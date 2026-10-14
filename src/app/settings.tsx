@@ -6,6 +6,7 @@ import { AppState, Linking, StyleSheet, Text, View } from 'react-native';
 
 import { currentCheckInTime, nextWindow, pendingWindow, type ClockTime } from '@/engine';
 import { formatWhen } from '@/lib/format';
+import { requestSync } from '@/notifications';
 import { getReminderPermission, requestReminderPermission, type ReminderPermission } from '@/notifications/permissions';
 import { appStore, useApp, type EditResult } from '@/store';
 import { colors, space, type } from '@/theme/tokens';
@@ -151,7 +152,12 @@ export default function Settings() {
                 small
                 variant="ghost"
                 label="Turn on"
-                onPress={() => requestReminderPermission().then(setPermission)}
+                onPress={() =>
+                  requestReminderPermission().then((p) => {
+                    setPermission(p);
+                    if (p === 'granted') void requestSync({ force: true });
+                  })
+                }
               />
             ) : null
           }

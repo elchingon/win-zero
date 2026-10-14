@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { startNotifications } from '@/notifications';
 import { appStore, startLifecycle, useApp } from '@/store';
 import { fontAssets } from '@/theme/fonts';
 import { colors } from '@/theme/tokens';
@@ -27,6 +28,8 @@ export default function RootLayout() {
 
   // Catch up on closed windows after storage loads and whenever the app comes back.
   useEffect(() => startLifecycle(appStore), []);
+  // Then keep the scheduled reminders in step with the goal.
+  useEffect(() => startNotifications(), []);
 
   useEffect(() => {
     if (ready) SplashScreen.hide();

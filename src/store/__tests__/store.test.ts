@@ -1,68 +1,14 @@
 // The persisted store: lifecycle, notices, weapons, rounds, persistence and migration.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { beforeEach, describe, expect, it } from '@jest/globals';
-import type { AppStateStatus } from 'react-native';
 
-import {
-  addDays,
-  currentCheckInTime,
-  latestScheduleEntry,
-  MS_PER_DAY,
-  pendingWindow,
-  type ClockTime,
-  type DayKey,
-  type GoalState,
-} from '@/engine';
-import { at, DAY0, DENVER, newGoal, TOKYO, yesDays } from '@/engine/__tests__/fixtures';
+import { addDays, currentCheckInTime, latestScheduleEntry, MS_PER_DAY, pendingWindow } from '@/engine';
+import { at, DAY0, newGoal, TOKYO, yesDays } from '@/engine/__tests__/fixtures';
 
-import { createAppStore, type AppStore } from '../createAppStore';
+import type { AppStore } from '../createAppStore';
 import { startLifecycle } from '../lifecycle';
-import { DEFAULT_PERSISTED } from '../migrate';
 import { STORE_KEY, STORE_VERSION } from '../types';
-
-const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
-
-function harness(opts: { dev?: boolean } = {}) {
-  const clock = { t: at(DAY0, '12:00').getTime() };
-  const zone = { tz: DENVER };
-  let ids = 0;
-  const store = createAppStore({
-    storage: AsyncStorage,
-    now: () => new Date(clock.t),
-    timeZone: () => zone.tz,
-    makeId: () => `goal-${++ids}`,
-    dev: opts.dev ?? true,
-  });
-  const setTime = (day: DayKey, time: ClockTime) => {
-    clock.t = at(day, time).getTime();
-  };
-  return { store, clock, zone, setTime };
-}
-
-async function ready(store: AppStore) {
-  for (let i = 0; i < 50 && !store.getState().hydrated; i++) await flush();
-  expect(store.getState().hydrated).toBe(true);
-}
-
-/** A fake AppState that records its listener, so a test can bring the app to the foreground. */
-function fakeAppState() {
-  const listeners: ((s: AppStateStatus) => void)[] = [];
-  return {
-    addEventListener: (_type: 'change', fn: (s: AppStateStatus) => void) => {
-      listeners.push(fn);
-      return { remove: () => listeners.splice(listeners.indexOf(fn), 1) };
-    },
-    emit: (s: AppStateStatus) => listeners.forEach((fn) => fn(s)),
-    count: () => listeners.length,
-  };
-}
-
-async function withGoal(goal: GoalState, opts: { dev?: boolean } = {}) {
-  const h = harness(opts);
-  await ready(h.store);
-  h.store.setState({ ...DEFAULT_PERSISTED, goal }); // not whatever an earlier store left in storage
-  return h;
-}
+import { fakeAppState, flush, harness, ready, withGoal } from './harness';
 
 beforeEach(async () => {
   await AsyncStorage.clear();
@@ -389,9 +335,11 @@ describe('debug clock', () => {
     const h = await withGoal(yesDays(newGoal(), DAY0, 1)); // answered 10-13; clock at 10-13 12:00
     h.store.getState().advanceDevClock(9 * MS_PER_DAY); // 10-22 12:00: 10-14 .. 10-20 closed
     expect(h.store.getState().now().getTime()).toBe(h.clock.t + 9 * MS_PER_DAY);
+    expect(h.store.getState().clockOffsetMs()).toBe(9 * MS_PER_DAY);
     expect(h.store.getState().goal?.consecutiveMissed).toBe(7);
     h.store.getState().resetDevClock();
     expect(h.store.getState().now().getTime()).toBe(h.clock.t);
+    expect(h.store.getState().clockOffsetMs()).toBe(0);
   });
 
   it('is ignored outside development', async () => {
@@ -400,6 +348,7 @@ describe('debug clock', () => {
     expect(h.store.getState().devClockOffsetMs).toBe(0);
     h.store.setState({ devClockOffsetMs: MS_PER_DAY }); // e.g. left over in storage
     expect(h.store.getState().now().getTime()).toBe(h.clock.t);
+    expect(h.store.getState().clockOffsetMs()).toBe(0);
   });
 });
 

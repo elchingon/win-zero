@@ -54,6 +54,8 @@ export interface AppState extends PersistedState {
 
   /** The clock the app runs on: the device clock, plus the debug offset in development. */
   now: () => Date;
+  /** How far `now` runs ahead of the device clock: the debug offset, or 0 outside development. */
+  clockOffsetMs: () => number;
   timeZone: () => TimeZone;
 
   /** Settle closed windows and follow a time zone change. Run on launch and on foreground. */
@@ -108,7 +110,8 @@ export function createAppStore(deps: StoreDeps) {
   const store = createStore<AppState>()(
     persist(
       (set, get, api) => {
-        const now = () => new Date(deps.now().getTime() + (deps.dev ? get().devClockOffsetMs : 0));
+        const clockOffsetMs = () => (deps.dev ? get().devClockOffsetMs : 0);
+        const now = () => new Date(deps.now().getTime() + clockOffsetMs());
         const timeZone = () => deps.timeZone();
         /** The goal, once storage has been read. Acting earlier would overwrite saved data. */
         const ready = () => (get().hydrated ? get().goal : null);
@@ -124,6 +127,7 @@ export function createAppStore(deps: StoreDeps) {
           hydrated: false,
           notice: null,
           now,
+          clockOffsetMs,
           timeZone,
 
           refresh: () => {

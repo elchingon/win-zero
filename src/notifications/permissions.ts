@@ -1,4 +1,4 @@
-// Notification permission. Scheduling arrives in Phase 4; this only asks, and reports.
+// Notification permission and the Android channel reminders are posted to.
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
@@ -14,8 +14,11 @@ function summarize(s: Notifications.NotificationPermissionsStatus): ReminderPerm
   return s.status === 'denied' ? 'denied' : 'undetermined';
 }
 
-/** Android 13+ shows no permission prompt until the app has a notification channel. */
-async function ensureChannel(): Promise<void> {
+/**
+ * The Android channel for check-ins and reminders. Android 13+ shows no permission prompt until
+ * the app has one, and reminders are scheduled onto it. Safe to call again.
+ */
+export async function ensureReminderChannel(): Promise<void> {
   if (Platform.OS !== 'android') return;
   await Notifications.setNotificationChannelAsync(CHECKIN_CHANNEL_ID, {
     name: 'Check-ins',
@@ -36,7 +39,7 @@ export async function getReminderPermission(): Promise<ReminderPermission> {
 /** Ask once. If the OS won't ask again, report 'denied' so the UI can point to Settings. */
 export async function requestReminderPermission(): Promise<ReminderPermission> {
   try {
-    await ensureChannel();
+    await ensureReminderChannel();
     const current = await Notifications.getPermissionsAsync();
     if (summarize(current) === 'granted') return 'granted';
     if (!current.canAskAgain) return 'denied';
