@@ -1,6 +1,9 @@
 'worklet';
 // One frame of the round. The frame callback calls step() with the time since the last frame.
-import { HIT_FLASH, MAX_DT } from './constants';
+import { updateBullets } from './bullets';
+import { HIT_FLASH, MAX_DT, MUZZLE_DECAY } from './constants';
+import { decay } from './ease';
+import { updateFiring } from './input';
 import type { GameState, Zero } from './types';
 
 /** Move a zero and bounce it off the play area's edges. */
@@ -40,5 +43,9 @@ export function step(state: GameState, dt: number): void {
   const d = Math.min(MAX_DT, Math.max(0, dt));
   state.time += d;
   state.phaseT += d;
+  state.sinceShot += d;
+  updateFiring(state);
   updateZeros(state, d);
+  updateBullets(state, d);
+  state.muzzle *= decay(MUZZLE_DECAY, d);
 }

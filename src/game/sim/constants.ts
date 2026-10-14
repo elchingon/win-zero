@@ -2,6 +2,7 @@
 // Tunable numbers for the shooting round, ported from the prototype (docs/prototype/win-zero.html).
 // Distances are in points, times in seconds, speeds in points per second. Damage, HP, unlocks
 // and the fire rate live in the engine (round.ts, weapons.ts); these are feel and budget.
+import { FIRE_RATE_HZ } from '@/engine';
 
 // --- Frame -------------------------------------------------------------------------------
 
@@ -61,6 +62,10 @@ export const FAN_STEP = 0.11;
 export const OFFSCREEN_MARGIN = 20;
 /** A tap fires at once if at least this long has passed since the last shot. */
 export const MIN_TAP_INTERVAL = 0.08;
+/** Holding the trigger fires this often. */
+export const FIRE_INTERVAL = 1 / FIRE_RATE_HZ;
+/** Slack for comparing summed frame times, so ten 1/60 s frames count as 1/6 s. */
+export const TIME_EPSILON = 1e-6;
 /** Hit test: the zero's ellipse, with small zeros padded up to these radii, plus HIT_PAD. */
 export const HIT_MIN_RX = 12;
 export const HIT_MIN_RY = 14;

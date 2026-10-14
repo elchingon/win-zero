@@ -1,15 +1,20 @@
 // The shooting round's canvas. The sim and the drawing both run on the UI thread: every frame
 // steps the round, records it as one Skia picture, and sends a short report to the JS thread.
-// Keep this component's props stable: a new frame callback re-registers the loop.
+// Touches go straight to the sim on the UI thread too. Keep this component's props stable: a
+// new frame callback re-registers the loop, and a new `round` starts the round over.
 import { Canvas, createPicture, Picture, usePictureAsTexture, type SkPicture } from '@shopify/react-native-skia';
-import { memo, useCallback, useEffect, useMemo } from 'react';
-import { StyleSheet } from 'react-native';
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
+import { StyleSheet, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useFrameCallback, useSharedValue, type FrameInfo, type SharedValue } from 'react-native-reanimated';
 import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
+
+import type { WeaponDef } from '@/engine';
 
 import { bakeSprites, makeKit } from './bake/kit';
 import { drawScene, makeScratch } from './draw/scene';
 import type { Scratch } from './draw/types';
+import { moveAim, pressFire, releaseFire, setReduceMotion, setWeapon } from './sim/input';
 import { resetReport } from './sim/report';
 import { createGame } from './sim/spawn';
 import { step } from './sim/step';
@@ -26,19 +31,36 @@ export interface FrameStats {
   worstMs: number;
 }
 
+/** What identifies a round. The weapon and reduce motion can change mid-round. */
+export type RoundSetup = Omit<GameConfig, 'weapon' | 'reduceMotion'>;
+
 function startGame(state: SharedValue<GameState | null>, cfg: GameConfig) {
   'worklet';
   state.value = createGame(cfg);
 }
 
+function applyWeapon(state: SharedValue<GameState | null>, weapon: WeaponDef) {
+  'worklet';
+  const s = state.value;
+  if (s) setWeapon(s, weapon);
+}
+
+function applyReduceMotion(state: SharedValue<GameState | null>, reduceMotion: boolean) {
+  'worklet';
+  const s = state.value;
+  if (s) setReduceMotion(s, reduceMotion);
+}
+
 export const GameCanvas = memo(function GameCanvas(props: {
-  config: GameConfig;
+  round: RoundSetup;
+  weapon: WeaponDef;
+  reduceMotion: boolean;
   onReport: (report: Report) => void;
   /** Development only: frame rate and the slowest frame, twice a second. */
   onFrameStats?: (stats: FrameStats) => void;
 }) {
-  const { config, onReport, onFrameStats } = props;
-  const { width, height, groups } = config;
+  const { round, weapon, reduceMotion, onReport, onFrameStats } = props;
+  const { width, height, groups } = round;
   const objectCount = groups.reduce((sum, g) => sum + g.count, 0);
   const armored = groups.some((g) => g.kind === 'armored');
 
@@ -56,9 +78,43 @@ export const GameCanvas = memo(function GameCanvas(props: {
   const empty = useMemo(() => createPicture(() => {}), []);
   const picture = useSharedValue<SkPicture>(empty);
 
+  // A new round starts with whatever weapon and motion setting are current, without making
+  // either one restart the round when it changes.
+  const live = useRef({ weapon, reduceMotion });
   useEffect(() => {
-    scheduleOnUI(startGame, state, config);
-  }, [config, state]);
+    live.current = { weapon, reduceMotion };
+  }, [weapon, reduceMotion]);
+  useEffect(() => {
+    scheduleOnUI(startGame, state, { ...round, ...live.current });
+  }, [round, state]);
+  useEffect(() => {
+    scheduleOnUI(applyWeapon, state, weapon);
+  }, [weapon, state]);
+  useEffect(() => {
+    scheduleOnUI(applyReduceMotion, state, reduceMotion);
+  }, [reduceMotion, state]);
+
+  const gesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .minDistance(0)
+        .onBegin((e) => {
+          'worklet';
+          const s = state.value;
+          if (s) pressFire(s, e.x, e.y);
+        })
+        .onUpdate((e) => {
+          'worklet';
+          const s = state.value;
+          if (s) moveAim(s, e.x, e.y);
+        })
+        .onFinalize(() => {
+          'worklet';
+          const s = state.value;
+          if (s) releaseFire(s);
+        }),
+    [state],
+  );
 
   const frame = useCallback(
     (info: FrameInfo) => {
@@ -99,8 +155,12 @@ export const GameCanvas = memo(function GameCanvas(props: {
   useFrameCallback(frame);
 
   return (
-    <Canvas style={StyleSheet.absoluteFill}>
-      <Picture picture={picture} />
-    </Canvas>
+    <GestureDetector gesture={gesture}>
+      <View style={StyleSheet.absoluteFill} collapsable={false} accessibilityLabel="Play area">
+        <Canvas style={StyleSheet.absoluteFill}>
+          <Picture picture={picture} />
+        </Canvas>
+      </View>
+    </GestureDetector>
   );
 });

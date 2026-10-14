@@ -1,14 +1,16 @@
 'worklet';
 // Drawing one frame of the round, as in the prototype's draw(). Zeros come from the baked
 // sprite sheet in a single drawAtlas call; nothing here allocates Skia objects.
-import type { SkCanvas, SkColor, SkImage, SkPaint, SkRSXform, SkRect } from '@shopify/react-native-skia';
+import type { SkCanvas, SkImage, SkRSXform, SkRect } from '@shopify/react-native-skia';
 
-import { POP_IN } from '../sim/constants';
+import { MAX_BULLETS, POP_IN } from '../sim/constants';
 import { clamp01, easeBack } from '../sim/ease';
 import type { GameState, Zero } from '../sim/types';
 
 import { beginBatch, endBatch, makeBatch, pushSprite } from './batch';
-import type { Kit, Rgba, Scratch } from './types';
+import { drawBullets } from './fx';
+import type { Kit, Scratch } from './types';
+import { paintColor, rect } from './util';
 
 /** The turret's barrel: a fg bar with an amber tip, pivoting on the muzzle point. */
 const BARREL_WIDTH = 14;
@@ -35,29 +37,11 @@ const RAD_TO_DEG = 180 / Math.PI;
 export function makeScratch(): Scratch {
   return {
     zeros: makeBatch(ZERO_BATCH),
+    bullets: makeBatch(MAX_BULLETS),
     rect: { x: 0, y: 0, width: 0, height: 0 } as SkRect,
     rgba: [0, 0, 0, 1],
     meter: { t: 0, frames: 0, worst: 0 },
   };
-}
-
-/** Set a paint's color from an [r, g, b, a] array, times `alpha`, without allocating. */
-function paintColor(paint: SkPaint, sc: Scratch, color: Rgba, alpha: number): void {
-  const out = sc.rgba;
-  out[0] = color[0] ?? 0;
-  out[1] = color[1] ?? 0;
-  out[2] = color[2] ?? 0;
-  out[3] = (color[3] ?? 1) * alpha;
-  paint.setColor(out as unknown as SkColor);
-}
-
-function rect(sc: Scratch, x: number, y: number, width: number, height: number): SkRect {
-  const r = sc.rect as { x: number; y: number; width: number; height: number };
-  r.x = x;
-  r.y = y;
-  r.width = width;
-  r.height = height;
-  return sc.rect;
 }
 
 /** A zero's pop-in scale: easeBack from 0 once its spawn delay is over. */
@@ -110,7 +94,10 @@ function drawTurret(canvas: SkCanvas, s: GameState, kit: Kit, sc: Scratch): void
 /** Draw the round as it stands. `atlas` is null until the sprite sheet reaches the GPU. */
 export function drawScene(canvas: SkCanvas, s: GameState, kit: Kit, atlas: SkImage | null, sc: Scratch): void {
   canvas.drawPicture(kit.background);
-  if (atlas) drawZeros(canvas, s, kit, atlas, sc);
+  if (atlas) {
+    drawZeros(canvas, s, kit, atlas, sc);
+    drawBullets(canvas, s, kit, atlas, sc);
+  }
   if (s.phase === 'play' || s.phase === 'celebrate') drawTurret(canvas, s, kit, sc);
   if (s.flash > FLASH_MIN) {
     paintColor(kit.paints.fill, sc, kit.colors.fg, Math.min(FLASH_MAX, s.flash * FLASH_MAX));

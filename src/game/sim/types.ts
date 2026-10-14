@@ -128,6 +128,8 @@ export interface GameConfig {
 
 /** What happened since the last report, sent to the JS thread at most once a frame. */
 export interface Report {
+  /** The round it's about: a replay starts a new seed, so late reports from the old one can be ignored. */
+  seed: number;
   dirty: boolean;
   valueLeft: number;
   shots: number;
@@ -144,6 +146,7 @@ export interface Report {
 
 export interface GameState {
   n: number;
+  seed: number;
   width: number;
   height: number;
   /** Zeros bounce between these. */

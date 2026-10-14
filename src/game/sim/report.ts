@@ -2,8 +2,9 @@
 // The per-frame summary the sim sends to the JS thread (HUD counter, sounds, haptics, result).
 import type { Report } from './types';
 
-export function makeReport(valueLeft: number): Report {
+export function makeReport(valueLeft: number, seed: number): Report {
   return {
+    seed,
     dirty: true,
     valueLeft,
     shots: 0,
@@ -17,7 +18,7 @@ export function makeReport(valueLeft: number): Report {
   };
 }
 
-/** Start the next frame's report. valueLeft carries over; the counts start again. */
+/** Start the next frame's report. The seed and valueLeft carry over; the counts start again. */
 export function resetReport(report: Report): void {
   report.dirty = false;
   report.shots = 0;

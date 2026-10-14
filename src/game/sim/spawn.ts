@@ -160,6 +160,7 @@ export function createGame(cfg: GameConfig): GameState {
   const bottomInset = cfg.height - cfg.insetBottom;
   const state: GameState = {
     n: cfg.n,
+    seed: cfg.seed,
     width: cfg.width,
     height: cfg.height,
     top: cfg.insetTop + HUD_TOP,
@@ -197,7 +198,7 @@ export function createGame(cfg: GameConfig): GameState {
     muzzle: 0,
 
     rng: makeRng(cfg.seed),
-    report: makeReport(cfg.n),
+    report: makeReport(cfg.n, cfg.seed),
   };
   spawnZeros(state, cfg);
   return state;

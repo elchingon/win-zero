@@ -39,6 +39,13 @@ const ARMOR_SHEEN = [0.7, 0, 0.35, 0];
 const ARMOR_SHEEN_STOPS = [0, 0.4, 0.7, 1];
 const ARMOR_EDGE_WIDTH = 0.1;
 const ARMOR_EDGE_ALPHA = 0.55;
+/** Bullet streaks, in points: the prototype's tail length, line width and head radius. */
+const BULLET_LOOKS = [
+  { color: colors.amber, tail: 18, width: 4, head: 3 },
+  { color: colors.teal, tail: 18, width: 4, head: 3 },
+  { color: colors.flare, tail: 26, width: 8, head: 5 },
+];
+const BULLET_TAIL_ALPHA = 0.55;
 
 export function rgba(hex: string, alpha = 1): Rgba {
   const c = Skia.Color(hex);
@@ -127,6 +134,31 @@ function ringCell(ry: number, color: string, armored: boolean): Cell {
   };
 }
 
+/** A bullet streak pointing right, its head on the cell's center. Drawn at `d` px per point. */
+function bulletCell(look: (typeof BULLET_LOOKS)[number], d: number): Cell {
+  const reach = (look.tail + look.width / 2) * d + SPRITE_PAD;
+  return {
+    w: Math.ceil(2 * reach),
+    h: Math.ceil(2 * (Math.max(look.head, look.width / 2) * d + SPRITE_PAD)),
+    ry: d,
+    draw: (canvas, cx, cy) => {
+      canvas.drawLine(
+        cx - look.tail * d,
+        cy,
+        cx,
+        cy,
+        paint(PaintStyle.Stroke, (p) => {
+          p.setStrokeWidth(look.width * d);
+          p.setStrokeCap(StrokeCap.Round);
+          p.setColor(Skia.Color(look.color));
+          p.setAlphaf(BULLET_TAIL_ALPHA);
+        }),
+      );
+      canvas.drawCircle(cx, cy, look.head * d, paint(PaintStyle.Fill, (p) => p.setColor(Skia.Color(colors.fg))));
+    },
+  };
+}
+
 /** Lay out rows of cells left to right, top to bottom, and record them into one picture. */
 function pack(rows: Cell[][]): { picture: SkPicture; sprites: Sprite[][]; width: number; height: number } {
   let width = 0;
@@ -169,15 +201,23 @@ export interface BakedSprites {
   sheet: SpriteSheet;
 }
 
-/** The round's sprite sheet: a ring per palette color, and armored rings when the round has them. */
+/**
+ * The round's sprite sheet: a ring per palette color, armored rings when the round has them,
+ * and the shots and effects.
+ */
 export function bakeSprites(opts: { objectCount: number; width: number; height: number; armored: boolean }): BakedSprites {
   const ryPt = spriteRadius(opts.objectCount, opts.width, opts.height);
   const biggest = ryPt * (opts.armored ? ARMOR_SIZE_SCALE : 1);
   const density = Math.max(1, Math.min(PixelRatio.get(), SPRITE_MAX_DENSITY, SPRITE_MAX_RY_PX / biggest));
-  const rows = [zeroPalette.map((c) => ringCell(ryPt * density, c, false))];
-  if (opts.armored) rows.push(zeroPalette.map((c) => ringCell(ryPt * ARMOR_SIZE_SCALE * density, c, true)));
-  const { picture, sprites, width, height } = pack(rows);
-  return { picture, sheet: { width, height, zero: sprites[0] ?? [], armored: sprites[1] ?? [] } };
+  const fxDensity = Math.min(PixelRatio.get(), SPRITE_MAX_DENSITY);
+  const rows = {
+    zero: zeroPalette.map((c) => ringCell(ryPt * density, c, false)),
+    armored: opts.armored ? zeroPalette.map((c) => ringCell(ryPt * ARMOR_SIZE_SCALE * density, c, true)) : [],
+    bullets: BULLET_LOOKS.map((look) => bulletCell(look, fxDensity)),
+  };
+  const { picture, sprites, width, height } = pack(Object.values(rows));
+  const [zero = [], armored = [], bullets = []] = sprites;
+  return { picture, sheet: { width, height, zero, armored, bullets } };
 }
 
 function background(width: number, height: number): SkPicture {
@@ -232,6 +272,7 @@ export function makeKit(width: number, height: number, sheet: SpriteSheet): Kit 
       fill: paint(PaintStyle.Fill),
       stroke: paint(PaintStyle.Stroke),
       glowFill: paint(PaintStyle.Fill, (p) => p.setBlendMode(BlendMode.Plus)),
+      spriteAdd: paint(PaintStyle.Fill, (p) => p.setBlendMode(BlendMode.Plus)),
     },
     palette: zeroPalette.map((c) => rgba(c)),
     colors: { fg: rgba(colors.fg), amber: rgba(colors.amber), panel2: rgba(colors.panel2) },

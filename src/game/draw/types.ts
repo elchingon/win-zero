@@ -3,7 +3,11 @@
 // with the UI thread by reference); the scratch is built on the UI thread and reused every frame.
 import type { SkPaint, SkPath, SkPicture, SkRect } from '@shopify/react-native-skia';
 
-/** A cell of the sprite sheet, in sheet pixels, and the zero radius (px) it was drawn at. */
+/**
+ * A cell of the sprite sheet, in sheet pixels. `ry` is the size it was drawn at, in px: a
+ * zero's vertical radius, or for effects drawn at their natural size, the pixels per point.
+ * Draw it at scale = wanted size / ry.
+ */
 export interface Sprite {
   x: number;
   y: number;
@@ -19,6 +23,8 @@ export interface SpriteSheet {
   zero: Sprite[];
   /** An armored ring per palette slot; empty when the round has none. */
   armored: Sprite[];
+  /** Bullet streaks, head at the sprite's center, pointing right: amber, teal (chain), flare (big). */
+  bullets: Sprite[];
 }
 
 /** A color as [r, g, b, a], each 0..1: what Skia's native calls accept without allocating. */
@@ -39,6 +45,8 @@ export interface Kit {
     stroke: SkPaint;
     /** Additive (the prototype's 'lighter'), for glows and effects. */
     glowFill: SkPaint;
+    /** Additive sprites. */
+    spriteAdd: SkPaint;
   };
   /** tokens.zeroPalette: amber, flare, teal, fg. */
   palette: Rgba[];
@@ -64,6 +72,7 @@ export interface Batch {
 
 export interface Scratch {
   zeros: Batch;
+  bullets: Batch;
   rect: SkRect;
   rgba: Rgba;
   /** The development frame meter: time and frames since it last reported, and the slowest frame (ms). */
