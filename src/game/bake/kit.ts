@@ -8,6 +8,7 @@ import {
   PointMode,
   Skia,
   StrokeCap,
+  StrokeJoin,
   TileMode,
   vec,
   type SkCanvas,
@@ -17,14 +18,16 @@ import {
 } from '@shopify/react-native-skia';
 import { PixelRatio } from 'react-native';
 
-import type { ZeroGroup } from '@/engine';
-import { colors, zeroPalette } from '@/theme/tokens';
+import type { FillPlan, ZeroGroup } from '@/engine';
+import { formatCount } from '@/lib/format';
+import { colors, withAlpha, zeroPalette } from '@/theme/tokens';
 import { DOT_ALPHA, DOT_ORIGIN, DOT_SIZE, DOT_SPACING, GLOW_RADIUS, GLOW_Y } from '@/ui/ZeroField';
 
 import { TURRET_BASE_RADIUS } from '../draw/scene';
 import type { Kit, Rgba, Sprite, SpriteSheet } from '../draw/types';
 import { armorBadges } from '../sim/badges';
 import { ARMOR_SIZE_SCALE, SIZE_JITTER } from '../sim/constants';
+import { fillGrid } from '../sim/fill';
 import { ZERO_ASPECT, ZERO_STROKE, zeroRadius } from '../sim/sizing';
 import { HIGHLIGHT_ALPHA, HIGHLIGHT_WIDTH, highlightPath, ZERO_GLOW } from '../ZeroRing';
 
@@ -64,6 +67,20 @@ const BADGE_PAD_X = 5;
 const BADGE_FILL_ALPHA = 0.9;
 const BADGE_EDGE_ALPHA = 0.45;
 const BADGE_EDGE = 1;
+/** Fill glyphs: baked no bigger than this many px (a one-zero fill scales up a little). */
+const GLYPH_MAX_PX = 1024;
+/** Fills of up to this many glyphs glow, as in the prototype; the glow's blur is this × the size. */
+const GLYPH_GLOW_MAX = 40;
+const GLYPH_GLOW = 0.06;
+/** The fill's glow: amber at this opacity in the middle, out to this × the longer side. */
+const FILL_GLOW_ALPHA = 0.22;
+const FILL_GLOW_RADIUS = 0.7;
+/** The overlaid number: up to this share of the width, this share of the height, outlined this thick (× size). */
+const OVERLAY_WIDTH = 0.86;
+const OVERLAY_HEIGHT = 0.3;
+const OVERLAY_OUTLINE = 0.08;
+/** Measuring size for fitting the overlaid number. */
+const MEASURE_SIZE = 100;
 /** Tinted sprites are baked white, so a tint multiplies straight to its color. */
 const TINT_BASE = '#FFFFFF';
 
@@ -258,6 +275,29 @@ function badgeCell(value: number, font: SkFont, d: number): Cell {
   };
 }
 
+/** The fill's Bungee "0", white so each glyph can be tinted, centered on its ink. ry is the font size in px. */
+function glyphCell(sizePx: number, font: SkFont, glow: boolean): Cell {
+  const sized = Skia.Font(font.getTypeface() ?? undefined, sizePx);
+  const bounds = sized.measureText('0');
+  const sigma = glow ? sizePx * GLYPH_GLOW : 0;
+  const reach = sigma * GLOW_REACH + SPRITE_PAD;
+  return {
+    w: Math.ceil(bounds.width + 2 * reach),
+    h: Math.ceil(bounds.height + 2 * reach),
+    ry: sizePx,
+    draw: (canvas, cx, cy) =>
+      canvas.drawText(
+        '0',
+        cx - bounds.x - bounds.width / 2,
+        cy - bounds.y - bounds.height / 2,
+        white(PaintStyle.Fill, (p) => {
+          if (glow) p.setMaskFilter(Skia.MaskFilter.MakeBlur(BlurStyle.Solid, sigma, false));
+        }),
+        sized,
+      ),
+  };
+}
+
 /** Lay out rows of cells left to right, top to bottom, and record them into one picture. */
 function pack(rows: Cell[][]): { picture: SkPicture; sprites: Sprite[][]; width: number; height: number } {
   let width = 0;
@@ -306,6 +346,7 @@ export interface BakedSprites {
  */
 export function bakeSprites(opts: {
   groups: readonly ZeroGroup[];
+  fill: FillPlan;
   width: number;
   height: number;
   font: SkFont;
@@ -317,18 +358,21 @@ export function bakeSprites(opts: {
   const biggest = ryPt * (armoredRound ? ARMOR_SIZE_SCALE : 1);
   const density = Math.max(1, Math.min(PixelRatio.get(), SPRITE_MAX_DENSITY, SPRITE_MAX_RY_PX / biggest));
   const fxDensity = Math.min(PixelRatio.get(), SPRITE_MAX_DENSITY);
+  const glyphPt = fillGrid(opts.fill.glyphs, opts.width, opts.height).size;
   const rows = {
     zero: zeroPalette.map((c) => ringCell(ryPt * density, c, false)),
     armored: armoredRound ? zeroPalette.map((c) => ringCell(ryPt * ARMOR_SIZE_SCALE * density, c, true)) : [],
     badges: badgeValues.map((v) => badgeCell(v, opts.font, fxDensity)),
     bullets: BULLET_LOOKS.map((look) => bulletCell(look, fxDensity)),
     fx: fxCells(fxDensity),
+    glyph: [glyphCell(Math.min(glyphPt * fxDensity, GLYPH_MAX_PX), opts.font, opts.fill.glyphs <= GLYPH_GLOW_MAX)],
   };
   const { picture, sprites, width, height } = pack(Object.values(rows));
-  const [zero = [], armored = [], badges = [], bullets = [], fx = []] = sprites;
+  const [zero = [], armored = [], badges = [], bullets = [], fx = [], glyphs = []] = sprites;
   const [dot, confetti, ring] = fx;
-  if (!dot || !confetti || !ring) throw new Error('The effect sprites failed to pack');
-  return { picture, sheet: { width, height, zero, armored, badges, bullets, fx: { dot, confetti, ring } } };
+  const [glyph] = glyphs;
+  if (!dot || !confetti || !ring || !glyph) throw new Error('The effect sprites failed to pack');
+  return { picture, sheet: { width, height, zero, armored, badges, bullets, glyph, fx: { dot, confetti, ring } } };
 }
 
 function background(width: number, height: number): SkPicture {
@@ -366,8 +410,25 @@ function background(width: number, height: number): SkPicture {
   );
 }
 
-export function makeKit(width: number, height: number, sheet: SpriteSheet): Kit {
+/** The full number for a fill too big to draw, sized to fit, centered on (0, 0). */
+function overlay(n: number, font: SkFont, width: number, height: number): Kit['overlay'] {
+  const label = formatCount(n);
+  const typeface = font.getTypeface() ?? undefined;
+  const measured = Skia.Font(typeface, MEASURE_SIZE).measureText(label).width || 1;
+  const size = Math.min(height * OVERLAY_HEIGHT, (width * OVERLAY_WIDTH * MEASURE_SIZE) / measured);
+  const sized = Skia.Font(typeface, size);
+  const bounds = sized.measureText(label);
+  return { label, font: sized, x: -bounds.x - bounds.width / 2, y: -bounds.y - bounds.height / 2 };
+}
+
+export function makeKit(
+  width: number,
+  height: number,
+  sheet: SpriteSheet,
+  round: { n: number; fill: FillPlan; font: SkFont },
+): Kit {
   const r = TURRET_BASE_RADIUS;
+  const big = round.fill.overlayNumber ? overlay(round.n, round.font, width, height) : null;
   const turretBase = Skia.Path.Make();
   turretBase.addArc(Skia.XYWHRect(-r, -r, r * 2, r * 2), 180, 180);
   turretBase.close();
@@ -388,7 +449,25 @@ export function makeKit(width: number, height: number, sheet: SpriteSheet): Kit 
         p.setBlendMode(BlendMode.Plus);
         p.setStrokeCap(StrokeCap.Round);
       }),
+      fillGlow: paint(PaintStyle.Fill, (p) =>
+        p.setShader(
+          Skia.Shader.MakeRadialGradient(
+            vec(width / 2, height / 2),
+            Math.max(width, height) * FILL_GLOW_RADIUS,
+            [Skia.Color(withAlpha(colors.amber, FILL_GLOW_ALPHA)), Skia.Color(withAlpha(colors.flare, 0))],
+            null,
+            TileMode.Clamp,
+          ),
+        ),
+      ),
+      overlayStroke: paint(PaintStyle.Stroke, (p) => {
+        p.setColor(Skia.Color(colors.ink));
+        p.setStrokeWidth((big?.font.getSize() ?? 0) * OVERLAY_OUTLINE);
+        p.setStrokeJoin(StrokeJoin.Round);
+      }),
+      overlayFill: paint(PaintStyle.Fill, (p) => p.setColor(Skia.Color(colors.amber))),
     },
+    overlay: big,
     blend: { modulate: BlendMode.Modulate },
     palette: zeroPalette.map((c) => rgba(c)),
     colors: { fg: rgba(colors.fg), amber: rgba(colors.amber), teal: rgba(colors.teal), panel2: rgba(colors.panel2) },

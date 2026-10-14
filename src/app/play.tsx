@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { composeRound, equippedWeapon, unlockedWeapons, type WeaponId } from '@/engine';
+import { composeRound, equippedWeapon, fillPlan, unlockedWeapons, type WeaponId } from '@/engine';
 import { GameCanvas, type FrameStats, type GameHandle, type RoundSetup } from '@/game/GameCanvas';
 import { Hud } from '@/game/Hud';
 import type { Report } from '@/game/sim/types';
@@ -24,8 +24,6 @@ const PRACTICE_BEST = 100;
 const PRACTICE_MAX_N = 100_000;
 /** Practice rounds come with this many free bombs, to try them without a long run. */
 const PRACTICE_BOMBS = 9;
-/** Until the result sheet moves into Play: how long the last kill shows before the result. */
-const RESULT_STOPGAP_MS = 900;
 
 type Mode = 'real' | 'replay' | 'practice';
 
@@ -65,10 +63,11 @@ function Round({ mode, n, best }: { mode: Mode; n: number; best: number }) {
   const unlocked = useMemo(() => unlockedWeapons(best), [best]);
 
   const groups = useMemo(() => composeRound(n).groups, [n]);
+  const fill = useMemo(() => fillPlan(n), [n]);
   const [seed, setSeed] = useState(newSeed);
   const round = useMemo<RoundSetup>(
-    () => ({ n, groups, width, height, insetTop: insets.top, insetBottom: insets.bottom, seed }),
-    [n, groups, width, height, insets.top, insets.bottom, seed],
+    () => ({ n, groups, fill, width, height, insetTop: insets.top, insetBottom: insets.bottom, seed }),
+    [n, groups, fill, width, height, insets.top, insets.bottom, seed],
   );
 
   const game = useRef<GameHandle>(null);
@@ -81,11 +80,13 @@ function Round({ mode, n, best }: { mode: Mode; n: number; best: number }) {
   const [stats, setStats] = useState<FrameStats | null>(null);
   // Reports from a round that has since been restarted are ignored.
   const seedRef = useRef(seed);
+  const onLanded = useRef(() => {});
 
   const onReport = useCallback((r: Report) => {
     if (r.seed !== seedRef.current) return;
     setLeft(r.valueLeft);
     if (r.final) setOver(true);
+    if (r.showResult) onLanded.current();
   }, []);
 
   const restart = useCallback(() => {
@@ -97,17 +98,19 @@ function Round({ mode, n, best }: { mode: Mode; n: number; best: number }) {
     setFreeBombs(mode === 'practice' ? PRACTICE_BOMBS : (appStore.getState().goal?.bombs ?? 0));
   }, [n, mode]);
 
-  // The last zero went: a real round counts as played. Until the result sheet moves in here,
-  // the result screen follows (practice just starts over).
+  // The last zero went: a real round counts as played.
   useEffect(() => {
-    if (!over) return;
-    if (mode === 'real') appStore.getState().finishRound();
-    const id = setTimeout(() => {
+    if (over && mode === 'real') appStore.getState().finishRound();
+  }, [over, mode]);
+
+  // The fill has landed. Until the result sheet moves in here, the result screen follows
+  // (practice just starts over).
+  useEffect(() => {
+    onLanded.current = () => {
       if (mode === 'practice') restart();
       else router.replace(mode === 'replay' ? { pathname: '/result', params: { replay: '1' } } : '/result');
-    }, RESULT_STOPGAP_MS);
-    return () => clearTimeout(id);
-  }, [over, mode, restart]);
+    };
+  }, [mode, restart]);
 
   const onBomb = () => {
     if (over || bombs < 1) return;

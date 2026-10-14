@@ -3,10 +3,11 @@
 // sheet a whole layer per drawAtlas call; nothing here allocates Skia objects.
 import type { SkCanvas, SkImage, SkRect } from '@shopify/react-native-skia';
 
-import { MAX_BULLETS, MAX_PARTICLES } from '../sim/constants';
+import { MAX_BULLETS, MAX_GLYPHS, MAX_PARTICLES } from '../sim/constants';
 import type { GameState } from '../sim/types';
 
 import { makeBatch } from './batch';
+import { drawFill } from './fill';
 import { drawBeams, drawBolts, drawBullets, drawParticles, drawRings } from './fx';
 import type { Kit, Scratch } from './types';
 import { paintColor, rect } from './util';
@@ -38,6 +39,7 @@ export function makeScratch(): Scratch {
   return {
     zeros: makeBatch(ZERO_BATCH * 2),
     flashes: makeBatch(ZERO_BATCH, true),
+    glyphs: makeBatch(MAX_GLYPHS, true),
     bullets: makeBatch(MAX_BULLETS),
     particles: makeBatch(MAX_PARTICLES, true),
     rect: { x: 0, y: 0, width: 0, height: 0 } as SkRect,
@@ -76,7 +78,9 @@ export function drawScene(canvas: SkCanvas, s: GameState, kit: Kit, atlas: SkIma
   canvas.drawPicture(kit.background);
   canvas.save();
   canvas.translate(s.shakeX, s.shakeY);
-  if (atlas) {
+  if (s.phase === 'fill' || s.phase === 'done') {
+    drawFill(canvas, s, kit, atlas, sc);
+  } else if (atlas) {
     drawZeros(canvas, s, kit, atlas, sc);
     drawHitFlashes(canvas, s, kit, atlas, sc);
   }

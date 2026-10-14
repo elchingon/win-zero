@@ -2,7 +2,7 @@
 // The shooting round's state. It lives on the UI thread and is mutated in place every frame,
 // so everything is plain data: fixed pools of reusable objects, palette slots instead of
 // color strings, and the random number generator's state inside it.
-import type { WeaponDef, ZeroGroup, ZeroKind } from '@/engine';
+import type { FillPlan, WeaponDef, ZeroGroup, ZeroKind } from '@/engine';
 
 /** play → celebrate (the last zero went) → fill (the screen fills with zeros) → done (result sheet). */
 export type Phase = 'play' | 'celebrate' | 'fill' | 'done';
@@ -119,6 +119,8 @@ export interface GameConfig {
   n: number;
   /** composeRound(n).groups */
   groups: readonly ZeroGroup[];
+  /** fillPlan(n): glyphs in the celebration fill, and whether the full number goes on top. */
+  fill: FillPlan;
   width: number;
   height: number;
   insetTop: number;
@@ -163,7 +165,7 @@ export interface GameState {
 
   phase: Phase;
   time: number;
-  /** Seconds since the phase began. */
+  /** Seconds since the phase began. The fill and done phases share one clock, from the fill's start. */
   phaseT: number;
   valueLeft: number;
 
@@ -176,7 +178,10 @@ export interface GameState {
 
   glyphs: Glyph[];
   glyphCount: number;
+  /** Fill glyph height, in points. */
   glyphSize: number;
+  /** Too many zeros to draw: the full number goes on top of the fill. */
+  overlayNumber: boolean;
   /** Seconds from the fill's start until its last glyph lands. */
   fillLen: number;
 

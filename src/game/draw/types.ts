@@ -1,7 +1,7 @@
 'worklet';
 // What the scene drawing needs. The kit is built once on the JS thread (Skia objects are shared
 // with the UI thread by reference); the scratch is built on the UI thread and reused every frame.
-import type { BlendMode, SkPaint, SkPath, SkPicture, SkRect } from '@shopify/react-native-skia';
+import type { BlendMode, SkFont, SkPaint, SkPath, SkPicture, SkRect } from '@shopify/react-native-skia';
 
 /**
  * A cell of the sprite sheet, in sheet pixels. `ry` is the size it was drawn at, in px: a
@@ -27,6 +27,8 @@ export interface SpriteSheet {
   bullets: Sprite[];
   /** A ×V badge per distinct armored value, in armorBadges order. Drawn at natural size (ry = px per point). */
   badges: Sprite[];
+  /** The white Bungee "0" for the celebration fill, tinted per glyph. `ry` is its font size in px. */
+  glyph: Sprite;
   /** White effect shapes, tinted per particle. `ry` is the dot's side, the confetti's length, the ring's ry. */
   fx: { dot: Sprite; confetti: Sprite; ring: Sprite };
 }
@@ -53,7 +55,14 @@ export interface Kit {
     spriteAdd: SkPaint;
     /** Additive strokes: shockwaves, beams, bolts. */
     glowStroke: SkPaint;
+    /** The fill's warm radial glow (a shader); its alpha ramps in. */
+    fillGlow: SkPaint;
+    /** The overlaid number: an ink outline under amber. */
+    overlayStroke: SkPaint;
+    overlayFill: SkPaint;
   };
+  /** The full number drawn over a fill too big to show every zero, centered on (0, 0) at offset (x, y). */
+  overlay: { label: string; font: SkFont; x: number; y: number } | null;
   /** Skia enum values the worklets can't import: drawAtlas tints multiply the sprite. */
   blend: { modulate: BlendMode };
   /** tokens.zeroPalette: amber, flare, teal, fg. */
@@ -85,6 +94,7 @@ export interface Batch {
 export interface Scratch {
   zeros: Batch;
   flashes: Batch;
+  glyphs: Batch;
   bullets: Batch;
   particles: Batch;
   rect: SkRect;

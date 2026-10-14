@@ -4,6 +4,7 @@ import { updateBullets } from './bullets';
 import { HIT_FLASH, MAX_DT } from './constants';
 import { updateEffects } from './effects';
 import { updateFiring } from './input';
+import { updatePhase } from './phase';
 import type { GameState, Zero } from './types';
 
 /** Move a zero and bounce it off the play area's edges. */
@@ -48,4 +49,5 @@ export function step(state: GameState, dt: number): void {
   updateZeros(state, d);
   updateBullets(state, d);
   updateEffects(state, d);
+  updatePhase(state, d);
 }

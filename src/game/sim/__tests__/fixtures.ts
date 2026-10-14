@@ -1,5 +1,5 @@
 // Shared setup for sim tests: a phone-sized screen and a round built from the real engine.
-import { composeRound, weaponById, type WeaponId } from '@/engine';
+import { composeRound, fillPlan, weaponById, type WeaponId } from '@/engine';
 
 import { acquire } from '../pool';
 import { createGame } from '../spawn';
@@ -14,6 +14,7 @@ export function config(n: number, opts: Partial<Omit<GameConfig, 'weapon'>> & { 
   return {
     n,
     groups: composeRound(n).groups,
+    fill: fillPlan(n),
     ...SCREEN,
     weapon: weaponById(weapon),
     seed: 1,

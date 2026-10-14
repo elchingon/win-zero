@@ -2,7 +2,7 @@
 // Tunable numbers for the shooting round, ported from the prototype (docs/prototype/win-zero.html).
 // Distances are in points, times in seconds, speeds in points per second. Damage, HP, unlocks
 // and the fire rate live in the engine (round.ts, weapons.ts); these are feel and budget.
-import { FIRE_RATE_HZ } from '@/engine';
+import { FILL_GLYPH_CAP, FIRE_RATE_HZ } from '@/engine';
 
 // --- Frame -------------------------------------------------------------------------------
 
@@ -173,6 +173,8 @@ export const REDUCED_PARTICLES = 0.5;
 
 // --- Celebration and fill ------------------------------------------------------------------
 
+/** Most glyphs a fill draws (the engine's cap). */
+export const MAX_GLYPHS = FILL_GLYPH_CAP;
 /** The fill starts this long after the last zero goes. */
 export const FILL_DELAY = 0.85;
 /** Fill glyphs ripple out from the center over up to FILL_SPREAD_MAX seconds. */
@@ -185,7 +187,49 @@ export const RESULT_DELAY = 0.9;
 /** Glyph height as a fraction of its grid cell's height, and cell width per glyph height. */
 export const GLYPH_CELL_FILL = 0.86;
 export const GLYPH_ASPECT = 0.82;
-/** Chance per frame of a sparkle rising off a fill glyph. */
+/** Chance per 1/60 s of a sparkle rising off a fill glyph. */
 export const FILL_SPARKLE_CHANCE = 0.5;
 /** Fill sparkles stop once this many particles are live. */
 export const FILL_SPARKLE_CAP = 200;
+/** A fill sparkle: where it starts (fraction of the glyph's size from its center), drift, rise, life, size. */
+export const FILL_SPARKLE = {
+  spreadX: 0.6,
+  spreadY: 0.8,
+  drift: 30,
+  riseMin: 40,
+  riseRange: 60,
+  life: 0.8,
+  sizeMin: 2,
+  sizeRange: 3,
+};
+
+/** The final zero's three shockwaves: start radius (points), reach (× screen diagonal), seconds, width. */
+export const FINAL_RINGS = [
+  { start: 20, reach: 1, duration: 0.9, color: AMBER, width: 40 },
+  { start: 10, reach: 0.7, duration: 1.1, color: FLARE, width: 24 },
+  { start: 5, reach: 0.45, duration: 1.3, color: TEAL, width: 14 },
+];
+/** Celebration confetti strips: speed, lift, life and size ranges, spin, fall. */
+export const CONFETTI_PIECE = {
+  speedMin: 250,
+  speedRange: 900,
+  lift: 200,
+  lifeMin: 1.4,
+  lifeRange: 1.2,
+  sizeMin: 5,
+  sizeRange: 7,
+  spin: 14,
+  gravity: 520,
+};
+/** Celebration fragment rings: big tumbling "0"s. */
+export const CONFETTI_FRAGMENT = {
+  speedMin: 200,
+  speedRange: 600,
+  lift: 150,
+  lifeMin: 1.6,
+  lifeRange: 1,
+  sizeMin: 10,
+  sizeRange: 16,
+  spin: 8,
+  gravity: 380,
+};

@@ -1,8 +1,6 @@
 'worklet';
 // Building a round: zeros from composeRound's groups, placed and set moving as in the
 // prototype's spawn(), plus every pool the frame loop will need, allocated once up front.
-import { FILL_GLYPH_CAP } from '@/engine';
-
 import {
   ARMOR_SIZE_SCALE,
   ARMOR_SPEED_SCALE,
@@ -31,6 +29,7 @@ import {
   TURRET_Y_FROM_BOTTOM,
 } from './constants';
 import { armorBadges } from './badges';
+import { layoutFill } from './fill';
 import { makePool } from './pool';
 import { makeReport } from './report';
 import { between, makeRng, random } from './rng';
@@ -156,7 +155,7 @@ export function createGame(cfg: GameConfig): GameState {
   const zeros: Zero[] = [];
   for (let i = 0; i < objectCount; i++) zeros.push(makeZero());
   const glyphs: Glyph[] = [];
-  const glyphCount = Math.min(cfg.n, FILL_GLYPH_CAP);
+  const glyphCount = cfg.fill.glyphs;
   for (let i = 0; i < glyphCount; i++) glyphs.push(makeGlyph());
 
   const bottomInset = cfg.height - cfg.insetBottom;
@@ -188,6 +187,7 @@ export function createGame(cfg: GameConfig): GameState {
     glyphs,
     glyphCount,
     glyphSize: 0,
+    overlayNumber: cfg.fill.overlayNumber,
     fillLen: 0,
 
     weapon: cfg.weapon,
@@ -205,5 +205,6 @@ export function createGame(cfg: GameConfig): GameState {
     report: makeReport(cfg.n, cfg.seed),
   };
   spawnZeros(state, cfg);
+  layoutFill(state);
   return state;
 }

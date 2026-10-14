@@ -85,15 +85,21 @@ export const GameCanvas = memo(function GameCanvas(props: {
   ref?: Ref<GameHandle>;
 }) {
   const { round, weapon, reduceMotion, onReport, onFrameStats, ref } = props;
-  const { width, height, groups } = round;
+  const { width, height, groups, n, fill } = round;
   const font = useFont(fontAssets.Bungee_400Regular, FONT_LOAD_SIZE);
 
   // The sprite sheet waits for the font (badges and fill glyphs are Bungee); until then the
   // frame loop holds off.
-  const baked = useMemo(() => (font ? bakeSprites({ groups, width, height, font }) : null), [groups, width, height, font]);
+  const baked = useMemo(
+    () => (font ? bakeSprites({ groups, fill, width, height, font }) : null),
+    [groups, fill, width, height, font],
+  );
   const sheetSize = useMemo(() => (baked ? { width: baked.sheet.width, height: baked.sheet.height } : NO_SIZE), [baked]);
   const atlas = usePictureAsTexture(baked?.picture ?? null, sheetSize);
-  const kit = useMemo(() => (baked ? makeKit(width, height, baked.sheet) : null), [width, height, baked]);
+  const kit = useMemo(
+    () => (baked && font ? makeKit(width, height, baked.sheet, { n, fill, font }) : null),
+    [width, height, baked, n, fill, font],
+  );
 
   // Built and mutated on the UI thread only. Reading it from JS would copy the whole round.
   const state = useSharedValue<GameState | null>(null);

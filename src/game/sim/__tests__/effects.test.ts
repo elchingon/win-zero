@@ -55,7 +55,8 @@ describe('a kill', () => {
 describe('caps and draining', () => {
   it('keeps a full board going up at once inside the kill budget', () => {
     const s = game(60);
-    for (const z of s.zeros) killZero(s, z);
+    // All but one, so the final's confetti (which may use the rest of the pool) stays out of it.
+    for (const z of s.zeros.slice(1)) killZero(s, z);
     expect(s.particles.count).toBeLessThanOrEqual(KILL_PARTICLE_CAP);
     expect(s.rings.count).toBeLessThanOrEqual(MAX_RINGS);
   });
