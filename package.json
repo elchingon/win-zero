@@ -10,7 +10,8 @@
     "test:tz": "TZ=UTC jest && TZ=America/Denver jest && TZ=Pacific/Chatham jest",
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
-    "gen:sfx": "node scripts/gen-sfx.mjs"
+    "gen:sfx": "node scripts/gen-sfx.mjs",
+    "gen:brand": "node scripts/gen-brand.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/barlow": "^0.4.1",
