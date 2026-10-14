@@ -139,6 +139,26 @@ export function newlyUnlocked(prevBest: number, nextBest: number): WeaponDef[] {
   return unlockedWeapons(nextBest).filter((w) => w.unlockAt > before);
 }
 
+/** The player's pick while it's unlocked; otherwise the default, the highest unlocked weapon. */
+export function equippedWeapon(pick: WeaponId | null, bestStreak: number): WeaponDef {
+  return pick && isUnlocked(pick, bestStreak) ? weaponById(pick) : defaultWeapon(bestStreak);
+}
+
+export interface ArsenalRow {
+  weapon: WeaponDef;
+  unlocked: boolean;
+  /** Yes answers until it unlocks: the current streak has to reach the unlock day. 0 once unlocked. */
+  daysToGo: number;
+}
+
+/** Every weapon with its unlock state, for the Home arsenal list. */
+export function arsenal(bestStreak: number, streak: number): ArsenalRow[] {
+  return WEAPONS.map((weapon) => {
+    const unlocked = isUnlocked(weapon.id, bestStreak);
+    return { weapon, unlocked, daysToGo: unlocked ? 0 : weapon.unlockAt - streak };
+  });
+}
+
 export interface NextUnlock {
   weapon: WeaponDef;
   /** Yes answers still needed: the current streak has to reach the unlock day. */
