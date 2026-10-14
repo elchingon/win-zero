@@ -2,7 +2,7 @@ import { useFonts } from 'expo-font';
 import { DarkTheme, Stack, ThemeProvider, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -12,6 +12,7 @@ import { appStore, startLifecycle, useApp } from '@/store';
 import { fontAssets } from '@/theme/fonts';
 import { colors } from '@/theme/tokens';
 import { ZeroField } from '@/ui/ZeroField';
+import { LaunchSplash } from '@/ui/LaunchSplash';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -27,19 +28,24 @@ export default function RootLayout() {
   // On a font error, fall through to system fonts rather than holding the splash.
   const ready = (fontsLoaded || !!fontError) && hydrated;
   const pathname = usePathname();
+  const [launched, setLaunched] = useState(false);
+  const finishLaunch = useCallback(() => setLaunched(true), []);
 
   // Catch up on closed windows after storage loads and whenever the app comes back.
   useEffect(() => startLifecycle(appStore), []);
   // Then keep the scheduled reminders in step with the goal, and answer from notifications.
   useEffect(() => startNotifications(), []);
   // Notification handling needs to know which screen is up, once there is one.
-  useEffect(() => reportPath(ready ? pathname : null), [ready, pathname]);
+  useEffect(() => reportPath(ready && launched ? pathname : null), [ready, launched, pathname]);
 
-  useEffect(() => {
-    if (ready) SplashScreen.hide();
-  }, [ready]);
-
-  if (!ready) return null;
+  if (!ready || !launched) {
+    return (
+      <GestureHandlerRootView style={styles.root}>
+        <StatusBar style="light" />
+        <LaunchSplash ready={ready} onFinish={finishLaunch} />
+      </GestureHandlerRootView>
+    );
+  }
 
   return (
     <GestureHandlerRootView style={styles.root}>
