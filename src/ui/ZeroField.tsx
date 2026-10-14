@@ -14,7 +14,7 @@ import { useEffect, useMemo } from 'react';
 import { StyleSheet, useWindowDimensions } from 'react-native';
 import { useDerivedValue, useFrameCallback, useSharedValue, type SharedValue } from 'react-native-reanimated';
 
-import { zeroRadius } from '@/game/sizing';
+import { zeroRadius } from '@/game/sim/sizing';
 import { ZeroRing } from '@/game/ZeroRing';
 import { colors, withAlpha, zeroPalette } from '@/theme/tokens';
 

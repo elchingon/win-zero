@@ -14,7 +14,7 @@ import { useMemo } from 'react';
 
 import { colors } from '@/theme/tokens';
 
-import { ZERO_ASPECT, ZERO_STROKE } from './sizing';
+import { ZERO_ASPECT, ZERO_STROKE } from './sim/sizing';
 
 /** Glow size as a fraction of the vertical radius (the prototype's shadowBlur, as a blur sigma). */
 const GLOW = 0.22;
