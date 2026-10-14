@@ -10,12 +10,15 @@ import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { composeRound, equippedWeapon, fillPlan, unlockedWeapons, type WeaponId } from '@/engine';
+import { makeCues } from '@/game/cues';
 import { GameCanvas, type FrameStats, type GameHandle, type RoundSetup } from '@/game/GameCanvas';
 import { Hud } from '@/game/Hud';
 import { ResultSheet, type ResultMode } from '@/game/ResultSheet';
+import { useSfx } from '@/game/sfx';
 import type { Report } from '@/game/sim/types';
 import { appStore, useApp, type RoundRecord } from '@/store';
 import { colors, fonts } from '@/theme/tokens';
+import { feedback } from '@/ui/feedback';
 import { useReduceMotion } from '@/ui/useReduceMotion';
 
 /** Practice rounds: development builds, and release builds made for measuring frame rate. */
@@ -93,12 +96,24 @@ function Round(props: { initialMode: ResultMode; n: number; best: number; record
   // Reports from a round that has since been restarted are ignored.
   const seedRef = useRef(seed);
 
-  const onReport = useCallback((r: Report) => {
-    if (r.seed !== seedRef.current) return;
-    setLeft(r.valueLeft);
-    if (r.final) setOver(true);
-    if (r.showResult) setLanded(true);
-  }, []);
+  const play = useSfx();
+  const [cues] = useState(makeCues);
+  const onReport = useCallback(
+    (r: Report) => {
+      if (r.seed !== seedRef.current) return;
+      setLeft(r.valueLeft);
+      if (r.final) setOver(true);
+      if (r.showResult) setLanded(true);
+      const c = cues(r, Date.now());
+      if (c.shoot) play('shoot');
+      if (c.pop) play('pop');
+      if (c.boom) play('boom');
+      if (c.killHaptic) feedback.kill();
+      if (c.bombHaptic) feedback.bomb();
+      if (c.boomHaptic) feedback.boom();
+    },
+    [cues, play],
+  );
 
   // The last zero went: a real round counts as played.
   useEffect(() => {

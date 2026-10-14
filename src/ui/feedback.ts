@@ -15,4 +15,10 @@ export const feedback = {
   success: () => on() && quiet(Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)),
   /** A Not today: acknowledged, gently. */
   soft: () => on() && quiet(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft)),
+  /** A zero shot down (the round throttles these). */
+  kill: () => on() && quiet(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)),
+  /** A bomb going off. */
+  bomb: () => on() && quiet(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)),
+  /** The last zero: the big explosion. */
+  boom: () => on() && quiet(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)),
 };
