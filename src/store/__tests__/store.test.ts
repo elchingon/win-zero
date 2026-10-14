@@ -95,22 +95,73 @@ describe('notices', () => {
     const h = await withGoal(yesDays(newGoal(), DAY0, 10)); // through 10-22
     h.setTime('2026-10-30', '20:30');
     h.store.getState().refresh(); // seven free misses
-    expect(h.store.getState().takeMissNotice()).toBeNull();
+    expect(h.store.getState().nextNotice()).toBeNull();
+    h.store.getState().markQuietMisses();
     expect(h.store.getState().seenThrough).toBe('2026-10-29');
 
     h.setTime('2026-11-01', '20:30');
     h.store.getState().refresh(); // two slips
-    const notice = { kind: 'slipping', cause: 'missed', lost: 2, streak: 8, days: 2 };
-    expect(h.store.getState().takeMissNotice()).toEqual(notice);
-    expect(h.store.getState().notice).toEqual(notice);
-    expect(h.store.getState().takeMissNotice()).toBeNull();
+    const pending = h.store.getState().nextNotice();
+    expect(pending).toEqual({
+      source: 'missed',
+      notice: { kind: 'slipping', cause: 'missed', lost: 2, streak: 8, days: 2 },
+      through: '2026-10-31',
+    });
+    h.store.getState().noticeShown(pending!);
+    expect(h.store.getState().seenThrough).toBe('2026-10-31');
+    expect(h.store.getState().nextNotice()).toBeNull();
+  });
+
+  it('only marks missed days seen once their news is shown', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 10)); // through 10-22
+    h.setTime('2026-11-01', '20:30');
+    h.store.getState().refresh(); // 7 free misses, then 2 slips
+    const first = h.store.getState().nextNotice();
+    expect(h.store.getState().nextNotice()).toEqual(first); // reading it changes nothing
+    expect(h.store.getState().seenThrough).toBeNull();
+    h.store.getState().markQuietMisses(); // there is news, so nothing is quiet
+    expect(h.store.getState().seenThrough).toBeNull();
+
+    // A Yes now leaves the news in place, for after the round.
+    expect(h.store.getState().answer('yes')).toMatchObject({ ok: true });
+    expect(h.store.getState().nextNotice()).toMatchObject({ source: 'missed', notice: { kind: 'slipping', lost: 2 } });
+  });
+
+  it('never moves the seen mark back', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 10)); // through 10-22
+    h.setTime('2026-11-01', '20:30');
+    h.store.getState().refresh();
+    const early = h.store.getState().nextNotice()!; // through 10-31
+    h.setTime('2026-11-02', '20:30');
+    h.store.getState().refresh(); // one more slip
+    const late = h.store.getState().nextNotice()!;
+    expect(late).toMatchObject({ through: '2026-11-01', notice: { lost: 3 } });
+    h.store.getState().noticeShown(late);
+    h.store.getState().noticeShown(early); // e.g. an older Notice screen closing late
+    expect(h.store.getState().seenThrough).toBe('2026-11-01');
+  });
+
+  it("puts an answer's notice ahead of missed-day news, and clears only the one shown", async () => {
+    const h = await withGoal({ ...yesDays(newGoal(), DAY0, 10), shields: 0 }); // through 10-22
+    h.setTime('2026-11-01', '20:30');
+    h.store.getState().refresh(); // 2 slips, not yet shown
+    const missed = h.store.getState().nextNotice()!;
+    h.store.getState().answer('not-today'); // one more
+    const answered = h.store.getState().nextNotice()!;
+    expect(answered).toEqual({ source: 'answer', notice: { kind: 'slipping', cause: 'answer', lost: 1, streak: 7, days: 1 } });
+
+    h.store.getState().noticeShown(missed);
+    expect(h.store.getState().nextNotice()?.notice).toBe(answered.notice); // still waiting its turn
+    h.store.setState({ notice: { kind: 'noted' } }); // a newer answer's notice
+    h.store.getState().noticeShown(answered);
+    expect(h.store.getState().notice).toEqual({ kind: 'noted' });
   });
 
   it('shows Reset or Shielded for a missed-day final', async () => {
     const reset = await withGoal({ ...yesDays(newGoal(), DAY0, 20), shields: 0 });
     reset.setTime('2026-11-16', '20:00');
     reset.store.getState().refresh();
-    expect(reset.store.getState().takeMissNotice()).toEqual({
+    expect(reset.store.getState().nextNotice()?.notice).toEqual({
       kind: 'reset',
       cause: 'missed',
       lostStreak: 20,
@@ -121,7 +172,7 @@ describe('notices', () => {
     const shielded = await withGoal(yesDays(newGoal(), DAY0, 20)); // 2 shields
     shielded.setTime('2026-11-16', '20:00');
     shielded.store.getState().refresh();
-    expect(shielded.store.getState().takeMissNotice()).toEqual({
+    expect(shielded.store.getState().nextNotice()?.notice).toEqual({
       kind: 'shielded',
       cause: 'missed',
       lost: 6,
@@ -137,7 +188,7 @@ describe('notices', () => {
     expect(h.store.getState().answer('not-today')).toMatchObject({ ok: true, outcome: { kind: 'slipped' } });
     expect(h.store.getState().notice).toEqual({ kind: 'slipping', cause: 'answer', lost: 1, streak: 9, days: 1 });
 
-    h.store.getState().clearNotice();
+    h.store.getState().noticeShown(h.store.getState().nextNotice()!);
     expect(h.store.getState().notice).toBeNull();
 
     h.store.setState({ goal: { ...h.store.getState().goal!, slide: 6 } });
@@ -413,7 +464,7 @@ describe('debug jump to day', () => {
     expect(s.round).toMatchObject({ day: addDays(DAY0, -1), n: 30, played: false, rewards: { bomb: true, weapons: ['chain'] } });
     expect(s.weapon).toBe('chain');
     expect(s.notice).toBeNull();
-    expect(s.takeMissNotice()).toBeNull();
+    expect(s.nextNotice()).toBeNull();
   });
 
   it('turns down run lengths it cannot build', async () => {

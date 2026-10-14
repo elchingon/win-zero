@@ -36,6 +36,7 @@ import {
   STORE_VERSION,
   type AnswerRoute,
   type Notice,
+  type PendingNotice,
   type PersistedState,
   type Prefs,
   type RoundRecord,
@@ -90,9 +91,15 @@ export interface AppState extends PersistedState {
   setCheckInTime: (time: ClockTime) => EditResult;
   setMorningTime: (time: ClockTime) => EditResult;
   setPref: <K extends keyof Prefs>(key: K, value: Prefs[K]) => void;
-  /** The Slipping / Reset / Shielded screen for missed days not yet shown, marking them seen. */
-  takeMissNotice: () => Notice | null;
-  clearNotice: () => void;
+  /**
+   * The next one-time screen, without marking it shown: an answer's notice first, then the
+   * Slipping / Reset / Shielded news for missed days not yet shown.
+   */
+  nextNotice: () => PendingNotice | null;
+  /** The Notice screen showed `p`: clear that answer's notice, or count those missed days as seen. */
+  noticeShown: (p: PendingNotice) => void;
+  /** Count missed days that cost nothing (the grace week, or paused) as seen, as they have no news. */
+  markQuietMisses: () => void;
   erase: () => void;
   advanceDevClock: (ms: number) => void;
   resetDevClock: () => void;
@@ -135,6 +142,20 @@ export function createAppStore(deps: StoreDeps) {
         const timeZone = () => deps.timeZone();
         /** The goal, once storage has been read. Acting earlier would overwrite saved data. */
         const ready = () => (get().hydrated ? get().goal : null);
+
+        /** News of missed days after `seenThrough`, through the latest settled day. */
+        const missedNews = (seenThrough: DayKey | null): PendingNotice | null => {
+          const goal = ready();
+          if (!goal?.lastSettledDay) return null;
+          const notice = noticeForMisses(missDigest(goal, seenThrough), goal);
+          return notice ? { source: 'missed', notice, through: goal.lastSettledDay } : null;
+        };
+
+        /** Missed days through `day` have been shown. Never moves back. */
+        const seeThrough = (day: DayKey) => {
+          const { seenThrough } = get();
+          if (seenThrough === null || day > seenThrough) set({ seenThrough: day });
+        };
 
         /** Store a new goal state, dropping a round that's gone stale. */
         const setGoal = (goal: GoalState, patch: Partial<AppState> = {}) => {
@@ -255,18 +276,24 @@ export function createAppStore(deps: StoreDeps) {
 
           setPref: (key, value) => set({ prefs: { ...get().prefs, [key]: value } }),
 
-          takeMissNotice: () => {
-            const goal = ready();
-            if (!goal) return null;
-            const { seenThrough } = get();
-            const notice = noticeForMisses(missDigest(goal, seenThrough), goal);
-            if (seenThrough !== goal.lastSettledDay) set({ seenThrough: goal.lastSettledDay });
-            if (notice) set({ notice });
-            return notice;
+          nextNotice: () => {
+            const { notice, seenThrough } = get();
+            if (notice) return { source: 'answer', notice };
+            return missedNews(seenThrough);
           },
 
-          clearNotice: () => {
-            if (get().notice) set({ notice: null });
+          noticeShown: (p) => {
+            if (p.source === 'answer') {
+              // Only the one shown: a newer answer's notice waits its turn.
+              if (get().notice === p.notice) set({ notice: null });
+            } else {
+              seeThrough(p.through);
+            }
+          },
+
+          markQuietMisses: () => {
+            const goal = ready();
+            if (goal?.lastSettledDay && !missedNews(get().seenThrough)) seeThrough(goal.lastSettledDay);
           },
 
           erase: () => {

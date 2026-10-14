@@ -60,3 +60,11 @@ export type Notice =
   | { kind: 'reset'; cause: NoticeCause; lostStreak: number; bestStreak: number; days: number }
   /** A Not today that cost nothing, because the streak was already 0. */
   | { kind: 'noted' };
+
+/**
+ * The next one-time screen and where it came from. An answer's notice waits in the store;
+ * missed-day news is worked out from history, and counts as seen through `through` once shown.
+ */
+export type PendingNotice =
+  | { source: 'answer'; notice: Notice }
+  | { source: 'missed'; notice: Notice; through: DayKey };

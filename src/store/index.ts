@@ -20,4 +20,4 @@ export function useApp<T>(selector: (state: AppState) => T): T {
 
 export type { AppState, AppStore, EditResult, SetupResult } from './createAppStore';
 export { startLifecycle, whenHydrated } from './lifecycle';
-export type { AnswerRoute, Notice, Prefs, RoundRecord } from './types';
+export type { AnswerRoute, Notice, PendingNotice, Prefs, RoundRecord } from './types';

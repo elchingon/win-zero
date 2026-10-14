@@ -8,57 +8,14 @@ import type { GoalState } from '@/engine';
 import { DAY0, newGoal, yesDays } from '@/engine/__tests__/fixtures';
 import { flush, harness, ready, withGoal } from '@/store/__tests__/harness';
 
-import { decideResponse, startResponses, type ResponseApi, type ResponseLike } from '../responses';
+import { decideResponse, startResponses, type ResponseLike } from '../responses';
 import { shouldGoHome } from '../route';
-import { ACTION_NOT_TODAY, ACTION_YES, type ReminderData } from '../shared';
+import { ACTION_NOT_TODAY, ACTION_YES } from '../shared';
+import { fakeResponses, response } from './fakes';
 
 beforeEach(async () => {
   await AsyncStorage.clear();
 });
-
-/** A response to one of our notifications. */
-function response(action: string, data: Partial<ReminderData> & { day: string }, id?: string, date = 1): ResponseLike {
-  const payload = { goalId: 'g1', kind: 'checkin', ...data };
-  return {
-    actionIdentifier: action,
-    notification: { date, request: { identifier: id ?? `${payload.kind}-${payload.day}`, content: { data: payload } } },
-  };
-}
-
-/** A stand-in for expo-notifications' response API. */
-function fakeResponses() {
-  let last: ResponseLike | null = null;
-  const listeners = new Set<(r: ResponseLike) => void>();
-  const dismissed: string[] = [];
-  let cleared = 0;
-  const api: ResponseApi = {
-    getLastNotificationResponse: () => last,
-    addNotificationResponseReceivedListener: (fn) => {
-      listeners.add(fn);
-      return { remove: () => listeners.delete(fn) };
-    },
-    clearLastNotificationResponse: () => {
-      last = null;
-      cleared++;
-    },
-    dismissNotificationAsync: async (id) => {
-      dismissed.push(id);
-    },
-  };
-  return {
-    api,
-    dismissed,
-    cleared: () => cleared,
-    listeners: () => listeners.size,
-    /** The response that launched the app. */
-    launchWith: (r: ResponseLike) => (last = r),
-    /** A tap while the app is running (or before JS is ready, on Android). */
-    tap: (r: ResponseLike) => {
-      last = r;
-      listeners.forEach((fn) => fn(r));
-    },
-  };
-}
 
 /** A hydrated store holding `goal` at a time and date, listening for responses. */
 async function running(goal: GoalState, day: string, time: `${number}:${number}`) {
