@@ -23,7 +23,7 @@ import { acquire } from '../pool';
 import { resetReport } from '../report';
 import { step } from '../step';
 import type { GameState } from '../types';
-import { game, run } from './fixtures';
+import { finalRings, game, run } from './fixtures';
 
 const count = (s: GameState, shape: string) => s.particles.items.slice(0, s.particles.count).filter((p) => p.shape === shape).length;
 
@@ -69,10 +69,11 @@ describe('the celebration', () => {
     expect(s.shake).toBeLessThan(SHAKE_FINAL / 4);
   });
 
-  it('keeps room for the confetti after a full board goes up at once', () => {
+  it('keeps room for the confetti and the shockwaves after a full board goes up at once', () => {
     const s = game(60);
-    win(s);
+    win(s, 120, 300);
     expect(count(s, 'confetti')).toBe(CONFETTI);
+    expect(finalRings(s, 120, 300)).toEqual([AMBER, FLARE, TEAL]);
   });
 });
 
