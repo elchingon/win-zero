@@ -1,5 +1,7 @@
-// Month grids for the history calendar.
-import { addDays, weekdayOf, type DayKey } from '@/engine';
+// Month grids and summaries for the history calendar.
+import { addDays, weekdayOf, type CalendarMark, type DayKey } from '@/engine';
+
+import { formatMonth } from './format';
 
 /** 'YYYY-MM'. */
 export type MonthKey = string;
@@ -31,4 +33,24 @@ const INITIALS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 export function weekdayInitials(firstWeekday: number): string[] {
   return Array.from({ length: 7 }, (_, i) => INITIALS[(firstWeekday - 1 + i) % 7] ?? '');
+}
+
+/** How each mark is counted in a month summary. Same order as the calendar's legend. */
+const SUMMARY_WORDS: [CalendarMark, string][] = [
+  ['yes', 'yes'],
+  ['no', 'not today'],
+  ['shielded', 'shielded'],
+  ['missed', 'missed'],
+  ['paused', 'paused'],
+];
+
+/**
+ * One line for a screen reader, ahead of the month's day cells: "October 2026: 9 yes, 2 missed",
+ * or "October 2026: no check-ins yet".
+ */
+export function monthSummary(month: MonthKey, marks: ReadonlyMap<DayKey, CalendarMark>): string {
+  const counts = new Map<CalendarMark, number>();
+  for (const [day, mark] of marks) if (monthOf(day) === month) counts.set(mark, (counts.get(mark) ?? 0) + 1);
+  const parts = SUMMARY_WORDS.filter(([mark]) => counts.has(mark)).map(([mark, word]) => `${counts.get(mark)} ${word}`);
+  return `${formatMonth(month)}: ${parts.length ? parts.join(', ') : 'no check-ins yet'}`;
 }

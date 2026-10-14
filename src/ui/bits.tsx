@@ -6,8 +6,13 @@ import { colors, fonts, radii, space, type } from '@/theme/tokens';
 
 import { feedback } from './feedback';
 
-export function Eyebrow({ children, color }: { children: ReactNode; color?: string }) {
-  return <Text style={[type.eyebrow, color ? { color } : null]}>{children}</Text>;
+/** A small uppercase label. `header` makes it a heading, for screen readers' heading navigation. */
+export function Eyebrow({ children, color, header }: { children: ReactNode; color?: string; header?: boolean }) {
+  return (
+    <Text style={[type.eyebrow, color ? { color } : null]} accessibilityRole={header ? 'header' : undefined}>
+      {children}
+    </Text>
+  );
 }
 
 export function Fine({ children, color, center }: { children: ReactNode; color?: string; center?: boolean }) {
@@ -96,6 +101,7 @@ export function ToggleRow(props: { label: string; detail?: string; value: boolea
       </View>
       <Switch
         accessibilityLabel={props.label}
+        accessibilityHint={props.detail}
         value={props.value}
         onValueChange={(v) => {
           feedback.tick();

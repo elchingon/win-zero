@@ -2,20 +2,12 @@
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
-import { isWindowToday, notTodayPreview, type CheckInWindow, type GoalState, type TimeZone } from '@/engine';
-import { formatInstantTime, plural } from '@/lib/format';
+import { isWindowToday, type CheckInWindow, type GoalState, type TimeZone } from '@/engine';
+import { formatInstantTime } from '@/lib/format';
 import { colors, fonts, fontScale, radii, space } from '@/theme/tokens';
 import { Button } from '@/ui/Button';
 
-/** What each answer would do, in plain words. */
-function stakes(goal: GoalState): string {
-  const yes = `Yes: ${plural(goal.streak + 1, 'zero')} to shoot.`;
-  const no = notTodayPreview(goal);
-  if (no.kind === 'shield') return `${yes} Not today: a shield keeps your streak.`;
-  if (no.lose === 0) return yes;
-  if (no.kind === 'reset') return `${yes} Not today: a fresh start, from one zero.`;
-  return `${yes} Not today: one zero comes off.`;
-}
+import { checkInStakes, stakesHint, stakesLine } from './stakes';
 
 export function CheckInCard(props: {
   goal: GoalState;
@@ -29,11 +21,13 @@ export function CheckInCard(props: {
 }) {
   const { goal, window, now, tz, h24, onYes, onNotToday } = props;
   const when = isWindowToday(window, now) ? 'today' : 'yesterday';
+  const stakes = checkInStakes(goal);
   // At large text sizes the buttons stack, so their labels needn't shrink to fit side by side.
   const stack = useWindowDimensions().fontScale > fontScale.stackButtons;
   return (
-    <Animated.View entering={FadeInDown.springify().damping(14)} style={styles.card} accessibilityRole="summary">
-      <View style={styles.head}>
+    <Animated.View entering={FadeInDown.springify().damping(14)} style={styles.card}>
+      {/* Dressed like a notification; screen readers start at the question. */}
+      <View style={styles.head} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
         <View style={styles.app}>
           <View style={styles.appRing} />
         </View>
@@ -43,10 +37,23 @@ export function CheckInCard(props: {
       <Text style={styles.question}>
         Did you stick to “{goal.goal}” {when}?
       </Text>
-      <Text style={styles.stakes}>{stakes(goal)}</Text>
+      <Text style={styles.stakes}>{stakesLine(stakes)}</Text>
       <View style={[styles.actions, stack && styles.stacked]}>
-        <Button label="Yes, I did" onPress={onYes} silent style={!stack && styles.yes} />
-        <Button label="Not today" variant="ghost" onPress={onNotToday} silent style={!stack && styles.no} />
+        <Button
+          label="Yes, I did"
+          onPress={onYes}
+          silent
+          accessibilityHint={stakesHint(stakes.yes)}
+          style={!stack && styles.yes}
+        />
+        <Button
+          label="Not today"
+          variant="ghost"
+          onPress={onNotToday}
+          silent
+          accessibilityHint={stakes.notToday ? stakesHint(stakes.notToday) : undefined}
+          style={!stack && styles.no}
+        />
       </View>
     </Animated.View>
   );

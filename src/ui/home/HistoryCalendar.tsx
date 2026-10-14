@@ -1,10 +1,10 @@
 // One month of check-ins: yes / not today / shielded / missed, with misses after a long-break
 // reset muted as "paused". Browsable from the first goal day to today.
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { calendarMark, type CalendarMark, type DayKey, type GoalState } from '@/engine';
-import { addMonths, monthGrid, monthOf, weekdayInitials } from '@/lib/calendar';
+import { addMonths, monthGrid, monthOf, monthSummary, weekdayInitials, type MonthKey } from '@/lib/calendar';
 import { formatDayShort, formatMonth } from '@/lib/format';
 import { colors, fonts, fontScale, space } from '@/theme/tokens';
 import { Eyebrow, shared } from '@/ui/bits';
@@ -38,26 +38,38 @@ export function HistoryCalendar(props: { goal: GoalState; today: DayKey; pending
 
   const markOf = (day: DayKey): Mark | null => marks.get(day) ?? (day === pendingDay ? 'pending' : null);
 
+  /** Show another month, and tell a screen reader what's in it. */
+  const go = (to: MonthKey) => {
+    setMonth(to);
+    AccessibilityInfo.announceForAccessibility(monthSummary(to, marks));
+  };
+  const prev = addMonths(shown, -1);
+  const next = addMonths(shown, 1);
+
   return (
     <View style={shared.section}>
       <View style={shared.sectionHead}>
-        <Eyebrow>History</Eyebrow>
+        <Eyebrow header>History</Eyebrow>
         <View style={styles.nav}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Previous month"
+            accessibilityLabel={`Previous month, ${formatMonth(prev)}`}
+            accessibilityState={{ disabled: shown <= first }}
             disabled={shown <= first}
-            onPress={() => setMonth(addMonths(shown, -1))}
+            onPress={() => go(prev)}
             hitSlop={10}
           >
             <Text style={[styles.arrow, shown <= first && styles.arrowOff]}>‹</Text>
           </Pressable>
-          <Text style={styles.month}>{formatMonth(shown)}</Text>
+          <Text style={styles.month} accessibilityLabel={monthSummary(shown, marks)}>
+            {formatMonth(shown)}
+          </Text>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Next month"
+            accessibilityLabel={`Next month, ${formatMonth(next)}`}
+            accessibilityState={{ disabled: shown >= last }}
             disabled={shown >= last}
-            onPress={() => setMonth(addMonths(shown, 1))}
+            onPress={() => go(next)}
             hitSlop={10}
           >
             <Text style={[styles.arrow, shown >= last && styles.arrowOff]}>›</Text>
@@ -66,7 +78,8 @@ export function HistoryCalendar(props: { goal: GoalState; today: DayKey; pending
       </View>
 
       <View style={styles.grid}>
-        <View style={styles.week}>
+        {/* The day labels say the weekday, so screen readers skip the initials. */}
+        <View style={styles.week} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
           {weekdayInitials(firstWeekday).map((d, i) => (
             <Text key={i} style={styles.weekday}>
               {d}
@@ -83,8 +96,10 @@ export function HistoryCalendar(props: { goal: GoalState; today: DayKey; pending
                 <View
                   key={day}
                   style={[styles.cell, outside && styles.outside]}
-                  accessible
-                  accessibilityLabel={`${formatDayShort(day)}${mark ? `: ${MARK_WORDS[mark]}` : ''}`}
+                  accessible={!outside}
+                  accessibilityElementsHidden={outside}
+                  importantForAccessibility={outside ? 'no-hide-descendants' : 'yes'}
+                  accessibilityLabel={`${formatDayShort(day)}${day === today ? ', today' : ''}${mark ? `: ${MARK_WORDS[mark]}` : ''}`}
                 >
                   <Text style={[styles.date, day === today && styles.today]} maxFontSizeMultiplier={fontScale.calendarDate}>
                     {Number(day.slice(8))}
@@ -97,7 +112,8 @@ export function HistoryCalendar(props: { goal: GoalState; today: DayKey; pending
         ))}
       </View>
 
-      <View style={styles.legend}>
+      {/* Each day says its own mark, so screen readers skip the key. */}
+      <View style={styles.legend} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
         {LEGEND.map((m) => (
           <View key={m} style={styles.legendItem}>
             <MarkGlyph mark={m} />

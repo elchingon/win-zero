@@ -2,7 +2,7 @@
 // and the history calendar.
 import { Redirect, router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState, type ComponentType } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
 
 import { dayKeyAt, nextWindow, pendingWindow, type AnswerRejection, type GoalState } from '@/engine';
 import { formatWhen } from '@/lib/format';
@@ -86,6 +86,10 @@ function HomeScreen({ goal }: { goal: GoalState }) {
   };
 
   const banner = rejection ? REJECTED[rejection] : null;
+  // It appears after a notification's answer was turned down; say so to a screen reader too.
+  useEffect(() => {
+    if (banner) AccessibilityInfo.announceForAccessibility(banner);
+  }, [banner]);
 
   const unplayed = round && !round.played ? round : null;
   const nextWhen = formatWhen(next.opensAt, now, tz, h24);
@@ -95,7 +99,7 @@ function HomeScreen({ goal }: { goal: GoalState }) {
       <TopBar right={<LinkButton label="Settings" onPress={() => router.push('/settings')} />} />
 
       <View style={styles.goal}>
-        <Eyebrow>Daily goal</Eyebrow>
+        <Eyebrow header>Daily goal</Eyebrow>
         <Text style={type.goal}>{goal.goal}</Text>
       </View>
 
