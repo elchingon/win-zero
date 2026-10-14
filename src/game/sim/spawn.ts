@@ -15,6 +15,7 @@ import {
   MAX_BULLETS,
   MAX_PARTICLES,
   MAX_RINGS,
+  PALETTE_SIZE,
   SIZE_JITTER,
   SMALL_ZERO_BOOST,
   SMALL_ZERO_REF,
@@ -34,9 +35,6 @@ import { makeReport } from './report';
 import { between, makeRng, random } from './rng';
 import { ZERO_ASPECT, ZERO_MIN_RADIUS, zeroRadius } from './sizing';
 import type { Beam, Bolt, Bullet, GameConfig, GameState, Glyph, Particle, Ring, Zero } from './types';
-
-/** Colors cycle through the zero palette: amber, flare, teal, fg. */
-const PALETTE_SIZE = 4;
 
 function makeZero(): Zero {
   return {
@@ -194,6 +192,8 @@ export function createGame(cfg: GameConfig): GameState {
     sinceShot: Infinity,
 
     shake: 0,
+    shakeX: 0,
+    shakeY: 0,
     flash: 0,
     muzzle: 0,
 

@@ -46,6 +46,16 @@ const BULLET_LOOKS = [
   { color: colors.flare, tail: 26, width: 8, head: 5 },
 ];
 const BULLET_TAIL_ALPHA = 0.55;
+/**
+ * White effect shapes, in points, tinted per particle when drawn: a square dot, a 2:1 confetti
+ * strip, and a fragment ring (an oval with the prototype's stroke).
+ */
+const FX_DOT = 8;
+const FX_CONFETTI = 16;
+const FX_RING = 12;
+const FX_RING_STROKE = 0.3;
+/** Tinted sprites are baked white, so a tint multiplies straight to its color. */
+const TINT_BASE = '#FFFFFF';
 
 export function rgba(hex: string, alpha = 1): Rgba {
   const c = Skia.Color(hex);
@@ -159,6 +169,46 @@ function bulletCell(look: (typeof BULLET_LOOKS)[number], d: number): Cell {
   };
 }
 
+function white(style: PaintStyle, setup?: (p: SkPaint) => void): SkPaint {
+  return paint(style, (p) => {
+    p.setColor(Skia.Color(TINT_BASE));
+    setup?.(p);
+  });
+}
+
+/** The effect shapes, drawn at `d` px per point. Each sprite's ry is its reference size in px. */
+function fxCells(d: number): Cell[] {
+  const dot = FX_DOT * d;
+  const conf = FX_CONFETTI * d;
+  const ring = FX_RING * d;
+  const ringStroke = ring * FX_RING_STROKE;
+  return [
+    {
+      w: Math.ceil(dot + 2 * SPRITE_PAD),
+      h: Math.ceil(dot + 2 * SPRITE_PAD),
+      ry: dot,
+      draw: (canvas, cx, cy) => canvas.drawRect(Skia.XYWHRect(cx - dot / 2, cy - dot / 2, dot, dot), white(PaintStyle.Fill)),
+    },
+    {
+      w: Math.ceil(conf + 2 * SPRITE_PAD),
+      h: Math.ceil(conf / 2 + 2 * SPRITE_PAD),
+      ry: conf,
+      draw: (canvas, cx, cy) =>
+        canvas.drawRect(Skia.XYWHRect(cx - conf / 2, cy - conf / 4, conf, conf / 2), white(PaintStyle.Fill)),
+    },
+    {
+      w: Math.ceil(2 * (ring * ZERO_ASPECT + ringStroke / 2 + SPRITE_PAD)),
+      h: Math.ceil(2 * (ring + ringStroke / 2 + SPRITE_PAD)),
+      ry: ring,
+      draw: (canvas, cx, cy) =>
+        canvas.drawOval(
+          Skia.XYWHRect(cx - ring * ZERO_ASPECT, cy - ring, 2 * ring * ZERO_ASPECT, 2 * ring),
+          white(PaintStyle.Stroke, (p) => p.setStrokeWidth(ringStroke)),
+        ),
+    },
+  ];
+}
+
 /** Lay out rows of cells left to right, top to bottom, and record them into one picture. */
 function pack(rows: Cell[][]): { picture: SkPicture; sprites: Sprite[][]; width: number; height: number } {
   let width = 0;
@@ -214,10 +264,13 @@ export function bakeSprites(opts: { objectCount: number; width: number; height: 
     zero: zeroPalette.map((c) => ringCell(ryPt * density, c, false)),
     armored: opts.armored ? zeroPalette.map((c) => ringCell(ryPt * ARMOR_SIZE_SCALE * density, c, true)) : [],
     bullets: BULLET_LOOKS.map((look) => bulletCell(look, fxDensity)),
+    fx: fxCells(fxDensity),
   };
   const { picture, sprites, width, height } = pack(Object.values(rows));
-  const [zero = [], armored = [], bullets = []] = sprites;
-  return { picture, sheet: { width, height, zero, armored, bullets } };
+  const [zero = [], armored = [], bullets = [], fx = []] = sprites;
+  const [dot, confetti, ring] = fx;
+  if (!dot || !confetti || !ring) throw new Error('The effect sprites failed to pack');
+  return { picture, sheet: { width, height, zero, armored, bullets, fx: { dot, confetti, ring } } };
 }
 
 function background(width: number, height: number): SkPicture {
@@ -273,7 +326,12 @@ export function makeKit(width: number, height: number, sheet: SpriteSheet): Kit 
       stroke: paint(PaintStyle.Stroke),
       glowFill: paint(PaintStyle.Fill, (p) => p.setBlendMode(BlendMode.Plus)),
       spriteAdd: paint(PaintStyle.Fill, (p) => p.setBlendMode(BlendMode.Plus)),
+      glowStroke: paint(PaintStyle.Stroke, (p) => {
+        p.setBlendMode(BlendMode.Plus);
+        p.setStrokeCap(StrokeCap.Round);
+      }),
     },
+    blend: { modulate: BlendMode.Modulate },
     palette: zeroPalette.map((c) => rgba(c)),
     colors: { fg: rgba(colors.fg), amber: rgba(colors.amber), panel2: rgba(colors.panel2) },
   };

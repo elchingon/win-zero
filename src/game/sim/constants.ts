@@ -93,6 +93,13 @@ export const BOLT_JITTER = 11;
 export const BOLT_DURATION = 0.3;
 export const BEAM_DURATION = 0.28;
 
+/** Palette slots (tokens.zeroPalette), for effects that aren't a zero's own color. */
+export const AMBER = 0;
+export const FLARE = 1;
+export const TEAL = 2;
+export const FG = 3;
+export const PALETTE_SIZE = 4;
+
 /** Sparks per kill, fewer when the screen is crowded. */
 export const KILL_SPARKS = 22;
 export const KILL_SPARKS_BUSY = 10;
@@ -101,6 +108,11 @@ export const BUSY_OBJECTS = 40;
 /** Little spinning "0" fragments per kill. */
 export const KILL_FRAGMENTS = 4;
 export const KILL_FRAGMENTS_BUSY = 2;
+/**
+ * Kills stop throwing particles once this many are live, so a bomb through a full board leaves
+ * room in the pool for the final zero's confetti.
+ */
+export const KILL_PARTICLE_CAP = 340;
 /** Armored kills throw this many times the sparks, and a bigger shockwave. */
 export const ARMOR_BURST_SCALE = 2;
 /** Sparks thrown by a hit that doesn't kill. */
@@ -109,11 +121,41 @@ export const HIT_SPARKS = 6;
 export const CONFETTI = 240;
 export const CONFETTI_RINGS = 22;
 
+/** A kill's sparks: speed and size grow with the zero (size / SCALE_REF, at least SCALE_MIN). */
+export const SPARK = {
+  speedMin: 120,
+  speedRange: 360,
+  lifeMin: 0.5,
+  lifeRange: 0.6,
+  sizeMin: 2,
+  sizeRange: 3.5,
+  scaleRef: 40,
+  scaleMin: 0.6,
+};
+/** A kill's fragments: small "0" rings that tumble and fall. Size is a fraction of the zero's ry. */
+export const FRAGMENT = {
+  speedMin: 80,
+  speedRange: 220,
+  lift: 60,
+  lifeMin: 0.9,
+  lifeRange: 0.5,
+  size: 0.32,
+  spin: 10,
+  gravity: 420,
+};
+/** A kill's shockwave, in multiples of the zero's ry. */
+export const KILL_RING = { start: 0.4, reach: 2.6, duration: 0.4, width: 0.18, minWidth: 2 };
+/** Shake per kill: base + ry × perRy, up to SHAKE_KILL_MAX. */
+export const SHAKE_KILL_BASE = 2;
+export const SHAKE_KILL_PER_RY = 0.06;
+
 export const SHAKE_DECAY = 0.86;
 export const FLASH_DECAY = 0.9;
 export const MUZZLE_DECAY = 0.7;
 export const PARTICLE_DRAG = 0.96;
 export const CONFETTI_DRAG = 0.985;
+/** Below this, the shake is too small to see and the screen holds still. */
+export const SHAKE_MIN = 0.3;
 export const SHAKE_KILL_MAX = 7;
 export const SHAKE_BLAST = 8;
 export const SHAKE_BOMB = 16;

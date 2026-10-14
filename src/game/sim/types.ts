@@ -186,6 +186,9 @@ export interface GameState {
   sinceShot: number;
 
   shake: number;
+  /** This frame's shake offset, drawn from the seeded generator. */
+  shakeX: number;
+  shakeY: number;
   flash: number;
   muzzle: number;
 

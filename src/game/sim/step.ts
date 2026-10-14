@@ -1,8 +1,8 @@
 'worklet';
 // One frame of the round. The frame callback calls step() with the time since the last frame.
 import { updateBullets } from './bullets';
-import { HIT_FLASH, MAX_DT, MUZZLE_DECAY } from './constants';
-import { decay } from './ease';
+import { HIT_FLASH, MAX_DT } from './constants';
+import { updateEffects } from './effects';
 import { updateFiring } from './input';
 import type { GameState, Zero } from './types';
 
@@ -47,5 +47,5 @@ export function step(state: GameState, dt: number): void {
   updateFiring(state);
   updateZeros(state, d);
   updateBullets(state, d);
-  state.muzzle *= decay(MUZZLE_DECAY, d);
+  updateEffects(state, d);
 }

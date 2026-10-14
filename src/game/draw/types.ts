@@ -1,7 +1,7 @@
 'worklet';
 // What the scene drawing needs. The kit is built once on the JS thread (Skia objects are shared
 // with the UI thread by reference); the scratch is built on the UI thread and reused every frame.
-import type { SkPaint, SkPath, SkPicture, SkRect } from '@shopify/react-native-skia';
+import type { BlendMode, SkPaint, SkPath, SkPicture, SkRect } from '@shopify/react-native-skia';
 
 /**
  * A cell of the sprite sheet, in sheet pixels. `ry` is the size it was drawn at, in px: a
@@ -25,6 +25,8 @@ export interface SpriteSheet {
   armored: Sprite[];
   /** Bullet streaks, head at the sprite's center, pointing right: amber, teal (chain), flare (big). */
   bullets: Sprite[];
+  /** White effect shapes, tinted per particle. `ry` is the dot's side, the confetti's length, the ring's ry. */
+  fx: { dot: Sprite; confetti: Sprite; ring: Sprite };
 }
 
 /** A color as [r, g, b, a], each 0..1: what Skia's native calls accept without allocating. */
@@ -47,7 +49,11 @@ export interface Kit {
     glowFill: SkPaint;
     /** Additive sprites. */
     spriteAdd: SkPaint;
+    /** Additive strokes: shockwaves, beams, bolts. */
+    glowStroke: SkPaint;
   };
+  /** Skia enum values the worklets can't import: drawAtlas tints multiply the sprite. */
+  blend: { modulate: BlendMode };
   /** tokens.zeroPalette: amber, flare, teal, fg. */
   palette: Rgba[];
   colors: { fg: Rgba; amber: Rgba; panel2: Rgba };
@@ -61,18 +67,23 @@ export interface Xform {
   ty: number;
 }
 
-/** Sprites waiting for one drawAtlas call. srcs / dsts are trimmed to `count` before drawing. */
+/** Sprites waiting for one drawAtlas call. srcs / dsts / cols are trimmed to `count` before drawing. */
 export interface Batch {
   srcs: Sprite[];
   dsts: Xform[];
-  /** Backing transforms, reused. */
+  /** One tint per sprite, for a tinted batch; empty otherwise. */
+  cols: Rgba[];
+  /** Backing transforms and tints, reused. */
   xforms: Xform[];
+  tints: Rgba[];
+  tinted: boolean;
   count: number;
 }
 
 export interface Scratch {
   zeros: Batch;
   bullets: Batch;
+  particles: Batch;
   rect: SkRect;
   rgba: Rgba;
   /** The development frame meter: time and frames since it last reported, and the slowest frame (ms). */

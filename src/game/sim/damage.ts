@@ -1,6 +1,7 @@
 'worklet';
 // Damage and kills. Every weapon, splash, chain and bomb comes through damageZero, so the
 // counter, the report and the end of the round are handled in one place.
+import { explode } from './effects';
 import { hittable } from './hit';
 import type { GameState, Zero } from './types';
 
@@ -23,6 +24,7 @@ export function killZero(s: GameState, z: Zero): void {
   r.kills++;
   if (z.kind === 'armored') r.armoredKills++;
   r.dirty = true;
+  explode(s, z);
   if (s.valueLeft === 0 && s.phase === 'play') finishRound(s);
 }
 
