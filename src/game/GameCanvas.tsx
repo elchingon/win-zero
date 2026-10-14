@@ -2,7 +2,14 @@
 // steps the round, records it as one Skia picture, and sends a short report to the JS thread.
 // Touches go straight to the sim on the UI thread too. Keep this component's props stable: a
 // new frame callback re-registers the loop, and a new `round` starts the round over.
-import { Canvas, createPicture, Picture, usePictureAsTexture, type SkPicture } from '@shopify/react-native-skia';
+import {
+  Canvas,
+  createPicture,
+  Picture,
+  useFont,
+  usePictureAsTexture,
+  type SkPicture,
+} from '@shopify/react-native-skia';
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -10,6 +17,7 @@ import { useFrameCallback, useSharedValue, type FrameInfo, type SharedValue } fr
 import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
 
 import type { WeaponDef } from '@/engine';
+import { fontAssets } from '@/theme/fonts';
 
 import { bakeSprites, makeKit } from './bake/kit';
 import { drawScene, makeScratch } from './draw/scene';
@@ -24,6 +32,9 @@ import type { GameConfig, GameState, Report } from './sim/types';
 const METER_WINDOW = 0.5;
 /** Assumed for the first frame, which has no previous one. */
 const FIRST_FRAME_MS = 1000 / 60;
+/** The bake makes its own sizes from the typeface; this only loads it. */
+const FONT_LOAD_SIZE = 16;
+const NO_SIZE = { width: 1, height: 1 };
 
 export interface FrameStats {
   fps: number;
@@ -61,16 +72,14 @@ export const GameCanvas = memo(function GameCanvas(props: {
 }) {
   const { round, weapon, reduceMotion, onReport, onFrameStats } = props;
   const { width, height, groups } = round;
-  const objectCount = groups.reduce((sum, g) => sum + g.count, 0);
-  const armored = groups.some((g) => g.kind === 'armored');
+  const font = useFont(fontAssets.Bungee_400Regular, FONT_LOAD_SIZE);
 
-  const baked = useMemo(
-    () => bakeSprites({ objectCount, width, height, armored }),
-    [objectCount, width, height, armored],
-  );
-  const sheetSize = useMemo(() => ({ width: baked.sheet.width, height: baked.sheet.height }), [baked]);
-  const atlas = usePictureAsTexture(baked.picture, sheetSize);
-  const kit = useMemo(() => makeKit(width, height, baked.sheet), [width, height, baked]);
+  // The sprite sheet waits for the font (badges and fill glyphs are Bungee); until then the
+  // frame loop holds off.
+  const baked = useMemo(() => (font ? bakeSprites({ groups, width, height, font }) : null), [groups, width, height, font]);
+  const sheetSize = useMemo(() => (baked ? { width: baked.sheet.width, height: baked.sheet.height } : NO_SIZE), [baked]);
+  const atlas = usePictureAsTexture(baked?.picture ?? null, sheetSize);
+  const kit = useMemo(() => (baked ? makeKit(width, height, baked.sheet) : null), [width, height, baked]);
 
   // Built and mutated on the UI thread only. Reading it from JS would copy the whole round.
   const state = useSharedValue<GameState | null>(null);
@@ -120,7 +129,7 @@ export const GameCanvas = memo(function GameCanvas(props: {
     (info: FrameInfo) => {
       'worklet';
       const s = state.value;
-      if (!s) return;
+      if (!s || !kit) return;
       let sc = scratch.value;
       if (!sc) {
         sc = makeScratch();

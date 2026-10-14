@@ -1,7 +1,7 @@
 'worklet';
 // Damage and kills. Every weapon, splash, chain and bomb comes through damageZero, so the
 // counter, the report and the end of the round are handled in one place.
-import { explode } from './effects';
+import { explode, wound } from './effects';
 import { hittable } from './hit';
 import type { GameState, Zero } from './types';
 
@@ -36,7 +36,7 @@ export function damageZero(s: GameState, z: Zero, damage: number): boolean {
     killZero(s, z);
     return true;
   }
-  z.hitFlash = 1;
+  wound(s, z);
   s.report.hits++;
   s.report.dirty = true;
   return false;

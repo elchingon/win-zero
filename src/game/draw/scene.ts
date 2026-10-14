@@ -1,16 +1,16 @@
 'worklet';
-// Drawing one frame of the round, as in the prototype's draw(). Zeros come from the baked
-// sprite sheet in a single drawAtlas call; nothing here allocates Skia objects.
-import type { SkCanvas, SkImage, SkRSXform, SkRect } from '@shopify/react-native-skia';
+// Drawing one frame of the round, as in the prototype's draw(). Sprites come from the baked
+// sheet a whole layer per drawAtlas call; nothing here allocates Skia objects.
+import type { SkCanvas, SkImage, SkRect } from '@shopify/react-native-skia';
 
-import { MAX_BULLETS, MAX_PARTICLES, POP_IN } from '../sim/constants';
-import { clamp01, easeBack } from '../sim/ease';
-import type { GameState, Zero } from '../sim/types';
+import { MAX_BULLETS, MAX_PARTICLES } from '../sim/constants';
+import type { GameState } from '../sim/types';
 
-import { beginBatch, endBatch, makeBatch, pushSprite } from './batch';
+import { makeBatch } from './batch';
 import { drawBullets, drawParticles, drawRings } from './fx';
 import type { Kit, Scratch } from './types';
 import { paintColor, rect } from './util';
+import { drawEnergyBars, drawHitFlashes, drawZeros } from './zeros';
 
 /** The turret's barrel: a fg bar with an amber tip, pivoting on the muzzle point. */
 const BARREL_WIDTH = 14;
@@ -30,41 +30,20 @@ export const TURRET_BASE_STROKE = 3;
 /** The white flash never fully whites out the screen. */
 const FLASH_MAX = 0.85;
 const FLASH_MIN = 0.02;
-/** Most zeros a round can have on screen (engine OBJECT_CAP), with room to spare. */
+/** Most zeros a round can have on screen (engine OBJECT_CAP), with room to spare, and their badges. */
 const ZERO_BATCH = 64;
 const RAD_TO_DEG = 180 / Math.PI;
 
 export function makeScratch(): Scratch {
   return {
-    zeros: makeBatch(ZERO_BATCH),
+    zeros: makeBatch(ZERO_BATCH * 2),
+    flashes: makeBatch(ZERO_BATCH, true),
     bullets: makeBatch(MAX_BULLETS),
     particles: makeBatch(MAX_PARTICLES, true),
     rect: { x: 0, y: 0, width: 0, height: 0 } as SkRect,
     rgba: [0, 0, 0, 1],
     meter: { t: 0, frames: 0, worst: 0 },
   };
-}
-
-/** A zero's pop-in scale: easeBack from 0 once its spawn delay is over. */
-export function popScale(z: Zero): number {
-  return z.delay > 0 ? easeBack(clamp01((z.age - z.delay) / POP_IN)) : 1;
-}
-
-function drawZeros(canvas: SkCanvas, s: GameState, kit: Kit, atlas: SkImage, sc: Scratch): void {
-  const batch = sc.zeros;
-  beginBatch(batch);
-  for (let i = 0; i < s.zeros.length; i++) {
-    const z = s.zeros[i];
-    if (!z || !z.alive) continue;
-    const pop = popScale(z);
-    if (pop <= 0.001) continue;
-    const sprite = z.kind === 'armored' ? kit.sheet.armored[z.color] : kit.sheet.zero[z.color];
-    if (!sprite) continue;
-    pushSprite(batch, sprite, z.x, z.y, (z.ry * pop) / sprite.ry, 0);
-  }
-  endBatch(batch);
-  if (batch.count === 0) return;
-  canvas.drawAtlas(atlas, batch.srcs as unknown as SkRect[], batch.dsts as unknown as SkRSXform[], kit.paints.sprite);
 }
 
 function drawTurret(canvas: SkCanvas, s: GameState, kit: Kit, sc: Scratch): void {
@@ -99,8 +78,10 @@ export function drawScene(canvas: SkCanvas, s: GameState, kit: Kit, atlas: SkIma
   canvas.translate(s.shakeX, s.shakeY);
   if (atlas) {
     drawZeros(canvas, s, kit, atlas, sc);
-    drawBullets(canvas, s, kit, atlas, sc);
+    drawHitFlashes(canvas, s, kit, atlas, sc);
   }
+  drawEnergyBars(canvas, s, kit, sc);
+  if (atlas) drawBullets(canvas, s, kit, atlas, sc);
   drawRings(canvas, s, kit, sc);
   if (atlas) drawParticles(canvas, s, kit, atlas, sc);
   if (s.phase === 'play' || s.phase === 'celebrate') drawTurret(canvas, s, kit, sc);

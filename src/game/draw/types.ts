@@ -25,6 +25,8 @@ export interface SpriteSheet {
   armored: Sprite[];
   /** Bullet streaks, head at the sprite's center, pointing right: amber, teal (chain), flare (big). */
   bullets: Sprite[];
+  /** A ×V badge per distinct armored value, in armorBadges order. Drawn at natural size (ry = px per point). */
+  badges: Sprite[];
   /** White effect shapes, tinted per particle. `ry` is the dot's side, the confetti's length, the ring's ry. */
   fx: { dot: Sprite; confetti: Sprite; ring: Sprite };
 }
@@ -82,6 +84,7 @@ export interface Batch {
 
 export interface Scratch {
   zeros: Batch;
+  flashes: Batch;
   bullets: Batch;
   particles: Batch;
   rect: SkRect;

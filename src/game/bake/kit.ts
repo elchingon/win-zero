@@ -11,16 +11,19 @@ import {
   TileMode,
   vec,
   type SkCanvas,
+  type SkFont,
   type SkPaint,
   type SkPicture,
 } from '@shopify/react-native-skia';
 import { PixelRatio } from 'react-native';
 
+import type { ZeroGroup } from '@/engine';
 import { colors, zeroPalette } from '@/theme/tokens';
 import { DOT_ALPHA, DOT_ORIGIN, DOT_SIZE, DOT_SPACING, GLOW_RADIUS, GLOW_Y } from '@/ui/ZeroField';
 
 import { TURRET_BASE_RADIUS } from '../draw/scene';
 import type { Kit, Rgba, Sprite, SpriteSheet } from '../draw/types';
+import { armorBadges } from '../sim/badges';
 import { ARMOR_SIZE_SCALE, SIZE_JITTER } from '../sim/constants';
 import { ZERO_ASPECT, ZERO_STROKE, zeroRadius } from '../sim/sizing';
 import { HIGHLIGHT_ALPHA, HIGHLIGHT_WIDTH, highlightPath, ZERO_GLOW } from '../ZeroRing';
@@ -54,6 +57,13 @@ const FX_DOT = 8;
 const FX_CONFETTI = 16;
 const FX_RING = 12;
 const FX_RING_STROKE = 0.3;
+/** ×V badges, in points: Bungee on a dark pill with a faint fg edge. */
+const BADGE_FONT = 10;
+const BADGE_HEIGHT = 15;
+const BADGE_PAD_X = 5;
+const BADGE_FILL_ALPHA = 0.9;
+const BADGE_EDGE_ALPHA = 0.45;
+const BADGE_EDGE = 1;
 /** Tinted sprites are baked white, so a tint multiplies straight to its color. */
 const TINT_BASE = '#FFFFFF';
 
@@ -209,6 +219,45 @@ function fxCells(d: number): Cell[] {
   ];
 }
 
+/** A ×V pill for armored zeros worth `value`, drawn at `d` px per point. */
+function badgeCell(value: number, font: SkFont, d: number): Cell {
+  const sized = Skia.Font(font.getTypeface() ?? undefined, BADGE_FONT * d);
+  const label = `×${value}`;
+  const bounds = sized.measureText(label);
+  const h = BADGE_HEIGHT * d;
+  const w = Math.max(h, bounds.width + 2 * BADGE_PAD_X * d);
+  return {
+    w: Math.ceil(w + 2 * SPRITE_PAD),
+    h: Math.ceil(h + 2 * SPRITE_PAD),
+    ry: d,
+    draw: (canvas, cx, cy) => {
+      const pill = Skia.RRectXY(Skia.XYWHRect(cx - w / 2, cy - h / 2, w, h), h / 2, h / 2);
+      canvas.drawRRect(
+        pill,
+        paint(PaintStyle.Fill, (p) => {
+          p.setColor(Skia.Color(colors.ink));
+          p.setAlphaf(BADGE_FILL_ALPHA);
+        }),
+      );
+      canvas.drawRRect(
+        pill,
+        paint(PaintStyle.Stroke, (p) => {
+          p.setStrokeWidth(BADGE_EDGE * d);
+          p.setColor(Skia.Color(colors.fg));
+          p.setAlphaf(BADGE_EDGE_ALPHA);
+        }),
+      );
+      canvas.drawText(
+        label,
+        cx - bounds.x - bounds.width / 2,
+        cy - bounds.y - bounds.height / 2,
+        paint(PaintStyle.Fill, (p) => p.setColor(Skia.Color(colors.fg))),
+        sized,
+      );
+    },
+  };
+}
+
 /** Lay out rows of cells left to right, top to bottom, and record them into one picture. */
 function pack(rows: Cell[][]): { picture: SkPicture; sprites: Sprite[][]; width: number; height: number } {
   let width = 0;
@@ -252,25 +301,34 @@ export interface BakedSprites {
 }
 
 /**
- * The round's sprite sheet: a ring per palette color, armored rings when the round has them,
- * and the shots and effects.
+ * The round's sprite sheet: a ring per palette color, armored rings and their ×V badges when
+ * the round has them, and the shots and effects. `font` is Bungee, at any size.
  */
-export function bakeSprites(opts: { objectCount: number; width: number; height: number; armored: boolean }): BakedSprites {
-  const ryPt = spriteRadius(opts.objectCount, opts.width, opts.height);
-  const biggest = ryPt * (opts.armored ? ARMOR_SIZE_SCALE : 1);
+export function bakeSprites(opts: {
+  groups: readonly ZeroGroup[];
+  width: number;
+  height: number;
+  font: SkFont;
+}): BakedSprites {
+  const objectCount = opts.groups.reduce((sum, g) => sum + g.count, 0);
+  const badgeValues = armorBadges(opts.groups);
+  const armoredRound = badgeValues.length > 0;
+  const ryPt = spriteRadius(objectCount, opts.width, opts.height);
+  const biggest = ryPt * (armoredRound ? ARMOR_SIZE_SCALE : 1);
   const density = Math.max(1, Math.min(PixelRatio.get(), SPRITE_MAX_DENSITY, SPRITE_MAX_RY_PX / biggest));
   const fxDensity = Math.min(PixelRatio.get(), SPRITE_MAX_DENSITY);
   const rows = {
     zero: zeroPalette.map((c) => ringCell(ryPt * density, c, false)),
-    armored: opts.armored ? zeroPalette.map((c) => ringCell(ryPt * ARMOR_SIZE_SCALE * density, c, true)) : [],
+    armored: armoredRound ? zeroPalette.map((c) => ringCell(ryPt * ARMOR_SIZE_SCALE * density, c, true)) : [],
+    badges: badgeValues.map((v) => badgeCell(v, opts.font, fxDensity)),
     bullets: BULLET_LOOKS.map((look) => bulletCell(look, fxDensity)),
     fx: fxCells(fxDensity),
   };
   const { picture, sprites, width, height } = pack(Object.values(rows));
-  const [zero = [], armored = [], bullets = [], fx = []] = sprites;
+  const [zero = [], armored = [], badges = [], bullets = [], fx = []] = sprites;
   const [dot, confetti, ring] = fx;
   if (!dot || !confetti || !ring) throw new Error('The effect sprites failed to pack');
-  return { picture, sheet: { width, height, zero, armored, bullets, fx: { dot, confetti, ring } } };
+  return { picture, sheet: { width, height, zero, armored, badges, bullets, fx: { dot, confetti, ring } } };
 }
 
 function background(width: number, height: number): SkPicture {

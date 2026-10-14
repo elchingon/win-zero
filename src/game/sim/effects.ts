@@ -3,7 +3,9 @@
 // explode() and update(). Every effect draws from a fixed pool; when a pool is full the extra
 // pieces are simply skipped. Reduce motion means fewer particles and much less shake.
 import {
+  ARMOR_BURST_SCALE,
   FLASH_DECAY,
+  HIT_SPARKS,
   FRAGMENT,
   KILL_FRAGMENTS,
   KILL_FRAGMENTS_BUSY,
@@ -121,21 +123,31 @@ export function addRing(
   ring.width = width;
 }
 
-/** A zero going up: sparks, fragments, a shockwave and a shake (the prototype's explode). */
+/**
+ * A zero going up: sparks, fragments, a shockwave and a shake (the prototype's explode).
+ * Armored zeros go up ARMOR_BURST_SCALE times bigger.
+ */
 export function explode(s: GameState, z: Zero): void {
-  sparks(s, z, scaledCount(s, s.busy ? KILL_SPARKS_BUSY : KILL_SPARKS));
-  fragments(s, z, scaledCount(s, s.busy ? KILL_FRAGMENTS_BUSY : KILL_FRAGMENTS));
+  const burst = z.kind === 'armored' ? ARMOR_BURST_SCALE : 1;
+  sparks(s, z, scaledCount(s, (s.busy ? KILL_SPARKS_BUSY : KILL_SPARKS) * burst));
+  fragments(s, z, scaledCount(s, (s.busy ? KILL_FRAGMENTS_BUSY : KILL_FRAGMENTS) * burst));
   addRing(
     s,
     z.x,
     z.y,
     z.ry * KILL_RING.start,
-    z.ry * KILL_RING.reach,
-    KILL_RING.duration,
+    z.ry * KILL_RING.reach * burst,
+    KILL_RING.duration * burst,
     z.color,
-    Math.max(KILL_RING.minWidth, z.ry * KILL_RING.width),
+    Math.max(KILL_RING.minWidth, z.ry * KILL_RING.width) * burst,
   );
-  addShake(s, Math.min(SHAKE_KILL_MAX, SHAKE_KILL_BASE + z.ry * SHAKE_KILL_PER_RY));
+  addShake(s, Math.min(SHAKE_KILL_MAX, SHAKE_KILL_BASE + z.ry * SHAKE_KILL_PER_RY) * burst);
+}
+
+/** A hit the zero survives: it flashes and throws a few sparks. */
+export function wound(s: GameState, z: Zero): void {
+  z.hitFlash = 1;
+  sparks(s, z, scaledCount(s, HIT_SPARKS));
 }
 
 function updateParticles(s: GameState, dt: number): void {

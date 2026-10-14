@@ -30,6 +30,7 @@ import {
   SPEED_PER_ZERO,
   TURRET_Y_FROM_BOTTOM,
 } from './constants';
+import { armorBadges } from './badges';
 import { makePool } from './pool';
 import { makeReport } from './report';
 import { between, makeRng, random } from './rng';
@@ -50,6 +51,7 @@ function makeZero(): Zero {
     hp: 0,
     maxHp: 0,
     value: 0,
+    badge: -1,
     energyBar: false,
     delay: 0,
     age: 0,
@@ -106,6 +108,7 @@ function spawnZeros(state: GameState, cfg: GameConfig): void {
   const base = zeroRadius(count, state.width, state.height);
   const crowdSpeed = SPEED_BASE + Math.min(SPEED_CROWD_MAX, count * SPEED_PER_ZERO);
   const delaySpan = Math.min(SPAWN_DELAY_MAX, SPAWN_DELAY_BASE + count * SPAWN_DELAY_PER_ZERO);
+  const badges = armorBadges(cfg.groups);
   let i = 0;
   for (let g = 0; g < cfg.groups.length; g++) {
     const group = cfg.groups[g];
@@ -134,6 +137,7 @@ function spawnZeros(state: GameState, cfg: GameConfig): void {
       z.hp = group.hp;
       z.maxHp = group.hp;
       z.value = group.value;
+      z.badge = armored ? badges.indexOf(group.value) : -1;
       z.energyBar = group.energyBar;
       z.delay = random(rng) * delaySpan;
       z.age = 0;

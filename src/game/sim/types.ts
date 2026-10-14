@@ -24,6 +24,8 @@ export interface Zero {
   maxHp: number;
   /** Zeros this object counts for in the HUD: 1, or V for an armored zero. */
   value: number;
+  /** Which ×V badge it wears (an index into armorBadges), or -1. */
+  badge: number;
   energyBar: boolean;
   /** Seconds after the round starts before it pops in. Bullets pass through until then. */
   delay: number;
