@@ -4,7 +4,7 @@ import { isValidDayKey, WEAPONS, type GoalState, type WeaponId } from '@/engine'
 
 import type { PersistedState, Prefs, RoundRecord, RoundRewards } from './types';
 
-export const DEFAULT_PREFS: Prefs = { sound: true, haptics: true, reengage: true };
+export const DEFAULT_PREFS: Prefs = { sound: true, haptics: true, reengage: true, goalInReminders: false };
 
 export const DEFAULT_PERSISTED: PersistedState = {
   goal: null,
@@ -60,6 +60,7 @@ export function normalizePersisted(raw: unknown): PersistedState {
       sound: bool(prefs.sound, DEFAULT_PREFS.sound),
       haptics: bool(prefs.haptics, DEFAULT_PREFS.haptics),
       reengage: bool(prefs.reengage, DEFAULT_PREFS.reengage),
+      goalInReminders: bool(prefs.goalInReminders, DEFAULT_PREFS.goalInReminders),
     },
     seenThrough: dayOrNull(r.seenThrough),
     round: normalizeRound(r.round),

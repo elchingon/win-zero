@@ -74,7 +74,10 @@ export default function Setup() {
           if you haven&apos;t answered yet. You can answer Yes or Not today right from the notification.
         </Lede>
         <Lede>If you&apos;re away for a while, reminders ease off to one gentle nudge a week.</Lede>
-        <Fine>Reminders are scheduled on this phone. Nothing about your goal leaves it.</Fine>
+        <Fine>
+          Reminders are scheduled on this phone. Nothing about your goal leaves it, and reminders don&apos;t show its
+          wording unless you turn that on in Settings.
+        </Fine>
         <View style={styles.block}>
           <Button label="Turn on reminders" onPress={() => finish(true)} disabled={busy} silent />
           <LinkButton label="Not now" onPress={() => finish(false)} />

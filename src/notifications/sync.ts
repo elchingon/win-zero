@@ -30,7 +30,7 @@ export function syncInputFrom(s: StoreState): SyncInput {
     tz: s.timeZone(),
     offsetMs: s.clockOffsetMs(),
     reengage: s.prefs.reengage,
-    showGoal: false,
+    showGoal: s.prefs.goalInReminders,
   };
 }
 
@@ -162,9 +162,12 @@ export function startReminderSync(store: AppStore, reminders: ReminderSync, appS
   const stopWaiting = whenHydrated(store, () => void reminders.sync({ force: true }));
   const unsubscribe = store.subscribe((s, prev) => {
     if (!s.hydrated) return;
-    if (s.goal !== prev.goal || s.prefs.reengage !== prev.prefs.reengage || s.devClockOffsetMs !== prev.devClockOffsetMs) {
-      void reminders.sync();
-    }
+    const changed =
+      s.goal !== prev.goal ||
+      s.prefs.reengage !== prev.prefs.reengage ||
+      s.prefs.goalInReminders !== prev.prefs.goalInReminders ||
+      s.devClockOffsetMs !== prev.devClockOffsetMs;
+    if (changed) void reminders.sync();
   });
   const sub = appState.addEventListener('change', (state) => {
     if (state === 'active' && store.getState().hydrated) void reminders.sync({ force: true });

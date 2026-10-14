@@ -141,6 +141,12 @@ export default function Settings() {
           value={prefs.reengage}
           onChange={(v) => store.setPref('reengage', v)}
         />
+        <ToggleRow
+          label="Goal in reminders"
+          detail="Off keeps your goal private on the lock screen. Reminders just say “your goal”."
+          value={prefs.goalInReminders}
+          onChange={(v) => store.setPref('goalInReminders', v)}
+        />
         <Row
           label="Reminders"
           detail={permission ? PERMISSION_WORDS[permission] : ' '}

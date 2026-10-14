@@ -9,6 +9,8 @@ export interface Prefs {
   haptics: boolean;
   /** Weekly nudge after a long break (SPEC 2). */
   reengage: boolean;
+  /** Reminders name the goal ("Did you stick to “Stop drinking” today?"). Off keeps it private. */
+  goalInReminders: boolean;
 }
 
 /** A Yes's rewards, stored by weapon id so they survive a restart. */

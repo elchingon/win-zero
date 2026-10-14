@@ -277,6 +277,7 @@ describe('startReminderSync', () => {
       ['check-in time', () => s().setCheckInTime('21:00')],
       ['morning time', () => s().setMorningTime('08:00')],
       ['weekly nudge', () => s().setPref('reengage', false)],
+      ['goal in reminders', () => s().setPref('goalInReminders', true)],
       ['dev clock', () => s().advanceDevClock(60_000)],
       ['check-in', () => (h.setTime(DAY0, '21:30'), s().answer('yes'))],
       ['erase', () => s().erase()],
@@ -308,13 +309,15 @@ describe('startReminderSync', () => {
     const h = await withGoal(newGoal(), { dev: true });
     h.store.getState().advanceDevClock(60_000);
     h.store.getState().setPref('reengage', false);
+    expect(syncInputFrom(h.store.getState()).showGoal).toBe(false); // private by default
+    h.store.getState().setPref('goalInReminders', true);
     expect(syncInputFrom(h.store.getState())).toEqual({
       goal: h.store.getState().goal,
       now: new Date(h.clock.t + 60_000),
       tz: DENVER,
       offsetMs: 60_000,
       reengage: false,
-      showGoal: false,
+      showGoal: true,
     });
   });
 });

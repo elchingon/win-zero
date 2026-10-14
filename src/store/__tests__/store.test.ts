@@ -263,6 +263,7 @@ describe('persistence', () => {
     a.store.getState().answer('yes');
     a.store.getState().setPref('sound', false);
     a.store.getState().setPref('reengage', false);
+    a.store.getState().setPref('goalInReminders', true);
     a.store.getState().selectWeapon('pea');
     a.store.setState({ notice: { kind: 'noted' } });
     await flush();
@@ -278,7 +279,7 @@ describe('persistence', () => {
       devClockOffsetMs: s.devClockOffsetMs,
     });
     expect(pick(b.store.getState())).toEqual(pick(a.store.getState()));
-    expect(b.store.getState().prefs).toEqual({ sound: false, haptics: true, reengage: false });
+    expect(b.store.getState().prefs).toEqual({ sound: false, haptics: true, reengage: false, goalInReminders: true });
     expect(b.store.getState().round).toMatchObject({ n: 1, played: false });
     expect(b.store.getState().notice).toBeNull(); // not persisted
 
@@ -302,7 +303,7 @@ describe('persistence', () => {
     await ready(store);
     expect(store.getState().goal).toMatchObject({ goalId: 'g1', streak: 3, slide: 0, paused: false });
     expect(store.getState().goal?.history).toHaveLength(3);
-    expect(store.getState().prefs).toEqual({ sound: false, haptics: true, reengage: true });
+    expect(store.getState().prefs).toEqual({ sound: false, haptics: true, reengage: true, goalInReminders: false });
     expect(store.getState().weapon).toBeNull();
     expect(store.getState().round).toBeNull();
 
