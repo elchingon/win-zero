@@ -15,7 +15,7 @@ import {
   WEAPONS,
   weaponById,
 } from '../weapons';
-import { at, answerDay, DAY0, DENVER, newGoal, stateWith, yesDays } from './fixtures';
+import { at, answerDay, DAY0, DENVER, newGoal, notTodays, stateWith, yesDays } from './fixtures';
 
 describe('bombs (SPEC 5)', () => {
   it('earns one at every multiple of 5', () => {
@@ -28,11 +28,19 @@ describe('bombs (SPEC 5)', () => {
   });
 
   it('keeps banked bombs through a reset and re-earns them on the next run', () => {
+    let s = { ...yesDays(newGoal(), DAY0, 10), shields: 0 }; // through 10-22
+    s = notTodays(s, '2026-10-23', 7); // six slips, then the final reset
+    expect(s.streak).toBe(0);
+    expect(s.bombs).toBe(2);
+    s = yesDays(s, '2026-10-30', 5);
+    expect(s.bombs).toBe(3);
+  });
+
+  it('is never taken by a slip', () => {
     let s = yesDays(newGoal(), DAY0, 10);
     s = answerDay(s, '2026-10-23', 'not-today').state;
+    expect(s.streak).toBe(9);
     expect(s.bombs).toBe(2);
-    s = yesDays(s, '2026-10-24', 5);
-    expect(s.bombs).toBe(3);
   });
 
   it('is spent when used, and cannot be spent at 0', () => {
@@ -54,26 +62,27 @@ describe('shields (SPEC 5)', () => {
     expect(r.outcome).toMatchObject({ rewards: { shield: false, shieldCapped: true } });
   });
 
-  it('refills after one is used', () => {
-    let s = yesDays(newGoal(), DAY0, 21); // 3 shields
-    s = answerDay(s, addDays(DAY0, 21), 'not-today').state; // shielded, 2 left
-    expect(s.shields).toBe(2);
-    s = yesDays(s, addDays(DAY0, 22), 7); // streak 21 → 28
+  it('is spent by the final slip only, then refills on new ground', () => {
+    let s = yesDays(newGoal(), DAY0, 21); // 3 shields, through 11-02
+    s = notTodays(s, '2026-11-03', 6); // 21 → 15
+    expect(s).toMatchObject({ streak: 15, shields: 3 });
+    s = notTodays(s, '2026-11-09', 1); // the final: shielded
+    expect(s).toMatchObject({ streak: 15, shields: 2, slide: 0 });
+    s = yesDays(s, '2026-11-10', 13); // 15 → 28, past the run's peak of 21
     expect(s.shields).toBe(3);
   });
 
-  it('stays banked through a reset', () => {
-    let s = yesDays(newGoal(), DAY0, 14);
-    s = resolve(s, at('2026-11-10', '21:00'), DENVER).state; // long absence, 7-day reset
-    expect(s.streak).toBe(0);
-    expect(s.shields).toBe(2);
+  it('a missed-day final spends one too', () => {
+    const s = resolve(yesDays(newGoal(), DAY0, 14), at('2026-11-10', '20:00'), DENVER).state; // answered through 10-26
+    // 10-27 .. 11-02 free, 11-03 .. 11-08 slip to 8, 11-09 is the final.
+    expect(s).toMatchObject({ streak: 8, shields: 1, paused: false });
   });
 });
 
 describe('milestones can only be earned once per run', () => {
-  it('climbing back to 10 after a missed day does not pay the bomb again', () => {
+  it('climbing back to 10 after a slip does not pay the bomb again', () => {
     let s = yesDays(newGoal(), DAY0, 10); // bombs 2, runPeak 10, last 10-22
-    s = resolve(s, at('2026-10-24', '20:30'), DENVER).state; // 10-23 missed → 9
+    s = answerDay(s, '2026-10-23', 'not-today').state; // → 9
     expect(s.streak).toBe(9);
     const r = answerDay(s, '2026-10-24', 'yes'); // back to 10
     expect(r.state.streak).toBe(10);
@@ -82,18 +91,19 @@ describe('milestones can only be earned once per run', () => {
     expect(yesDays(r.state, '2026-10-25', 5).bombs).toBe(3); // 15 is new ground
   });
 
-  it('a shielded day keeps the run going without re-earning anything', () => {
-    let s = yesDays(newGoal(), DAY0, 7); // shield at 7
-    s = answerDay(s, addDays(DAY0, 7), 'not-today').state; // shielded, streak 7
-    s = yesDays(s, addDays(DAY0, 8), 7); // 8..14
+  it('a shielded final keeps the run going without re-earning anything', () => {
+    let s = yesDays(newGoal(), DAY0, 7); // shield at 7, through 10-19
+    s = notTodays(s, addDays(DAY0, 7), 7); // 7 → 1, then the final is shielded
+    expect(s).toMatchObject({ streak: 1, shields: 0, runPeak: 7 });
+    s = yesDays(s, addDays(DAY0, 14), 13); // 2 .. 14
     expect(s.streak).toBe(14);
-    expect(s.shields).toBe(1); // spent one, earned one at 14
-    expect(s.bombs).toBe(2); // 5 and 10
+    expect(s.shields).toBe(1); // 7 was already reached this run; 14 is new
+    expect(s.bombs).toBe(2); // 5 (first climb) and 10
   });
 
   it('a run restarts once the streak reaches 0, so rewards are earned again', () => {
     let s = yesDays(newGoal(), DAY0, 3); // last 10-15
-    s = resolve(s, at('2026-10-19', '20:30'), DENVER).state; // 3 misses → 0
+    s = notTodays(s, '2026-10-16', 3); // 3 slips → 0
     expect(s.streak).toBe(0);
     expect(s.runPeak).toBe(0);
     s = yesDays(s, '2026-10-19', 5);
@@ -135,7 +145,7 @@ describe('weapons (SPEC 5)', () => {
   });
 
   it('stays unlocked after a reset', () => {
-    const s = answerDay({ ...yesDays(newGoal(), DAY0, 30), shields: 0 }, addDays(DAY0, 30), 'not-today').state;
+    const s = notTodays({ ...yesDays(newGoal(), DAY0, 30), shields: 0 }, addDays(DAY0, 30), 7);
     expect(s.streak).toBe(0);
     expect(s.bestStreak).toBe(30);
     expect(isUnlocked('chain', s.bestStreak)).toBe(true);
@@ -157,9 +167,9 @@ describe('weapons (SPEC 5)', () => {
 
   it('a reset run does not re-announce weapons already unlocked', () => {
     let s = yesDays(newGoal(), DAY0, 3);
-    s = answerDay(s, addDays(DAY0, 3), 'not-today').state;
-    s = yesDays(s, addDays(DAY0, 4), 2);
-    expect(answerDay(s, addDays(DAY0, 6), 'yes').outcome).toMatchObject({ rewards: { weapons: [] } });
+    s = notTodays(s, addDays(DAY0, 3), 3); // back to 0
+    s = yesDays(s, addDays(DAY0, 6), 2);
+    expect(answerDay(s, addDays(DAY0, 8), 'yes').outcome).toMatchObject({ rewards: { weapons: [] } });
   });
 
   it('counts days to the next unlock from the current streak', () => {

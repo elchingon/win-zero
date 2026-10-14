@@ -61,6 +61,13 @@ export function yesDays(state: GoalState, from: DayKey, n: number, tz: TimeZone 
   return s;
 }
 
+/** Answer Not today on `n` consecutive days starting at `from`. */
+export function notTodays(state: GoalState, from: DayKey, n: number, tz: TimeZone = DENVER): GoalState {
+  let s = state;
+  for (let i = 0; i < n; i++) s = answerDay(s, addDays(from, i), 'not-today', { tz }).state;
+  return s;
+}
+
 /** A state with chosen counters, for testing the reducers directly. */
 export function stateWith(patch: Partial<GoalState>): GoalState {
   return { ...newGoal(), ...patch };

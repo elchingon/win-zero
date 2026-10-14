@@ -1,6 +1,6 @@
 # Win Zero: Product & Game Spec
 
-Version 0.2 · October 13, 2026 · Owner: e7sal
+Version 0.3 · October 13, 2026 · Owner: e7sal
 
 Win Zero is a daily habit app for iOS and Android. The user sets one daily goal (for example "Stop drinking" or "Exercise more"). Every evening the app asks whether they did it. Each "yes" adds a zero to a shooting round. The streak is the number of zeros on screen.
 
@@ -29,29 +29,37 @@ Only one window can be pending at a time. If a window closes unanswered, day `D`
 Notifications are **local** (scheduled on device; no push server needed for v1):
 
 - While a day is unanswered, send 2 reminders per day (evening check-in + morning reminder).
-- Pre-schedule the next 7 days of reminders. On every check-in or app open, cancel and reschedule.
-- Reminders stop once the streak resets from 7 consecutive missed days (section 3). After that, send one gentle re-engagement notification per week (setting, default on).
+- Pre-schedule reminders for every window up to the one whose miss would reset the streak (section 3), at most 14 windows ahead. On every check-in or app open, cancel and reschedule.
+- Reminders stop once a run of missed days resets the streak (section 3). After that, send one gentle re-engagement notification per week (setting, default on). Any answer brings daily reminders back.
 
 ## 3. Streak rules (the rules engine)
 
-State fields: `streak`, `bestStreak`, `shields`, `bombs`, `consecutiveMissed`, `history[]`.
+State fields: `streak`, `bestStreak`, `shields`, `bombs`, `consecutiveMissed`, `slide`, `paused`, `history[]`.
+
+The streak **slides** rather than snapping to zero, so one hard day doesn't wipe out a long run. A **slip** costs one zero; the 7th slip since the last Yes is the **final**.
 
 | Event | Effect |
 |---|---|
-| **Yes** for day D | `streak += 1`; `bestStreak = max(bestStreak, streak)`; `consecutiveMissed = 0`; grant rewards (section 5); play a round with `streak` zeros. |
-| **Not today** for day D | If `shields > 0`: consume 1 shield; streak unchanged; history records `shielded`; show the shield-absorb animation (no round). Otherwise `streak = 0`, so the next Yes plays 1 zero. `consecutiveMissed = 0`. |
-| **Missed** day D (window closed unanswered) | `consecutiveMissed += 1`; `streak = max(0, streak - 1)` (lose one zero per missed day). History records `missed`. |
-| **7th consecutive missed day** | Full reset: `streak = 0`. Reminders stop (section 2). |
+| **Yes** for day D | `streak += 1`; `bestStreak = max(bestStreak, streak)`; `consecutiveMissed = 0`; `slide = 0`; `paused = false`; grant rewards (section 5); play a round with `streak` zeros. |
+| **Not today** for day D | `consecutiveMissed = 0`; `paused = false`; then one **slip**. History records `no` (or `shielded`). |
+| **Missed** day D, 1st–7th in a row | Grace: nothing lost. `consecutiveMissed += 1`. History records `missed`. |
+| **Missed** day D, 8th+ in a row | `consecutiveMissed += 1`, then one **slip**. If that slip resets the streak, `paused = true`: daily reminders stop (section 2). |
+| **Missed** while `paused` | Recorded as missed (paused). Counts toward nothing. |
+| **Slip** #1–#6 | `slide += 1`; `streak = max(0, streak - 1)` (lose one zero). |
+| **Slip** #7: the final | If `shields > 0` and `streak > 0`: consume 1 shield, streak unchanged, history records `shielded`, show the shield-absorb animation. Otherwise `streak = 0` and show the encouraging final screen. Either way `slide = 0`. |
 
 Notes:
+- `slide` counts slips since the last Yes (or the last final). Grace misses neither add to it nor clear it.
+- A shield is only spent when there's a streak to protect, and never on an ordinary slip.
+- Bombs and shields are only granted above the run's previous peak, so slipping and climbing back can't earn the same milestone twice.
 - `bestStreak` never decreases. It drives weapon unlocks.
 - Missed days are resolved lazily. On app open, on notification response, or in a background task, run `resolve(state, now)` to walk every closed window since the last resolution. It must be idempotent and handle the app being closed for weeks.
 - All date math uses the user's local timezone and must survive DST changes and travel. Store the timezone with each history entry.
 
-### Open questions (assumptions are in place; confirm or change)
-1. Does a shield also protect a **missed** day, or only an honest "Not today"? *Assumed: only "Not today".*
-2. Is a shield used automatically, or does the app ask "Use a shield?" *Assumed: automatic, with an animation.*
-3. Does a missed day after a "Not today" reset have any effect at `streak = 0`? *Assumed: it still counts toward the 7-day reminder cutoff.*
+### Decisions (v0.3)
+1. Shields protect only the final slip, whether it comes from a Not today or a missed day.
+2. Shields are used automatically, with an animation.
+3. Missed days at `streak = 0` still count toward the reset that pauses reminders.
 
 ## 4. Round composition
 
@@ -100,7 +108,7 @@ Hold to fire at about 6 shots/sec.
 - **Home:** goal, current streak, best run, bombs, shields; pending check-in card (same Yes / Not today as the notification); arsenal list with next-unlock progress; history calendar (yes / no / shielded / missed).
 - **Play:** full-screen Skia canvas, HUD (value left, day, weapon switch, bomb button, sound toggle), turret at bottom center.
 - **Result sheet:** over the filled screen, showing day, "N zeros down", rewards earned, next unlock, and buttons for Back to base and Replay (replay has no streak effect).
-- **Reset / Shielded / Slipping:** supportive copy, never shaming. Slipping covers missed days: "You've lost a zero. Check in to stop the slide."
+- **Reset / Shielded / Slipping:** supportive copy, never shaming. Slipping covers any slip that cost a zero, from a Not today or from missed days found on opening: "You've lost a zero. Check in to stop the slide." The final shows Reset (encouraging) or Shielded.
 - **Settings:** edit goal and times, sound/haptics, re-engagement toggle, erase data, support link.
 
 **Support link:** goals like quitting drinking are health-related. Settings should include a "Need support?" row. In the US, list the SAMHSA National Helpline, 1-800-662-4357 (free, confidential, 24/7). Localize later.

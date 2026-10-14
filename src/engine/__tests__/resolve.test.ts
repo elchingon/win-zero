@@ -82,19 +82,35 @@ describe('resolve', () => {
     expect(events).toHaveLength(45); // 11-02 .. 12-16
     expect(events[0]?.day).toBe('2026-11-02');
     expect(events[44]?.day).toBe('2026-12-16');
-    expect(events.map((e) => e.streakAfter)).toEqual([19, 18, 17, 16, 15, 14, ...Array(39).fill(0)]);
+    // Seven free days, then slides of six zeros; the first two finals spend the shields.
+    expect(events.map((e) => e.streakAfter)).toEqual([
+      ...Array(7).fill(20),
+      19, 18, 17, 16, 15, 14, 14,
+      13, 12, 11, 10, 9, 8, 8,
+      7, 6, 5, 4, 3, 2, 0,
+      ...Array(17).fill(0),
+    ]);
     expect(events.map((e) => e.missedInRow)).toEqual(Array.from({ length: 45 }, (_, i) => i + 1));
-    expect(events.filter((e) => e.reset).map((e) => e.day)).toEqual(['2026-11-08']);
+    expect(events.filter((e) => e.final).map((e) => [e.day, e.final])).toEqual([
+      ['2026-11-15', 'shielded'],
+      ['2026-11-22', 'shielded'],
+      ['2026-11-29', 'reset'],
+    ]);
+    expect(events.filter((e) => e.paused).map((e) => e.day)[0]).toBe('2026-11-30');
+    expect(events.filter((e) => e.paused)).toHaveLength(17);
 
     expect(state).toMatchObject({
       streak: 0,
       bestStreak: 20,
       runPeak: 0,
       bombs: 4,
-      shields: 2,
+      shields: 0,
       consecutiveMissed: 45,
+      slide: 0,
+      paused: true,
       lastSettledDay: '2026-12-16',
     });
+    expect(state.history.filter((e) => e.result === 'shielded')).toHaveLength(2);
     expect(state.history).toHaveLength(65);
     expect(state.history.slice(0, 20)).toEqual(before.history); // append-only
     expectConsecutiveHistory(state);
@@ -102,7 +118,7 @@ describe('resolve', () => {
 
     const back = answerDay(state, '2026-12-17', 'yes');
     expect(back.state.streak).toBe(1);
-    expect(back.state.consecutiveMissed).toBe(0);
+    expect(back.state).toMatchObject({ consecutiveMissed: 0, paused: false });
   });
 
   it('settles exactly one day per calendar day across the fall-back change', () => {
@@ -122,6 +138,23 @@ describe('resolve', () => {
     const atOf = (day: string) => state.history.find((e) => e.day === day)?.at;
     expect(atOf('2026-10-30')).toBe('2026-11-01T02:00:00.000Z'); // 20:00 MDT on 10-31
     expect(atOf('2026-10-31')).toBe('2026-11-02T03:00:00.000Z'); // 20:00 MST on 11-01
+  });
+
+  it('slides one zero per missed day across the fall-back change', () => {
+    const s = { ...yesDays(newGoal(), DAY0, 10), shields: 0 }; // through 10-22
+    const { state, events } = resolve(s, at('2026-11-05', '20:00'), DENVER); // 10-23 .. 11-04 closed
+    const slips = events.filter((e) => e.slip !== null);
+    expect(slips.map((e) => [e.day, e.slip, e.streakAfter])).toEqual([
+      ['2026-10-30', 1, 9],
+      ['2026-10-31', 2, 8],
+      ['2026-11-01', 3, 7], // the 25-hour window
+      ['2026-11-02', 4, 6],
+      ['2026-11-03', 5, 5],
+      ['2026-11-04', 6, 4],
+    ]);
+    const atOf = (day: string) => state.history.find((e) => e.day === day)?.at;
+    expect(atOf('2026-10-31')).toBe('2026-11-02T03:00:00.000Z'); // 20:00 MST on 11-01
+    expectConsecutiveHistory(state);
   });
 
   it('settles exactly one day per calendar day across the spring-forward change', () => {
@@ -186,7 +219,17 @@ describe('answer', () => {
     const r = answer(newGoal(), { answer: 'yes', day: DAY0 }, at('2026-10-14', '20:30'), DENVER);
     expect(r).toMatchObject({ ok: false, reason: 'expired' });
     expect(r.events).toEqual([
-      { type: 'missed', day: DAY0, streakBefore: 0, streakAfter: 0, missedInRow: 1, reset: false },
+      {
+        type: 'missed',
+        day: DAY0,
+        streakBefore: 0,
+        streakAfter: 0,
+        missedInRow: 1,
+        grace: true,
+        slip: null,
+        final: null,
+        paused: false,
+      },
     ]);
     expect(r.state.history.map((e) => e.result)).toEqual(['missed']);
     expect(pendingWindow(r.state, at('2026-10-14', '20:30'))?.day).toBe('2026-10-14');
@@ -197,10 +240,10 @@ describe('answer', () => {
 
   it('returns missed-day events alongside an accepted answer', () => {
     const s = yesDays(newGoal(), DAY0, 5); // through 10-17
-    const r = answer(s, { answer: 'yes' }, at('2026-10-20', '21:00'), DENVER); // 10-18, 10-19 missed
+    const r = answer(s, { answer: 'yes' }, at('2026-10-20', '21:00'), DENVER); // 10-18, 10-19 missed (free)
     expect(r.ok).toBe(true);
     expect(r.events.map((e) => e.day)).toEqual(['2026-10-18', '2026-10-19']);
-    expect(r.ok && r.outcome).toMatchObject({ kind: 'yes', day: '2026-10-20', streak: 4 });
+    expect(r.ok && r.outcome).toMatchObject({ kind: 'yes', day: '2026-10-20', streak: 6 });
   });
 });
 

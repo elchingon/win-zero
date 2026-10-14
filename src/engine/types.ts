@@ -35,10 +35,14 @@ export interface HistoryEntry {
   /** Time zone the day's window was scheduled in. */
   tz: TimeZone;
   streakAfter: number;
-  /** Missed days only: consecutive misses including this one. */
+  /** Days with no answer (missed, or shielded after a miss): consecutive misses including this one. */
   missedInRow?: number;
-  /** Missed days only: this miss was the one that reset the streak. */
+  /** The day counted as slip 1–7 since the last Yes: a Not today, or a miss past the grace days. */
+  slip?: number;
+  /** The final slip found no shield to spend, so the streak reset to 0. */
   reset?: true;
+  /** A miss after a missed-day reset. It counts toward nothing. */
+  paused?: true;
 }
 
 export interface GoalState {
@@ -58,7 +62,12 @@ export interface GoalState {
   runPeak: number;
   shields: number;
   bombs: number;
+  /** Missed days in a row. Any answer clears it. */
   consecutiveMissed: number;
+  /** Slips since the last Yes or the last final (SPEC 3). The SLIDE_FINAL-th slip is the final. */
+  slide: number;
+  /** A run of missed days reached a reset: daily reminders stop until the next answer. */
+  paused: boolean;
   /** Latest day that is answered or missed. Days settle strictly in order. */
   lastSettledDay: DayKey | null;
   history: HistoryEntry[];

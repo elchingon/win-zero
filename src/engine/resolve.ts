@@ -1,7 +1,7 @@
 // Catching up on closed windows, answering check-ins, and schedule edits. Every function
 // takes `now` and the device time zone `tz` as inputs and returns a new state.
 import { addDays, dayKeyAt, isValidClockTime, isValidTimeZone } from './dates';
-import { applyMissed, applyNotToday, applyYes, type YesRewards } from './rules';
+import { applyMissed, applyNotToday, applyYes, type Final, type YesRewards } from './rules';
 import type { ClockTime, DayKey, GoalState, ScheduleEntry, TimeZone } from './types';
 import {
   closesAt,
@@ -64,6 +64,8 @@ export function createGoal(input: CreateGoalInput): GoalState {
     shields: 0,
     bombs: 0,
     consecutiveMissed: 0,
+    slide: 0,
+    paused: false,
     lastSettledDay: null,
     history: [],
   };
@@ -75,8 +77,14 @@ export interface MissedEvent {
   streakBefore: number;
   streakAfter: number;
   missedInRow: number;
-  /** This miss was the 7th in a row and reset the streak. */
-  reset: boolean;
+  /** One of the first MISSED_GRACE_DAYS misses in a row: nothing lost. */
+  grace: boolean;
+  /** The slip number (1–7) when the miss counted as a slip. */
+  slip: number | null;
+  /** The miss was the final slip: the streak reset, or a shield was spent. */
+  final: Final | null;
+  /** Recorded after a missed-day reset: counts toward nothing. */
+  paused: boolean;
 }
 
 export type ResolveEvent = MissedEvent;
@@ -109,7 +117,10 @@ export function resolve(state: GoalState, now: Date, tz: TimeZone): Resolved {
       streakBefore,
       streakAfter: next.streak,
       missedInRow: r.missedInRow,
-      reset: r.reset,
+      grace: r.grace,
+      slip: r.slip?.n ?? null,
+      final: r.slip?.final ?? null,
+      paused: r.paused,
     });
   }
   const latest = latestScheduleEntry(next);
@@ -163,8 +174,13 @@ function pruneSchedule(state: GoalState): GoalState {
 
 export type Answer = 'yes' | 'not-today';
 
+/**
+ * - `slipped`: Not today #1–#6 since the last Yes, which costs one zero (none at streak 0).
+ * - `shielded` / `reset`: the final slip, saved by a shield or not.
+ */
 export type AnswerOutcome =
   | { kind: 'yes'; day: DayKey; streak: number; rewards: YesRewards }
+  | { kind: 'slipped'; day: DayKey; streak: number; slip: number; lost: number }
   | { kind: 'shielded'; day: DayKey; streak: number; shieldsLeft: number }
   | { kind: 'reset'; day: DayKey; lostStreak: number };
 
@@ -208,9 +224,12 @@ export function answer(state: GoalState, input: AnswerInput, now: Date, tz: Time
       };
     }
     const r = applyNotToday(current, ctx);
-    const outcome: AnswerOutcome = r.shielded
-      ? { kind: 'shielded', day, streak: r.state.streak, shieldsLeft: r.state.shields }
-      : { kind: 'reset', day, lostStreak: r.lostStreak };
+    const outcome: AnswerOutcome =
+      r.slip.final === 'shielded'
+        ? { kind: 'shielded', day, streak: r.state.streak, shieldsLeft: r.state.shields }
+        : r.slip.final === 'reset'
+          ? { kind: 'reset', day, lostStreak: r.lost }
+          : { kind: 'slipped', day, streak: r.state.streak, slip: r.slip.n, lost: r.lost };
     return { ok: true, state: r.state, events, outcome };
   }
   if (day >= firstUnsettledDay(current)) return reject('not-open');
