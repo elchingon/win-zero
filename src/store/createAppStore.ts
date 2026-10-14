@@ -10,6 +10,8 @@ import {
   isMorningBeforeCheckIn,
   isUnlocked,
   missDigest,
+  nextWindow,
+  pendingWindow,
   resolve,
   setCheckInTime as setGoalCheckInTime,
   setGoalText as setGoalWording,
@@ -23,6 +25,7 @@ import {
   type TimeZone,
   type WeaponId,
 } from '@/engine';
+import { SEED_MAX_N, seedYesRun } from '@/dev/seedRun';
 
 import { DEFAULT_PERSISTED, migratePersisted, normalizePersisted } from './migrate';
 import { noticeForAnswer, noticeForMisses } from './notice';
@@ -69,7 +72,17 @@ export interface AppState extends PersistedState {
   erase: () => void;
   advanceDevClock: (ms: number) => void;
   resetDevClock: () => void;
+  /**
+   * Development only: rebuild the goal as `n - 1` days of Yes, then answer Yes to the open
+   * window, so a Day `n` round is ready. Overwrites the streak, history and rewards.
+   */
+  devJumpToDay: (n: number) => AnswerResult | null;
+  /** Development only: move the clock to the moment the next check-in opens. */
+  devSkipToNextCheckIn: () => void;
 }
+
+/** The debug skip lands just after the next window opens, not on its edge. */
+const DEV_SKIP_SLACK_MS = 1000;
 
 export type AppStore = ReturnType<typeof createAppStore>;
 
@@ -231,6 +244,23 @@ export function createAppStore(deps: StoreDeps) {
             if (!deps.dev || !get().hydrated) return;
             set({ devClockOffsetMs: 0 });
             get().refresh();
+          },
+
+          devJumpToDay: (n) => {
+            const goal = ready();
+            if (!deps.dev || !goal || !Number.isInteger(n) || n < 1 || n > SEED_MAX_N) return null;
+            const seeded = seedYesRun(goal, n, now(), timeZone());
+            // The old history is gone, so there's no missed-day news left to show.
+            set({ goal: seeded, round: null, weapon: null, notice: null, seenThrough: seeded.lastSettledDay });
+            return get().answer('yes');
+          },
+
+          devSkipToNextCheckIn: () => {
+            if (!deps.dev || !ready()) return;
+            get().refresh();
+            const goal = get().goal;
+            if (!goal || pendingWindow(goal, now())) return;
+            get().advanceDevClock(nextWindow(goal).opensAt.getTime() - now().getTime() + DEV_SKIP_SLACK_MS);
           },
         };
       },
