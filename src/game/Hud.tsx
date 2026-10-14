@@ -24,7 +24,12 @@ function Hint() {
   }, [opacity]);
   const style = useAnimatedStyle(() => ({ opacity: opacity.get() }));
   return (
-    <Animated.View style={[styles.hintRow, style]} pointerEvents="none">
+    <Animated.View
+      style={[styles.hintRow, style]}
+      pointerEvents="none"
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
       <Text style={styles.hint}>Hold anywhere to fire</Text>
     </Animated.View>
   );
@@ -35,6 +40,7 @@ function HudButton(props: {
   label: string;
   hint?: string;
   disabled?: boolean;
+  /** A toggle, read as a switch that's on or off. */
   checked?: boolean;
   style?: StyleProp<ViewStyle>;
   children: ReactNode;
@@ -42,7 +48,7 @@ function HudButton(props: {
   const { onPress, label, hint, disabled, checked, style, children } = props;
   return (
     <Pressable
-      accessibilityRole="button"
+      accessibilityRole={checked === undefined ? 'button' : 'switch'}
       accessibilityLabel={label}
       accessibilityHint={hint}
       accessibilityState={{ disabled: !!disabled, checked }}
@@ -75,6 +81,8 @@ export function Hud(props: {
   controls: boolean;
   /** Changes when a round starts, to show the hint again. */
   hintKey: number;
+  /** Clear the round at once. Offered while a screen reader is on, since the game is visual. */
+  onFinish?: () => void;
   /** Development readouts, under the counter. */
   extra?: ReactNode;
 }) {
@@ -127,6 +135,11 @@ export function Hud(props: {
               {p.weaponName}
             </Text>
           </HudButton>
+          {p.onFinish ? (
+            <HudButton onPress={p.onFinish} label="Finish round" hint="Clears every zero and ends the round">
+              <Text style={styles.buttonText}>FINISH ROUND</Text>
+            </HudButton>
+          ) : null}
           <HudButton
             onPress={p.onBomb}
             label={`Bomb, ${p.bombs} left`}

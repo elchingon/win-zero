@@ -2,8 +2,8 @@
 // the next unlock. Rewards were applied when Yes was answered; this only reveals them. A
 // replay or a practice round changes nothing, and says so.
 import { Canvas, LinearGradient, Rect, vec } from '@shopify/react-native-skia';
-import { useState } from 'react';
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { AccessibilityInfo, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -42,6 +42,15 @@ export function ResultSheet(props: {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [height, setHeight] = useState(0);
+  const header = useRef<Text>(null);
+
+  // A screen reader moves to the sheet as it lands, starting at "N zeros down".
+  useEffect(() => {
+    const id = setTimeout(() => {
+      if (header.current) AccessibilityInfo.sendAccessibilityEvent(header.current, 'focus');
+    }, RISE_MS);
+    return () => clearTimeout(id);
+  }, []);
 
   const lines: Line[] = [];
   if (mode === 'practice') {
@@ -71,6 +80,7 @@ export function ResultSheet(props: {
       entering={FadeInDown.duration(RISE_MS)}
       style={[styles.sheet, { paddingBottom: insets.bottom + BOTTOM }]}
       onLayout={(e) => setHeight(e.nativeEvent.layout.height)}
+      accessibilityViewIsModal
     >
       <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
         <Rect x={0} y={0} width={width} height={height}>
@@ -78,7 +88,7 @@ export function ResultSheet(props: {
         </Rect>
       </Canvas>
       <Eyebrow>{mode === 'practice' ? 'Practice' : `Day ${n}${goal ? ` · ${goal.goal}` : ''}`}</Eyebrow>
-      <Text style={type.h2} accessibilityRole="header">
+      <Text ref={header} style={type.h2} accessibilityRole="header">
         <Em>{formatCount(n)}</Em> {n === 1 ? 'zero' : 'zeros'} down
       </Text>
       <View style={styles.lines}>

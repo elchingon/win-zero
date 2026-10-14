@@ -23,6 +23,7 @@ import { bakeSprites, makeKit } from './bake/kit';
 import { drawScene, makeScratch } from './draw/scene';
 import type { Scratch } from './draw/types';
 import { dropBomb } from './sim/bomb';
+import { finishAll } from './sim/finish';
 import { moveAim, pressFire, releaseFire, setReduceMotion, setWeapon } from './sim/input';
 import { resetReport } from './sim/report';
 import { createGame } from './sim/spawn';
@@ -50,6 +51,8 @@ export type RoundSetup = Omit<GameConfig, 'weapon' | 'reduceMotion'>;
 export interface GameHandle {
   /** Blast the middle of the play area. The screen has already paid for it. */
   dropBomb: () => void;
+  /** Clear every zero left and end the round (Finish round, for screen readers). */
+  finishAll: () => void;
 }
 
 function startGame(state: SharedValue<GameState | null>, cfg: GameConfig) {
@@ -73,6 +76,12 @@ function bomb(state: SharedValue<GameState | null>) {
   'worklet';
   const s = state.value;
   if (s) dropBomb(s);
+}
+
+function finish(state: SharedValue<GameState | null>) {
+  'worklet';
+  const s = state.value;
+  if (s) finishAll(s);
 }
 
 export const GameCanvas = memo(function GameCanvas(props: {
@@ -123,7 +132,11 @@ export const GameCanvas = memo(function GameCanvas(props: {
     scheduleOnUI(applyReduceMotion, state, reduceMotion);
   }, [reduceMotion, state]);
 
-  useImperativeHandle(ref, () => ({ dropBomb: () => scheduleOnUI(bomb, state) }), [state]);
+  useImperativeHandle(
+    ref,
+    () => ({ dropBomb: () => scheduleOnUI(bomb, state), finishAll: () => scheduleOnUI(finish, state) }),
+    [state],
+  );
 
   const gesture = useMemo(
     () =>
@@ -187,7 +200,13 @@ export const GameCanvas = memo(function GameCanvas(props: {
 
   return (
     <GestureDetector gesture={gesture}>
-      <View style={StyleSheet.absoluteFill} collapsable={false} accessibilityLabel="Play area">
+      <View
+        style={StyleSheet.absoluteFill}
+        collapsable={false}
+        accessible
+        accessibilityLabel="Play area"
+        accessibilityHint="The round is visual. Finish round clears it."
+      >
         <Canvas style={StyleSheet.absoluteFill}>
           <Picture picture={picture} />
         </Canvas>
