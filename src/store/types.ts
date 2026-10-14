@@ -45,6 +45,9 @@ export interface PersistedState {
   devClockOffsetMs: number;
 }
 
+/** The screen an accepted answer opens: Yes plays the round, Not today shows its notice. */
+export type AnswerRoute = '/play' | '/notice';
+
 export type NoticeCause = 'answer' | 'missed';
 
 /** A screen to show once: what a Not today or a run of missed days did to the streak. */

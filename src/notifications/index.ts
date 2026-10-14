@@ -5,13 +5,22 @@ import * as Notifications from 'expo-notifications';
 import { appStore } from '@/store';
 
 import { ensureReminderChannel, getReminderPermission } from './permissions';
+import { startResponses } from './responses';
+import { toHome } from './route';
+import { CHECKIN_ACTIONS, CHECKIN_CATEGORY_ID, CHECKIN_CATEGORY_OPTIONS } from './shared';
 import { createReminderSync, startReminderSync, syncInputFrom } from './sync';
+
+/** The Android channel, and the Yes / Not today buttons, before anything is scheduled. */
+async function prepare(): Promise<void> {
+  await ensureReminderChannel();
+  await Notifications.setNotificationCategoryAsync(CHECKIN_CATEGORY_ID, CHECKIN_ACTIONS, CHECKIN_CATEGORY_OPTIONS);
+}
 
 const reminders = createReminderSync({
   api: Notifications,
   read: () => syncInputFrom(appStore.getState()),
   allowed: async () => (await getReminderPermission()) === 'granted',
-  prepare: ensureReminderChannel,
+  prepare,
   onError: (error) => {
     if (__DEV__) console.warn('Reminder sync failed:', error);
   },
@@ -21,7 +30,16 @@ const reminders = createReminderSync({
 export const requestSync = reminders.sync;
 export const onSynced = reminders.subscribe;
 
-/** Keep scheduled reminders in step with the goal from launch on. Returns a cleanup. */
+/**
+ * From launch on: keep scheduled reminders in step with the goal, and answer from a
+ * notification's buttons. Start before storage is read, so a response that launched the app is
+ * answered before Home first shows. Returns a cleanup.
+ */
 export function startNotifications(): () => void {
-  return startReminderSync(appStore, reminders);
+  const stopSync = startReminderSync(appStore, reminders);
+  const stopResponses = startResponses(appStore, Notifications, { toHome });
+  return () => {
+    stopSync();
+    stopResponses();
+  };
 }

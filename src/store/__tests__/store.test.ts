@@ -206,6 +206,55 @@ describe('answering a given day', () => {
   });
 });
 
+describe('where an answer leads', () => {
+  it('leaves Home the round or the notice to open, in the same update as the answer', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 2)); // through 10-14
+    const seen: { settled: string | null | undefined; route: string | null }[] = [];
+    const stop = h.store.subscribe((s, prev) => {
+      if (s.goal?.lastSettledDay !== prev.goal?.lastSettledDay) seen.push({ settled: s.goal?.lastSettledDay, route: s.route });
+    });
+
+    h.setTime('2026-10-15', '21:00');
+    h.store.getState().answer('yes');
+    expect(seen).toEqual([{ settled: '2026-10-15', route: '/play' }]);
+    expect(h.store.getState().takeRoute()).toBe('/play');
+    expect(h.store.getState().takeRoute()).toBeNull();
+
+    h.setTime('2026-10-16', '21:00');
+    h.store.getState().answer('not-today');
+    expect(seen.at(-1)).toEqual({ settled: '2026-10-16', route: '/notice' });
+    expect(h.store.getState().takeRoute()).toBe('/notice');
+    stop();
+  });
+
+  it("records why an answer was turned down for Home's banner, and keeps a route still waiting", async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 2)); // through 10-14
+    h.setTime('2026-10-15', '21:00');
+    h.store.getState().answer('yes'); // its round hasn't been opened yet
+    h.store.getState().answer('yes', '2026-10-15');
+    expect(h.store.getState()).toMatchObject({ rejection: 'already-answered', route: '/play' });
+
+    h.store.getState().clearRejection();
+    expect(h.store.getState().rejection).toBeNull();
+
+    h.setTime('2026-10-17', '21:00'); // 10-16 closed unanswered
+    h.store.getState().answer('not-today', '2026-10-16');
+    expect(h.store.getState().rejection).toBe('expired');
+    h.store.getState().answer('not-today');
+    expect(h.store.getState()).toMatchObject({ rejection: null, route: '/notice' });
+  });
+
+  it('starts clean after erase and after setup', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 2));
+    h.store.setState({ route: '/play', rejection: 'expired' });
+    h.store.getState().erase();
+    expect(h.store.getState()).toMatchObject({ route: null, rejection: null });
+    h.store.setState({ route: '/notice', rejection: 'not-open' });
+    h.store.getState().setupGoal({ goal: 'Read', checkInTime: '20:00', morningTime: '09:00' });
+    expect(h.store.getState()).toMatchObject({ route: null, rejection: null });
+  });
+});
+
 describe('weapons and rounds', () => {
   it("equips a newly unlocked weapon, and otherwise keeps the player's pick", async () => {
     const h = await withGoal(yesDays(newGoal(), DAY0, 2)); // best 2, through 10-14

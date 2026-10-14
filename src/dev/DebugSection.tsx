@@ -1,7 +1,7 @@
 // Development builds only (Settings and Home load this behind __DEV__, so production bundles
 // leave it out). Moves the app's clock to test missed days, slips and resets on a device, and
 // jumps to a long run to try later weapons, armored zeros and big fills.
-import { router } from 'expo-router';
+import { router, usePathname } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -35,6 +35,7 @@ const PRACTICE_MAX_N = 100_000;
 export function DebugSection() {
   const goal = useApp((s) => s.goal);
   const offset = useApp((s) => s.devClockOffsetMs);
+  const pathname = usePathname();
   const [customDay, setCustomDay] = useState('');
   const [practiceN, setPracticeN] = useState('60');
   const store = appStore.getState();
@@ -55,8 +56,9 @@ export function DebugSection() {
     pending ? `Open: ${pending.day} until ${at(pending.closesAt)}` : next ? `Next opens ${at(next.opensAt)}` : '',
   ].filter(Boolean);
 
+  // The answer leaves Home the round to open, so from Settings, go back to Home.
   const jump = (n: number) => {
-    if (store.devJumpToDay(n)?.ok) router.push('/play');
+    if (store.devJumpToDay(n)?.ok && pathname !== '/') router.dismissTo('/');
   };
 
   return (
