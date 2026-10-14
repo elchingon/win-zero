@@ -1,10 +1,10 @@
 'worklet';
 // Bullets in flight. They move in short sub-steps so a fast one can't skip over a small zero.
 import { BULLET_SUBSTEP, OFFSCREEN_MARGIN } from './constants';
-import { damageZero } from './damage';
 import { hitTest, hittable } from './hit';
 import { release } from './pool';
 import type { Bullet, GameState, Zero } from './types';
+import { applyHit } from './weapons';
 
 function offscreen(s: GameState, b: Bullet): boolean {
   return b.x < -OFFSCREEN_MARGIN || b.x > s.width + OFFSCREEN_MARGIN || b.y < -OFFSCREEN_MARGIN || b.y > s.height + OFFSCREEN_MARGIN;
@@ -40,7 +40,7 @@ export function updateBullets(s: GameState, dt: number): void {
       if (!z) continue;
       const weapon = b.weapon;
       release(pool, i);
-      damageZero(s, z, weapon.damage);
+      applyHit(s, weapon, z);
     }
   }
 }

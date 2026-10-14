@@ -58,7 +58,7 @@ export interface Kit {
   blend: { modulate: BlendMode };
   /** tokens.zeroPalette: amber, flare, teal, fg. */
   palette: Rgba[];
-  colors: { fg: Rgba; amber: Rgba; panel2: Rgba };
+  colors: { fg: Rgba; amber: Rgba; teal: Rgba; panel2: Rgba };
 }
 
 /** One RSXform: rotation and scale (scos, ssin) and translation. */

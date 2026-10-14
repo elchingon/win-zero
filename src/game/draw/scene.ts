@@ -7,7 +7,7 @@ import { MAX_BULLETS, MAX_PARTICLES } from '../sim/constants';
 import type { GameState } from '../sim/types';
 
 import { makeBatch } from './batch';
-import { drawBullets, drawParticles, drawRings } from './fx';
+import { drawBeams, drawBolts, drawBullets, drawParticles, drawRings } from './fx';
 import type { Kit, Scratch } from './types';
 import { paintColor, rect } from './util';
 import { drawEnergyBars, drawHitFlashes, drawZeros } from './zeros';
@@ -81,6 +81,8 @@ export function drawScene(canvas: SkCanvas, s: GameState, kit: Kit, atlas: SkIma
     drawHitFlashes(canvas, s, kit, atlas, sc);
   }
   drawEnergyBars(canvas, s, kit, sc);
+  drawBeams(canvas, s, kit, sc);
+  drawBolts(canvas, s, kit, sc);
   if (atlas) drawBullets(canvas, s, kit, atlas, sc);
   drawRings(canvas, s, kit, sc);
   if (atlas) drawParticles(canvas, s, kit, atlas, sc);

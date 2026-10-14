@@ -74,6 +74,8 @@ export const HIT_PAD = 6;
 export const SPLASH_MARGIN = 0.6;
 /** A bomb reaches a zero when its center is within R + ry × this. */
 export const BOMB_MARGIN = 1;
+/** A splash's shockwave (the prototype's blast ring): starting radius and width, in points, and seconds. */
+export const BLAST_RING = { start: 10, duration: 0.45, width: 10 };
 /** Rail Laser: beam length as a multiple of the screen diagonal. */
 export const BEAM_LENGTH = 1.3;
 /** Rail Laser: a zero is on the line when its center is within max(ry, this). */

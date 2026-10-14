@@ -391,6 +391,6 @@ export function makeKit(width: number, height: number, sheet: SpriteSheet): Kit 
     },
     blend: { modulate: BlendMode.Modulate },
     palette: zeroPalette.map((c) => rgba(c)),
-    colors: { fg: rgba(colors.fg), amber: rgba(colors.amber), panel2: rgba(colors.panel2) },
+    colors: { fg: rgba(colors.fg), amber: rgba(colors.amber), teal: rgba(colors.teal), panel2: rgba(colors.panel2) },
   };
 }
