@@ -1,0 +1,83 @@
+{
+  "schema": [
+    {
+      "name": "shieldMaxHealth",
+      "type": "number",
+      "label": "Shield Max Health",
+      "default": 100,
+      "min": 50,
+      "max": 250,
+      "step": 10
+    },
+    {
+      "name": "zeroBaseSpeed",
+      "type": "number",
+      "label": "Zero Target Speed",
+      "default": 110,
+      "min": 50,
+      "max": 250,
+      "step": 10
+    },
+    {
+      "name": "laserFireRate",
+      "type": "number",
+      "label": "Blaster Fire Rate",
+      "default": 8.5,
+      "min": 4.0,
+      "max": 18.0,
+      "step": 0.5
+    },
+    {
+      "name": "bombStartingStock",
+      "type": "number",
+      "label": "Starting Bombs",
+      "default": 3,
+      "min": 1,
+      "max": 10,
+      "step": 1
+    },
+    {
+      "name": "aimAssistEnabled",
+      "type": "boolean",
+      "label": "Aim Assist Magnetism",
+      "default": true
+    },
+    {
+      "name": "screenShakeIntensity",
+      "type": "number",
+      "label": "Screen Shake Intensity",
+      "default": 1.0,
+      "min": 0.0,
+      "max": 2.0,
+      "step": 0.1
+    },
+    {
+      "name": "starTokenMultiplier",
+      "type": "number",
+      "label": "Star Token Multiplier",
+      "default": 1,
+      "min": 1,
+      "max": 5,
+      "step": 1
+    },
+    {
+      "name": "defaultMusicVolume",
+      "type": "number",
+      "label": "Default Music Volume",
+      "default": 0.45,
+      "min": 0,
+      "max": 1,
+      "step": 0.05
+    }
+  ],
+  "values": {
+    "shieldMaxHealth": 100,
+    "zeroBaseSpeed": 110,
+    "laserFireRate": 8.5,
+    "bombStartingStock": 3,
+    "aimAssistEnabled": true,
+    "screenShakeIntensity": 1.0,
+    "starTokenMultiplier": 1,
+    "defaultMusicVolume": 0.45
+  }
+}

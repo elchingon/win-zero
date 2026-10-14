@@ -1,0 +1,110 @@
+{
+  "title": "Win Zero",
+  "hook": "Blast zeroes to build streaks",
+  "game_overview": "An energetic arcade celebration game where players track daily goals and blast bouncing zero targets into screen-filling fireworks while unlocking potent blasters.",
+  "artstyle": "modern-vector",
+  "genre": "arcade",
+  "winning_condition": "Successfully blast all target zeroes to complete the daily habit celebration or achieve a target score in Arcade Endless mode.",
+  "losing_condition": "Allow moving zero targets to deplete the shield barrier integrity to zero in Arcade Challenge mode.",
+  "player_mode": "single_player",
+  "supported_orientations": [
+    "portrait",
+    "landscape"
+  ],
+  "input_methods": [
+    "touch",
+    "mouse",
+    "keyboard"
+  ],
+  "score_options": {
+    "score_type": "points",
+    "score_order": "higher_is_better"
+  },
+  "low_end_device_support": true,
+  "mobile_playable": true,
+  "tv_playable": false,
+  "language": [
+    "en"
+  ],
+  "content_descriptors": [],
+  "controls": [
+    {
+      "input": "Tap / Left Click",
+      "action": "Aim and fire active blaster or tap directly on floating zero targets to destroy them."
+    },
+    {
+      "input": "Swipe / Drag Reticle",
+      "action": "Move targeting reticle smoothly across the screen."
+    },
+    {
+      "input": "Spacebar / Bomb Button",
+      "action": "Detonate tactical celebration bomb to clear all on-screen zeroes in a giant explosion."
+    },
+    {
+      "input": "1, 2, 3 Keys / Weapon Selector Icons",
+      "action": "Switch between Standard Laser, Pulse Shotgun, and Star Cannon."
+    }
+  ],
+  "sections": [
+    {
+      "title": "Design Pillars",
+      "content": "1. Dopamine Reinforcement: Transforming daily habit discipline into high-satisfaction sensory explosions. 2. Escalating Spectacle: Each streak day adds more active zero targets culminating in full-screen victory fireworks. 3. Accessible Arcade Depth: Quick pick-up-and-play tapping combined with unlockable weapon arsenals and high-score multipliers.",
+      "summary": "Core emotional and mechanical focus of Win Zero."
+    },
+    {
+      "title": "Core Loop",
+      "content": "Players configure customizable daily goals (e.g., 'Stop Drinking', 'Daily Workout', 'Meditation'). Checking in daily triggers the celebratory Zero Blast arena where bouncing, spinning zero numerals spawn proportional to streak days (Day 1 = 1 Zero, Day 2 = 2 Zeros, etc.). Players blast the zeroes using unlocked weapons; defeating the final zero triggers a giant celebratory full-screen confetti supernova. Players earn Star Tokens to unlock special blasters, cosmic bombs, and weapon modifiers.",
+      "summary": "Habit check-in, zero-target engagement, and explosive reward cycle."
+    },
+    {
+      "title": "Core Mechanics",
+      "content": "1. Daily Streak Tracker & Check-in: Custom habit prompt with confirmation checkmark that calculates current streak and targets. 2. Zero Dynamics: Physics-driven zero targets bounce, split, or shimmer with unique trajectories and shield rings. 3. Arsenal Progression: Unlock weapons including Rapid Laser, Triple Spreader, Cluster Fireworks, and Screen-Clearing Supernova Bomb. 4. Arcade Rush Mode: An endless wave mode where players battle swarms of zero targets to practice aiming and farm upgrade currency.",
+      "summary": "Key interactive systems for habit tracking and shooting."
+    },
+    {
+      "title": "Movement & Scrolling Alignment",
+      "content": "Scrolling Axis: Static Bounded Arena (Zero vertical or horizontal camera scroll). Asset Orientation: All weapon turrets and reticles aim radially towards cursor/tap coordinate (360-degree aiming). Target Movement Physics: Float and bounce kinetics with elastic collision along screen boundaries and gentle rotational torque. Camera Behavior: Locked static canvas viewport with dynamic shockwave screen-shakes on zero detonations.",
+      "summary": "Fixed bounded arena with multi-directional target kinetics."
+    },
+    {
+      "title": "Visual Hierarchy & Layering",
+      "content": "Layer Separation: Deep indigo/violet gradient background with subtle hexagonal grid and floating ambient dust motes (zero collision, desaturated). Midground: Floating neon-glowing numeral zero targets with golden outline shields. Foreground Layer: Aim reticles, laser beams, projectile trails, and celebratory particle supernovas. HUD Overlay: Sleek semi-transparent header displaying active goal name, current streak count, remaining targets, and bomb inventory.",
+      "summary": "Clean modern-vector aesthetic with vivid foreground explosions."
+    },
+    {
+      "title": "Characters & Enemies",
+      "content": "1. Standard Zero: Crisp cyan numeral that floats and bobs gently. 2. Golden Milestone Zero: Appears on milestone days (Day 7, 14, 30, 100) with armored spin rings that burst into double fireworks. 3. Swarm Mini-Zero: Splits from larger zeroes in high-streak arcade sessions requiring rapid-fire taps.",
+      "summary": "Dynamic zero numeral variations and targets."
+    },
+    {
+      "title": "Fairness Tools",
+      "content": "Auto-aim assist toggle for touch screen users, generous tap collision hitboxes around zeroes, slow-motion Focus Burst capability, and habit check-in grace periods.",
+      "summary": "Player assistance and accessibility enhancements."
+    },
+    {
+      "title": "Juice & Game Feel",
+      "content": "Anticipation Juice: Laser reticle glows and pulses with charging sound; zeroes deform elastically upon hover or touch. State Change Juice: Color shift from calm cyan to radiant gold when reaching the final zero of the day. Impact Juice: Screen shake, brief freeze-frame hit-stop (40ms), expanding shockwave rings, and thousands of multi-colored zero particles filling the canvas.",
+      "summary": "High-impact audiovisual explosion feedback."
+    },
+    {
+      "title": "Social Mechanics & Audience",
+      "content": "Designed for habit builders, productivity enthusiasts, and casual arcade players. Features shareable victory certificates displaying habit streak milestones and total zeroes destroyed.",
+      "summary": "Self-improvement motivation and achievement sharing."
+    },
+    {
+      "title": "Accessibility",
+      "content": "Screen-shake intensity slider, high-contrast target outlines, single-tap interaction mode, and text size scaling for daily goal prompts.",
+      "summary": "Inclusive visual and control features."
+    },
+    {
+      "title": "Structural Integrity",
+      "content": "Main Dashboard (Habit Setup & Streak Status) -> Daily Goal Check-In Dialog -> Celebration Blast Arena -> Milestone Victory Recap -> Arsenal Upgrade Shop -> Endless Arcade Mode. All streak progress, custom goals, and weapon unlocks persist across sessions via local storage.",
+      "summary": "UI workflow and persistent storage architecture."
+    },
+    {
+      "title": "Virtual Touch Controls Implementation",
+      "content": "Supports direct tapping on floating zeroes anywhere on the screen for instant firing, alongside dedicated floating bottom HUD action buttons for Bomb Detonation and Arsenal Switch. Virtual buttons feature touch-none, pointer-events-auto, and handle onPointerDown, onPointerUp, onPointerLeave, and onPointerCancel cleanly.",
+      "summary": "Responsive direct-touch and mobile UI implementation."
+    }
+  ]
+}
