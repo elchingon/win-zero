@@ -72,7 +72,7 @@ describe('the celebration', () => {
   it('keeps room for the confetti after a full board goes up at once', () => {
     const s = game(60);
     win(s);
-    expect(count(s, 'confetti')).toBeGreaterThanOrEqual(CONFETTI - 10);
+    expect(count(s, 'confetti')).toBe(CONFETTI);
   });
 });
 

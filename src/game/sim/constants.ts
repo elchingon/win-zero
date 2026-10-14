@@ -113,11 +113,6 @@ export const BUSY_OBJECTS = 40;
 /** Little spinning "0" fragments per kill. */
 export const KILL_FRAGMENTS = 4;
 export const KILL_FRAGMENTS_BUSY = 2;
-/**
- * Kills stop throwing particles once this many are live, so a bomb through a full board leaves
- * room in the pool for the final zero's confetti.
- */
-export const KILL_PARTICLE_CAP = 340;
 /** Armored kills throw this many times the sparks, and a bigger shockwave. */
 export const ARMOR_BURST_SCALE = 2;
 /** Sparks thrown by a hit that doesn't kill. */
@@ -125,6 +120,11 @@ export const HIT_SPARKS = 6;
 /** Confetti and fragment rings in the final-zero celebration. */
 export const CONFETTI = 240;
 export const CONFETTI_RINGS = 22;
+/**
+ * Kills stop throwing particles once this many are live, so even a bomb through a full board
+ * leaves room in the pool for all of the final zero's confetti.
+ */
+export const KILL_PARTICLE_CAP = MAX_PARTICLES - CONFETTI - CONFETTI_RINGS;
 
 /** A kill's sparks: speed and size grow with the zero (size / SCALE_REF, at least SCALE_MIN). */
 export const SPARK = {
