@@ -4,9 +4,10 @@ import * as Notifications from 'expo-notifications';
 
 import { appStore } from '@/store';
 
+import { foregroundBehavior } from './foreground';
 import { ensureReminderChannel, getReminderPermission } from './permissions';
 import { startResponses } from './responses';
-import { toHome } from './route';
+import { getCurrentPath, toHome } from './route';
 import { CHECKIN_ACTIONS, CHECKIN_CATEGORY_ID, CHECKIN_CATEGORY_OPTIONS } from './shared';
 import { createReminderSync, startReminderSync, syncInputFrom } from './sync';
 
@@ -31,15 +32,19 @@ export const requestSync = reminders.sync;
 export const onSynced = reminders.subscribe;
 
 /**
- * From launch on: keep scheduled reminders in step with the goal, and answer from a
- * notification's buttons. Start before storage is read, so a response that launched the app is
- * answered before Home first shows. Returns a cleanup.
+ * From launch on: keep scheduled reminders in step with the goal, answer from a notification's
+ * buttons, and decide how one shows while the app is open. Start before storage is read, so a
+ * response that launched the app is answered before Home first shows. Returns a cleanup.
  */
 export function startNotifications(): () => void {
+  Notifications.setNotificationHandler({
+    handleNotification: async (n) => foregroundBehavior(getCurrentPath(), n.request.content.data),
+  });
   const stopSync = startReminderSync(appStore, reminders);
   const stopResponses = startResponses(appStore, Notifications, { toHome });
   return () => {
     stopSync();
     stopResponses();
+    Notifications.setNotificationHandler(null);
   };
 }
