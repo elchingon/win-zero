@@ -223,6 +223,43 @@ describe('notices', () => {
   });
 });
 
+describe('answering a given day', () => {
+  it('answers the open window when its day is named', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 2)); // through 10-14
+    h.setTime('2026-10-15', '20:05');
+    expect(h.store.getState().answer('yes', '2026-10-15')).toMatchObject({
+      ok: true,
+      outcome: { kind: 'yes', day: '2026-10-15', streak: 3 },
+    });
+    expect(h.store.getState().round).toMatchObject({ day: '2026-10-15', n: 3, played: false });
+  });
+
+  it("answers yesterday's window from the morning reminder", async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 2)); // through 10-14
+    h.setTime('2026-10-16', '09:00'); // 10-15 stays open until 20:00 today
+    expect(h.store.getState().answer('not-today', '2026-10-15')).toMatchObject({
+      ok: true,
+      outcome: { kind: 'slipped', day: '2026-10-15' },
+    });
+    expect(h.store.getState().goal?.lastSettledDay).toBe('2026-10-15');
+    expect(h.store.getState().notice).toMatchObject({ kind: 'slipping', cause: 'answer' });
+  });
+
+  it("turns down a day that closed, was answered, or hasn't opened", async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 2)); // through 10-14
+    h.setTime('2026-10-16', '20:30'); // 10-15 closed unanswered
+    expect(h.store.getState().answer('yes', '2026-10-15')).toMatchObject({ ok: false, reason: 'expired' });
+    expect(h.store.getState().goal?.lastSettledDay).toBe('2026-10-15'); // caught up all the same
+    expect(h.store.getState().answer('yes', '2026-10-14')).toMatchObject({ ok: false, reason: 'already-answered' });
+    expect(h.store.getState().answer('not-today', '2026-10-17')).toMatchObject({ ok: false, reason: 'not-open' });
+    expect(h.store.getState().round).toBeNull();
+
+    expect(h.store.getState().answer('yes', '2026-10-16')).toMatchObject({ ok: true });
+    expect(h.store.getState().answer('yes', '2026-10-16')).toMatchObject({ ok: false, reason: 'already-answered' });
+    expect(h.store.getState().round).toMatchObject({ day: '2026-10-16', n: 3 });
+  });
+});
+
 describe('weapons and rounds', () => {
   it("equips a newly unlocked weapon, and otherwise keeps the player's pick", async () => {
     const h = await withGoal(yesDays(newGoal(), DAY0, 2)); // best 2, through 10-14

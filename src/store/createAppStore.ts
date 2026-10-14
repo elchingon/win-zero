@@ -20,6 +20,7 @@ import {
   type Answer,
   type AnswerResult,
   type ClockTime,
+  type DayKey,
   type GoalState,
   type ResolveEvent,
   type TimeZone,
@@ -58,7 +59,8 @@ export interface AppState extends PersistedState {
   /** Settle closed windows and follow a time zone change. Run on launch and on foreground. */
   refresh: () => ResolveEvent[];
   setupGoal: (input: { goal: string; checkInTime: ClockTime; morningTime: ClockTime }) => SetupResult;
-  answer: (answer: Answer) => AnswerResult | null;
+  /** Answer a check-in: `day` when it comes from a notification, otherwise the open window. */
+  answer: (answer: Answer, day?: DayKey) => AnswerResult | null;
   finishRound: () => void;
   selectWeapon: (id: WeaponId) => void;
   spendBomb: () => boolean;
@@ -141,10 +143,10 @@ export function createAppStore(deps: StoreDeps) {
             return { ok: true };
           },
 
-          answer: (ans) => {
+          answer: (ans, day) => {
             const goal = ready();
             if (!goal) return null;
-            const r = answerCheckIn(goal, { answer: ans }, now(), timeZone());
+            const r = answerCheckIn(goal, { answer: ans, day }, now(), timeZone());
             if (!r.ok) {
               setGoal(r.state);
             } else if (r.outcome.kind === 'yes') {
