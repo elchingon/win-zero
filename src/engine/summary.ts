@@ -12,21 +12,27 @@ export interface MissDigest {
   /** The streak before the first of those days. */
   streakBefore: number;
   streak: number;
+  /** A Yes came after the last of those days, so the slide has stopped. */
+  stopped: boolean;
 }
 
 /**
  * What happened on days nobody answered, after `seenThrough` (exclusive; null means all of
- * history). Null when there were none. Answered days only move the running streak.
+ * history). Null when there were none. Answered days only move the running streak, and a Yes
+ * after the last of them stops the slide.
  */
 export function missDigest(state: GoalState, seenThrough: DayKey | null): MissDigest | null {
   let prev = 0;
   let digest: MissDigest | null = null;
   for (const e of state.history) {
     if (e.missedInRow !== undefined && (seenThrough === null || e.day > seenThrough)) {
-      digest ??= { days: 0, lost: 0, final: null, streakBefore: prev, streak: state.streak };
+      digest ??= { days: 0, lost: 0, final: null, streakBefore: prev, streak: state.streak, stopped: false };
       digest.days += 1;
+      digest.stopped = false;
       digest.lost += Math.max(0, prev - e.streakAfter);
       if (e.slip === SLIDE_FINAL && prev > 0) digest.final = e.reset ? 'reset' : 'shielded';
+    } else if (digest && e.result === 'yes') {
+      digest.stopped = true;
     }
     prev = e.streakAfter;
   }

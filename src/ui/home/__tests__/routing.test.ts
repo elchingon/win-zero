@@ -73,6 +73,8 @@ async function scene() {
 }
 
 const missedSlip = { source: 'missed', notice: { kind: 'slipping', cause: 'missed', lost: 2 } };
+/** The same news, read after the Yes: the copy says the slide has stopped. */
+const stoppedSlip = { source: 'missed', notice: { ...missedSlip.notice, stopped: true } };
 const answerSlip = { source: 'answer', notice: { kind: 'slipping', cause: 'answer', lost: 1 } };
 
 describe('Home after a long time in the background', () => {
@@ -88,7 +90,7 @@ describe('Home after a long time in the background', () => {
     expect(t.s().route).toBe('/play');
     expect(t.s().seenThrough).toBe('2026-10-22'); // nothing shown yet
 
-    expect(t.showNotice()).toMatchObject(missedSlip);
+    expect(t.showNotice()).toMatchObject(stoppedSlip);
     expect(t.s().seenThrough).toBe('2026-11-01');
     t.refocus();
     expect(t.pushed).toEqual(['/notice', '/play']);
@@ -101,7 +103,7 @@ describe('Home after a long time in the background', () => {
     t.focus();
     t.away();
     t.app.emit('active');
-    expect(t.showNotice()).toMatchObject(missedSlip);
+    expect(t.showNotice()).toMatchObject({ notice: { ...missedSlip.notice, stopped: false } });
     expect(t.s().seenThrough).toBe('2026-10-31');
     t.yes();
     t.refocus();
@@ -121,7 +123,8 @@ describe('Home after a long time in the background', () => {
 
     t.refocus(); // back from the round
     expect(t.pushed).toEqual(['/play', '/notice']);
-    expect(t.showNotice()).toMatchObject(missedSlip);
+    expect(t.showNotice()).toMatchObject(stoppedSlip); // "Your Yes stopped the slide"
+
     t.refocus();
     expect(t.pushed).toHaveLength(2);
   });

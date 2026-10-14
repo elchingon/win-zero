@@ -104,7 +104,7 @@ describe('notices', () => {
     const pending = h.store.getState().nextNotice();
     expect(pending).toEqual({
       source: 'missed',
-      notice: { kind: 'slipping', cause: 'missed', lost: 2, streak: 8, days: 2 },
+      notice: { kind: 'slipping', cause: 'missed', lost: 2, streak: 8, days: 2, stopped: false },
       through: '2026-10-31',
     });
     h.store.getState().noticeShown(pending!);
@@ -148,7 +148,7 @@ describe('notices', () => {
     const missed = h.store.getState().nextNotice()!;
     h.store.getState().answer('not-today'); // one more
     const answered = h.store.getState().nextNotice()!;
-    expect(answered).toEqual({ source: 'answer', notice: { kind: 'slipping', cause: 'answer', lost: 1, streak: 7, days: 1 } });
+    expect(answered).toEqual({ source: 'answer', notice: { kind: 'slipping', cause: 'answer', lost: 1, streak: 7, days: 1, stopped: false } });
 
     h.store.getState().noticeShown(missed);
     expect(h.store.getState().nextNotice()?.notice).toBe(answered.notice); // still waiting its turn
@@ -167,6 +167,7 @@ describe('notices', () => {
       lostStreak: 20,
       bestStreak: 20,
       days: 14,
+      stopped: false,
     });
 
     const shielded = await withGoal(yesDays(newGoal(), DAY0, 20)); // 2 shields
@@ -186,7 +187,7 @@ describe('notices', () => {
     const h = await withGoal({ ...yesDays(newGoal(), DAY0, 10), shields: 0 }); // through 10-22
     h.setTime('2026-10-23', '21:00');
     expect(h.store.getState().answer('not-today')).toMatchObject({ ok: true, outcome: { kind: 'slipped' } });
-    expect(h.store.getState().notice).toEqual({ kind: 'slipping', cause: 'answer', lost: 1, streak: 9, days: 1 });
+    expect(h.store.getState().notice).toEqual({ kind: 'slipping', cause: 'answer', lost: 1, streak: 9, days: 1, stopped: false });
 
     h.store.getState().noticeShown(h.store.getState().nextNotice()!);
     expect(h.store.getState().notice).toBeNull();
@@ -200,6 +201,7 @@ describe('notices', () => {
       lostStreak: 9,
       bestStreak: 10,
       days: 1,
+      stopped: false,
     });
 
     h.setTime('2026-10-25', '21:00');

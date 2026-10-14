@@ -52,12 +52,12 @@ export type NoticeCause = 'answer' | 'missed';
 
 /** A screen to show once: what a Not today or a run of missed days did to the streak. */
 export type Notice =
-  /** Lost zeros, short of the final. */
-  | { kind: 'slipping'; cause: NoticeCause; lost: number; streak: number; days: number }
+  /** Lost zeros, short of the final. `stopped`: a Yes has since stopped the slide. */
+  | { kind: 'slipping'; cause: NoticeCause; lost: number; streak: number; days: number; stopped: boolean }
   /** The final, absorbed by a shield. */
   | { kind: 'shielded'; cause: NoticeCause; lost: number; streak: number; shieldsLeft: number; days: number }
-  /** The final, with no shield: the streak starts over. */
-  | { kind: 'reset'; cause: NoticeCause; lostStreak: number; bestStreak: number; days: number }
+  /** The final, with no shield: the streak starts over. `stopped`: a Yes has since begun a new run. */
+  | { kind: 'reset'; cause: NoticeCause; lostStreak: number; bestStreak: number; days: number; stopped: boolean }
   /** A Not today that cost nothing, because the streak was already 0. */
   | { kind: 'noted' };
 

@@ -45,7 +45,9 @@ function copyFor(n: Notice): Copy {
         eyebrow: 'While you were away',
         title: ["You've lost ", lostLine],
         body: [
-          `Check in to stop the slide. Your streak is at ${plural(n.streak, 'zero')}.`,
+          n.stopped
+            ? `Your Yes stopped the slide. Your streak is at ${plural(n.streak, 'zero')}.`
+            : `Check in to stop the slide. Your streak is at ${plural(n.streak, 'zero')}.`,
           'Missed days are free for a week; after that, each one takes a zero.',
         ],
         motion: 'shed',
@@ -82,7 +84,9 @@ function copyFor(n: Notice): Copy {
             title: ['A fresh ', 'start.'],
             body: [
               "It's been a while since your last check-in, so your streak has started over.",
-              `Your best run stays at ${plural(n.bestStreak, 'day')}, and ${KEEPSAKES}. Check in whenever you're ready.`,
+              n.stopped
+                ? `Your Yes started a new run. Your best run stays at ${plural(n.bestStreak, 'day')}, and ${KEEPSAKES}.`
+                : `Your best run stays at ${plural(n.bestStreak, 'day')}, and ${KEEPSAKES}. Check in whenever you're ready.`,
             ],
             motion: 'settle',
             support: true,
