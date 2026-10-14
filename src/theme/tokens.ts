@@ -13,7 +13,14 @@ export const colors = {
   amberDeep: '#B9770A',
   flare: '#FF4F6D', // danger, bombs
   teal: '#3FDCCB', // weapons, success
+  card: '#2B2F54', // check-in card: color-mix(fg 10%, ink-2)
 } as const;
+
+/** A palette color at `opacity`, as rgba(). */
+export function withAlpha(hex: string, opacity: number): string {
+  const n = Number.parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${opacity})`;
+}
 
 /** Rotating ring colors for zeros, in prototype order. */
 export const zeroPalette = [colors.amber, colors.flare, colors.teal, colors.fg] as const;

@@ -3,12 +3,14 @@ import { describe, expect, it } from '@jest/globals';
 import {
   addDays,
   clockMinutes,
+  clockTimeAt,
   dayKeyAt,
   diffDays,
   isValidClockTime,
   isValidDayKey,
   isValidTimeZone,
   wallTimeToInstant,
+  weekdayOf,
   zoneOffsetMs,
 } from '../dates';
 import { DENVER, iso, LONDON, TOKYO } from './fixtures';
@@ -53,6 +55,19 @@ describe('time zones', () => {
   it('validates IANA names', () => {
     expect(isValidTimeZone(DENVER)).toBe(true);
     expect(isValidTimeZone('Mars/Olympus_Mons')).toBe(false);
+  });
+
+  it('reads the local wall time of an instant, midnight included', () => {
+    expect(clockTimeAt(iso('2026-10-14T05:00:00Z'), DENVER)).toBe('23:00');
+    expect(clockTimeAt(iso('2026-10-14T06:00:00Z'), DENVER)).toBe('00:00');
+    expect(clockTimeAt(iso('2026-10-14T05:07:00Z'), TOKYO)).toBe('14:07');
+    expect(clockTimeAt(iso('2026-11-01T08:30:00Z'), DENVER)).toBe('01:30'); // second 01:30, MST
+  });
+
+  it('knows the weekday of a day key', () => {
+    expect(weekdayOf('2026-10-13')).toBe(2); // Tuesday
+    expect(weekdayOf('2026-10-18')).toBe(0);
+    expect(weekdayOf('2028-02-29')).toBe(2);
   });
 
   it('reads the local date of an instant in any zone', () => {

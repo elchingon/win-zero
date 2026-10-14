@@ -141,6 +141,18 @@ export function dayKeyAt(instant: Date, tz: TimeZone): DayKey {
   return formatDayKey(p.y, p.m, p.d);
 }
 
+/** The wall-clock time in `tz` at an instant, as 'HH:mm'. */
+export function clockTimeAt(instant: Date, tz: TimeZone): ClockTime {
+  const p = wallPartsAt(instant.getTime(), tz);
+  return `${pad(p.h)}:${pad(p.min)}`;
+}
+
+/** 0 = Sunday … 6 = Saturday. */
+export function weekdayOf(day: DayKey): number {
+  const { y, m, d } = parseDayKey(day);
+  return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+}
+
 /**
  * The instant at which the clock in `tz` reads `time` on `day`.
  *
