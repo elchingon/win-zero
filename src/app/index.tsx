@@ -1,7 +1,8 @@
-// Phase 1 placeholder. Confirms on a device that the router, fonts, theme, Skia, and
-// Reanimated all work in the dev build. Replaced by the real Home screen in Phase 2.
+// Phase 1 placeholder. Confirms on a device that the router, fonts, theme, Skia, Reanimated,
+// and the engine's Intl time-zone math all work in the dev build. Replaced in Phase 2.
 import { BlurMask, Canvas, Group, Oval, vec } from '@shopify/react-native-skia';
-import { useEffect } from 'react';
+import { useCalendars } from 'expo-localization';
+import { useEffect, useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import {
   Easing,
@@ -13,6 +14,7 @@ import {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { composeRound, createGoal, dayKeyAt, nextWindow, wallTimeToInstant } from '@/engine';
 import { colors, fonts, radii, space, type, zeroPalette } from '@/theme/tokens';
 
 const RING_CANVAS_HEIGHT = 150;
@@ -53,11 +55,40 @@ export default function Placeholder() {
           </View>
         </View>
 
+        <EngineCheck />
+
         <Text style={type.fine}>
           Phase 1 build: foundation and rules engine. The real screens arrive in Phase 2.
         </Text>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function EngineCheck() {
+  const tz = useCalendars()[0].timeZone ?? 'UTC';
+  const lines = useMemo(() => {
+    const now = new Date();
+    const next = nextWindow(createGoal({ goalId: 'preview', goal: 'Preview', now, tz }));
+    // Hermes must resolve zone rules the same way Node does in the unit tests.
+    const dst = wallTimeToInstant('2027-03-14', '02:30', 'America/Denver').toISOString();
+    const round = composeRound(250).groups.map((g) => `${g.count} ${g.kind}${g.value > 1 ? ` ×${g.value}` : ''}`);
+    return [
+      `Zone ${tz} · today ${dayKeyAt(now, tz)}`,
+      `First check-in opens ${next.opensAt.toISOString()}`,
+      `DST check ${dst === '2027-03-14T09:30:00.000Z' ? 'pass' : `FAIL (${dst})`}`,
+      `Day 250 round: ${round.join(' + ')}`,
+    ];
+  }, [tz]);
+  return (
+    <View style={styles.section}>
+      <Text style={type.eyebrow}>Engine check</Text>
+      {lines.map((line) => (
+        <Text key={line} style={type.fine}>
+          {line}
+        </Text>
+      ))}
+    </View>
   );
 }
 
