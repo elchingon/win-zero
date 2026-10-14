@@ -3,11 +3,11 @@
 // a hint that fades once play starts. It sits over the canvas; only its buttons take touches,
 // so a finger anywhere else aims and fires.
 import { useEffect, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type StyleProp, type TextProps, type ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { colors, fonts, radii, type, withAlpha } from '@/theme/tokens';
+import { colors, fonts, fontScale, radii, type, withAlpha } from '@/theme/tokens';
 import { feedback } from '@/ui/feedback';
 
 /** The hint stays this long, then fades over HINT_FADE_MS. */
@@ -16,6 +16,11 @@ const HINT_FADE_MS = 600;
 /** The prototype's .hud-top / .hud-bottom padding. */
 const EDGE = 14;
 const GUTTER = 16;
+
+/** HUD text grows with the OS text size only so far: the round keeps fixed bands clear for it. */
+function HudText(props: TextProps) {
+  return <Text maxFontSizeMultiplier={fontScale.overlay} {...props} />;
+}
 
 function Hint() {
   const opacity = useSharedValue(1);
@@ -30,7 +35,7 @@ function Hint() {
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
-      <Text style={styles.hint}>Hold anywhere to fire</Text>
+      <HudText style={styles.hint}>Hold anywhere to fire</HudText>
     </Animated.View>
   );
 }
@@ -93,10 +98,10 @@ export function Hud(props: {
       <View style={[styles.top, { paddingTop: insets.top + EDGE }]} pointerEvents="box-none">
         <View pointerEvents="none" accessible accessibilityLabel={`${p.left} of ${p.total} zeros left. ${p.label}`}>
           <View style={styles.count}>
-            <Text style={[type.hudCount, styles.tabular]}>{p.left}</Text>
-            <Text style={type.hudLabel}>/ {p.total} LEFT</Text>
+            <HudText style={[type.hudCount, styles.tabular]}>{p.left}</HudText>
+            <HudText style={type.hudLabel}>/ {p.total} LEFT</HudText>
           </View>
-          <Text style={[type.eyebrow, styles.day]}>{p.label}</Text>
+          <HudText style={[type.eyebrow, styles.day]}>{p.label}</HudText>
           {p.extra}
         </View>
         <View style={styles.topButtons}>
@@ -108,10 +113,10 @@ export function Hud(props: {
             label="Sound"
             checked={p.sound}
           >
-            <Text style={styles.buttonText}>{p.sound ? 'SOUND ON' : 'SOUND OFF'}</Text>
+            <HudText style={styles.buttonText}>{p.sound ? 'SOUND ON' : 'SOUND OFF'}</HudText>
           </HudButton>
           <HudButton onPress={p.onQuit} label="Leave the round" hint="Goes back to base" style={styles.quit}>
-            <Text style={[styles.buttonText, styles.quitText]}>✕</Text>
+            <HudText style={[styles.buttonText, styles.quitText]}>✕</HudText>
           </HudButton>
         </View>
       </View>
@@ -130,14 +135,14 @@ export function Hud(props: {
             disabled={!p.canSwitch}
             style={styles.weapon}
           >
-            <Text style={styles.weaponSmall}>{p.canSwitch ? 'WEAPON · TAP TO SWITCH' : 'WEAPON'}</Text>
-            <Text style={styles.weaponName} numberOfLines={1}>
+            <HudText style={styles.weaponSmall}>{p.canSwitch ? 'WEAPON · TAP TO SWITCH' : 'WEAPON'}</HudText>
+            <HudText style={styles.weaponName} numberOfLines={1}>
               {p.weaponName}
-            </Text>
+            </HudText>
           </HudButton>
           {p.onFinish ? (
             <HudButton onPress={p.onFinish} label="Finish round" hint="Clears every zero and ends the round">
-              <Text style={styles.buttonText}>FINISH ROUND</Text>
+              <HudText style={styles.buttonText}>FINISH ROUND</HudText>
             </HudButton>
           ) : null}
           <HudButton
@@ -148,7 +153,7 @@ export function Hud(props: {
             style={styles.bomb}
           >
             <View style={styles.bombDot} />
-            <Text style={styles.bombCount}>{p.bombs}</Text>
+            <HudText style={styles.bombCount}>{p.bombs}</HudText>
           </HudButton>
         </View>
       ) : null}

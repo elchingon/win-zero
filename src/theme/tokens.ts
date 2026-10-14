@@ -89,3 +89,16 @@ export const type = {
   hudCount: { fontFamily: fonts.display, fontSize: 34, color: colors.amber },
   hudLabel: { fontFamily: fonts.monoSemiBold, fontSize: 12, letterSpacing: em(12, 0.08), color: colors.muted },
 } as const;
+
+/**
+ * Dynamic type: text follows the OS text size, except where a fixed layout can't grow with it.
+ * These are maxFontSizeMultiplier values.
+ */
+export const fontScale = {
+  /** The HUD, which sits in bands the round keeps clear, and the result sheet's title. */
+  overlay: 1.3,
+  /** Calendar dates, in a seven-column grid. */
+  calendarDate: 1.5,
+  /** Above this OS text size, a pair of buttons stacks rather than shrinking its labels. */
+  stackButtons: 1.3,
+} as const;

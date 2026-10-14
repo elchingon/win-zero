@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.line,
   },
   locked: { opacity: 0.5 },
-  day: { width: 62, fontFamily: fonts.monoSemiBold, fontSize: 11, letterSpacing: 0.88, color: colors.muted },
+  day: { minWidth: 62, fontFamily: fonts.monoSemiBold, fontSize: 11, letterSpacing: 0.88, color: colors.muted },
   text: { flex: 1, gap: 2 },
   name: { fontFamily: fonts.bodyBold, fontSize: 16, color: colors.fg },
   desc: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18, color: colors.muted },

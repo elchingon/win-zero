@@ -42,7 +42,7 @@ export function Chip(props: { label: string; selected: boolean; onPress: () => v
 export function StatTile(props: { label: string; value: string; hero?: boolean; accessibilityLabel?: string }) {
   return (
     <View style={styles.stat} accessible accessibilityLabel={props.accessibilityLabel ?? `${props.label}: ${props.value}`}>
-      <Text style={type.statLabel} numberOfLines={1}>
+      <Text style={type.statLabel} numberOfLines={2}>
         {props.label}
       </Text>
       <Text

@@ -6,7 +6,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { calendarMark, type CalendarMark, type DayKey, type GoalState } from '@/engine';
 import { addMonths, monthGrid, monthOf, weekdayInitials } from '@/lib/calendar';
 import { formatDayShort, formatMonth } from '@/lib/format';
-import { colors, fonts, space } from '@/theme/tokens';
+import { colors, fonts, fontScale, space } from '@/theme/tokens';
 import { Eyebrow, shared } from '@/ui/bits';
 
 type Mark = CalendarMark | 'pending';
@@ -86,7 +86,9 @@ export function HistoryCalendar(props: { goal: GoalState; today: DayKey; pending
                   accessible
                   accessibilityLabel={`${formatDayShort(day)}${mark ? `: ${MARK_WORDS[mark]}` : ''}`}
                 >
-                  <Text style={[styles.date, day === today && styles.today]}>{Number(day.slice(8))}</Text>
+                  <Text style={[styles.date, day === today && styles.today]} maxFontSizeMultiplier={fontScale.calendarDate}>
+                    {Number(day.slice(8))}
+                  </Text>
                   <View style={styles.glyphSlot}>{mark ? <MarkGlyph mark={mark} /> : null}</View>
                 </View>
               );
