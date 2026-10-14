@@ -27,7 +27,7 @@ import {
   type TimeZone,
   type WeaponId,
 } from '@/engine';
-import { SEED_MAX_N, seedYesRun } from '@/dev/seedRun';
+import type * as SeedRun from '@/dev/seedRun';
 
 import { DEFAULT_PERSISTED, migratePersisted, normalizePersisted } from './migrate';
 import { noticeForAnswer, noticeForMisses } from './notice';
@@ -51,6 +51,11 @@ export interface StoreDeps {
   makeId: () => string;
   /** Development build: honour the debug clock offset. */
   dev: boolean;
+  /**
+   * Development build: the run builder behind "Jump to day". Passed in, not imported, so a
+   * production bundle leaves it out.
+   */
+  devTools?: Pick<typeof SeedRun, 'seedYesRun' | 'SEED_MAX_N'>;
 }
 
 export type SetupResult = { ok: true } | { ok: false; reason: 'not-ready' | 'empty-goal' | 'order' };
@@ -315,8 +320,9 @@ export function createAppStore(deps: StoreDeps) {
 
           devJumpToDay: (n) => {
             const goal = ready();
-            if (!deps.dev || !goal || !Number.isInteger(n) || n < 1 || n > SEED_MAX_N) return null;
-            const seeded = seedYesRun(goal, n, now(), timeZone());
+            const tools = deps.dev ? deps.devTools : undefined;
+            if (!tools || !goal || !Number.isInteger(n) || n < 1 || n > tools.SEED_MAX_N) return null;
+            const seeded = tools.seedYesRun(goal, n, now(), timeZone());
             // The old history is gone, so there's no missed-day news left to show.
             set({ goal: seeded, round: null, weapon: null, notice: null, seenThrough: seeded.lastSettledDay });
             return get().answer('yes');

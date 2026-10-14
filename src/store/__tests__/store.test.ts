@@ -3,9 +3,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { beforeEach, describe, expect, it } from '@jest/globals';
 
 import { addDays, currentCheckInTime, latestScheduleEntry, MS_PER_DAY, pendingWindow } from '@/engine';
-import { at, DAY0, newGoal, TOKYO, yesDays } from '@/engine/__tests__/fixtures';
+import { at, DAY0, DENVER, newGoal, TOKYO, yesDays } from '@/engine/__tests__/fixtures';
 
-import type { AppStore } from '../createAppStore';
+import { createAppStore, type AppStore } from '../createAppStore';
 import { startLifecycle } from '../lifecycle';
 import { STORE_KEY, STORE_VERSION } from '../types';
 import { fakeAppState, flush, harness, ready, withGoal } from './harness';
@@ -467,6 +467,17 @@ describe('debug jump to day', () => {
     expect(s.weapon).toBe('chain');
     expect(s.notice).toBeNull();
     expect(s.nextNotice()).toBeNull();
+  });
+
+  it('does nothing without the development tools, as in a production build', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 2), { dev: false });
+    expect(h.store.getState().devJumpToDay(30)).toBeNull();
+
+    const noTools = createAppStore({ storage: AsyncStorage, now: () => new Date(h.clock.t), timeZone: () => DENVER, makeId: () => 'x', dev: true });
+    await ready(noTools);
+    noTools.setState({ goal: yesDays(newGoal(), DAY0, 2) });
+    expect(noTools.getState().devJumpToDay(30)).toBeNull();
+    expect(noTools.getState().goal?.streak).toBe(2);
   });
 
   it('turns down run lengths it cannot build', async () => {
