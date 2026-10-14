@@ -4,8 +4,7 @@ import { Platform } from 'react-native';
 
 import { colors } from '@/theme/tokens';
 
-/** Android channel for check-ins and reminders. */
-export const CHECKIN_CHANNEL_ID = 'checkin';
+import { CHECKIN_CHANNEL_ID } from './shared';
 
 export type ReminderPermission = 'granted' | 'denied' | 'undetermined';
 
