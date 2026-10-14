@@ -23,22 +23,28 @@ function offsetLabel(ms: number): string {
   return `+${days}d ${hours}h`;
 }
 
-function parseDay(text: string): number | null {
+/** A whole number from 1 to `max`, or null. */
+function parseCount(text: string, max: number): number | null {
   const n = Number(text);
-  return /^\d+$/.test(text) && n >= 1 && n <= SEED_MAX_N ? n : null;
+  return /^\d+$/.test(text) && n >= 1 && n <= max ? n : null;
 }
+
+/** Practice rounds can be far bigger than a seeded run: the round is built straight from N. */
+const PRACTICE_MAX_N = 100_000;
 
 export function DebugSection() {
   const goal = useApp((s) => s.goal);
   const offset = useApp((s) => s.devClockOffsetMs);
   const [customDay, setCustomDay] = useState('');
+  const [practiceN, setPracticeN] = useState('60');
   const store = appStore.getState();
   const now = store.now();
   const tz = store.timeZone();
   const pending = goal ? pendingWindow(goal, now) : null;
   const next = goal ? nextWindow(goal) : null;
   const at = (d: Date) => `${dayKeyAt(d, tz)} ${clockTimeAt(d, tz)}`;
-  const custom = parseDay(customDay);
+  const custom = parseCount(customDay, SEED_MAX_N);
+  const practice = parseCount(practiceN, PRACTICE_MAX_N);
 
   const lines = [
     `Now ${at(now)} (${offsetLabel(offset)})`,
@@ -104,6 +110,25 @@ export function DebugSection() {
           style={styles.input}
         />
         <Button small label="Go" onPress={() => custom && jump(custom)} disabled={!goal || !custom} />
+      </View>
+
+      <Eyebrow>Practice round</Eyebrow>
+      <Fine>Plays N zeros with every weapon and a frame meter. Nothing about your streak changes.</Fine>
+      <View style={styles.custom}>
+        <TextField
+          value={practiceN}
+          onChangeText={setPracticeN}
+          placeholder={`1–${PRACTICE_MAX_N}`}
+          keyboardType="number-pad"
+          accessibilityLabel="Zeros in the practice round"
+          style={styles.input}
+        />
+        <Button
+          small
+          label="Play"
+          onPress={() => practice && router.push({ pathname: '/play', params: { practice: String(practice) } })}
+          disabled={!practice}
+        />
       </View>
     </View>
   );

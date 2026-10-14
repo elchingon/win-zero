@@ -10,6 +10,7 @@ import {
   vec,
   type Transforms3d,
 } from '@shopify/react-native-skia';
+import { usePathname } from 'expo-router';
 import { useEffect, useMemo } from 'react';
 import { StyleSheet, useWindowDimensions } from 'react-native';
 import { useDerivedValue, useFrameCallback, useSharedValue, type SharedValue } from 'react-native-reanimated';
@@ -29,12 +30,14 @@ const SIZE_JITTER = 0.3;
 const DRIFT_SPEED = 28;
 const MAX_STEP_S = 0.05;
 
-const DOT_SPACING = 26;
-const DOT_SIZE = 1.5;
-const DOT_ALPHA = 0.35;
+export const DOT_SPACING = 26;
+export const DOT_SIZE = 1.5;
+export const DOT_ALPHA = 0.35;
+/** The first dot's offset from the top-left corner. */
+export const DOT_ORIGIN = { x: 13, y: 14 };
 /** The backdrop glow sits a little above center. */
-const GLOW_Y = 0.38;
-const GLOW_RADIUS = 0.8;
+export const GLOW_Y = 0.38;
+export const GLOW_RADIUS = 0.8;
 /** The screen wash: ink at 40% at the top, deepening to 82% by 55% of the height. */
 const WASH = [withAlpha(colors.ink, 0.4), withAlpha(colors.ink, 0.82)];
 const WASH_STOPS = [0, 0.55];
@@ -78,6 +81,8 @@ function DriftingZero(props: { drift: SharedValue<Drift[]>; index: number; ry: n
 export function ZeroField() {
   const { width, height } = useWindowDimensions();
   const reduceMotion = useReduceMotion();
+  // The game draws its own backdrop over this one; don't spend frames on drift nobody sees.
+  const covered = usePathname() === '/play';
   const initial = useMemo(() => seed(width, height), [width, height]);
   const drift = useSharedValue(initial);
   const bounds = useSharedValue({ width, height });
@@ -114,12 +119,14 @@ export function ZeroField() {
   }, false);
 
   useEffect(() => {
-    frame.setActive(!reduceMotion);
-  }, [frame, reduceMotion]);
+    frame.setActive(!reduceMotion && !covered);
+  }, [frame, reduceMotion, covered]);
 
   const dots = useMemo(() => {
     const out = [];
-    for (let y = 14; y < height; y += DOT_SPACING) for (let x = 13; x < width; x += DOT_SPACING) out.push(vec(x, y));
+    for (let y = DOT_ORIGIN.y; y < height; y += DOT_SPACING) {
+      for (let x = DOT_ORIGIN.x; x < width; x += DOT_SPACING) out.push(vec(x, y));
+    }
     return out;
   }, [width, height]);
 

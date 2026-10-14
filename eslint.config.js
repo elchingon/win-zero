@@ -35,9 +35,7 @@ module.exports = defineConfig([
     },
   },
   {
-    // The game sim runs on the UI thread as worklets: plain data in, no platform imports, no
-    // clock or Math.random (the seeded generator lives in the state), and no use before
-    // definition, because the worklets plugin turns function declarations into constants.
+    // The game sim runs on the UI thread as worklets: plain data in, no platform imports.
     files: ['src/game/sim/**/*.ts'],
     ignores: ['src/game/sim/__tests__/**'],
     rules: {
@@ -54,20 +52,29 @@ module.exports = defineConfig([
           ],
         },
       ],
+    },
+  },
+  {
+    // Sim and scene drawing both run as worklets: no clock or Math.random (the seeded generator
+    // lives in the game state), no classes, and no use before definition, because the worklets
+    // plugin turns function declarations into constants captured when the module loads.
+    files: ['src/game/sim/**/*.ts', 'src/game/draw/**/*.ts'],
+    ignores: ['src/game/*/__tests__/**'],
+    rules: {
       'no-restricted-syntax': [
         'error',
         {
           selector: "CallExpression[callee.object.name='Date'][callee.property.name='now']",
-          message: 'The sim takes dt; it never reads the clock.',
+          message: 'Worklets take dt; they never read the clock.',
         },
-        { selector: "NewExpression[callee.name='Date']", message: 'The sim takes dt; it never reads the clock.' },
+        { selector: "NewExpression[callee.name='Date']", message: 'Worklets take dt; they never read the clock.' },
         {
           selector: "CallExpression[callee.object.name='Math'][callee.property.name='random']",
-          message: 'Use the seeded generator in the game state (rng.ts).',
+          message: 'Use the seeded generator in the game state (sim/rng.ts).',
         },
         {
           selector: "CallExpression[callee.object.name='performance'][callee.property.name='now']",
-          message: 'The sim takes dt; it never reads the clock.',
+          message: 'Worklets take dt; they never read the clock.',
         },
         { selector: 'ClassDeclaration', message: 'Worklets can’t carry classes to the UI thread; use plain objects.' },
       ],

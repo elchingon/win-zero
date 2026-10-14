@@ -16,6 +16,15 @@
     "preview": {
       "distribution": "internal"
     },
+    "perf": {
+      "extends": "preview",
+      "env": {
+        "EXPO_PUBLIC_PERF_BUILD": "1"
+      },
+      "android": {
+        "buildType": "apk"
+      }
+    },
     "production": {
       "autoIncrement": true
     }

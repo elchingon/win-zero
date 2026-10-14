@@ -17,15 +17,18 @@ import { colors } from '@/theme/tokens';
 import { ZERO_ASPECT, ZERO_STROKE } from './sim/sizing';
 
 /** Glow size as a fraction of the vertical radius (the prototype's shadowBlur, as a blur sigma). */
-const GLOW = 0.22;
-const HIGHLIGHT_ALPHA = 0.35;
+export const ZERO_GLOW = 0.22;
+export const HIGHLIGHT_ALPHA = 0.35;
 /** The highlight arc, in degrees clockwise from 3 o'clock: 1.1π to 1.45π. */
-const HIGHLIGHT_START = 198;
-const HIGHLIGHT_SWEEP = 63;
+export const HIGHLIGHT_START = 198;
+export const HIGHLIGHT_SWEEP = 63;
+/** The highlight sits this many ring widths in from the outer edge, and is this fraction of one thick. */
+export const HIGHLIGHT_INSET = 0.75;
+export const HIGHLIGHT_WIDTH = 0.18;
 
-function highlightPath(rx: number, ry: number, lw: number): SkPath {
-  const hx = Math.max(1, rx - lw * 0.75);
-  const hy = Math.max(1, ry - lw * 0.75);
+export function highlightPath(rx: number, ry: number, lw: number): SkPath {
+  const hx = Math.max(1, rx - lw * HIGHLIGHT_INSET);
+  const hy = Math.max(1, ry - lw * HIGHLIGHT_INSET);
   const path = Skia.Path.Make();
   path.addArc(Skia.XYWHRect(-hx, -hy, hx * 2, hy * 2), HIGHLIGHT_START, HIGHLIGHT_SWEEP);
   return path;
@@ -46,12 +49,12 @@ export function ZeroRing(props: {
   return (
     <Group transform={transform}>
       <Oval x={-ox} y={-oy} width={ox * 2} height={oy * 2} style="stroke" strokeWidth={lw} color={color}>
-        {glow ? <BlurMask blur={ry * GLOW} style="solid" /> : null}
+        {glow ? <BlurMask blur={ry * ZERO_GLOW} style="solid" /> : null}
       </Oval>
       <Path
         path={highlight}
         style="stroke"
-        strokeWidth={Math.max(1, lw * 0.18)}
+        strokeWidth={Math.max(1, lw * HIGHLIGHT_WIDTH)}
         strokeCap="round"
         color={colors.fg}
         opacity={HIGHLIGHT_ALPHA}
