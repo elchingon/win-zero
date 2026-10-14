@@ -147,6 +147,7 @@ function HomeScreen({ goal }: { goal: GoalState }) {
           goal={goal}
           window={pending}
           now={now}
+          tz={tz}
           h24={h24}
           onYes={onYes}
           onNotToday={onNotToday}

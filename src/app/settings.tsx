@@ -63,6 +63,7 @@ export default function Settings() {
 
   const store = appStore.getState();
   const now = store.now();
+  const tz = store.timeZone();
   const pending = pendingWindow(goal, now);
   const next = nextWindow(goal);
   const goalChanged = draft.trim() !== goal.goal && draft.trim().length > 0;
@@ -116,8 +117,8 @@ export default function Settings() {
           error={timeError.checkIn}
           hint={
             pending
-              ? `Today's check-in is open. A new time starts with the next one, ${formatWhen(next.closesAt, now, next.tz, h24)}.`
-              : `Next check-in: ${formatWhen(next.opensAt, now, next.tz, h24)}.`
+              ? `A check-in is open now. The next one opens ${formatWhen(next.closesAt, now, tz, h24)}.`
+              : `Next check-in: ${formatWhen(next.opensAt, now, tz, h24)}.`
           }
         />
         <TimeField

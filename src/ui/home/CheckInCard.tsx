@@ -2,7 +2,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
-import { isWindowToday, notTodayPreview, type CheckInWindow, type GoalState } from '@/engine';
+import { isWindowToday, notTodayPreview, type CheckInWindow, type GoalState, type TimeZone } from '@/engine';
 import { formatInstantTime, plural } from '@/lib/format';
 import { colors, fonts, radii, space } from '@/theme/tokens';
 import { Button } from '@/ui/Button';
@@ -21,11 +21,13 @@ export function CheckInCard(props: {
   goal: GoalState;
   window: CheckInWindow;
   now: Date;
+  /** The device's time zone: times show as the phone's clock reads them. */
+  tz: TimeZone;
   h24: boolean;
   onYes: () => void;
   onNotToday: () => void;
 }) {
-  const { goal, window, now, h24, onYes, onNotToday } = props;
+  const { goal, window, now, tz, h24, onYes, onNotToday } = props;
   const when = isWindowToday(window, now) ? 'today' : 'yesterday';
   return (
     <Animated.View entering={FadeInDown.springify().damping(14)} style={styles.card} accessibilityRole="summary">
@@ -34,7 +36,7 @@ export function CheckInCard(props: {
           <View style={styles.appRing} />
         </View>
         <Text style={styles.headText}>WIN ZERO</Text>
-        <Text style={[styles.headText, styles.when]}>{formatInstantTime(window.opensAt, window.tz, h24)}</Text>
+        <Text style={[styles.headText, styles.when]}>{formatInstantTime(window.opensAt, tz, h24)}</Text>
       </View>
       <Text style={styles.question}>
         Did you stick to “{goal.goal}” {when}?
