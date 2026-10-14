@@ -115,7 +115,7 @@ export function reminderRequests(input: ReminderInput): ReminderRequest[] {
 export function testCheckInRequest(
   input: Pick<ReminderInput, 'goal' | 'now' | 'tz' | 'showGoal'>,
   identifier: string,
-): NotificationRequestInput & { trigger: TimeIntervalTriggerInput } {
+): NotificationRequestInput & { content: ReminderContent; trigger: TimeIntervalTriggerInput } {
   const state = resolve(input.goal, input.now, input.tz).state;
   const w = nextWindow(state);
   const upcoming = w.opensAt.getTime() > input.now.getTime();
