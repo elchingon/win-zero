@@ -2,6 +2,7 @@
 module.exports = {
   preset: 'jest-expo',
   globalSetup: '<rootDir>/jest.global-setup.js',
+  setupFiles: ['<rootDir>/jest.setup.js'],
   testMatch: ['<rootDir>/src/**/*.test.ts?(x)'],
   testPathIgnorePatterns: ['/node_modules/', '<rootDir>/docs/'],
   modulePathIgnorePatterns: ['<rootDir>/docs/'],
