@@ -1,8 +1,9 @@
-// The shooting round: the game canvas full screen, with the HUD over it. A real round is the
-// one the latest Yes earned (its rewards are already banked); a replay plays it again with no
-// effect on the streak. Development builds, and release builds made with
-// EXPO_PUBLIC_PERF_BUILD=1 (eas build --profile perf), can open /play?practice=N to play any N
-// with every weapon and a frame meter, and nothing about the streak changes.
+// The shooting round: the game canvas full screen, with the HUD over it, and the result sheet
+// over the fill once the round is won. A real round is the one the latest Yes earned (its
+// rewards are already banked); Replay plays it again in place, with no effect on the streak.
+// Development builds, and release builds made with EXPO_PUBLIC_PERF_BUILD=1 (eas build
+// --profile perf), can open /play?practice=N to play any N with every weapon and a frame
+// meter, and nothing about the streak changes.
 import { Redirect, router, Stack, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -11,8 +12,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { composeRound, equippedWeapon, fillPlan, unlockedWeapons, type WeaponId } from '@/engine';
 import { GameCanvas, type FrameStats, type GameHandle, type RoundSetup } from '@/game/GameCanvas';
 import { Hud } from '@/game/Hud';
+import { ResultSheet, type ResultMode } from '@/game/ResultSheet';
 import type { Report } from '@/game/sim/types';
-import { appStore, useApp } from '@/store';
+import { appStore, useApp, type RoundRecord } from '@/store';
 import { colors, fonts } from '@/theme/tokens';
 import { useReduceMotion } from '@/ui/useReduceMotion';
 
@@ -25,32 +27,41 @@ const PRACTICE_MAX_N = 100_000;
 /** Practice rounds come with this many free bombs, to try them without a long run. */
 const PRACTICE_BOMBS = 9;
 
-type Mode = 'real' | 'replay' | 'practice';
-
 const newSeed = () => Math.floor(Math.random() * 2 ** 31);
 
 export default function Play() {
-  const { replay, practice } = useLocalSearchParams<{ replay?: string; practice?: string }>();
+  const { practice } = useLocalSearchParams<{ practice?: string }>();
   const practiceN = PRACTICE_ENABLED && practice ? Number(practice) : NaN;
   const isPractice = Number.isInteger(practiceN) && practiceN >= 1 && practiceN <= PRACTICE_MAX_N;
   return (
     <>
       {/* An iOS edge swipe would fight the aim. The HUD's ✕ leaves instead. */}
       <Stack.Screen options={{ gestureEnabled: false }} />
-      {isPractice ? <Round mode="practice" n={practiceN} best={PRACTICE_BEST} /> : <StoreRound replay={replay === '1'} />}
+      {isPractice ? (
+        <Round initialMode="practice" n={practiceN} best={PRACTICE_BEST} record={null} />
+      ) : (
+        <StoreRound />
+      )}
     </>
   );
 }
 
-function StoreRound({ replay }: { replay: boolean }) {
+function StoreRound() {
   // Read once: if a day settles mid-round, the round on screen stays put.
   const [record] = useState(() => appStore.getState().round);
   const best = useApp((s) => s.goal?.bestStreak);
   if (!record || best === undefined) return <Redirect href="/" />;
-  return <Round mode={replay || record.played ? 'replay' : 'real'} n={record.n} best={best} />;
+  // Home only offers rounds not yet played; one that was is a replay.
+  return <Round initialMode={record.played ? 'replay' : 'real'} n={record.n} best={best} record={record} />;
 }
 
-function Round({ mode, n, best }: { mode: Mode; n: number; best: number }) {
+/** Back to Home: underneath Play, or taking its place when a link opened Play directly. */
+const toBase = () => router.dismissTo('/');
+
+function Round(props: { initialMode: ResultMode; n: number; best: number; record: RoundRecord | null }) {
+  const { initialMode, n, best, record } = props;
+  // Replay turns a real round into a replay.
+  const [mode, setMode] = useState(initialMode);
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const reduceMotion = useReduceMotion();
@@ -73,6 +84,7 @@ function Round({ mode, n, best }: { mode: Mode; n: number; best: number }) {
   const game = useRef<GameHandle>(null);
   const [left, setLeft] = useState(n);
   const [over, setOver] = useState(false);
+  const [landed, setLanded] = useState(false);
   // A real round spends banked bombs. Replays and practice get free ones: a replay as many as
   // are banked, which it never touches.
   const [freeBombs, setFreeBombs] = useState(() => (mode === 'practice' ? PRACTICE_BOMBS : bankedBombs));
@@ -80,37 +92,30 @@ function Round({ mode, n, best }: { mode: Mode; n: number; best: number }) {
   const [stats, setStats] = useState<FrameStats | null>(null);
   // Reports from a round that has since been restarted are ignored.
   const seedRef = useRef(seed);
-  const onLanded = useRef(() => {});
 
   const onReport = useCallback((r: Report) => {
     if (r.seed !== seedRef.current) return;
     setLeft(r.valueLeft);
     if (r.final) setOver(true);
-    if (r.showResult) onLanded.current();
+    if (r.showResult) setLanded(true);
   }, []);
-
-  const restart = useCallback(() => {
-    const next = newSeed();
-    seedRef.current = next;
-    setSeed(next);
-    setLeft(n);
-    setOver(false);
-    setFreeBombs(mode === 'practice' ? PRACTICE_BOMBS : (appStore.getState().goal?.bombs ?? 0));
-  }, [n, mode]);
 
   // The last zero went: a real round counts as played.
   useEffect(() => {
     if (over && mode === 'real') appStore.getState().finishRound();
   }, [over, mode]);
 
-  // The fill has landed. Until the result sheet moves in here, the result screen follows
-  // (practice just starts over).
-  useEffect(() => {
-    onLanded.current = () => {
-      if (mode === 'practice') restart();
-      else router.replace(mode === 'replay' ? { pathname: '/result', params: { replay: '1' } } : '/result');
-    };
-  }, [mode, restart]);
+  /** Play the same round again, right here, with fresh positions and free bombs. */
+  const replay = () => {
+    const next = newSeed();
+    seedRef.current = next;
+    setSeed(next);
+    setMode(mode === 'practice' ? 'practice' : 'replay');
+    setLeft(n);
+    setOver(false);
+    setLanded(false);
+    setFreeBombs(mode === 'practice' ? PRACTICE_BOMBS : bankedBombs);
+  };
 
   const onBomb = () => {
     if (over || bombs < 1) return;
@@ -140,30 +145,33 @@ function Round({ mode, n, best }: { mode: Mode; n: number; best: number }) {
         onReport={onReport}
         onFrameStats={mode === 'practice' ? setStats : undefined}
       />
-      <Hud
-        left={left}
-        total={n}
-        label={mode === 'practice' ? 'PRACTICE' : `DAY ${n}`}
-        weaponName={weapon.name}
-        canSwitch={unlocked.length > 1}
-        onSwitchWeapon={switchWeapon}
-        bombs={bombs}
-        bombEnabled={!over && bombs > 0}
-        onBomb={onBomb}
-        sound={sound}
-        onToggleSound={() => appStore.getState().setPref('sound', !sound)}
-        // Home stays underneath, or takes Play's place when a link opened Play directly.
-        onQuit={() => router.dismissTo('/')}
-        controls={!over}
-        hintKey={seed}
-        extra={
-          mode === 'practice' ? (
-            <Text style={styles.meter}>
-              {stats ? `${stats.fps.toFixed(0)} FPS · WORST ${stats.worstMs.toFixed(1)} MS` : 'MEASURING…'}
-            </Text>
-          ) : null
-        }
-      />
+      {landed ? (
+        <ResultSheet n={n} mode={mode} record={record} onBack={toBase} onReplay={replay} />
+      ) : (
+        <Hud
+          left={left}
+          total={n}
+          label={mode === 'practice' ? 'PRACTICE' : `DAY ${n}`}
+          weaponName={weapon.name}
+          canSwitch={unlocked.length > 1}
+          onSwitchWeapon={switchWeapon}
+          bombs={bombs}
+          bombEnabled={!over && bombs > 0}
+          onBomb={onBomb}
+          sound={sound}
+          onToggleSound={() => appStore.getState().setPref('sound', !sound)}
+          onQuit={toBase}
+          controls={!over}
+          hintKey={seed}
+          extra={
+            mode === 'practice' ? (
+              <Text style={styles.meter}>
+                {stats ? `${stats.fps.toFixed(0)} FPS · WORST ${stats.worstMs.toFixed(1)} MS` : 'MEASURING…'}
+              </Text>
+            ) : null
+          }
+        />
+      )}
     </View>
   );
 }

@@ -18,9 +18,12 @@ Daily habit app (iOS + Android): check in on one goal each day; every "yes" adds
 
 ## Layout
 ```
-src/app/            expo-router screens (setup, index=home, play, result, settings)
+src/app/            expo-router screens (setup, index=home, play, notice, settings)
 src/engine/         PURE logic, no React/Expo imports: rules.ts, resolve.ts, round.ts, weapons.ts, rewards.ts
-src/game/           Skia scene, physics, particles, hit testing, sfx
+src/game/           the round: GameCanvas, Hud, ResultSheet (shown inside play), sfx
+  sim/              worklet physics, weapons, effects, fill (runs on the UI thread; unit-tested)
+  draw/             worklet Skia scene, drawn from the baked atlas
+  bake/             the per-round sprite atlas and paints, built on the JS thread
 src/notifications/  scheduling + response handling
 src/store/          zustand store wrapping the engine
 src/theme/          tokens.ts (palette + fonts from SPEC section 7)
