@@ -10,7 +10,7 @@ import {
   usePictureAsTexture,
   type SkPicture,
 } from '@shopify/react-native-skia';
-import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
+import { memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, type Ref } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useFrameCallback, useSharedValue, type FrameInfo, type SharedValue } from 'react-native-reanimated';
@@ -22,6 +22,7 @@ import { fontAssets } from '@/theme/fonts';
 import { bakeSprites, makeKit } from './bake/kit';
 import { drawScene, makeScratch } from './draw/scene';
 import type { Scratch } from './draw/types';
+import { dropBomb } from './sim/bomb';
 import { moveAim, pressFire, releaseFire, setReduceMotion, setWeapon } from './sim/input';
 import { resetReport } from './sim/report';
 import { createGame } from './sim/spawn';
@@ -45,6 +46,12 @@ export interface FrameStats {
 /** What identifies a round. The weapon and reduce motion can change mid-round. */
 export type RoundSetup = Omit<GameConfig, 'weapon' | 'reduceMotion'>;
 
+/** Commands the screen sends into the running round. */
+export interface GameHandle {
+  /** Blast the middle of the play area. The screen has already paid for it. */
+  dropBomb: () => void;
+}
+
 function startGame(state: SharedValue<GameState | null>, cfg: GameConfig) {
   'worklet';
   state.value = createGame(cfg);
@@ -62,6 +69,12 @@ function applyReduceMotion(state: SharedValue<GameState | null>, reduceMotion: b
   if (s) setReduceMotion(s, reduceMotion);
 }
 
+function bomb(state: SharedValue<GameState | null>) {
+  'worklet';
+  const s = state.value;
+  if (s) dropBomb(s);
+}
+
 export const GameCanvas = memo(function GameCanvas(props: {
   round: RoundSetup;
   weapon: WeaponDef;
@@ -69,8 +82,9 @@ export const GameCanvas = memo(function GameCanvas(props: {
   onReport: (report: Report) => void;
   /** Development only: frame rate and the slowest frame, twice a second. */
   onFrameStats?: (stats: FrameStats) => void;
+  ref?: Ref<GameHandle>;
 }) {
-  const { round, weapon, reduceMotion, onReport, onFrameStats } = props;
+  const { round, weapon, reduceMotion, onReport, onFrameStats, ref } = props;
   const { width, height, groups } = round;
   const font = useFont(fontAssets.Bungee_400Regular, FONT_LOAD_SIZE);
 
@@ -102,6 +116,8 @@ export const GameCanvas = memo(function GameCanvas(props: {
   useEffect(() => {
     scheduleOnUI(applyReduceMotion, state, reduceMotion);
   }, [reduceMotion, state]);
+
+  useImperativeHandle(ref, () => ({ dropBomb: () => scheduleOnUI(bomb, state) }), [state]);
 
   const gesture = useMemo(
     () =>

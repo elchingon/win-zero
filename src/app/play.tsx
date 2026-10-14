@@ -9,7 +9,7 @@ import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { composeRound, equippedWeapon, unlockedWeapons, type WeaponId } from '@/engine';
-import { GameCanvas, type FrameStats, type RoundSetup } from '@/game/GameCanvas';
+import { GameCanvas, type FrameStats, type GameHandle, type RoundSetup } from '@/game/GameCanvas';
 import { Hud } from '@/game/Hud';
 import type { Report } from '@/game/sim/types';
 import { appStore, useApp } from '@/store';
@@ -22,6 +22,8 @@ const PRACTICE_ENABLED = __DEV__ || process.env.EXPO_PUBLIC_PERF_BUILD === '1';
 const PRACTICE_BEST = 100;
 /** Practice rounds go up to this many zeros. */
 const PRACTICE_MAX_N = 100_000;
+/** Practice rounds come with this many free bombs, to try them without a long run. */
+const PRACTICE_BOMBS = 9;
 /** Until the result sheet moves into Play: how long the last kill shows before the result. */
 const RESULT_STOPGAP_MS = 900;
 
@@ -69,8 +71,13 @@ function Round({ mode, n, best }: { mode: Mode; n: number; best: number }) {
     [n, groups, width, height, insets.top, insets.bottom, seed],
   );
 
+  const game = useRef<GameHandle>(null);
   const [left, setLeft] = useState(n);
   const [over, setOver] = useState(false);
+  // A real round spends banked bombs. Replays and practice get free ones: a replay as many as
+  // are banked, which it never touches.
+  const [freeBombs, setFreeBombs] = useState(() => (mode === 'practice' ? PRACTICE_BOMBS : bankedBombs));
+  const bombs = mode === 'real' ? bankedBombs : freeBombs;
   const [stats, setStats] = useState<FrameStats | null>(null);
   // Reports from a round that has since been restarted are ignored.
   const seedRef = useRef(seed);
@@ -87,7 +94,8 @@ function Round({ mode, n, best }: { mode: Mode; n: number; best: number }) {
     setSeed(next);
     setLeft(n);
     setOver(false);
-  }, [n]);
+    setFreeBombs(mode === 'practice' ? PRACTICE_BOMBS : (appStore.getState().goal?.bombs ?? 0));
+  }, [n, mode]);
 
   // The last zero went: a real round counts as played. Until the result sheet moves in here,
   // the result screen follows (practice just starts over).
@@ -101,6 +109,16 @@ function Round({ mode, n, best }: { mode: Mode; n: number; best: number }) {
     return () => clearTimeout(id);
   }, [over, mode, restart]);
 
+  const onBomb = () => {
+    if (over || bombs < 1) return;
+    if (mode === 'real') {
+      if (!appStore.getState().spendBomb()) return;
+    } else {
+      setFreeBombs((b) => b - 1);
+    }
+    game.current?.dropBomb();
+  };
+
   const switchWeapon = () => {
     const i = unlocked.findIndex((w) => w.id === weapon.id);
     const next = unlocked[(i + 1) % unlocked.length];
@@ -112,6 +130,7 @@ function Round({ mode, n, best }: { mode: Mode; n: number; best: number }) {
   return (
     <View style={styles.root}>
       <GameCanvas
+        ref={game}
         round={round}
         weapon={weapon}
         reduceMotion={reduceMotion}
@@ -125,9 +144,9 @@ function Round({ mode, n, best }: { mode: Mode; n: number; best: number }) {
         weaponName={weapon.name}
         canSwitch={unlocked.length > 1}
         onSwitchWeapon={switchWeapon}
-        bombs={mode === 'practice' ? 0 : bankedBombs}
-        bombEnabled={false}
-        onBomb={() => {}}
+        bombs={bombs}
+        bombEnabled={!over && bombs > 0}
+        onBomb={onBomb}
         sound={sound}
         onToggleSound={() => appStore.getState().setPref('sound', !sound)}
         // Home stays underneath, or takes Play's place when a link opened Play directly.
