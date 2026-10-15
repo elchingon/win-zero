@@ -84,6 +84,7 @@ and its debug tools. The others use a TestFlight, internal or `preview` build.
 | 11 | **Release permissions** | `bundletool dump manifest --bundle app.aab` (or `aapt dump permissions` on a preview APK). | No storage or SYSTEM_ALERT_WINDOW permissions, and no exact-alarm permission. |
 | 12 | **Fresh install and erase** | Install fresh, go through Setup and allow notifications. Then Settings → Erase all data. | The permission explanation shows before the OS prompt. After erasing, Setup shows and the pending count is 0. |
 | 13 | **Answering the next evening** _dev_ | Leave a check-in unanswered. Move the debug clock to 9:00 PM the next day, then answer. Leave the next one unanswered and move the clock past the following midnight. | At 9:00 PM, Home asks about yesterday and says "Open until the end of today". That evening's notification has no buttons, and tapping it opens Home. After answering yesterday, today's card shows. Past midnight, the unanswered day is recorded as missed, and the day after it is still open. |
+| 14 | **Changing the check-in time** | Leave yesterday's check-in unanswered. In Settings, set the check-in time a few minutes from now, then lock the phone. | Settings says "Next check-in: today at …" with the new time. The notification arrives then, without buttons while yesterday is open, and tapping it opens Home on yesterday's card. |
 
 ### Known and accepted
 - **Android reminders are inexact,** and can arrive a few minutes late. There's no exact-alarm

@@ -281,8 +281,9 @@ describe('travel', () => {
     const after = yes.ok ? yes.state : state;
     expect(after.history.at(-1)?.tz).toBe(LA);
 
-    // Oct 14 gets a short window; from Oct 15 on, check-in is 20:00 Tokyo time.
-    expect(opensAt(after, '2026-10-14').toISOString()).toBe('2026-10-15T03:00:00.000Z');
+    // Oct 14's 20:00 in Tokyo had passed on landing, so it opened on arrival; from Oct 15 on,
+    // check-in is 20:00 Tokyo time.
+    expect(opensAt(after, '2026-10-14').toISOString()).toBe(landed.toISOString());
     expect(opensAt(after, '2026-10-15').toISOString()).toBe(at('2026-10-15', '20:00', TOKYO).toISOString());
     expect(opensAt(after, '2026-10-16').toISOString()).toBe(at('2026-10-16', '20:00', TOKYO).toISOString());
 

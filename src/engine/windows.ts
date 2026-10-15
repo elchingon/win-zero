@@ -82,6 +82,17 @@ export function pendingWindow(state: GoalState, now: Date): CheckInWindow | null
   return w.opensAt.getTime() <= t && t < w.closesAt.getTime() ? w : null;
 }
 
+/**
+ * The first day, from the earliest unsettled one, whose check-in hasn't arrived by `now`: today's
+ * while yesterday's is still open. Expects a state already resolved at `now`, so every unsettled
+ * day that has opened is still open.
+ */
+export function firstUpcomingDay(state: GoalState, now: Date): DayKey {
+  let day = firstUnsettledDay(state);
+  while (opensAt(state, day).getTime() <= now.getTime()) day = addDays(day, 1);
+  return day;
+}
+
 /** The window the user answers next: the pending one, or else the next one to open. */
 export function nextWindow(state: GoalState): CheckInWindow {
   return windowFor(state, firstUnsettledDay(state));

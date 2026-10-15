@@ -4,7 +4,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState, type ComponentType } from 'react';
 import { AppState, Linking, StyleSheet, Text, View } from 'react-native';
 
-import { currentCheckInTime, nextWindow, pendingWindow, type ClockTime } from '@/engine';
+import { currentCheckInTime, firstUpcomingDay, opensAt, pendingWindow, type ClockTime } from '@/engine';
 import { formatUntil, formatWhen } from '@/lib/format';
 import { requestSync } from '@/notifications';
 import { getReminderPermission, requestReminderPermission, type ReminderPermission } from '@/notifications/permissions';
@@ -66,7 +66,7 @@ export default function Settings() {
   const now = store.now();
   const tz = store.timeZone();
   const pending = pendingWindow(goal, now);
-  const next = nextWindow(goal);
+  const upcoming = opensAt(goal, firstUpcomingDay(goal, now));
   const goalChanged = draft.trim() !== goal.goal && draft.trim().length > 0;
 
   const saveGoal = () => {
@@ -116,11 +116,7 @@ export default function Settings() {
           onChange={changeCheckIn}
           h24={h24}
           error={timeError.checkIn}
-          hint={
-            pending
-              ? `A check-in is open until ${formatUntil(pending.closesAt, now, tz, h24)}. A new time starts with the next one.`
-              : `Next check-in: ${formatWhen(next.opensAt, now, tz, h24)}.`
-          }
+          hint={`${pending ? `A check-in is open until ${formatUntil(pending.closesAt, now, tz, h24)}. ` : ''}Next check-in: ${formatWhen(upcoming, now, tz, h24)}.`}
         />
         <TimeField
           label="Morning reminder"

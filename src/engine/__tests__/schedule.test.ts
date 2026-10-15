@@ -1,7 +1,8 @@
 // Editing the check-in time, morning time and goal text (SPEC 6 Settings).
 import { describe, expect, it } from '@jest/globals';
 
-import { currentCheckInTime, setCheckInTime, setGoalText, setMorningTime } from '../resolve';
+import { planReminders } from '../reminders';
+import { answer, currentCheckInTime, setCheckInTime, setGoalText, setMorningTime } from '../resolve';
 import { closesAt, opensAt, pendingWindow, windowFor } from '../windows';
 import { at, answerDay, DAY0, DENVER, newGoal, yesDays } from './fixtures';
 
@@ -16,18 +17,47 @@ describe('setCheckInTime', () => {
     expect(opensAt(state, '2026-10-15')).toEqual(at('2026-10-15', '22:00'));
   });
 
-  it('moving it earlier never closes the open window early', () => {
+  it('moving it earlier never closes the open window early, and moves the next check-in', () => {
     const now = at(DAY0, '21:00');
     const { state } = setCheckInTime(newGoal(), '18:00', now, DENVER);
     expect(pendingWindow(state, now)?.day).toBe(DAY0);
     expect(closesAt(state, DAY0)).toEqual(at('2026-10-15', '00:00')); // its original close
-    expect(opensAt(state, '2026-10-14')).toEqual(at('2026-10-14', '20:00')); // its original opening
+    expect(opensAt(state, '2026-10-14')).toEqual(at('2026-10-14', '18:00'));
     expect(windowFor(state, '2026-10-14').closesAt).toEqual(at('2026-10-16', '00:00'));
     expect(opensAt(state, '2026-10-16')).toEqual(at('2026-10-16', '18:00'));
     // The next evening, the open window is still answerable.
     expect(answerDay(state, DAY0, 'yes', { timeDay: '2026-10-14', time: '23:30' }).outcome).toMatchObject({
       day: DAY0,
     });
+  });
+
+  it("applies a new time to today's check-in while yesterday's is still open", () => {
+    const s = answerDay(newGoal(), DAY0, 'yes').state; // 10-14 left unanswered
+    const now = at('2026-10-15', '10:00');
+    const { state } = setCheckInTime(s, '11:45', now, DENVER);
+    expect(pendingWindow(state, now)?.day).toBe('2026-10-14');
+    expect(closesAt(state, '2026-10-14')).toEqual(at('2026-10-16', '00:00')); // unchanged
+    expect(opensAt(state, '2026-10-15')).toEqual(at('2026-10-15', '11:45'));
+    expect(planReminders(state, now, { reengage: false })[0]).toEqual({
+      at: at('2026-10-15', '11:45'),
+      kind: 'checkin',
+      day: '2026-10-15',
+      earlier: '2026-10-14',
+    });
+
+    // A time that already passed today opens today's check-in right away.
+    const passed = setCheckInTime(s, '09:30', now, DENVER).state;
+    expect(opensAt(passed, '2026-10-15')).toEqual(now);
+    expect(answer(passed, { answer: 'yes' }, now, DENVER)).toMatchObject({ ok: true, outcome: { day: '2026-10-14' } });
+  });
+
+  it("starts from tomorrow once today's check-in has arrived", () => {
+    const s = answerDay(newGoal(), DAY0, 'yes').state; // 10-14 left unanswered
+    const now = at('2026-10-15', '21:00'); // 10-14 and 10-15 both open
+    const { state } = setCheckInTime(s, '22:00', now, DENVER);
+    expect(opensAt(state, '2026-10-15')).toEqual(at('2026-10-15', '20:00'));
+    expect(opensAt(state, '2026-10-16')).toEqual(at('2026-10-16', '22:00'));
+    expect(closesAt(state, '2026-10-14')).toEqual(at('2026-10-16', '00:00'));
   });
 
   it('an edit after answering applies from the next day', () => {
@@ -56,12 +86,12 @@ describe('setCheckInTime', () => {
     expect(pendingWindow(state, now)?.day).toBe('2026-10-14');
   });
 
-  it('two edits while the same window is open keep its close and the later next opening', () => {
+  it('two edits while the same window is open: it keeps its close, and the latest time applies next', () => {
     const now = at(DAY0, '21:00');
     let s = setCheckInTime(newGoal(), '22:00', now, DENVER).state;
     s = setCheckInTime(s, '18:00', at(DAY0, '21:30'), DENVER).state;
     expect(closesAt(s, DAY0)).toEqual(at('2026-10-15', '00:00'));
-    expect(opensAt(s, '2026-10-14')).toEqual(at('2026-10-14', '22:00'));
+    expect(opensAt(s, '2026-10-14')).toEqual(at('2026-10-14', '18:00'));
     expect(opensAt(s, '2026-10-15')).toEqual(at('2026-10-15', '18:00'));
     expect(s.checkInSchedule).toHaveLength(2);
   });

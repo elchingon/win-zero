@@ -4,6 +4,7 @@ import { addDays } from '../dates';
 import { createGoal, resolve, setMorningTime } from '../resolve';
 import {
   closesAt,
+  firstUpcomingDay,
   isMorningBeforeCheckIn,
   isWindowToday,
   nextWindow,
@@ -41,6 +42,9 @@ describe('windowFor (SPEC 2)', () => {
     const s = newGoal();
     const tuesdayEvening = at('2026-10-14', '21:00');
     expect(pendingWindow(s, tuesdayEvening)?.day).toBe('2026-10-13');
+    expect(firstUpcomingDay(s, at('2026-10-14', '10:00'))).toBe('2026-10-14'); // today's hasn't arrived
+    expect(firstUpcomingDay(s, tuesdayEvening)).toBe('2026-10-15');
+    expect(firstUpcomingDay(s, at(DAY0, '12:00'))).toBe(DAY0);
     const answered = answerDay(s, DAY0, 'yes', { timeDay: '2026-10-14' }).state;
     expect(pendingWindow(answered, tuesdayEvening)?.day).toBe('2026-10-14');
   });
