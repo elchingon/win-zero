@@ -31,6 +31,9 @@ const GOAL_MAX_LENGTH = 60;
 /** The app version from app.json, as built. */
 const APP_VERSION = Constants.expoConfig?.version;
 const APP_NAME = APP_VERSION ? `Win Zero ${APP_VERSION}` : 'Win Zero';
+/** From the environment; a build without them leaves their rows out (see APP_LINKS). */
+const PRIVACY_URL = APP_LINKS.privacy;
+const SUPPORT_URL = APP_LINKS.support;
 const ORDER_ERROR = "The reminder can't come later than check-in time.";
 
 const PERMISSION_WORDS: Record<ReminderPermission, string> = {
@@ -168,20 +171,24 @@ export default function Settings() {
       <View style={shared.section}>
         <Eyebrow header>About</Eyebrow>
         <View style={shared.list}>
-          <Row
-            label="Privacy policy"
-            detail="Your goal and history stay on this phone."
-            right={<Text style={styles.call}>Open</Text>}
-            hint="Opens the privacy policy in your browser"
-            onPress={() => openPage(APP_LINKS.privacy)}
-          />
-          <Row
-            label="Help and support"
-            detail="How Win Zero works, and fixes for common questions."
-            right={<Text style={styles.call}>Open</Text>}
-            hint="Opens the support page in your browser"
-            onPress={() => openPage(APP_LINKS.support)}
-          />
+          {PRIVACY_URL ? (
+            <Row
+              label="Privacy policy"
+              detail="Your goal and history stay on this phone."
+              right={<Text style={styles.call}>Open</Text>}
+              hint="Opens the privacy policy in your browser"
+              onPress={() => openPage(PRIVACY_URL)}
+            />
+          ) : null}
+          {SUPPORT_URL ? (
+            <Row
+              label="Help and support"
+              detail="How Win Zero works, and fixes for common questions."
+              right={<Text style={styles.call}>Open</Text>}
+              hint="Opens the support page in your browser"
+              onPress={() => openPage(SUPPORT_URL)}
+            />
+          ) : null}
           <Row
             label="Email us"
             detail={APP_LINKS.email}

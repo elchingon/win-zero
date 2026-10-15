@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, jest } from '@jest/globals';
 import { Alert, Linking } from 'react-native';
 
-import { APP_LINKS, callSupportLine, emailSupport, openOr, openPage, SUPPORT_LINE } from '../support';
+import { APP_LINKS, callSupportLine, emailSupport, linkFrom, openOr, openPage, SUPPORT_LINE } from '../support';
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -63,5 +63,14 @@ describe('About links', () => {
     await flush();
     expect(open).toHaveBeenCalledWith(`mailto:${APP_LINKS.email}?subject=Win%20Zero%201.0.0`);
     expect(alert).toHaveBeenCalledWith('No mail app is set up', `Email us at ${APP_LINKS.email}.`);
+  });
+});
+
+describe('linkFrom', () => {
+  it('takes a link from the environment, and treats an unset or blank one as missing', () => {
+    expect(linkFrom(' https://example.com/privacy ')).toBe('https://example.com/privacy');
+    expect(linkFrom('')).toBeNull();
+    expect(linkFrom('   ')).toBeNull();
+    expect(linkFrom(undefined)).toBeNull();
   });
 });

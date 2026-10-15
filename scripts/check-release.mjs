@@ -1,16 +1,24 @@
 // Release guard, run by EAS before every build (the eas-build-pre-install npm script). A
-// production build stops while the app still links to placeholder pages: App Review needs a
-// working privacy policy link inside the app. Other profiles, and local runs, pass.
-import { readFileSync } from 'node:fs';
+// production build stops unless the privacy and support pages are set as https URLs: App Review
+// needs a working privacy policy link inside the app. They come from EAS environment variables
+// (the gitignored .env isn't uploaded). Other profiles, and local runs, pass.
+const LINKS = ['EXPO_PUBLIC_PRIVACY_URL', 'EXPO_PUBLIC_SUPPORT_URL'];
 
-const FILE = 'src/ui/support.ts';
-const PLACEHOLDERS = ['[PRIVACY_URL]', '[SUPPORT_URL]'];
+const isHttps = (value) => {
+  try {
+    return new URL(value).protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
 
 if (process.env.EAS_BUILD_PROFILE === 'production') {
-  const source = readFileSync(new URL(`../${FILE}`, import.meta.url), 'utf8');
-  const left = PLACEHOLDERS.filter((p) => source.includes(p));
-  if (left.length > 0) {
-    console.error(`Set ${left.join(' and ')} in ${FILE} (APP_LINKS) before a production build. See docs/RELEASE.md.`);
+  const missing = LINKS.filter((name) => !isHttps(process.env[name]?.trim() ?? ''));
+  if (missing.length > 0) {
+    console.error(
+      `Set ${missing.join(' and ')} to their published https pages before a production build: ` +
+        'eas env:create --environment production --visibility plaintext. See docs/RELEASE.md.',
+    );
     process.exit(1);
   }
 }

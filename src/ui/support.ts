@@ -12,14 +12,22 @@ export const SUPPORT_LINE = {
   text: 'Or text your ZIP code to 435748 (HELP4U) to find help near you.',
 } as const;
 
+/** A link from the environment, or null when it isn't set. */
+export function linkFrom(value: string | undefined): string | null {
+  const link = value?.trim();
+  return link ? link : null;
+}
+
 /**
  * The privacy policy and support pages (App Review needs the privacy link in the app), and the
- * support email. The pages go up on e7systems.com before release (docs/RELEASE.md). Until then
- * the URLs are placeholders, and a production EAS build stops (scripts/check-release.mjs).
+ * support email. The page URLs come from the environment, inlined when the app is bundled:
+ * `.env` for local builds (see .env.example), EAS environment variables for EAS builds. Unset,
+ * Settings leaves the row out, and a production EAS build stops (scripts/check-release.mjs).
  */
 export const APP_LINKS = {
-  privacy: '[PRIVACY_URL]',
-  support: '[SUPPORT_URL]',
+  // Written out in full: Expo inlines only literal `process.env.EXPO_PUBLIC_*` reads.
+  privacy: linkFrom(process.env.EXPO_PUBLIC_PRIVACY_URL),
+  support: linkFrom(process.env.EXPO_PUBLIC_SUPPORT_URL),
   email: 'e7urgent@gmail.com',
 } as const;
 
