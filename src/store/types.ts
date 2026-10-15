@@ -45,18 +45,32 @@ export interface PersistedState {
   devClockOffsetMs: number;
 }
 
-/** The screen an accepted answer opens: Yes plays the round, Not today shows its notice. */
+/**
+ * The screen an accepted answer opens: Yes on Home's card plays the round, Not today shows its
+ * notice. A Yes from a notification opens nothing: Home shows the round, ready when the user is.
+ */
 export type AnswerRoute = '/play' | '/notice';
+
+/** Where an answer came from: Home's card, or a notification's buttons. */
+export type AnswerSource = 'app' | 'notification';
 
 export type NoticeCause = 'answer' | 'missed';
 
 /** A screen to show once: what a Not today or a run of missed days did to the streak. */
 export type Notice =
-  /** Lost zeros, short of the final. */
-  | { kind: 'slipping'; cause: NoticeCause; lost: number; streak: number; days: number }
+  /** Lost zeros, short of the final. `stopped`: a Yes has since stopped the slide. */
+  | { kind: 'slipping'; cause: NoticeCause; lost: number; streak: number; days: number; stopped: boolean }
   /** The final, absorbed by a shield. */
   | { kind: 'shielded'; cause: NoticeCause; lost: number; streak: number; shieldsLeft: number; days: number }
-  /** The final, with no shield: the streak starts over. */
-  | { kind: 'reset'; cause: NoticeCause; lostStreak: number; bestStreak: number; days: number }
+  /** The final, with no shield: the streak starts over. `stopped`: a Yes has since begun a new run. */
+  | { kind: 'reset'; cause: NoticeCause; lostStreak: number; bestStreak: number; days: number; stopped: boolean }
   /** A Not today that cost nothing, because the streak was already 0. */
   | { kind: 'noted' };
+
+/**
+ * The next one-time screen and where it came from. An answer's notice waits in the store;
+ * missed-day news is worked out from history, and counts as seen through `through` once shown.
+ */
+export type PendingNotice =
+  | { source: 'answer'; notice: Notice }
+  | { source: 'missed'; notice: Notice; through: DayKey };

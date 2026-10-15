@@ -14,7 +14,11 @@ export function Stats({ goal }: { goal: GoalState }) {
           hero
           accessibilityLabel={`Current streak: ${plural(goal.streak, 'zero')}`}
         />
-        <StatTile label="Best run" value={String(goal.bestStreak)} />
+        <StatTile
+          label="Best run"
+          value={String(goal.bestStreak)}
+          accessibilityLabel={`Best run: ${plural(goal.bestStreak, 'day')}`}
+        />
       </View>
       <View style={styles.row}>
         <StatTile label="Bombs" value={String(goal.bombs)} />

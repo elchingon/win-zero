@@ -16,13 +16,19 @@ export function Arsenal(props: { goal: GoalState; pick: WeaponId | null; onEquip
   return (
     <View style={shared.section}>
       <View style={shared.sectionHead}>
-        <Eyebrow>Arsenal</Eyebrow>
+        <Eyebrow header>Arsenal</Eyebrow>
         <Fine>{next ? `${next.weapon.name} in ${plural(next.daysToGo, 'day')}` : 'Fully armed'}</Fine>
       </View>
       <View
         style={styles.bar}
+        accessible
         accessibilityRole="progressbar"
-        accessibilityValue={{ min: 0, max: 100, now: Math.round(progress * 100) }}
+        accessibilityLabel={next ? `Next weapon: ${next.weapon.name}` : 'Every weapon unlocked'}
+        accessibilityValue={
+          next
+            ? { min: 0, max: 100, now: Math.round(progress * 100), text: `${plural(next.daysToGo, 'day')} to go` }
+            : { text: 'Fully armed' }
+        }
       >
         <View style={[styles.fill, { width: `${Math.round(progress * 100)}%` }]} />
       </View>
@@ -33,16 +39,20 @@ export function Arsenal(props: { goal: GoalState; pick: WeaponId | null; onEquip
           return (
             <Pressable
               key={weapon.id}
-              disabled={!unlocked || isEquipped}
+              // Not `disabled` when equipped, which screen readers would read as dimmed.
+              disabled={!unlocked}
               onPress={() => {
+                if (isEquipped) return;
                 feedback.tick();
                 onEquip(weapon.id);
               }}
               accessibilityRole="button"
+              accessibilityState={{ selected: isEquipped, disabled: !unlocked }}
               accessibilityLabel={`${weapon.name}. ${weapon.description} ${
-                isEquipped ? 'Equipped.' : unlocked ? 'Ready. Tap to equip.' : `Unlocks in ${plural(daysToGo, 'day')}.`
+                isEquipped ? 'Equipped.' : unlocked ? 'Ready.' : `Unlocks in ${plural(daysToGo, 'day')}.`
               }`}
-              style={({ pressed }) => [styles.row, !unlocked && styles.locked, pressed && { opacity: 0.7 }]}
+              accessibilityHint={unlocked && !isEquipped ? 'Equips it for your rounds' : undefined}
+              style={({ pressed }) => [styles.row, !unlocked && styles.locked, pressed && !isEquipped && { opacity: 0.7 }]}
             >
               <Text style={[styles.day, unlocked && { color: colors.amber }]}>DAY {weapon.unlockAt}</Text>
               <View style={styles.text}>
@@ -74,7 +84,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.line,
   },
   locked: { opacity: 0.5 },
-  day: { width: 62, fontFamily: fonts.monoSemiBold, fontSize: 11, letterSpacing: 0.88, color: colors.muted },
+  day: { minWidth: 62, fontFamily: fonts.monoSemiBold, fontSize: 11, letterSpacing: 0.88, color: colors.muted },
   text: { flex: 1, gap: 2 },
   name: { fontFamily: fonts.bodyBold, fontSize: 16, color: colors.fg },
   desc: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18, color: colors.muted },

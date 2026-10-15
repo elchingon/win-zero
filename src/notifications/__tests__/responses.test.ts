@@ -8,57 +8,14 @@ import type { GoalState } from '@/engine';
 import { DAY0, newGoal, yesDays } from '@/engine/__tests__/fixtures';
 import { flush, harness, ready, withGoal } from '@/store/__tests__/harness';
 
-import { decideResponse, startResponses, type ResponseApi, type ResponseLike } from '../responses';
+import { decideResponse, startResponses, type ResponseLike } from '../responses';
 import { shouldGoHome } from '../route';
-import { ACTION_NOT_TODAY, ACTION_YES, type ReminderData } from '../shared';
+import { ACTION_NOT_TODAY, ACTION_YES } from '../shared';
+import { fakeResponses, response } from './fakes';
 
 beforeEach(async () => {
   await AsyncStorage.clear();
 });
-
-/** A response to one of our notifications. */
-function response(action: string, data: Partial<ReminderData> & { day: string }, id?: string, date = 1): ResponseLike {
-  const payload = { goalId: 'g1', kind: 'checkin', ...data };
-  return {
-    actionIdentifier: action,
-    notification: { date, request: { identifier: id ?? `${payload.kind}-${payload.day}`, content: { data: payload } } },
-  };
-}
-
-/** A stand-in for expo-notifications' response API. */
-function fakeResponses() {
-  let last: ResponseLike | null = null;
-  const listeners = new Set<(r: ResponseLike) => void>();
-  const dismissed: string[] = [];
-  let cleared = 0;
-  const api: ResponseApi = {
-    getLastNotificationResponse: () => last,
-    addNotificationResponseReceivedListener: (fn) => {
-      listeners.add(fn);
-      return { remove: () => listeners.delete(fn) };
-    },
-    clearLastNotificationResponse: () => {
-      last = null;
-      cleared++;
-    },
-    dismissNotificationAsync: async (id) => {
-      dismissed.push(id);
-    },
-  };
-  return {
-    api,
-    dismissed,
-    cleared: () => cleared,
-    listeners: () => listeners.size,
-    /** The response that launched the app. */
-    launchWith: (r: ResponseLike) => (last = r),
-    /** A tap while the app is running (or before JS is ready, on Android). */
-    tap: (r: ResponseLike) => {
-      last = r;
-      listeners.forEach((fn) => fn(r));
-    },
-  };
-}
 
 /** A hydrated store holding `goal` at a time and date, listening for responses. */
 async function running(goal: GoalState, day: string, time: `${number}:${number}`) {
@@ -121,7 +78,7 @@ describe('startResponses', () => {
     const s = h.store.getState();
     expect(s.goal).toMatchObject({ streak: 3, lastSettledDay: '2026-10-15' });
     expect(s.round).toMatchObject({ day: '2026-10-15', n: 3, played: false });
-    expect(s.route).toBe('/play'); // Home opens the round as it mounts
+    expect(s.route).toBeNull(); // Home shows the round, ready to play whenever they like
     expect(s.rejection).toBeNull(); // answered once, not "already answered"
     expect(fake.dismissed).toEqual(['checkin-2026-10-15']);
     expect(fake.cleared()).toBe(1);
@@ -140,13 +97,14 @@ describe('startResponses', () => {
   it("answers yesterday's window from the morning reminder", async () => {
     const r = await running(yesDays(newGoal(), DAY0, 2), '2026-10-16', '09:05');
     r.fake.tap(response(ACTION_YES, { day: '2026-10-15', kind: 'morning' }));
-    expect(r.s().round).toMatchObject({ day: '2026-10-15', n: 3 });
-    expect(r.s().route).toBe('/play');
+    expect(r.s().round).toMatchObject({ day: '2026-10-15', n: 3, played: false });
+    expect(r.s().route).toBeNull();
+    expect(r.nav.toHome).toHaveBeenCalledTimes(1);
     expect(r.fake.dismissed).toEqual(['morning-2026-10-15']);
   });
 
   it("shows Home's banner when the check-in has closed, was answered, or hasn't opened", async () => {
-    const r = await running(yesDays(newGoal(), DAY0, 2), '2026-10-16', '20:30'); // 10-15 closed
+    const r = await running(yesDays(newGoal(), DAY0, 2), '2026-10-17', '00:30'); // 10-15 closed at midnight
     r.fake.tap(response(ACTION_YES, { day: '2026-10-15' }));
     expect(r.s()).toMatchObject({ rejection: 'expired', route: null, round: null });
     expect(r.s().goal?.lastSettledDay).toBe('2026-10-15'); // caught up all the same

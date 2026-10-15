@@ -67,6 +67,18 @@ function render(name, width, height, draw, transparent = false) {
   console.log(`${name}: ${width} × ${height}`);
 }
 
+/** Store artwork that can't have an alpha channel: check every pixel is opaque, then drop it. */
+function opaque(name, colorType = 2) {
+  const file = path.join(out, name);
+  const png = PNG.sync.read(fs.readFileSync(file));
+  for (let i = 3; i < png.data.length; i += 4) {
+    if (png.data[i] !== 255) throw new Error(`${name} must be fully opaque`);
+  }
+  // The tinted icon uses a grayscale PNG with a Gray Gamma 2.2 transfer curve.
+  if (colorType === 0) png.gamma = 1 / 2.2;
+  fs.writeFileSync(file, PNG.sync.write(png, { colorType }));
+}
+
 function backdrop(canvas, width, height) {
   const p = paint(color('ink'));
   const shader = kit.Shader.MakeRadialGradient([width / 2, height * 0.42], height * 0.7,
@@ -114,18 +126,25 @@ render('icon.png', 1024, 1024, (c) => { backdrop(c, 1024, 1024); mark(c, 1024); 
 // Store listings use full square artwork; each store supplies its own corner mask.
 render('app-store-icon.png', 1024, 1024, (c) => { backdrop(c, 1024, 1024); mark(c, 1024); });
 // Remove the alpha channel entirely for Apple's flat App Store icon.
-const applePath = path.join(out, 'app-store-icon.png');
-const apple = PNG.sync.read(fs.readFileSync(applePath));
-for (let i = 3; i < apple.data.length; i += 4) {
-  if (apple.data[i] !== 255) throw new Error('App Store artwork must be fully opaque');
-}
-fs.writeFileSync(applePath, PNG.sync.write(apple, { colorType: 2 }));
+opaque('app-store-icon.png');
+// iOS 18 appearance variants keep the same glyph, scale and optical center.
+// Dark artwork lets the system's own dark background show through.
+render('ios-icon-dark.png', 1024, 1024, (c) => mark(c, 1024), true);
+// A white glyph on black supplies luminance for the user's chosen Home Screen tint.
+render('ios-icon-tinted.png', 1024, 1024, (c) => {
+  c.clear(kit.parseColorString('#000000'));
+  mark(c, 1024, true);
+});
+opaque('ios-icon-tinted.png', 0);
 render('google-play-icon.png', 512, 512, (c) => { backdrop(c, 512, 512); mark(c, 512); });
 render('android-foreground.png', 1024, 1024, (c) => mark(c, 1024), true);
 render('android-background.png', 1024, 1024, (c) => backdrop(c, 1024, 1024));
 render('android-monochrome.png', 1024, 1024, (c) => mark(c, 1024, true), true);
 render('favicon.png', 64, 64, (c) => { backdrop(c, 64, 64); mark(c, 64); });
 render('splash-mark.png', 1024, 1024, (c) => launchMark(c, 1024), true);
+// The Android status-bar icon: the same white zero, filling the canvas so it reads at 24 dp
+// (the adaptive monochrome layer leaves room for launcher masks, so it shows up small there).
+render('notification-icon.png', 96, 96, (c) => text(c, '0', 96 * 1.12, 48, 48, '#FFFFFF'), true);
 
 render('splash.png', 1200, 2600, (c) => {
   backdrop(c, 1200, 2600);
@@ -146,4 +165,25 @@ render('splash.png', 1200, 2600, (c) => {
   p.delete();
   text(c, 'WIN ZERO', 150, 600, 1300, color('fg'));
 });
+// The Google Play feature graphic: a strip of the celebration fill with the title plate.
+render('play-feature-graphic.png', 1024, 500, (c) => {
+  backdrop(c, 1024, 500);
+  for (let row = 0; row < 5; row++) {
+    for (let col = 0; col < 10; col++) {
+      text(c, '0', 108, (col + 0.5) * 102.4, (row + 0.5) * 100, palette[(row * 10 + col) % 4], 1);
+    }
+  }
+  const panel = kit.RRectXY(kit.XYWHRect(212, 170, 600, 160), 22, 22);
+  const p = paint(color('ink'), 0.98);
+  c.drawRRect(panel, p);
+  p.setStyle(kit.PaintStyle.Stroke);
+  p.setStrokeWidth(2);
+  p.setColor(kit.parseColorString(color('amber')));
+  p.setAlphaf(0.65);
+  c.drawRRect(panel, p);
+  p.delete();
+  text(c, 'WIN ZERO', 84, 512, 250, color('fg'));
+});
+// Play wants a 24-bit PNG here, with no alpha.
+opaque('play-feature-graphic.png');
 face.delete();

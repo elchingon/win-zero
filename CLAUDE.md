@@ -43,4 +43,5 @@ src/theme/          tokens.ts (palette + fonts from SPEC section 7)
 - `npx jest`: unit tests
 - `npx tsc --noEmit`: type check
 - `npm run gen:sfx`: re-render the game's sound effects into assets/sfx/ (from scripts/gen-sfx.mjs)
+- `npm run gen:brand`: re-render the icons, splash and store art into assets/brand/ (from scripts/gen-brand.mjs)
 - `eas build --profile development --platform ios|android`: build dev clients

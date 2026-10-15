@@ -7,7 +7,7 @@ import {
   answer as answerCheckIn,
   createGoal,
   currentCheckInTime,
-  isMorningBeforeCheckIn,
+  isMorningAtOrBeforeCheckIn,
   isUnlocked,
   missDigest,
   nextWindow,
@@ -27,7 +27,7 @@ import {
   type TimeZone,
   type WeaponId,
 } from '@/engine';
-import { SEED_MAX_N, seedYesRun } from '@/dev/seedRun';
+import type * as SeedRun from '@/dev/seedRun';
 
 import { DEFAULT_PERSISTED, migratePersisted, normalizePersisted } from './migrate';
 import { noticeForAnswer, noticeForMisses } from './notice';
@@ -35,7 +35,9 @@ import {
   STORE_KEY,
   STORE_VERSION,
   type AnswerRoute,
+  type AnswerSource,
   type Notice,
+  type PendingNotice,
   type PersistedState,
   type Prefs,
   type RoundRecord,
@@ -50,6 +52,11 @@ export interface StoreDeps {
   makeId: () => string;
   /** Development build: honour the debug clock offset. */
   dev: boolean;
+  /**
+   * Development build: the run builder behind "Jump to day". Passed in, not imported, so a
+   * production bundle leaves it out.
+   */
+  devTools?: Pick<typeof SeedRun, 'seedYesRun' | 'SEED_MAX_N'>;
 }
 
 export type SetupResult = { ok: true } | { ok: false; reason: 'not-ready' | 'empty-goal' | 'order' };
@@ -62,7 +69,8 @@ export interface AppState extends PersistedState {
   notice: Notice | null;
   /**
    * Where the latest answer leads (its round, or its notice), waiting for Home to open it.
-   * Set in the same update as the answer, whether it came from Home or a notification.
+   * Set in the same update as the answer. A Yes from a notification leaves none: its round
+   * waits on Home.
    * Not persisted.
    */
   route: AnswerRoute | null;
@@ -79,7 +87,7 @@ export interface AppState extends PersistedState {
   refresh: () => ResolveEvent[];
   setupGoal: (input: { goal: string; checkInTime: ClockTime; morningTime: ClockTime }) => SetupResult;
   /** Answer a check-in: `day` when it comes from a notification, otherwise the open window. */
-  answer: (answer: Answer, day?: DayKey) => AnswerResult | null;
+  answer: (answer: Answer, day?: DayKey, source?: AnswerSource) => AnswerResult | null;
   /** The route the latest answer left, once. */
   takeRoute: () => AnswerRoute | null;
   clearRejection: () => void;
@@ -90,9 +98,15 @@ export interface AppState extends PersistedState {
   setCheckInTime: (time: ClockTime) => EditResult;
   setMorningTime: (time: ClockTime) => EditResult;
   setPref: <K extends keyof Prefs>(key: K, value: Prefs[K]) => void;
-  /** The Slipping / Reset / Shielded screen for missed days not yet shown, marking them seen. */
-  takeMissNotice: () => Notice | null;
-  clearNotice: () => void;
+  /**
+   * The next one-time screen, without marking it shown: an answer's notice first, then the
+   * Slipping / Reset / Shielded news for missed days not yet shown.
+   */
+  nextNotice: () => PendingNotice | null;
+  /** The Notice screen showed `p`: clear that answer's notice, or count those missed days as seen. */
+  noticeShown: (p: PendingNotice) => void;
+  /** Count missed days that cost nothing (the grace week, or paused) as seen, as they have no news. */
+  markQuietMisses: () => void;
   erase: () => void;
   advanceDevClock: (ms: number) => void;
   resetDevClock: () => void;
@@ -136,6 +150,20 @@ export function createAppStore(deps: StoreDeps) {
         /** The goal, once storage has been read. Acting earlier would overwrite saved data. */
         const ready = () => (get().hydrated ? get().goal : null);
 
+        /** News of missed days after `seenThrough`, through the latest settled day. */
+        const missedNews = (seenThrough: DayKey | null): PendingNotice | null => {
+          const goal = ready();
+          if (!goal?.lastSettledDay) return null;
+          const notice = noticeForMisses(missDigest(goal, seenThrough), goal);
+          return notice ? { source: 'missed', notice, through: goal.lastSettledDay } : null;
+        };
+
+        /** Missed days through `day` have been shown. Never moves back. */
+        const seeThrough = (day: DayKey) => {
+          const { seenThrough } = get();
+          if (seenThrough === null || day > seenThrough) set({ seenThrough: day });
+        };
+
         /** Store a new goal state, dropping a round that's gone stale. */
         const setGoal = (goal: GoalState, patch: Partial<AppState> = {}) => {
           const round = 'round' in patch ? (patch.round ?? null) : get().round;
@@ -163,13 +191,13 @@ export function createAppStore(deps: StoreDeps) {
           setupGoal: ({ goal, checkInTime, morningTime }) => {
             if (!get().hydrated) return { ok: false, reason: 'not-ready' };
             if (!goal.trim()) return { ok: false, reason: 'empty-goal' };
-            if (!isMorningBeforeCheckIn(morningTime, checkInTime)) return { ok: false, reason: 'order' };
+            if (!isMorningAtOrBeforeCheckIn(morningTime, checkInTime)) return { ok: false, reason: 'order' };
             const state = createGoal({ goalId: deps.makeId(), goal, checkInTime, morningTime, now: now(), tz: timeZone() });
             set({ goal: state, weapon: null, seenThrough: null, round: null, notice: null, route: null, rejection: null });
             return { ok: true };
           },
 
-          answer: (ans, day) => {
+          answer: (ans, day, source = 'app') => {
             const goal = ready();
             if (!goal) return null;
             const r = answerCheckIn(goal, { answer: ans, day }, now(), timeZone());
@@ -193,7 +221,7 @@ export function createAppStore(deps: StoreDeps) {
                   played: false,
                 },
                 notice: null,
-                route: '/play',
+                route: source === 'notification' ? null : '/play',
                 rejection: null,
               });
             } else {
@@ -240,7 +268,7 @@ export function createAppStore(deps: StoreDeps) {
           setCheckInTime: (time) => {
             const goal = ready();
             if (!goal) return { ok: false, reason: 'no-goal' };
-            if (!isMorningBeforeCheckIn(goal.morningTime, time)) return { ok: false, reason: 'order' };
+            if (!isMorningAtOrBeforeCheckIn(goal.morningTime, time)) return { ok: false, reason: 'order' };
             setGoal(setGoalCheckInTime(goal, time, now(), timeZone()).state);
             return { ok: true };
           },
@@ -248,25 +276,31 @@ export function createAppStore(deps: StoreDeps) {
           setMorningTime: (time) => {
             const goal = ready();
             if (!goal) return { ok: false, reason: 'no-goal' };
-            if (!isMorningBeforeCheckIn(time, currentCheckInTime(goal))) return { ok: false, reason: 'order' };
+            if (!isMorningAtOrBeforeCheckIn(time, currentCheckInTime(goal))) return { ok: false, reason: 'order' };
             set({ goal: setGoalMorningTime(goal, time) });
             return { ok: true };
           },
 
           setPref: (key, value) => set({ prefs: { ...get().prefs, [key]: value } }),
 
-          takeMissNotice: () => {
-            const goal = ready();
-            if (!goal) return null;
-            const { seenThrough } = get();
-            const notice = noticeForMisses(missDigest(goal, seenThrough), goal);
-            if (seenThrough !== goal.lastSettledDay) set({ seenThrough: goal.lastSettledDay });
-            if (notice) set({ notice });
-            return notice;
+          nextNotice: () => {
+            const { notice, seenThrough } = get();
+            if (notice) return { source: 'answer', notice };
+            return missedNews(seenThrough);
           },
 
-          clearNotice: () => {
-            if (get().notice) set({ notice: null });
+          noticeShown: (p) => {
+            if (p.source === 'answer') {
+              // Only the one shown: a newer answer's notice waits its turn.
+              if (get().notice === p.notice) set({ notice: null });
+            } else {
+              seeThrough(p.through);
+            }
+          },
+
+          markQuietMisses: () => {
+            const goal = ready();
+            if (goal?.lastSettledDay && !missedNews(get().seenThrough)) seeThrough(goal.lastSettledDay);
           },
 
           erase: () => {
@@ -288,8 +322,9 @@ export function createAppStore(deps: StoreDeps) {
 
           devJumpToDay: (n) => {
             const goal = ready();
-            if (!deps.dev || !goal || !Number.isInteger(n) || n < 1 || n > SEED_MAX_N) return null;
-            const seeded = seedYesRun(goal, n, now(), timeZone());
+            const tools = deps.dev ? deps.devTools : undefined;
+            if (!tools || !goal || !Number.isInteger(n) || n < 1 || n > tools.SEED_MAX_N) return null;
+            const seeded = tools.seedYesRun(goal, n, now(), timeZone());
             // The old history is gone, so there's no missed-day news left to show.
             set({ goal: seeded, round: null, weapon: null, notice: null, seenThrough: seeded.lastSettledDay });
             return get().answer('yes');

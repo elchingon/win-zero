@@ -109,7 +109,7 @@ describe('createReminderSync', () => {
 
     await sync.sync({ force: true });
     const ids = expectedIds(state.input);
-    expect(ids).toHaveLength(36); // 14 windows × 2, plus 8 nudges
+    expect(ids).toHaveLength(37); // 14 windows × 2, the next day's check-in before the reset, 8 nudges
     expect(fake.log).toEqual(['list', 'cancel checkin-2026-10-01', ...ids.map((id) => `schedule ${id}`), 'presented']);
     expect(fake.ids()).toEqual(ids);
     expect(prepare).toHaveBeenCalledTimes(1);
@@ -143,7 +143,7 @@ describe('createReminderSync', () => {
 
     state.allowed = true;
     await sync.sync(); // not forced: the signature changed
-    expect(fake.ids()).toHaveLength(36);
+    expect(fake.ids()).toHaveLength(37);
   });
 
   it('skips the work when nothing changed, unless forced', async () => {
@@ -159,7 +159,7 @@ describe('createReminderSync', () => {
 
     await sync.sync({ force: true });
     expect(fake.log.length).toBeGreaterThan(calls);
-    expect(reports).toEqual([36, 36]);
+    expect(reports).toEqual([37, 37]);
   });
 
   it('reschedules when the answer, the wording setting or the dev clock changes', async () => {
@@ -198,7 +198,7 @@ describe('createReminderSync', () => {
     expect(lists).toHaveLength(2);
     expect(presented).toHaveLength(2);
     expect(lists[1]).toBeGreaterThan(presented[0]!); // the second began after the first ended
-    expect(fake.ids()).toHaveLength(36);
+    expect(fake.ids()).toHaveLength(37);
   });
 
   it('keeps scheduling when one request fails', async () => {
@@ -206,7 +206,7 @@ describe('createReminderSync', () => {
     fake.failing.add('checkin-2026-10-14');
     await sync.sync({ force: true });
     expect(errors).toHaveLength(1);
-    expect(fake.ids()).toHaveLength(35);
+    expect(fake.ids()).toHaveLength(36);
     expect(fake.ids()).toContain('checkin-2026-10-15');
   });
 
@@ -220,14 +220,14 @@ describe('createReminderSync', () => {
     expect(fake.ids()).toEqual([]);
     await sync.sync();
     expect(prepare).toHaveBeenCalledTimes(2);
-    expect(fake.ids()).toHaveLength(36);
+    expect(fake.ids()).toHaveLength(37);
   });
 });
 
 describe('staleDelivered', () => {
   it("clears what's no longer open, and keeps the open check-in", () => {
     const goal = yesDays(newGoal(), DAY0, 1); // 10-13 answered
-    const now = at('2026-10-15', '08:00'); // 10-14 open until 20:00
+    const now = at('2026-10-15', '08:00'); // 10-14 open until midnight tonight
     const shown = [
       { identifier: 'checkin-2026-10-13', data: { goalId: 'g1', day: DAY0, kind: 'checkin' } }, // answered
       { identifier: 'checkin-2026-10-14', data: { goalId: 'g1', day: '2026-10-14', kind: 'checkin' } }, // open
@@ -238,7 +238,7 @@ describe('staleDelivered', () => {
     ];
     expect(staleDelivered(shown, input(goal, now))).toEqual(['checkin-2026-10-13', 'reengage-2026-10-14', 'checkin-old']);
     // Once 10-14 closes unanswered, its notifications go too.
-    expect(staleDelivered(shown, input(goal, at('2026-10-15', '20:30')))).toEqual([
+    expect(staleDelivered(shown, input(goal, at('2026-10-16', '00:30')))).toEqual([
       'checkin-2026-10-13',
       'checkin-2026-10-14',
       'morning-2026-10-14',
@@ -246,6 +246,19 @@ describe('staleDelivered', () => {
       'checkin-old',
     ]);
     expect(staleDelivered(shown, input(null))).toEqual(shown.slice(0, 5).map((s) => s.identifier));
+  });
+
+  it("keeps today's check-in while yesterday is still open, and clears yesterday's once answered", () => {
+    const goal = yesDays(newGoal(), DAY0, 1); // 10-13 answered; 10-14 open until midnight ending 10-15
+    const shown = [
+      { identifier: 'checkin-2026-10-14', data: { goalId: 'g1', day: '2026-10-14', kind: 'checkin' } },
+      { identifier: 'morning-2026-10-14', data: { goalId: 'g1', day: '2026-10-14', kind: 'morning' } },
+      { identifier: 'checkin-2026-10-15', data: { goalId: 'g1', day: '2026-10-15', kind: 'checkin' } },
+    ];
+    const evening = at('2026-10-15', '21:00');
+    expect(staleDelivered(shown, input(goal, evening))).toEqual([]);
+    const answered = yesDays(goal, '2026-10-14', 1);
+    expect(staleDelivered(shown, input(answered, evening))).toEqual(['checkin-2026-10-14', 'morning-2026-10-14']);
   });
 });
 

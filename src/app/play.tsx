@@ -6,7 +6,7 @@
 // meter, and nothing about the streak changes.
 import { Redirect, router, Stack, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { AccessibilityInfo, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { composeRound, equippedWeapon, fillPlan, unlockedWeapons, type WeaponId } from '@/engine';
@@ -19,7 +19,7 @@ import type { Report } from '@/game/sim/types';
 import { appStore, useApp, type RoundRecord } from '@/store';
 import { colors, fonts } from '@/theme/tokens';
 import { feedback } from '@/ui/feedback';
-import { useReduceMotion } from '@/ui/useReduceMotion';
+import { useReduceMotion, useScreenReader } from '@/ui/a11y';
 
 /** Practice rounds: development builds, and release builds made for measuring frame rate. */
 const PRACTICE_ENABLED = __DEV__ || process.env.EXPO_PUBLIC_PERF_BUILD === '1';
@@ -68,6 +68,7 @@ function Round(props: { initialMode: ResultMode; n: number; best: number; record
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const reduceMotion = useReduceMotion();
+  const screenReader = useScreenReader();
   const sound = useApp((s) => s.prefs.sound);
   const bankedBombs = useApp((s) => s.goal?.bombs ?? 0);
   const storePick = useApp((s) => s.weapon);
@@ -120,6 +121,16 @@ function Round(props: { initialMode: ResultMode; n: number; best: number; record
     if (over && mode === 'real') appStore.getState().finishRound();
   }, [over, mode]);
 
+  // The fill runs a few seconds before the result sheet; say the round is won right away.
+  useEffect(() => {
+    if (over && screenReader) AccessibilityInfo.announceForAccessibility('Round cleared.');
+  }, [over, screenReader]);
+
+  /** Finish round: the game is visual, so a screen reader can clear it in one go. */
+  const finish = () => {
+    if (!over) game.current?.finishAll();
+  };
+
   /** Play the same round again, right here, with fresh positions and free bombs. */
   const replay = () => {
     const next = newSeed();
@@ -151,7 +162,8 @@ function Round(props: { initialMode: ResultMode; n: number; best: number; record
   };
 
   return (
-    <View style={styles.root}>
+    // VoiceOver's magic tap (a two-finger double-tap) finishes the round too.
+    <View style={styles.root} onMagicTap={finish}>
       <GameCanvas
         ref={game}
         round={round}
@@ -178,6 +190,7 @@ function Round(props: { initialMode: ResultMode; n: number; best: number; record
           onQuit={toBase}
           controls={!over}
           hintKey={seed}
+          onFinish={screenReader ? finish : undefined}
           extra={
             mode === 'practice' ? (
               <Text style={styles.meter}>

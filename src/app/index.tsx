@@ -2,7 +2,7 @@
 // and the history calendar.
 import { Redirect, router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState, type ComponentType } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
 
 import { dayKeyAt, nextWindow, pendingWindow, type AnswerRejection, type GoalState } from '@/engine';
 import { formatWhen } from '@/lib/format';
@@ -15,6 +15,7 @@ import { feedback } from '@/ui/feedback';
 import { Arsenal } from '@/ui/home/Arsenal';
 import { CheckInCard } from '@/ui/home/CheckInCard';
 import { HistoryCalendar } from '@/ui/home/HistoryCalendar';
+import { startHomeRouting } from '@/ui/home/routing';
 import { Stats } from '@/ui/home/Stats';
 import { Screen } from '@/ui/Screen';
 import { useDeviceCalendar } from '@/ui/useDevice';
@@ -69,33 +70,10 @@ function HomeScreen({ goal }: { goal: GoalState }) {
   }, [boundary, tick, clockOffset]);
 
   // An answer, from the card here or a notification's buttons, leaves a screen to open: the
-  // round for Yes, the notice for Not today. Open it on focus and the moment it's set. Otherwise,
-  // on focus and whenever days settle while Home is showing (the app comes back to the
-  // foreground, a window closes): catch up, then show any Slipping / Reset / Shielded news once.
-  // An answer comes first, so missed-day news waits until the round is over.
-  useFocusEffect(
-    useCallback(() => {
-      const openRoute = () => {
-        const route = appStore.getState().takeRoute();
-        if (route) router.push(route);
-        return route !== null;
-      };
-      const showNews = () => {
-        const s = appStore.getState();
-        s.refresh();
-        if (s.takeMissNotice()) router.push('/notice');
-      };
-      if (!openRoute()) showNews();
-      const unsubscribe = appStore.subscribe((s, prev) => {
-        if (s.route) openRoute();
-        else if (s.goal?.lastSettledDay !== prev.goal?.lastSettledDay) showNews();
-      });
-      return () => {
-        unsubscribe();
-        appStore.getState().clearRejection(); // a turned-down answer's banner lasts this visit
-      };
-    }, []),
-  );
+  // round for Yes, the notice for Not today. Otherwise, on focus and whenever days settle while
+  // Home is showing (the app comes back to the foreground, a window closes), catch up and show
+  // any Slipping / Reset / Shielded news once. One screen per visit (see routing.ts).
+  useFocusEffect(useCallback(() => startHomeRouting(appStore, (path) => router.push(path)), []));
 
   const onYes = () => {
     feedback.success();
@@ -108,6 +86,10 @@ function HomeScreen({ goal }: { goal: GoalState }) {
   };
 
   const banner = rejection ? REJECTED[rejection] : null;
+  // It appears after a notification's answer was turned down; say so to a screen reader too.
+  useEffect(() => {
+    if (banner) AccessibilityInfo.announceForAccessibility(banner);
+  }, [banner]);
 
   const unplayed = round && !round.played ? round : null;
   const nextWhen = formatWhen(next.opensAt, now, tz, h24);
@@ -117,7 +99,7 @@ function HomeScreen({ goal }: { goal: GoalState }) {
       <TopBar right={<LinkButton label="Settings" onPress={() => router.push('/settings')} />} />
 
       <View style={styles.goal}>
-        <Eyebrow>Daily goal</Eyebrow>
+        <Eyebrow header>Daily goal</Eyebrow>
         <Text style={type.goal}>{goal.goal}</Text>
       </View>
 

@@ -15,7 +15,7 @@ import Animated, {
 
 import { colors } from '@/theme/tokens';
 
-import { useReduceMotion } from './useReduceMotion';
+import { useReduceMotion } from './a11y';
 
 export type NoticeMotion = 'settle' | 'absorb' | 'shed' | 'none';
 

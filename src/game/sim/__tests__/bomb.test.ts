@@ -3,10 +3,10 @@ import { describe, expect, it } from '@jest/globals';
 
 import { BOMB_DAMAGE } from '@/engine';
 
-import { BOMB_MARGIN, FLASH_BOMB } from '../constants';
+import { AMBER, BOMB_MARGIN, FLARE, FLASH_BOMB, TEAL } from '../constants';
 import { bombRadius, dropBomb } from '../bomb';
 import { resetReport } from '../report';
-import { alive, game, isolate, popIn } from './fixtures';
+import { alive, finalRings, game, isolate, popIn } from './fixtures';
 
 const center = (s: ReturnType<typeof game>) => ({ x: s.width / 2, y: (s.top + s.bottom) / 2 });
 
@@ -58,6 +58,15 @@ describe('bombs', () => {
     resetReport(s.report);
     expect(dropBomb(s)).toBe(false);
     expect(s.report.bombs).toBe(0);
+  });
+
+  it('keep the final shockwaves when they win a full board at once', () => {
+    const s = game(60);
+    const c = center(s);
+    for (const z of s.zeros) Object.assign(z, { x: c.x, y: c.y });
+    expect(dropBomb(s)).toBe(true);
+    expect(s.phase).toBe('celebrate');
+    expect(finalRings(s, c.x, c.y)).toEqual([AMBER, FLARE, TEAL]);
   });
 
   it('catch zeros still popping in, which appear at once', () => {

@@ -10,6 +10,7 @@ export const HONOLULU = 'Pacific/Honolulu';
 export const LONDON = 'Europe/London';
 export const PAGO_PAGO = 'Pacific/Pago_Pago'; // UTC-11
 export const KIRITIMATI = 'Pacific/Kiritimati'; // UTC+14
+export const SANTIAGO = 'America/Santiago'; // DST starts at midnight
 
 /** Setup day used by most tests: a Tuesday, two weeks before the US fall-back change. */
 export const DAY0 = '2026-10-13';

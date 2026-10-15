@@ -17,6 +17,7 @@ import {
 import { at, DAY0, DENVER, newGoal, TOKYO, yesDays } from '@/engine/__tests__/fixtures';
 
 import {
+  BOTH_OPEN_BODY,
   MAX_SCHEDULED,
   NUDGES,
   reminderRequests,
@@ -34,7 +35,7 @@ function input(goal: GoalState, now: Date, patch: Partial<ReminderInput> = {}): 
 
 /** A goal whose run of misses reset the streak, so only weekly nudges are left. */
 function pausedGoal() {
-  const now = at('2026-11-16', '20:00');
+  const now = at('2026-11-17', '00:00');
   const goal = resolve({ ...yesDays(newGoal(), DAY0, 20), shields: 0 }, now, DENVER).state;
   expect(goal.paused).toBe(true);
   return { goal, now };
@@ -43,7 +44,7 @@ function pausedGoal() {
 describe('reminderRequests', () => {
   it('asks the evening question and the next-morning one, without naming the goal', () => {
     const reqs = reminderRequests(input(newGoal(), at(DAY0, '12:00')));
-    expect(reqs).toHaveLength(2 * REMINDER_MAX_WINDOWS);
+    expect(reqs).toHaveLength(2 * REMINDER_MAX_WINDOWS + 1); // and the next day's check-in before the reset
     expect(reqs[0]).toEqual({
       identifier: 'checkin-2026-10-13',
       content: {
@@ -69,6 +70,30 @@ describe('reminderRequests', () => {
     expect(reqs.some((r) => JSON.stringify(r).includes('Stop drinking'))).toBe(false);
   });
 
+  it("asks without buttons when yesterday is still open, so a tap opens Home on yesterday's card", () => {
+    const reqs = reminderRequests(input(newGoal(), at(DAY0, '12:00'), { showGoal: true }));
+    const both = reqs.find((r) => r.identifier === 'checkin-2026-10-14');
+    expect(both).toEqual({
+      identifier: 'checkin-2026-10-14',
+      content: {
+        title: 'Daily check-in',
+        body: BOTH_OPEN_BODY,
+        data: { goalId: 'g1', day: '2026-10-14', kind: 'checkin' },
+        sound: 'default',
+      },
+      trigger: { type: SchedulableTriggerInputTypes.DATE, date: at('2026-10-14', '20:00'), channelId: 'checkin' },
+    });
+    expect(BOTH_OPEN_BODY).not.toContain('Stop drinking');
+
+    // Once yesterday is answered, today's check-in has its buttons again.
+    const answered = yesDays(newGoal(), DAY0, 1);
+    const plain = reminderRequests(input(answered, at('2026-10-14', '09:00')));
+    expect(plain[0]).toMatchObject({
+      identifier: 'checkin-2026-10-14',
+      content: { body: 'Did you stick to your goal today?', categoryIdentifier: 'checkin' },
+    });
+  });
+
   it('names the goal only when the user turned that on', () => {
     const reqs = reminderRequests(input(newGoal(), at(DAY0, '12:00'), { showGoal: true }));
     expect(reqs[0]?.content.body).toBe('Did you stick to “Stop drinking” today?');
@@ -89,7 +114,7 @@ describe('reminderRequests', () => {
 
   it('catches the goal up first, so nothing is planned for days already closed', () => {
     const goal = yesDays(newGoal(), DAY0, 3); // through 10-15, last resolved then
-    const now = at('2026-10-20', '21:00'); // 10-16 .. 10-19 have closed; 10-20 is open
+    const now = at('2026-10-21', '00:30'); // 10-16 .. 10-19 have closed; 10-20 is open
     const reqs = reminderRequests(input(goal, now));
     expect(reqs[0]?.identifier).toBe('morning-2026-10-20');
     expect(reqs[1]?.identifier).toBe('checkin-2026-10-21');
@@ -127,13 +152,13 @@ describe('reminderRequests', () => {
   });
 
   it('stays well under the iOS limit of 64 pending notifications', () => {
-    expect(2 * REMINDER_MAX_WINDOWS + REENGAGE_NUDGE_COUNT).toBeLessThanOrEqual(MAX_SCHEDULED);
+    expect(2 * REMINDER_MAX_WINDOWS + 1 + REENGAGE_NUDGE_COUNT).toBeLessThanOrEqual(MAX_SCHEDULED);
     const cases = [
       input(newGoal(), at(DAY0, '12:00'), { reengage: true }),
       input(yesDays(newGoal(), DAY0, 21), at('2026-11-02', '21:00'), { reengage: true }), // 3 shields
       input(pausedGoal().goal, pausedGoal().now, { reengage: true }),
     ];
-    for (const c of cases) expect(reminderRequests(c).length).toBeLessThanOrEqual(36);
+    for (const c of cases) expect(reminderRequests(c).length).toBeLessThanOrEqual(37);
   });
 
   it('lands on local wall times across a DST change (Chatham, +12:45 → +13:45)', () => {

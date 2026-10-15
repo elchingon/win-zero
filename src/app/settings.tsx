@@ -4,8 +4,8 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState, type ComponentType } from 'react';
 import { AppState, Linking, StyleSheet, Text, View } from 'react-native';
 
-import { currentCheckInTime, nextWindow, pendingWindow, type ClockTime } from '@/engine';
-import { formatWhen } from '@/lib/format';
+import { currentCheckInTime, firstUpcomingDay, opensAt, pendingWindow, type ClockTime } from '@/engine';
+import { formatUntil, formatWhen } from '@/lib/format';
 import { requestSync } from '@/notifications';
 import { getReminderPermission, requestReminderPermission, type ReminderPermission } from '@/notifications/permissions';
 import { appStore, useApp, type EditResult } from '@/store';
@@ -26,7 +26,7 @@ const DebugSection: ComponentType | null = __DEV__
   : null;
 
 const GOAL_MAX_LENGTH = 60;
-const ORDER_ERROR = 'The morning reminder has to come before check-in time.';
+const ORDER_ERROR = "The reminder can't come later than check-in time.";
 
 const PERMISSION_WORDS: Record<ReminderPermission, string> = {
   granted: 'On',
@@ -66,7 +66,7 @@ export default function Settings() {
   const now = store.now();
   const tz = store.timeZone();
   const pending = pendingWindow(goal, now);
-  const next = nextWindow(goal);
+  const upcoming = opensAt(goal, firstUpcomingDay(goal, now));
   const goalChanged = draft.trim() !== goal.goal && draft.trim().length > 0;
 
   const saveGoal = () => {
@@ -116,19 +116,15 @@ export default function Settings() {
           onChange={changeCheckIn}
           h24={h24}
           error={timeError.checkIn}
-          hint={
-            pending
-              ? `A check-in is open now. The next one opens ${formatWhen(next.closesAt, now, tz, h24)}.`
-              : `Next check-in: ${formatWhen(next.opensAt, now, tz, h24)}.`
-          }
+          hint={`${pending ? `A check-in is open until ${formatUntil(pending.closesAt, now, tz, h24)}. ` : ''}Next check-in: ${formatWhen(upcoming, now, tz, h24)}.`}
         />
         <TimeField
-          label="Morning reminder"
+          label="Reminder"
           value={goal.morningTime}
           onChange={changeMorning}
           h24={h24}
           error={timeError.morning}
-          hint="Sent the next morning, only if you haven't answered."
+          hint="Sent the next day, only if you haven't answered. Set it to check-in time to get one notification a day."
         />
       </View>
 

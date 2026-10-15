@@ -4,7 +4,7 @@
 import type { NotificationRequestInput } from 'expo-notifications';
 import { AppState } from 'react-native';
 
-import { pendingWindow, resolve, type GoalState } from '@/engine';
+import { firstUnsettledDay, resolve, type GoalState } from '@/engine';
 import type { AppStore, AppState as StoreState } from '@/store/createAppStore';
 import { whenHydrated, type AppStateLike } from '@/store/lifecycle';
 
@@ -60,18 +60,19 @@ export interface ReminderSync {
 }
 
 /**
- * Delivered notifications to clear: check-ins and morning reminders for days that are no longer
- * open (answered or closed), nudges once the app is open, and anything from an erased goal.
+ * Delivered notifications to clear: check-ins and morning reminders for days that have settled
+ * (answered or closed), nudges once the app is open, and anything from an erased goal. Today's
+ * check-in stays while yesterday is still open: both days are still to answer.
  */
 export function staleDelivered(presented: { identifier: string; data: unknown }[], input: SyncInput): string[] {
   const goal = input.goal ? resolve(input.goal, input.now, input.tz).state : null;
-  const openDay = goal ? (pendingWindow(goal, input.now)?.day ?? null) : null;
+  const firstOpen = goal ? firstUnsettledDay(goal) : null;
   return presented
     .filter((p) => {
       const data = readReminderData(p.data);
       if (!data) return false;
-      if (!goal || data.goalId !== goal.goalId) return true;
-      return data.kind === 'reengage' || data.day !== openDay;
+      if (!goal || !firstOpen || data.goalId !== goal.goalId) return true;
+      return data.kind === 'reengage' || data.day < firstOpen;
     })
     .map((p) => p.identifier);
 }

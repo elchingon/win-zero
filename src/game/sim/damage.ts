@@ -16,7 +16,8 @@ function finishRound(s: GameState, z: Zero): void {
   celebrate(s, z);
 }
 
-export function killZero(s: GameState, z: Zero): void {
+/** Destroy a zero. `quiet` skips its explosion (Finish round clears the board at once). */
+export function killZero(s: GameState, z: Zero, quiet = false): void {
   if (!z.alive) return;
   z.alive = false;
   z.hp = 0;
@@ -26,7 +27,7 @@ export function killZero(s: GameState, z: Zero): void {
   r.kills++;
   if (z.kind === 'armored') r.armoredKills++;
   r.dirty = true;
-  explode(s, z);
+  if (!quiet) explode(s, z);
   if (s.valueLeft === 0 && s.phase === 'play') finishRound(s, z);
 }
 

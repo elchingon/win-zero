@@ -6,6 +6,7 @@ import type { ClockTime, DayKey, GoalState, ScheduleEntry, TimeZone } from './ty
 import {
   closesAt,
   firstUnsettledDay,
+  firstUpcomingDay,
   latestScheduleEntry,
   MIN_WINDOW_MS,
   opensAt,
@@ -129,10 +130,12 @@ export function resolve(state: GoalState, now: Date, tz: TimeZone): Resolved {
 }
 
 /**
- * Start a new check-in time or time zone from the next window that hasn't opened.
+ * Start a new check-in time or time zone from the first check-in that hasn't arrived yet:
+ * today's, even while yesterday's is still open.
+ * - That check-in may arrive right away under the new schedule, never earlier.
  * - An open window keeps at least the close time it already had, so an edit or a flight
- *   never closes it early.
- * - A window that hasn't opened may open right away under the new schedule, never earlier.
+ *   never closes it early: its own entry is left alone, and if moving the next opening would
+ *   pull its close in, that opening stays where it was.
  * - Openings stay strictly increasing, so no day is skipped or repeated.
  * Expects a state already resolved at `now`.
  */
@@ -141,23 +144,24 @@ function appendScheduleEntry(
   change: Pick<ScheduleEntry, 'time' | 'tz'>,
   now: Date,
 ): GoalState {
-  const unsettled = firstUnsettledDay(state);
-  const isOpen = opensAt(state, unsettled).getTime() <= now.getTime();
-  const fromDay = isOpen ? addDays(unsettled, 1) : unsettled;
-  let notBefore: number;
-  if (isOpen) {
-    notBefore = opensAt(state, fromDay).getTime();
-  } else {
-    notBefore = now.getTime();
-    if (unsettled > state.firstDay) {
-      notBefore = Math.max(notBefore, opensAt(state, addDays(unsettled, -1)).getTime() + MIN_WINDOW_MS);
-    }
-  }
-  const entry: ScheduleEntry = { fromDay, ...change, notBefore: new Date(notBefore).toISOString() };
-  return {
-    ...state,
-    checkInSchedule: [...state.checkInSchedule.filter((e) => e.fromDay < fromDay), entry],
+  const t = now.getTime();
+  const fromDay = firstUpcomingDay(state, now);
+
+  const prev = addDays(fromDay, -1);
+  const hasPrev = fromDay > state.firstDay;
+  let notBefore = hasPrev ? Math.max(t, opensAt(state, prev).getTime() + MIN_WINDOW_MS) : t;
+  const withEntry = (floor: number): GoalState => {
+    const entry: ScheduleEntry = { fromDay, ...change, notBefore: new Date(floor).toISOString() };
+    return { ...state, checkInSchedule: [...state.checkInSchedule.filter((e) => e.fromDay < fromDay), entry] };
   };
+
+  let next = withEntry(notBefore);
+  const prevOpen = hasPrev && prev >= firstUnsettledDay(state);
+  if (prevOpen && closesAt(next, prev).getTime() < closesAt(state, prev).getTime()) {
+    notBefore = Math.max(notBefore, opensAt(state, fromDay).getTime());
+    next = withEntry(notBefore);
+  }
+  return next;
 }
 
 /** Drop schedule entries that no longer govern the last settled day or anything after it. */

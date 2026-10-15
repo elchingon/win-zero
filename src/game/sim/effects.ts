@@ -10,6 +10,7 @@ import {
   KILL_FRAGMENTS,
   KILL_FRAGMENTS_BUSY,
   KILL_PARTICLE_CAP,
+  RING_CAP,
   KILL_RING,
   KILL_SPARKS,
   KILL_SPARKS_BUSY,
@@ -100,8 +101,7 @@ export function fragments(s: GameState, z: Zero, count: number): void {
   }
 }
 
-/** A shockwave ring growing from `r` to `max` over `dur` seconds, thinning as it goes. */
-export function addRing(
+function placeRing(
   s: GameState,
   x: number,
   y: number,
@@ -121,6 +121,34 @@ export function addRing(
   ring.dur = dur;
   ring.color = color;
   ring.width = width;
+}
+
+/** A shockwave ring growing from `r` to `max` over `dur` seconds, thinning as it goes. */
+export function addRing(
+  s: GameState,
+  x: number,
+  y: number,
+  r: number,
+  max: number,
+  dur: number,
+  color: ColorSlot,
+  width: number,
+): void {
+  if (s.rings.count < RING_CAP) placeRing(s, x, y, r, max, dur, color, width);
+}
+
+/** One of the final zero's shockwaves, which may use the slots addRing leaves free. */
+export function addFinalRing(
+  s: GameState,
+  x: number,
+  y: number,
+  r: number,
+  max: number,
+  dur: number,
+  color: ColorSlot,
+  width: number,
+): void {
+  placeRing(s, x, y, r, max, dur, color, width);
 }
 
 /**

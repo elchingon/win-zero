@@ -3,9 +3,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { beforeEach, describe, expect, it } from '@jest/globals';
 
 import { addDays, currentCheckInTime, latestScheduleEntry, MS_PER_DAY, pendingWindow } from '@/engine';
-import { at, DAY0, newGoal, TOKYO, yesDays } from '@/engine/__tests__/fixtures';
+import { at, DAY0, DENVER, newGoal, TOKYO, yesDays } from '@/engine/__tests__/fixtures';
 
-import type { AppStore } from '../createAppStore';
+import { createAppStore, type AppStore } from '../createAppStore';
 import { startLifecycle } from '../lifecycle';
 import { STORE_KEY, STORE_VERSION } from '../types';
 import { fakeAppState, flush, harness, ready, withGoal } from './harness';
@@ -20,7 +20,7 @@ describe('lifecycle', () => {
     const app = fakeAppState();
     const stop = startLifecycle(h.store, app);
 
-    h.setTime('2026-11-01', '20:30'); // 10-23 .. 10-31 have closed
+    h.setTime('2026-11-02', '00:30'); // 10-23 .. 10-31 have closed
     app.emit('background');
     expect(h.store.getState().goal?.history).toHaveLength(10);
 
@@ -44,7 +44,7 @@ describe('lifecycle', () => {
     await flush();
 
     const h = harness();
-    h.setTime('2026-10-20', '21:00'); // 10-16 .. 10-19 closed
+    h.setTime('2026-10-21', '00:30'); // 10-16 .. 10-19 closed
     const stop = startLifecycle(h.store, fakeAppState());
     expect(h.store.getState().hydrated).toBe(false);
     await ready(h.store);
@@ -80,6 +80,7 @@ describe('setup and settings', () => {
 
     expect(store.getState().setCheckInTime('08:30')).toEqual({ ok: false, reason: 'order' });
     expect(store.getState().setMorningTime('21:00')).toEqual({ ok: false, reason: 'order' });
+    expect(store.getState().setMorningTime('20:00')).toEqual({ ok: true }); // the same as check-in time
     expect(store.getState().setCheckInTime('21:00')).toEqual({ ok: true });
     expect(currentCheckInTime(store.getState().goal!)).toBe('21:00');
     expect(store.getState().setMorningTime('07:30')).toEqual({ ok: true });
@@ -93,35 +94,87 @@ describe('setup and settings', () => {
 describe('notices', () => {
   it('shows a missed-day notice once, and nothing for the free week', async () => {
     const h = await withGoal(yesDays(newGoal(), DAY0, 10)); // through 10-22
-    h.setTime('2026-10-30', '20:30');
+    h.setTime('2026-10-31', '00:30');
     h.store.getState().refresh(); // seven free misses
-    expect(h.store.getState().takeMissNotice()).toBeNull();
+    expect(h.store.getState().nextNotice()).toBeNull();
+    h.store.getState().markQuietMisses();
     expect(h.store.getState().seenThrough).toBe('2026-10-29');
 
-    h.setTime('2026-11-01', '20:30');
+    h.setTime('2026-11-02', '00:30');
     h.store.getState().refresh(); // two slips
-    const notice = { kind: 'slipping', cause: 'missed', lost: 2, streak: 8, days: 2 };
-    expect(h.store.getState().takeMissNotice()).toEqual(notice);
-    expect(h.store.getState().notice).toEqual(notice);
-    expect(h.store.getState().takeMissNotice()).toBeNull();
+    const pending = h.store.getState().nextNotice();
+    expect(pending).toEqual({
+      source: 'missed',
+      notice: { kind: 'slipping', cause: 'missed', lost: 2, streak: 8, days: 2, stopped: false },
+      through: '2026-10-31',
+    });
+    h.store.getState().noticeShown(pending!);
+    expect(h.store.getState().seenThrough).toBe('2026-10-31');
+    expect(h.store.getState().nextNotice()).toBeNull();
+  });
+
+  it('only marks missed days seen once their news is shown', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 10)); // through 10-22
+    h.setTime('2026-11-02', '00:30');
+    h.store.getState().refresh(); // 7 free misses, then 2 slips
+    const first = h.store.getState().nextNotice();
+    expect(h.store.getState().nextNotice()).toEqual(first); // reading it changes nothing
+    expect(h.store.getState().seenThrough).toBeNull();
+    h.store.getState().markQuietMisses(); // there is news, so nothing is quiet
+    expect(h.store.getState().seenThrough).toBeNull();
+
+    // A Yes now leaves the news in place, for after the round.
+    expect(h.store.getState().answer('yes')).toMatchObject({ ok: true });
+    expect(h.store.getState().nextNotice()).toMatchObject({ source: 'missed', notice: { kind: 'slipping', lost: 2 } });
+  });
+
+  it('never moves the seen mark back', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 10)); // through 10-22
+    h.setTime('2026-11-02', '00:30');
+    h.store.getState().refresh();
+    const early = h.store.getState().nextNotice()!; // through 10-31
+    h.setTime('2026-11-03', '00:30');
+    h.store.getState().refresh(); // one more slip
+    const late = h.store.getState().nextNotice()!;
+    expect(late).toMatchObject({ through: '2026-11-01', notice: { lost: 3 } });
+    h.store.getState().noticeShown(late);
+    h.store.getState().noticeShown(early); // e.g. an older Notice screen closing late
+    expect(h.store.getState().seenThrough).toBe('2026-11-01');
+  });
+
+  it("puts an answer's notice ahead of missed-day news, and clears only the one shown", async () => {
+    const h = await withGoal({ ...yesDays(newGoal(), DAY0, 10), shields: 0 }); // through 10-22
+    h.setTime('2026-11-02', '00:30');
+    h.store.getState().refresh(); // 2 slips, not yet shown
+    const missed = h.store.getState().nextNotice()!;
+    h.store.getState().answer('not-today'); // one more
+    const answered = h.store.getState().nextNotice()!;
+    expect(answered).toEqual({ source: 'answer', notice: { kind: 'slipping', cause: 'answer', lost: 1, streak: 7, days: 1, stopped: false } });
+
+    h.store.getState().noticeShown(missed);
+    expect(h.store.getState().nextNotice()?.notice).toBe(answered.notice); // still waiting its turn
+    h.store.setState({ notice: { kind: 'noted' } }); // a newer answer's notice
+    h.store.getState().noticeShown(answered);
+    expect(h.store.getState().notice).toEqual({ kind: 'noted' });
   });
 
   it('shows Reset or Shielded for a missed-day final', async () => {
     const reset = await withGoal({ ...yesDays(newGoal(), DAY0, 20), shields: 0 });
-    reset.setTime('2026-11-16', '20:00');
+    reset.setTime('2026-11-17', '00:00');
     reset.store.getState().refresh();
-    expect(reset.store.getState().takeMissNotice()).toEqual({
+    expect(reset.store.getState().nextNotice()?.notice).toEqual({
       kind: 'reset',
       cause: 'missed',
       lostStreak: 20,
       bestStreak: 20,
       days: 14,
+      stopped: false,
     });
 
     const shielded = await withGoal(yesDays(newGoal(), DAY0, 20)); // 2 shields
-    shielded.setTime('2026-11-16', '20:00');
+    shielded.setTime('2026-11-17', '00:00');
     shielded.store.getState().refresh();
-    expect(shielded.store.getState().takeMissNotice()).toEqual({
+    expect(shielded.store.getState().nextNotice()?.notice).toEqual({
       kind: 'shielded',
       cause: 'missed',
       lost: 6,
@@ -135,9 +188,9 @@ describe('notices', () => {
     const h = await withGoal({ ...yesDays(newGoal(), DAY0, 10), shields: 0 }); // through 10-22
     h.setTime('2026-10-23', '21:00');
     expect(h.store.getState().answer('not-today')).toMatchObject({ ok: true, outcome: { kind: 'slipped' } });
-    expect(h.store.getState().notice).toEqual({ kind: 'slipping', cause: 'answer', lost: 1, streak: 9, days: 1 });
+    expect(h.store.getState().notice).toEqual({ kind: 'slipping', cause: 'answer', lost: 1, streak: 9, days: 1, stopped: false });
 
-    h.store.getState().clearNotice();
+    h.store.getState().noticeShown(h.store.getState().nextNotice()!);
     expect(h.store.getState().notice).toBeNull();
 
     h.store.setState({ goal: { ...h.store.getState().goal!, slide: 6 } });
@@ -149,6 +202,7 @@ describe('notices', () => {
       lostStreak: 9,
       bestStreak: 10,
       days: 1,
+      stopped: false,
     });
 
     h.setTime('2026-10-25', '21:00');
@@ -182,7 +236,7 @@ describe('answering a given day', () => {
 
   it("answers yesterday's window from the morning reminder", async () => {
     const h = await withGoal(yesDays(newGoal(), DAY0, 2)); // through 10-14
-    h.setTime('2026-10-16', '09:00'); // 10-15 stays open until 20:00 today
+    h.setTime('2026-10-16', '09:00'); // 10-15 stays open until midnight tonight
     expect(h.store.getState().answer('not-today', '2026-10-15')).toMatchObject({
       ok: true,
       outcome: { kind: 'slipped', day: '2026-10-15' },
@@ -193,7 +247,7 @@ describe('answering a given day', () => {
 
   it("turns down a day that closed, was answered, or hasn't opened", async () => {
     const h = await withGoal(yesDays(newGoal(), DAY0, 2)); // through 10-14
-    h.setTime('2026-10-16', '20:30'); // 10-15 closed unanswered
+    h.setTime('2026-10-17', '00:30'); // 10-15 closed unanswered at midnight
     expect(h.store.getState().answer('yes', '2026-10-15')).toMatchObject({ ok: false, reason: 'expired' });
     expect(h.store.getState().goal?.lastSettledDay).toBe('2026-10-15'); // caught up all the same
     expect(h.store.getState().answer('yes', '2026-10-14')).toMatchObject({ ok: false, reason: 'already-answered' });
@@ -227,6 +281,17 @@ describe('where an answer leads', () => {
     stop();
   });
 
+  it("leaves a notification's Yes on Home: the round waits, nothing opens", async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 2)); // through 10-14
+    h.setTime('2026-10-15', '21:00');
+    expect(h.store.getState().answer('yes', '2026-10-15', 'notification')).toMatchObject({ ok: true });
+    expect(h.store.getState()).toMatchObject({ route: null, round: { day: '2026-10-15', n: 3, played: false } });
+
+    h.setTime('2026-10-16', '21:00');
+    h.store.getState().answer('not-today', '2026-10-16', 'notification');
+    expect(h.store.getState().route).toBe('/notice'); // Not today still shows its notice
+  });
+
   it("records why an answer was turned down for Home's banner, and keeps a route still waiting", async () => {
     const h = await withGoal(yesDays(newGoal(), DAY0, 2)); // through 10-14
     h.setTime('2026-10-15', '21:00');
@@ -237,7 +302,7 @@ describe('where an answer leads', () => {
     h.store.getState().clearRejection();
     expect(h.store.getState().rejection).toBeNull();
 
-    h.setTime('2026-10-17', '21:00'); // 10-16 closed unanswered
+    h.setTime('2026-10-18', '00:30'); // 10-16 closed unanswered at midnight
     h.store.getState().answer('not-today', '2026-10-16');
     expect(h.store.getState().rejection).toBe('expired');
     h.store.getState().answer('not-today');
@@ -413,7 +478,18 @@ describe('debug jump to day', () => {
     expect(s.round).toMatchObject({ day: addDays(DAY0, -1), n: 30, played: false, rewards: { bomb: true, weapons: ['chain'] } });
     expect(s.weapon).toBe('chain');
     expect(s.notice).toBeNull();
-    expect(s.takeMissNotice()).toBeNull();
+    expect(s.nextNotice()).toBeNull();
+  });
+
+  it('does nothing without the development tools, as in a production build', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 2), { dev: false });
+    expect(h.store.getState().devJumpToDay(30)).toBeNull();
+
+    const noTools = createAppStore({ storage: AsyncStorage, now: () => new Date(h.clock.t), timeZone: () => DENVER, makeId: () => 'x', dev: true });
+    await ready(noTools);
+    noTools.setState({ goal: yesDays(newGoal(), DAY0, 2) });
+    expect(noTools.getState().devJumpToDay(30)).toBeNull();
+    expect(noTools.getState().goal?.streak).toBe(2);
   });
 
   it('turns down run lengths it cannot build', async () => {

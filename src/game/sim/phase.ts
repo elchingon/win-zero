@@ -13,7 +13,7 @@ import {
   RESULT_DELAY,
   SHAKE_FINAL,
 } from './constants';
-import { addFlash, addRing, addShake, particle, scaledCount } from './effects';
+import { addFinalRing, addFlash, addShake, particle, scaledCount } from './effects';
 import { updateFill } from './fill';
 import { random, spread } from './rng';
 import type { GameState, ParticleShape, Zero } from './types';
@@ -46,7 +46,7 @@ export function celebrate(s: GameState, z: Zero): void {
   const diagonal = Math.hypot(s.width, s.height);
   for (let i = 0; i < FINAL_RINGS.length; i++) {
     const r = FINAL_RINGS[i];
-    if (r) addRing(s, z.x, z.y, r.start, diagonal * r.reach, r.duration, r.color, r.width);
+    if (r) addFinalRing(s, z.x, z.y, r.start, diagonal * r.reach, r.duration, r.color, r.width);
   }
   throwPieces(s, 'confetti', z.x, z.y, scaledCount(s, CONFETTI), CONFETTI_PIECE, CONFETTI_DRAG);
   throwPieces(s, 'ring', z.x, z.y, scaledCount(s, CONFETTI_RINGS), CONFETTI_FRAGMENT, CONFETTI_DRAG);

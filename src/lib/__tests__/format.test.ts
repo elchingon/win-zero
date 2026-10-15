@@ -2,7 +2,16 @@ import { describe, expect, it } from '@jest/globals';
 
 import { at, DENVER, iso, TOKYO } from '@/engine/__tests__/fixtures';
 
-import { formatClockTime, formatCount, formatDayShort, formatMonth, formatWhen, plural, relativeDay } from '../format';
+import {
+  formatClockTime,
+  formatCount,
+  formatDayShort,
+  formatMonth,
+  formatUntil,
+  formatWhen,
+  plural,
+  relativeDay,
+} from '../format';
 
 describe('format', () => {
   it('formats clock times for 12- and 24-hour devices', () => {
@@ -26,6 +35,16 @@ describe('format', () => {
     );
     // The same instant is 11:00 the day after in Tokyo.
     expect(formatWhen(iso('2026-10-15T02:00:00Z'), iso('2026-10-14T03:00:00Z'), TOKYO, true)).toBe('tomorrow at 11:00');
+  });
+
+  it('says a midnight deadline as the end of a day, and anything else like formatWhen', () => {
+    const close = at('2026-10-15', '00:00'); // the end of 10-14
+    expect(formatUntil(close, at('2026-10-14', '21:00'), DENVER, false)).toBe('the end of today');
+    expect(formatUntil(close, at('2026-10-13', '20:00'), DENVER, false)).toBe('the end of tomorrow');
+    expect(formatUntil(close, at('2026-10-11', '20:00'), DENVER, false)).toBe('the end of Wednesday');
+    // On another zone's clock it isn't midnight, so it says the time.
+    expect(formatUntil(close, at('2026-10-14', '21:00'), TOKYO, true)).toBe('today at 15:00');
+    expect(formatUntil(at('2026-10-15', '03:00'), at('2026-10-14', '21:00'), DENVER, false)).toBe('tomorrow at 3:00 AM');
   });
 
   it('formats short days, months and plurals', () => {

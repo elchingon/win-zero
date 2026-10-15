@@ -9,8 +9,50 @@
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0D1130",
     "ios": {
+      "icon": {
+        "light": "./assets/brand/app-store-icon.png",
+        "dark": "./assets/brand/ios-icon-dark.png",
+        "tinted": "./assets/brand/ios-icon-tinted.png"
+      },
       "supportsTablet": false,
-      "bundleIdentifier": "com.e7systems.winzero"
+      "bundleIdentifier": "com.e7systems.winzero",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "privacyManifests": {
+        "NSPrivacyTracking": false,
+        "NSPrivacyTrackingDomains": [],
+        "NSPrivacyCollectedDataTypes": [],
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "CA92.1"
+            ]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "C617.1",
+              "0A2A.1",
+              "3B52.1"
+            ]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategorySystemBootTime",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "35F9.1"
+            ]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryDiskSpace",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "E174.1",
+              "85F4.1"
+            ]
+          }
+        ]
+      }
     },
     "android": {
       "package": "com.e7systems.winzero",
@@ -23,6 +65,11 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.MODIFY_AUDIO_SETTINGS"
+      ],
+      "blockedPermissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.SYSTEM_ALERT_WINDOW"
       ]
     },
     "web": {
@@ -52,7 +99,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/brand/android-monochrome.png",
+          "icon": "./assets/brand/notification-icon.png",
           "color": "#FFB52E"
         }
       ],

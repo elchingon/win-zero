@@ -4,9 +4,9 @@ import { Redirect, router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Linking, StyleSheet, Text, View } from 'react-native';
 
-import { pendingWindow, type GoalState } from '@/engine';
+import { pendingWindow } from '@/engine';
 import { plural } from '@/lib/format';
-import { appStore, type Notice } from '@/store';
+import { appStore, useApp, type Notice } from '@/store';
 import { colors, space, type } from '@/theme/tokens';
 import { Em, Eyebrow, Lede } from '@/ui/bits';
 import { Button, LinkButton } from '@/ui/Button';
@@ -45,7 +45,9 @@ function copyFor(n: Notice): Copy {
         eyebrow: 'While you were away',
         title: ["You've lost ", lostLine],
         body: [
-          `Check in to stop the slide. Your streak is at ${plural(n.streak, 'zero')}.`,
+          n.stopped
+            ? `Your Yes stopped the slide. Your streak is at ${plural(n.streak, 'zero')}.`
+            : `Check in to stop the slide. Your streak is at ${plural(n.streak, 'zero')}.`,
           'Missed days are free for a week; after that, each one takes a zero.',
         ],
         motion: 'shed',
@@ -82,7 +84,9 @@ function copyFor(n: Notice): Copy {
             title: ['A fresh ', 'start.'],
             body: [
               "It's been a while since your last check-in, so your streak has started over.",
-              `Your best run stays at ${plural(n.bestStreak, 'day')}, and ${KEEPSAKES}. Check in whenever you're ready.`,
+              n.stopped
+                ? `Your Yes started a new run. Your best run stays at ${plural(n.bestStreak, 'day')}, and ${KEEPSAKES}.`
+                : `Your best run stays at ${plural(n.bestStreak, 'day')}, and ${KEEPSAKES}. Check in whenever you're ready.`,
             ],
             motion: 'settle',
             support: true,
@@ -98,19 +102,23 @@ function copyFor(n: Notice): Copy {
 }
 
 export default function NoticeScreen() {
-  // Snapshot it: the store's copy is cleared once shown, so it appears only once.
-  const [notice] = useState(() => appStore.getState().notice);
-  const [goal] = useState<GoalState | null>(() => appStore.getState().goal);
+  // Snapshot it, and mark it shown: it appears once, and the store may move on while it's up.
+  const [pending] = useState(() => appStore.getState().nextNotice());
+  const goal = useApp((s) => s.goal);
+  const route = useApp((s) => s.route);
 
   useEffect(() => {
-    appStore.getState().clearNotice();
-  }, []);
+    if (pending) appStore.getState().noticeShown(pending);
+  }, [pending]);
 
-  if (!notice || !goal) return <Redirect href="/" />;
+  if (!pending || !goal) return <Redirect href="/" />;
 
+  const { notice } = pending;
   const copy = copyFor(notice);
   const color = noticeColors[notice.kind];
+  // An answer can land while this is up (a notification's buttons), so the way on is read live.
   const canAnswer = pendingWindow(goal, appStore.getState().now()) !== null;
+  const next = route === '/play' ? 'Play your round' : canAnswer && notice.kind !== 'noted' ? 'Check in now' : 'Got it';
   const close = () => router.dismissTo('/');
 
   return (
@@ -129,7 +137,7 @@ export default function NoticeScreen() {
         ))}
       </View>
       <View style={styles.block}>
-        <Button label={canAnswer && notice.kind !== 'noted' ? 'Check in now' : 'Got it'} onPress={close} />
+        <Button label={next} onPress={close} />
         {copy.support ? (
           <LinkButton
             label={`Need support? ${SUPPORT_LINE.name}, ${SUPPORT_LINE.display}`}

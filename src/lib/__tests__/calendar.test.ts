@@ -1,6 +1,8 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { addMonths, monthGrid, monthOf, weekdayInitials } from '../calendar';
+import type { CalendarMark } from '@/engine';
+
+import { addMonths, monthGrid, monthOf, monthSummary, weekdayInitials } from '../calendar';
 
 describe('calendar', () => {
   it('lays out a month starting on Sunday or Monday', () => {
@@ -25,5 +27,20 @@ describe('calendar', () => {
   it('labels weekdays from the first day of the week', () => {
     expect(weekdayInitials(1)).toEqual(['S', 'M', 'T', 'W', 'T', 'F', 'S']);
     expect(weekdayInitials(2)).toEqual(['M', 'T', 'W', 'T', 'F', 'S', 'S']);
+  });
+
+  it('sums up a month for a screen reader, in the legend order', () => {
+    const marks = new Map<string, CalendarMark>([
+      ['2026-09-30', 'yes'], // another month
+      ['2026-10-13', 'yes'],
+      ['2026-10-14', 'missed'],
+      ['2026-10-15', 'yes'],
+      ['2026-10-16', 'no'],
+      ['2026-10-17', 'shielded'],
+      ['2026-10-18', 'missed'],
+    ]);
+    expect(monthSummary('2026-10', marks)).toBe('October 2026: 2 yes, 1 not today, 1 shielded, 2 missed');
+    expect(monthSummary('2026-09', marks)).toBe('September 2026: 1 yes');
+    expect(monthSummary('2026-11', marks)).toBe('November 2026: no check-ins yet');
   });
 });

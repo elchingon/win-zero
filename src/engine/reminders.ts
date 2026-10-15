@@ -2,7 +2,7 @@
 // everything and schedules this list on every check-in and app open.
 import { addDays } from './dates';
 import { applyMissed, MISSED_GRACE_DAYS, SLIDE_FINAL } from './rules';
-import type { DayKey, GoalState } from './types';
+import type { CheckInWindow, DayKey, GoalState } from './types';
 import { firstUnsettledDay, opensAt, windowFor } from './windows';
 
 /**
@@ -21,6 +21,11 @@ export interface PlannedReminder {
   kind: ReminderKind;
   /** The goal day whose window is open at `at`. */
   day: DayKey;
+  /**
+   * A check-in that arrives while an earlier day is still open. Home asks about that day first,
+   * so this one shouldn't answer for its own day.
+   */
+  earlier?: DayKey;
 }
 
 export interface ReminderOptions {
@@ -41,8 +46,10 @@ function pausedOnDay(state: GoalState): DayKey | null {
  * Reminders after `now`, assuming nothing else gets answered. Expects a state resolved at `now`.
  * - Each window gets its evening check-in and its morning reminder, up to and including the
  *   one whose miss would reset the streak (projected with the real rules, so the grace days,
- *   the slide so far, and shields all count). Nothing is sent for the window that opens as the
- *   reset lands, nor while reminders are paused.
+ *   the slide so far, and shields all count). The next day's check-in still comes, as it
+ *   arrives before that reset lands at midnight; answering then keeps the streak. Nothing
+ *   after that, nor while reminders are paused.
+ * - A check-in that arrives while the day before is still open is marked `earlier`.
  * - Weekly nudges start one week after that reset, whether it already happened or is projected.
  *   If shields push it past REMINDER_MAX_WINDOWS, they start a week after the last daily window.
  */
@@ -51,18 +58,33 @@ export function planReminders(state: GoalState, now: Date, options: ReminderOpti
   const out: PlannedReminder[] = [];
   const first = firstUnsettledDay(state);
 
+  const pushCheckIn = (w: CheckInWindow, prev: CheckInWindow | null) => {
+    if (w.opensAt.getTime() <= t) return;
+    const checkIn: PlannedReminder = { at: w.opensAt, kind: 'checkin', day: w.day };
+    if (prev && prev.closesAt.getTime() > w.opensAt.getTime()) checkIn.earlier = prev.day;
+    out.push(checkIn);
+  };
+
   let lastDaily: DayKey | null = null;
+  let prev: CheckInWindow | null = null;
   let projected = state;
   for (let i = 0; i < REMINDER_MAX_WINDOWS && !projected.paused; i++) {
     const w = windowFor(state, addDays(first, i));
-    if (w.opensAt.getTime() > t) out.push({ at: w.opensAt, kind: 'checkin', day: w.day });
+    pushCheckIn(w, prev);
     if (w.remindAt && w.remindAt.getTime() > t) out.push({ at: w.remindAt, kind: 'morning', day: w.day });
     projected = applyMissed(projected, { day: w.day, at: w.closesAt, tz: w.tz }).state;
     lastDaily = w.day;
+    prev = w;
+  }
+  // The day after the reset day opens before the reset lands: its check-in is the last one.
+  if (projected.paused && !state.paused && prev) {
+    const w = windowFor(state, addDays(prev.day, 1));
+    if (w.opensAt.getTime() < prev.closesAt.getTime()) pushCheckIn(w, prev);
   }
 
   if (options.reengage) {
-    // The reset lands when its window closes, which is when the following day's window opens.
+    // The reset lands when its window closes, at midnight at the end of the following day.
+    // Nudges come at check-in time, a week at a time from that following day.
     const lastDay = (state.paused ? pausedOnDay(state) : lastDaily) ?? addDays(first, -1);
     for (let k = 1, added = 0; added < REENGAGE_NUDGE_COUNT; k++) {
       const day = addDays(lastDay, 1 + REENGAGE_EVERY_DAYS * k);

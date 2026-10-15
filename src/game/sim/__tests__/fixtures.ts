@@ -1,10 +1,11 @@
 // Shared setup for sim tests: a phone-sized screen and a round built from the real engine.
 import { composeRound, fillPlan, weaponById, type WeaponId } from '@/engine';
 
+import { FINAL_RINGS } from '../constants';
 import { acquire } from '../pool';
 import { createGame } from '../spawn';
 import { step } from '../step';
-import type { Bullet, GameConfig, GameState, Zero } from '../types';
+import type { Bullet, GameConfig, GameState, Ring, Zero } from '../types';
 
 /** An iPhone-sized screen with a notch and a home indicator. */
 export const SCREEN = { width: 390, height: 844, insetTop: 47, insetBottom: 34 };
@@ -71,4 +72,15 @@ export function bulletAt(s: GameState, x: number, y: number, vx: number, vy: num
   const b = acquire(s.bullets)!;
   Object.assign(b, { x, y, vx, vy, weapon: s.weapon });
   return b;
+}
+
+/** The colors of the final zero's shockwaves from (x, y), in the order they were thrown. */
+export function finalRings(s: GameState, x: number, y: number): number[] {
+  const diagonal = Math.hypot(s.width, s.height);
+  const isFinal = (r: Ring) =>
+    FINAL_RINGS.some((f) => f.duration === r.dur && f.color === r.color && Math.abs(diagonal * f.reach - r.max) < 1e-6);
+  return s.rings.items
+    .slice(0, s.rings.count)
+    .filter((r) => r.x === x && r.y === y && isFinal(r))
+    .map((r) => r.color);
 }

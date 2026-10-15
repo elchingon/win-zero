@@ -190,12 +190,12 @@ describe('SPEC 3 end to end', () => {
 
   it('the first seven missed days cost nothing; the 8th loses a zero', () => {
     const s = yesDays(newGoal(), DAY0, 10); // through 10-22
-    const week = resolve(s, at('2026-10-30', '20:30'), DENVER); // 10-23 .. 10-29 closed
+    const week = resolve(s, at('2026-10-31', '00:30'), DENVER); // 10-23 .. 10-29 closed
     expect(week.events).toHaveLength(7);
     expect(week.events.every((e) => e.grace && e.streakAfter === 10)).toBe(true);
     expect(week.state).toMatchObject({ streak: 10, consecutiveMissed: 7, slide: 0 });
 
-    const eighth = resolve(week.state, at('2026-10-31', '20:30'), DENVER);
+    const eighth = resolve(week.state, at('2026-11-01', '00:30'), DENVER);
     expect(eighth.events).toEqual([
       {
         type: 'missed',
@@ -215,7 +215,7 @@ describe('SPEC 3 end to end', () => {
     let s = { ...yesDays(newGoal(), DAY0, 10), shields: 0 }; // through 10-22
     s = notTodays(s, '2026-10-23', 5); // 10-23 .. 10-27
     expect(s).toMatchObject({ streak: 5, slide: 5 });
-    const { state, events } = resolve(s, at('2026-11-06', '20:00'), DENVER); // 10-28 .. 11-05 closed
+    const { state, events } = resolve(s, at('2026-11-07', '00:00'), DENVER); // 10-28 .. 11-05 closed
     expect(events.map((e) => [e.day, e.grace, e.slip, e.final, e.streakAfter])).toEqual([
       ['2026-10-28', true, null, null, 5],
       ['2026-10-29', true, null, null, 5],
@@ -230,13 +230,13 @@ describe('SPEC 3 end to end', () => {
     expect(state).toMatchObject({ streak: 0, slide: 0, paused: true, consecutiveMissed: 9 });
   });
 
-  it('20 → seven free misses → six slips to 14 → the 14th miss resets to 0', () => {
+  it('20 → seven free misses → six slips to 14 → the 14th miss resets to 0 at midnight', () => {
     const s = { ...yesDays(newGoal(), DAY0, 20), shields: 0 }; // last answered 11-01
-    const before = resolve(s, at('2026-11-16', '19:59'), DENVER); // 11-02 .. 11-14 closed
+    const before = resolve(s, at('2026-11-16', '23:59'), DENVER); // 11-02 .. 11-14 closed
     expect(before.events).toHaveLength(13);
     expect(before.state).toMatchObject({ streak: 14, consecutiveMissed: 13, slide: 6, paused: false });
 
-    const final = resolve(before.state, at('2026-11-16', '20:00'), DENVER);
+    const final = resolve(before.state, at('2026-11-17', '00:00'), DENVER);
     expect(final.events).toEqual([
       {
         type: 'missed',
@@ -255,10 +255,10 @@ describe('SPEC 3 end to end', () => {
 
   it('every kind of answer clears consecutiveMissed and the pause', () => {
     const s = { ...yesDays(newGoal(), DAY0, 20), shields: 0 };
-    const base = resolve(s, at('2026-11-17', '20:30'), DENVER).state; // reset on 11-15, 11-16 paused
+    const base = resolve(s, at('2026-11-18', '00:30'), DENVER).state; // reset on 11-15, 11-16 paused
     expect(base).toMatchObject({ paused: true, consecutiveMissed: 15 });
     for (const ans of ['yes', 'not-today'] as const) {
-      const r = answer(base, { answer: ans }, at('2026-11-17', '21:00'), DENVER);
+      const r = answer(base, { answer: ans }, at('2026-11-18', '00:30'), DENVER);
       expect(r.ok && r.state).toMatchObject({ consecutiveMissed: 0, paused: false });
     }
   });

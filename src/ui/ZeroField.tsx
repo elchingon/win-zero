@@ -19,7 +19,7 @@ import { zeroRadius } from '@/game/sim/sizing';
 import { ZeroRing } from '@/game/ZeroRing';
 import { colors, withAlpha, zeroPalette } from '@/theme/tokens';
 
-import { useReduceMotion } from './useReduceMotion';
+import { useReduceMotion } from './a11y';
 
 const FIELD_ZEROS = 7;
 const FIELD_ALPHA = 0.2;

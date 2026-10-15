@@ -209,6 +209,11 @@ export const FINAL_RINGS = [
   { start: 10, reach: 0.7, duration: 1.1, color: FLARE, width: 24 },
   { start: 5, reach: 0.45, duration: 1.3, color: TEAL, width: 14 },
 ];
+/**
+ * Ordinary shockwaves stop here, so a bomb through a full board still leaves room in the pool
+ * for the final zero's three.
+ */
+export const RING_CAP = MAX_RINGS - FINAL_RINGS.length;
 /** Celebration confetti strips: speed, lift, life and size ranges, spin, fall. */
 export const CONFETTI_PIECE = {
   speedMin: 250,

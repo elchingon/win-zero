@@ -53,6 +53,11 @@ describe('cues', () => {
     expect(c).toMatchObject({ boom: true, pop: false, boomHaptic: true, killHaptic: false });
   });
 
+  it('booms once for Finish round, with no pops for the zeros it clears', () => {
+    const c = makeCues()(report({ kills: 60, final: true }), 0);
+    expect(c).toEqual({ shoot: false, pop: false, boom: true, killHaptic: false, bombHaptic: false, boomHaptic: true });
+  });
+
   it('stays quiet for a frame where nothing happened', () => {
     expect(makeCues()(report({}), 0)).toEqual({
       shoot: false,

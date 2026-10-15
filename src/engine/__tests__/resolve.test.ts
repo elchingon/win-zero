@@ -60,14 +60,15 @@ describe('resolve', () => {
     expect(back.state).toEqual(s);
   });
 
-  it('records a missed day at its window close, in the window time zone', () => {
-    const { state } = resolve(newGoal(), at('2026-10-14', '20:00'), DENVER);
+  it('records a missed day at its window close, midnight ending the next day, in the window time zone', () => {
+    expect(resolve(newGoal(), at('2026-10-14', '23:59'), DENVER).events).toEqual([]);
+    const { state } = resolve(newGoal(), at('2026-10-15', '00:00'), DENVER);
     expect(state.history).toEqual([
       {
         id: 'g1:2026-10-13',
         day: '2026-10-13',
         result: 'missed',
-        at: at('2026-10-14', '20:00').toISOString(),
+        at: at('2026-10-15', '00:00').toISOString(),
         tz: DENVER,
         streakAfter: 0,
         missedInRow: 1,
@@ -77,7 +78,7 @@ describe('resolve', () => {
 
   it('handles a weeks-long absence', () => {
     const before = yesDays(newGoal(), DAY0, 20); // through 11-01; 4 bombs, 2 shields
-    const { state, events } = resolve(before, at('2026-12-17', '21:00'), DENVER);
+    const { state, events } = resolve(before, at('2026-12-18', '00:30'), DENVER);
 
     expect(events).toHaveLength(45); // 11-02 .. 12-16
     expect(events[0]?.day).toBe('2026-11-02');
@@ -114,16 +115,16 @@ describe('resolve', () => {
     expect(state.history).toHaveLength(65);
     expect(state.history.slice(0, 20)).toEqual(before.history); // append-only
     expectConsecutiveHistory(state);
-    expect(pendingWindow(state, at('2026-12-17', '21:00'))?.day).toBe('2026-12-17');
+    expect(pendingWindow(state, at('2026-12-18', '00:30'))?.day).toBe('2026-12-17');
 
-    const back = answerDay(state, '2026-12-17', 'yes');
+    const back = answerDay(state, '2026-12-17', 'yes', { timeDay: '2026-12-18', time: '00:30' });
     expect(back.state.streak).toBe(1);
     expect(back.state).toMatchObject({ consecutiveMissed: 0, paused: false });
   });
 
   it('settles exactly one day per calendar day across the fall-back change', () => {
     const s = newGoal({ day: '2026-10-27' });
-    const { state, events } = resolve(s, at('2026-11-05', '21:00'), DENVER);
+    const { state, events } = resolve(s, at('2026-11-06', '00:30'), DENVER);
     expect(events.map((e) => e.day)).toEqual([
       '2026-10-27',
       '2026-10-28',
@@ -136,30 +137,30 @@ describe('resolve', () => {
       '2026-11-04',
     ]);
     const atOf = (day: string) => state.history.find((e) => e.day === day)?.at;
-    expect(atOf('2026-10-30')).toBe('2026-11-01T02:00:00.000Z'); // 20:00 MDT on 10-31
-    expect(atOf('2026-10-31')).toBe('2026-11-02T03:00:00.000Z'); // 20:00 MST on 11-01
+    expect(atOf('2026-10-30')).toBe('2026-11-01T06:00:00.000Z'); // 00:00 MDT on 11-01
+    expect(atOf('2026-10-31')).toBe('2026-11-02T07:00:00.000Z'); // 00:00 MST on 11-02
   });
 
   it('slides one zero per missed day across the fall-back change', () => {
     const s = { ...yesDays(newGoal(), DAY0, 10), shields: 0 }; // through 10-22
-    const { state, events } = resolve(s, at('2026-11-05', '20:00'), DENVER); // 10-23 .. 11-04 closed
+    const { state, events } = resolve(s, at('2026-11-06', '00:00'), DENVER); // 10-23 .. 11-04 closed
     const slips = events.filter((e) => e.slip !== null);
     expect(slips.map((e) => [e.day, e.slip, e.streakAfter])).toEqual([
       ['2026-10-30', 1, 9],
-      ['2026-10-31', 2, 8],
-      ['2026-11-01', 3, 7], // the 25-hour window
+      ['2026-10-31', 2, 8], // the 29-hour window
+      ['2026-11-01', 3, 7],
       ['2026-11-02', 4, 6],
       ['2026-11-03', 5, 5],
       ['2026-11-04', 6, 4],
     ]);
     const atOf = (day: string) => state.history.find((e) => e.day === day)?.at;
-    expect(atOf('2026-10-31')).toBe('2026-11-02T03:00:00.000Z'); // 20:00 MST on 11-01
+    expect(atOf('2026-10-31')).toBe('2026-11-02T07:00:00.000Z'); // 00:00 MST on 11-02
     expectConsecutiveHistory(state);
   });
 
   it('settles exactly one day per calendar day across the spring-forward change', () => {
     const s = newGoal({ day: '2027-03-10' });
-    const { state, events } = resolve(s, at('2027-03-18', '21:00'), DENVER);
+    const { state, events } = resolve(s, at('2027-03-19', '00:30'), DENVER);
     expect(events.map((e) => e.day)).toEqual([
       '2027-03-10',
       '2027-03-11',
@@ -171,22 +172,24 @@ describe('resolve', () => {
       '2027-03-17',
     ]);
     const atOf = (day: string) => state.history.find((e) => e.day === day)?.at;
-    expect(atOf('2027-03-12')).toBe('2027-03-14T03:00:00.000Z'); // 20:00 MST on 03-13
-    expect(atOf('2027-03-13')).toBe('2027-03-15T02:00:00.000Z'); // 20:00 MDT on 03-14
+    expect(atOf('2027-03-12')).toBe('2027-03-14T07:00:00.000Z'); // 00:00 MST on 03-14
+    expect(atOf('2027-03-13')).toBe('2027-03-15T06:00:00.000Z'); // 00:00 MDT on 03-15
   });
 
   it('handles a check-in time inside the DST gap and overlap', () => {
     const gap = newGoal({ day: '2027-03-12', checkInTime: '02:30', morningTime: '01:00' });
     expect(opensAt(gap, '2027-03-14').toISOString()).toBe('2027-03-14T09:30:00.000Z'); // 03:30 MDT
-    expect(closesAt(gap, '2027-03-14').getTime() - opensAt(gap, '2027-03-14').getTime()).toBe(23 * HOUR);
+    expect(closesAt(gap, '2027-03-13').toISOString()).toBe('2027-03-15T06:00:00.000Z'); // 00:00 MDT on 03-15
+    expect(closesAt(gap, '2027-03-13').getTime() - opensAt(gap, '2027-03-13').getTime()).toBe(44.5 * HOUR);
     const g = resolve(gap, at('2027-03-17', '12:00'), DENVER);
-    expect(g.events.map((e) => e.day)).toEqual(['2027-03-12', '2027-03-13', '2027-03-14', '2027-03-15', '2027-03-16']);
+    expect(g.events.map((e) => e.day)).toEqual(['2027-03-12', '2027-03-13', '2027-03-14', '2027-03-15']);
 
     const overlap = newGoal({ day: '2026-10-30', checkInTime: '01:30', morningTime: '01:00' });
     expect(opensAt(overlap, '2026-11-01').toISOString()).toBe('2026-11-01T07:30:00.000Z'); // first 01:30
-    expect(closesAt(overlap, '2026-11-01').getTime() - opensAt(overlap, '2026-11-01').getTime()).toBe(25 * HOUR);
+    expect(closesAt(overlap, '2026-10-31').toISOString()).toBe('2026-11-02T07:00:00.000Z'); // 00:00 MST on 11-02
+    expect(closesAt(overlap, '2026-10-31').getTime() - opensAt(overlap, '2026-10-31').getTime()).toBe(47.5 * HOUR);
     const o = resolve(overlap, at('2026-11-04', '12:00'), DENVER);
-    expect(o.events.map((e) => e.day)).toEqual(['2026-10-30', '2026-10-31', '2026-11-01', '2026-11-02', '2026-11-03']);
+    expect(o.events.map((e) => e.day)).toEqual(['2026-10-30', '2026-10-31', '2026-11-01', '2026-11-02']);
   });
 });
 
@@ -206,6 +209,21 @@ describe('answer', () => {
     expect(r).toMatchObject({ ok: true, outcome: { kind: 'yes', day: DAY0, streak: 1 } });
   });
 
+  it("answers yesterday all the next day, even after today's check-in opens; then today is next", () => {
+    const late = at('2026-10-14', '23:30');
+    const r = answer(newGoal(), { answer: 'yes' }, late, DENVER);
+    expect(r).toMatchObject({ ok: true, events: [], outcome: { kind: 'yes', day: DAY0, streak: 1 } });
+    const today = answer(r.state, { answer: 'yes' }, late, DENVER);
+    expect(today).toMatchObject({ ok: true, outcome: { kind: 'yes', day: '2026-10-14', streak: 2 } });
+  });
+
+  it("turns down today's notification while yesterday is still open, and leaves yesterday pending", () => {
+    const evening = at('2026-10-14', '21:00');
+    const r = answer(newGoal(), { answer: 'yes', day: '2026-10-14' }, evening, DENVER);
+    expect(r).toMatchObject({ ok: false, reason: 'not-open', events: [] });
+    expect(pendingWindow(r.state, evening)?.day).toBe(DAY0);
+  });
+
   it('is idempotent: a second tap on the same day is rejected without changes', () => {
     const first = answerDay(newGoal(), DAY0, 'yes');
     const again = answer(first.state, { answer: 'yes', day: DAY0 }, at(DAY0, '21:05'), DENVER);
@@ -216,7 +234,7 @@ describe('answer', () => {
   });
 
   it('rejects a stale notification for a closed window, and still catches up', () => {
-    const r = answer(newGoal(), { answer: 'yes', day: DAY0 }, at('2026-10-14', '20:30'), DENVER);
+    const r = answer(newGoal(), { answer: 'yes', day: DAY0 }, at('2026-10-15', '00:30'), DENVER);
     expect(r).toMatchObject({ ok: false, reason: 'expired' });
     expect(r.events).toEqual([
       {
@@ -232,15 +250,15 @@ describe('answer', () => {
       },
     ]);
     expect(r.state.history.map((e) => e.result)).toEqual(['missed']);
-    expect(pendingWindow(r.state, at('2026-10-14', '20:30'))?.day).toBe('2026-10-14');
+    expect(pendingWindow(r.state, at('2026-10-15', '00:30'))?.day).toBe('2026-10-14');
 
-    const early = answer(r.state, { answer: 'yes', day: '2026-10-01' }, at('2026-10-14', '20:30'), DENVER);
+    const early = answer(r.state, { answer: 'yes', day: '2026-10-01' }, at('2026-10-15', '00:30'), DENVER);
     expect(early).toMatchObject({ ok: false, reason: 'expired' });
   });
 
   it('returns missed-day events alongside an accepted answer', () => {
     const s = yesDays(newGoal(), DAY0, 5); // through 10-17
-    const r = answer(s, { answer: 'yes' }, at('2026-10-20', '21:00'), DENVER); // 10-18, 10-19 missed (free)
+    const r = answer(s, { answer: 'yes' }, at('2026-10-21', '21:00'), DENVER); // 10-18, 10-19 missed (free)
     expect(r.ok).toBe(true);
     expect(r.events.map((e) => e.day)).toEqual(['2026-10-18', '2026-10-19']);
     expect(r.ok && r.outcome).toMatchObject({ kind: 'yes', day: '2026-10-20', streak: 6 });
@@ -256,15 +274,16 @@ describe('travel', () => {
     const pending = pendingWindow(state, landed);
     expect(pending?.day).toBe(DAY0);
     expect(pending?.tz).toBe(LA);
-    expect(pending?.closesAt.toISOString()).toBe('2026-10-15T03:00:00.000Z'); // its original close
+    expect(pending?.closesAt.toISOString()).toBe('2026-10-15T07:00:00.000Z'); // midnight ending Oct 14 in LA, where it opened
 
     const yes = answer(state, { answer: 'yes' }, landed, TOKYO);
     expect(yes).toMatchObject({ ok: true, outcome: { day: DAY0, streak: 1 } });
     const after = yes.ok ? yes.state : state;
     expect(after.history.at(-1)?.tz).toBe(LA);
 
-    // Oct 14 gets a short window; from Oct 15 on, check-in is 20:00 Tokyo time.
-    expect(opensAt(after, '2026-10-14').toISOString()).toBe('2026-10-15T03:00:00.000Z');
+    // Oct 14's 20:00 in Tokyo had passed on landing, so it opened on arrival; from Oct 15 on,
+    // check-in is 20:00 Tokyo time.
+    expect(opensAt(after, '2026-10-14').toISOString()).toBe(landed.toISOString());
     expect(opensAt(after, '2026-10-15').toISOString()).toBe(at('2026-10-15', '20:00', TOKYO).toISOString());
     expect(opensAt(after, '2026-10-16').toISOString()).toBe(at('2026-10-16', '20:00', TOKYO).toISOString());
 
@@ -283,7 +302,7 @@ describe('travel', () => {
     expect(closesAt(state, DAY0).toISOString()).toBe(at('2026-10-14', '20:00', HONOLULU).toISOString());
 
     const done = answerDay(state, DAY0, 'yes', { tz: HONOLULU, timeDay: DAY0, time: '11:00' }).state;
-    const later = resolve(done, at('2026-10-18', '21:00', HONOLULU), HONOLULU).state;
+    const later = resolve(done, at('2026-10-19', '00:30', HONOLULU), HONOLULU).state;
     expectConsecutiveHistory(later);
     expect(later.history.map((e) => e.day)).toEqual(['2026-10-13', '2026-10-14', '2026-10-15', '2026-10-16', '2026-10-17']);
   });
@@ -307,6 +326,13 @@ describe('travel', () => {
       const next = opensAt(state, addDays(DAY0, i)).getTime();
       expect(next).toBeGreaterThan(prev);
       prev = next;
+    }
+    // Midnight comes 25 hours sooner on Kiritimati, so closes need the floor to keep increasing.
+    let prevClose = closesAt(state, DAY0).getTime();
+    for (let i = 1; i < 12; i++) {
+      const next = closesAt(state, addDays(DAY0, i)).getTime();
+      expect(next).toBeGreaterThan(prevClose);
+      prevClose = next;
     }
     expect(opensAt(state, '2026-10-20').toISOString()).toBe(at('2026-10-20', '20:00', KIRITIMATI).toISOString());
   });
@@ -341,6 +367,7 @@ describe('travel', () => {
       const from = s.lastSettledDay ?? s.firstDay;
       for (let i = 0; i < 8; i++) {
         expect(opensAt(s, addDays(from, i + 1)).getTime()).toBeGreaterThan(opensAt(s, addDays(from, i)).getTime());
+        expect(closesAt(s, addDays(from, i + 1)).getTime()).toBeGreaterThan(closesAt(s, addDays(from, i)).getTime());
       }
     }
     expect(diffDays(s.lastSettledDay ?? s.firstDay, s.firstDay)).toBeGreaterThan(100);

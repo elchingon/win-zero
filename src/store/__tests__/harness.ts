@@ -5,6 +5,7 @@ import { expect } from '@jest/globals';
 import type { AppStateStatus } from 'react-native';
 
 import type { ClockTime, DayKey, GoalState } from '@/engine';
+import * as seedRun from '@/dev/seedRun';
 import { at, DAY0, DENVER } from '@/engine/__tests__/fixtures';
 
 import { createAppStore, type AppStore } from '../createAppStore';
@@ -22,6 +23,7 @@ export function harness(opts: { dev?: boolean } = {}) {
     timeZone: () => zone.tz,
     makeId: () => `goal-${++ids}`,
     dev: opts.dev ?? true,
+    devTools: seedRun,
   });
   const setTime = (day: DayKey, time: ClockTime) => {
     clock.t = at(day, time).getTime();
