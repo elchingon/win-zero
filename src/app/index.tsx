@@ -4,8 +4,8 @@ import { Redirect, router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState, type ComponentType } from 'react';
 import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
 
-import { dayKeyAt, nextWindow, pendingWindow, type AnswerRejection, type GoalState } from '@/engine';
-import { formatWhen } from '@/lib/format';
+import { currentCheckInTime, dayKeyAt, nextWindow, pendingWindow, type AnswerRejection, type GoalState } from '@/engine';
+import { formatClockTime, formatWhen } from '@/lib/format';
 import { appStore, useApp } from '@/store';
 import { colors, fonts, space, type } from '@/theme/tokens';
 import { Card, Eyebrow, Fine } from '@/ui/bits';
@@ -15,10 +15,13 @@ import { feedback } from '@/ui/feedback';
 import { Arsenal } from '@/ui/home/Arsenal';
 import { CheckInCard } from '@/ui/home/CheckInCard';
 import { HistoryCalendar } from '@/ui/home/HistoryCalendar';
+import { RemindersCard } from '@/ui/home/RemindersCard';
+import { remindersCardVisible } from '@/ui/home/remindersOff';
 import { startHomeRouting } from '@/ui/home/routing';
 import { Stats } from '@/ui/home/Stats';
 import { Screen } from '@/ui/Screen';
 import { useDeviceCalendar } from '@/ui/useDevice';
+import { useReminderPermission } from '@/ui/useReminderPermission';
 
 // Development builds only: Metro folds __DEV__ to false in production and drops the require.
 const DemoControls: ComponentType | null = __DEV__
@@ -49,6 +52,8 @@ function HomeScreen({ goal }: { goal: GoalState }) {
   const selectWeapon = useApp((s) => s.selectWeapon);
   const rejection = useApp((s) => s.rejection);
   const clockOffset = useApp((s) => s.devClockOffsetMs); // re-render when the debug clock moves
+  const reminderCardHiddenUntil = useApp((s) => s.reminderCardHiddenUntil);
+  const reminders = useReminderPermission();
   const { h24, firstWeekday } = useDeviceCalendar();
   const [tick, setTick] = useState(0);
 
@@ -143,6 +148,15 @@ function HomeScreen({ goal }: { goal: GoalState }) {
           <Text style={type.lede}>Your next check-in is {nextWhen}.</Text>
         </Card>
       )}
+
+      {remindersCardVisible(reminders.permission, reminderCardHiddenUntil, now) ? (
+        <RemindersCard
+          denied={reminders.permission === 'denied'}
+          checkInTime={formatClockTime(currentCheckInTime(goal), h24)}
+          onTurnOn={reminders.turnOn}
+          onHide={() => appStore.getState().hideReminderCard()}
+        />
+      ) : null}
 
       {goal.paused ? (
         <Fine>Reminders are paused after a long break. Check in whenever you&apos;re ready and they&apos;ll pick back up.</Fine>

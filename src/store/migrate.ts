@@ -12,6 +12,7 @@ export const DEFAULT_PERSISTED: PersistedState = {
   prefs: DEFAULT_PREFS,
   seenThrough: null,
   round: null,
+  reminderCardHiddenUntil: null,
   devClockOffsetMs: 0,
 };
 
@@ -22,6 +23,7 @@ const bool = (v: unknown, fallback: boolean) => (typeof v === 'boolean' ? v : fa
 const count = (v: unknown, fallback: number) => (typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : fallback);
 const isWeaponId = (v: unknown): v is WeaponId => WEAPONS.some((w) => w.id === v);
 const dayOrNull = (v: unknown) => (typeof v === 'string' && isValidDayKey(v) ? v : null);
+const instantOrNull = (v: unknown) => (typeof v === 'string' && !Number.isNaN(Date.parse(v)) ? v : null);
 
 /**
  * A stored goal, with fields added after it was saved filled in. A blob that isn't a goal at
@@ -64,6 +66,7 @@ export function normalizePersisted(raw: unknown): PersistedState {
     },
     seenThrough: dayOrNull(r.seenThrough),
     round: normalizeRound(r.round),
+    reminderCardHiddenUntil: instantOrNull(r.reminderCardHiddenUntil),
     devClockOffsetMs: typeof offset === 'number' && Number.isFinite(offset) ? offset : 0,
   };
 }

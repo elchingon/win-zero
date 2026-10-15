@@ -1,13 +1,12 @@
 // Settings: goal wording, times (through the engine, so an open window is respected),
 // sound / haptics / weekly nudge, reminder permission, support, and erase.
-import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState, type ComponentType } from 'react';
-import { AppState, Linking, StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { useState, type ComponentType } from 'react';
+import { Linking, StyleSheet, Text, View } from 'react-native';
 
 import { currentCheckInTime, firstUpcomingDay, opensAt, pendingWindow, type ClockTime } from '@/engine';
 import { formatUntil, formatWhen } from '@/lib/format';
-import { requestSync } from '@/notifications';
-import { getReminderPermission, requestReminderPermission, type ReminderPermission } from '@/notifications/permissions';
+import type { ReminderPermission } from '@/notifications/permissions';
 import { appStore, useApp, type EditResult } from '@/store';
 import { colors, space, type } from '@/theme/tokens';
 import { Card, Eyebrow, Field, Fine, Row, shared, TextField, ToggleRow } from '@/ui/bits';
@@ -18,6 +17,7 @@ import { Screen } from '@/ui/Screen';
 import { SUPPORT_LINE } from '@/ui/support';
 import { TimeField } from '@/ui/TimeField';
 import { useDeviceCalendar } from '@/ui/useDevice';
+import { useReminderPermission } from '@/ui/useReminderPermission';
 
 // Development builds only: Metro folds __DEV__ to false in production and drops the require.
 const DebugSection: ComponentType | null = __DEV__
@@ -46,18 +46,8 @@ export default function Settings() {
   const [draft, setDraft] = useState(goal?.goal ?? '');
   const [saved, setSaved] = useState(false);
   const [timeError, setTimeError] = useState<{ checkIn?: string | null; morning?: string | null }>({});
-  const [permission, setPermission] = useState<ReminderPermission | null>(null);
+  const { permission, turnOn } = useReminderPermission();
   const [eraseArmed, setEraseArmed] = useState(false);
-
-  // Re-read the permission on focus and on return from the system settings app.
-  useFocusEffect(
-    useCallback(() => {
-      const read = () => getReminderPermission().then(setPermission);
-      read();
-      const sub = AppState.addEventListener('change', (s) => s === 'active' && read());
-      return () => sub.remove();
-    }, []),
-  );
 
   // Erasing empties the goal on the way out; render nothing while the screen leaves.
   if (!goal) return null;
@@ -148,19 +138,9 @@ export default function Settings() {
           detail={permission ? PERMISSION_WORDS[permission] : ' '}
           right={
             permission === 'denied' ? (
-              <Button small variant="ghost" label="Open settings" onPress={() => Linking.openSettings()} />
+              <Button small variant="ghost" label="Open settings" onPress={turnOn} />
             ) : permission === 'undetermined' ? (
-              <Button
-                small
-                variant="ghost"
-                label="Turn on"
-                onPress={() =>
-                  requestReminderPermission().then((p) => {
-                    setPermission(p);
-                    if (p === 'granted') void requestSync({ force: true });
-                  })
-                }
-              />
+              <Button small variant="ghost" label="Turn on" onPress={turnOn} />
             ) : null
           }
         />

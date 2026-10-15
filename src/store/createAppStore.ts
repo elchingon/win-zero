@@ -10,6 +10,7 @@ import {
   isMorningAtOrBeforeCheckIn,
   isUnlocked,
   missDigest,
+  MS_PER_DAY,
   nextWindow,
   pendingWindow,
   resolve,
@@ -106,6 +107,8 @@ export interface AppState extends PersistedState {
   setCheckInTime: (time: ClockTime) => EditResult;
   setMorningTime: (time: ClockTime) => EditResult;
   setPref: <K extends keyof Prefs>(key: K, value: Prefs[K]) => void;
+  /** "Not now" on Home's reminders-off card: hide it for REMINDER_CARD_HIDE_MS. */
+  hideReminderCard: () => void;
   /**
    * The next one-time screen, without marking it shown: an answer's notice first, then the
    * Slipping / Reset / Shielded news for missed days not yet shown.
@@ -133,6 +136,8 @@ const DEV_SKIP_SLACK_MS = 1000;
 export const UNDO_MS = 10_000;
 /** With VoiceOver or TalkBack on: reaching the Undo button takes a few swipes. */
 export const UNDO_MS_SCREEN_READER = 30_000;
+/** "Not now" on Home's reminders-off card hides it this long. */
+export const REMINDER_CARD_HIDE_MS = 7 * MS_PER_DAY;
 
 export type AppStore = ReturnType<typeof createAppStore>;
 
@@ -148,6 +153,7 @@ function persisted(s: AppState): PersistedState {
     prefs: s.prefs,
     seenThrough: s.seenThrough,
     round: s.round,
+    reminderCardHiddenUntil: s.reminderCardHiddenUntil,
     devClockOffsetMs: s.devClockOffsetMs,
   };
 }
@@ -334,6 +340,10 @@ export function createAppStore(deps: StoreDeps) {
           },
 
           setPref: (key, value) => set({ prefs: { ...get().prefs, [key]: value } }),
+
+          hideReminderCard: () => {
+            set({ reminderCardHiddenUntil: new Date(now().getTime() + REMINDER_CARD_HIDE_MS).toISOString() });
+          },
 
           nextNotice: () => {
             const { notice, seenThrough } = get();

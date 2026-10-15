@@ -1,4 +1,4 @@
-import type { DayKey, GoalState, HistoryEntry, WeaponId } from '@/engine';
+import type { DayKey, GoalState, HistoryEntry, IsoInstant, WeaponId } from '@/engine';
 
 /** Bump when PersistedState changes shape, and teach migratePersisted the old one. */
 export const STORE_VERSION = 1;
@@ -41,6 +41,8 @@ export interface PersistedState {
   /** Missed days through this one have been shown (Slipping / Reset / Shielded on opening). */
   seenThrough: DayKey | null;
   round: RoundRecord | null;
+  /** "Not now" on Home's reminders-off card hides it until then. */
+  reminderCardHiddenUntil: IsoInstant | null;
   /** Development builds only: simulated time travel. Production builds ignore it. */
   devClockOffsetMs: number;
 }

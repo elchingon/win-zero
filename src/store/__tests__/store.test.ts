@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it } from '@jest/globals';
 import { addDays, currentCheckInTime, latestScheduleEntry, MS_PER_DAY, pendingWindow } from '@/engine';
 import { answerDay, at, DAY0, DENVER, newGoal, TOKYO, yesDays } from '@/engine/__tests__/fixtures';
 
-import { createAppStore, UNDO_MS, UNDO_MS_SCREEN_READER, type AppStore } from '../createAppStore';
+import { createAppStore, REMINDER_CARD_HIDE_MS, UNDO_MS, UNDO_MS_SCREEN_READER, type AppStore } from '../createAppStore';
 import { startLifecycle } from '../lifecycle';
 import { STORE_KEY, STORE_VERSION } from '../types';
 import { fakeAppState, flush, harness, ready, withGoal } from './harness';
@@ -439,6 +439,31 @@ describe('undo Not today', () => {
   });
 });
 
+describe("Home's reminders-off card", () => {
+  it('hides for a week on the app clock, until erase', async () => {
+    const h = await withGoal(newGoal(), { dev: true });
+    h.store.getState().advanceDevClock(60_000);
+    h.store.getState().hideReminderCard();
+    expect(h.store.getState().reminderCardHiddenUntil).toBe(
+      new Date(h.clock.t + 60_000 + REMINDER_CARD_HIDE_MS).toISOString(),
+    );
+    expect(REMINDER_CARD_HIDE_MS).toBe(7 * MS_PER_DAY);
+    h.store.getState().erase();
+    expect(h.store.getState().reminderCardHiddenUntil).toBeNull();
+  });
+
+  it('reads a stored value that is not a time as not hidden', async () => {
+    await AsyncStorage.setItem(
+      STORE_KEY,
+      JSON.stringify({ version: STORE_VERSION, state: { goal: newGoal(), reminderCardHiddenUntil: 'next week' } }),
+    );
+    const { store } = harness();
+    await ready(store);
+    expect(store.getState().goal?.goalId).toBe('g1');
+    expect(store.getState().reminderCardHiddenUntil).toBeNull();
+  });
+});
+
 describe('weapons and rounds', () => {
   it("equips a newly unlocked weapon, and otherwise keeps the player's pick", async () => {
     const h = await withGoal(yesDays(newGoal(), DAY0, 2)); // best 2, through 10-14
@@ -498,6 +523,7 @@ describe('persistence', () => {
     a.store.getState().setPref('reengage', false);
     a.store.getState().setPref('goalInReminders', true);
     a.store.getState().selectWeapon('pea');
+    a.store.getState().hideReminderCard();
     a.store.setState({ notice: { kind: 'noted' } });
     await flush();
 
@@ -509,9 +535,11 @@ describe('persistence', () => {
       prefs: s.prefs,
       seenThrough: s.seenThrough,
       round: s.round,
+      reminderCardHiddenUntil: s.reminderCardHiddenUntil,
       devClockOffsetMs: s.devClockOffsetMs,
     });
     expect(pick(b.store.getState())).toEqual(pick(a.store.getState()));
+    expect(b.store.getState().reminderCardHiddenUntil).not.toBeNull();
     expect(b.store.getState().prefs).toEqual({ sound: false, haptics: true, reengage: false, goalInReminders: true });
     expect(b.store.getState().round).toMatchObject({ n: 1, played: false });
     expect(b.store.getState().notice).toBeNull(); // not persisted
@@ -519,7 +547,7 @@ describe('persistence', () => {
     const raw = JSON.parse((await AsyncStorage.getItem(STORE_KEY)) ?? '{}');
     expect(raw.version).toBe(STORE_VERSION);
     expect(Object.keys(raw.state).sort()).toEqual(
-      ['devClockOffsetMs', 'goal', 'prefs', 'round', 'seenThrough', 'weapon'].sort(),
+      ['devClockOffsetMs', 'goal', 'prefs', 'reminderCardHiddenUntil', 'round', 'seenThrough', 'weapon'].sort(),
     );
   });
 
