@@ -68,13 +68,15 @@ function render(name, width, height, draw, transparent = false) {
 }
 
 /** Store artwork that can't have an alpha channel: check every pixel is opaque, then drop it. */
-function opaque(name) {
+function opaque(name, colorType = 2) {
   const file = path.join(out, name);
   const png = PNG.sync.read(fs.readFileSync(file));
   for (let i = 3; i < png.data.length; i += 4) {
     if (png.data[i] !== 255) throw new Error(`${name} must be fully opaque`);
   }
-  fs.writeFileSync(file, PNG.sync.write(png, { colorType: 2 }));
+  // The tinted icon uses a grayscale PNG with a Gray Gamma 2.2 transfer curve.
+  if (colorType === 0) png.gamma = 1 / 2.2;
+  fs.writeFileSync(file, PNG.sync.write(png, { colorType }));
 }
 
 function backdrop(canvas, width, height) {
@@ -125,6 +127,15 @@ render('icon.png', 1024, 1024, (c) => { backdrop(c, 1024, 1024); mark(c, 1024); 
 render('app-store-icon.png', 1024, 1024, (c) => { backdrop(c, 1024, 1024); mark(c, 1024); });
 // Remove the alpha channel entirely for Apple's flat App Store icon.
 opaque('app-store-icon.png');
+// iOS 18 appearance variants keep the same glyph, scale and optical center.
+// Dark artwork lets the system's own dark background show through.
+render('ios-icon-dark.png', 1024, 1024, (c) => mark(c, 1024), true);
+// A white glyph on black supplies luminance for the user's chosen Home Screen tint.
+render('ios-icon-tinted.png', 1024, 1024, (c) => {
+  c.clear(kit.parseColorString('#000000'));
+  mark(c, 1024, true);
+});
+opaque('ios-icon-tinted.png', 0);
 render('google-play-icon.png', 512, 512, (c) => { backdrop(c, 512, 512); mark(c, 512); });
 render('android-foreground.png', 1024, 1024, (c) => mark(c, 1024), true);
 render('android-background.png', 1024, 1024, (c) => backdrop(c, 1024, 1024));

@@ -9,6 +9,11 @@
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0D1130",
     "ios": {
+      "icon": {
+        "light": "./assets/brand/app-store-icon.png",
+        "dark": "./assets/brand/ios-icon-dark.png",
+        "tinted": "./assets/brand/ios-icon-tinted.png"
+      },
       "supportsTablet": false,
       "bundleIdentifier": "com.e7systems.winzero",
       "config": {
