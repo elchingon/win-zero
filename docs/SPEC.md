@@ -111,7 +111,7 @@ Hold to fire at about 6 shots/sec.
 - **Home:** goal, current streak, best run, bombs, shields; pending check-in card (same Yes / Not today as the notification); arsenal list with next-unlock progress; history calendar (yes / no / shielded / missed).
 - **Play:** full-screen Skia canvas, HUD (value left, day, weapon switch, bomb button, sound toggle), turret at bottom center.
 - **Result sheet:** over the filled screen, showing day, "N zeros down", rewards earned, next unlock, and buttons for Back to base and Replay (replay has no streak effect).
-- **Reset / Shielded / Slipping:** supportive copy, never shaming. Slipping covers any slip that cost a zero, from a Not today or from missed days found on opening: "You've lost a zero. Check in to stop the slide." The final shows Reset (encouraging) or Shielded.
+- **Reset / Shielded / Slipping:** supportive copy, never shaming. Slipping covers any slip that cost a zero, from a Not today or from missed days found on opening: "You've lost a zero. Check in to stop the slide." The final shows Reset (encouraging) or Shielded. After a Not today, the screen offers **Undo Not today** for 10 seconds (30 with a screen reader on), in case it was a mis-tap: the goal and round go back to just before the answer, as long as that check-in is still open.
 - **Settings:** edit goal and times, sound/haptics, re-engagement toggle, erase data, support link.
 
 **Support link:** goals like quitting drinking are health-related. Settings should include a "Need support?" row. In the US, list the SAMHSA National Helpline, 1-800-662-4357 (free, confidential, 24/7). Localize later.

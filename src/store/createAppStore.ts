@@ -41,6 +41,7 @@ import {
   type PersistedState,
   type Prefs,
   type RoundRecord,
+  type UndoNotToday,
 } from './types';
 
 export interface StoreDeps {
@@ -76,6 +77,8 @@ export interface AppState extends PersistedState {
   route: AnswerRoute | null;
   /** Why the latest answer was turned down, for Home's banner. Not persisted. */
   rejection: AnswerRejection | null;
+  /** The latest Not today, while it can still be taken back. Not persisted. */
+  undo: UndoNotToday | null;
 
   /** The clock the app runs on: the device clock, plus the debug offset in development. */
   now: () => Date;
@@ -88,6 +91,11 @@ export interface AppState extends PersistedState {
   setupGoal: (input: { goal: string; checkInTime: ClockTime; morningTime: ClockTime }) => SetupResult;
   /** Answer a check-in: `day` when it comes from a notification, otherwise the open window. */
   answer: (answer: Answer, day?: DayKey, source?: AnswerSource) => AnswerResult | null;
+  /**
+   * Take back the latest Not today, within `windowMs` of answering, while its check-in is still
+   * open and no other day has settled. Restores the goal and round from just before it.
+   */
+  undoNotToday: (windowMs?: number) => boolean;
   /** The route the latest answer left, once. */
   takeRoute: () => AnswerRoute | null;
   clearRejection: () => void;
@@ -121,6 +129,10 @@ export interface AppState extends PersistedState {
 
 /** The debug skip lands just after the next window opens, not on its edge. */
 const DEV_SKIP_SLACK_MS = 1000;
+/** How long a Not today can be taken back, for a mis-tap. */
+export const UNDO_MS = 10_000;
+/** With VoiceOver or TalkBack on: reaching the Undo button takes a few swipes. */
+export const UNDO_MS_SCREEN_READER = 30_000;
 
 export type AppStore = ReturnType<typeof createAppStore>;
 
@@ -176,6 +188,7 @@ export function createAppStore(deps: StoreDeps) {
           notice: null,
           route: null,
           rejection: null,
+          undo: null,
           now,
           clockOffsetMs,
           timeZone,
@@ -193,16 +206,26 @@ export function createAppStore(deps: StoreDeps) {
             if (!goal.trim()) return { ok: false, reason: 'empty-goal' };
             if (!isMorningAtOrBeforeCheckIn(morningTime, checkInTime)) return { ok: false, reason: 'order' };
             const state = createGoal({ goalId: deps.makeId(), goal, checkInTime, morningTime, now: now(), tz: timeZone() });
-            set({ goal: state, weapon: null, seenThrough: null, round: null, notice: null, route: null, rejection: null });
+            set({
+              goal: state,
+              weapon: null,
+              seenThrough: null,
+              round: null,
+              notice: null,
+              route: null,
+              rejection: null,
+              undo: null,
+            });
             return { ok: true };
           },
 
           answer: (ans, day, source = 'app') => {
             const goal = ready();
             if (!goal) return null;
-            const r = answerCheckIn(goal, { answer: ans, day }, now(), timeZone());
+            const at = now();
+            const r = answerCheckIn(goal, { answer: ans, day }, at, timeZone());
             if (!r.ok) {
-              setGoal(r.state, { rejection: r.reason });
+              setGoal(r.state, { rejection: r.reason, undo: null });
             } else if (r.outcome.kind === 'yes') {
               const { day, streak, rewards } = r.outcome;
               const newest = rewards.weapons.at(-1);
@@ -223,11 +246,40 @@ export function createAppStore(deps: StoreDeps) {
                 notice: null,
                 route: source === 'notification' ? null : '/play',
                 rejection: null,
+                undo: null,
               });
             } else {
-              setGoal(r.state, { notice: noticeForAnswer(r.outcome, r.state), route: '/notice', rejection: null });
+              const notice = noticeForAnswer(r.outcome, r.state);
+              const undo: UndoNotToday = {
+                day: r.outcome.day,
+                at: at.getTime(),
+                notice,
+                entry: r.state.history.at(-1),
+                before: { goal, round: get().round },
+              };
+              setGoal(r.state, { notice, route: '/notice', rejection: null, undo });
             }
             return r;
+          },
+
+          undoNotToday: (windowMs = UNDO_MS) => {
+            const goal = ready();
+            const { undo } = get();
+            if (!goal || !undo) return false;
+            const t = now();
+            // Restoring the old goal un-settles the answered day. Catch it up to now, then check
+            // that day's check-in is the one still open, so it can be answered again.
+            const restored = resolve(undo.before.goal, t, timeZone()).state;
+            const ok =
+              t.getTime() - undo.at < windowMs &&
+              goal.history.at(-1) === undo.entry &&
+              pendingWindow(restored, t)?.day === undo.day;
+            if (!ok) {
+              set({ undo: null });
+              return false;
+            }
+            setGoal(restored, { round: undo.before.round, notice: null, route: null, rejection: null, undo: null });
+            return true;
           },
 
           takeRoute: () => {
@@ -304,7 +356,7 @@ export function createAppStore(deps: StoreDeps) {
           },
 
           erase: () => {
-            set({ ...DEFAULT_PERSISTED, notice: null, route: null, rejection: null });
+            set({ ...DEFAULT_PERSISTED, notice: null, route: null, rejection: null, undo: null });
             api.persist.clearStorage();
           },
 
@@ -326,7 +378,7 @@ export function createAppStore(deps: StoreDeps) {
             if (!tools || !goal || !Number.isInteger(n) || n < 1 || n > tools.SEED_MAX_N) return null;
             const seeded = tools.seedYesRun(goal, n, now(), timeZone());
             // The old history is gone, so there's no missed-day news left to show.
-            set({ goal: seeded, round: null, weapon: null, notice: null, seenThrough: seeded.lastSettledDay });
+            set({ goal: seeded, round: null, weapon: null, notice: null, undo: null, seenThrough: seeded.lastSettledDay });
             return get().answer('yes');
           },
 

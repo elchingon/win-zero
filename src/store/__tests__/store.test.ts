@@ -3,9 +3,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { beforeEach, describe, expect, it } from '@jest/globals';
 
 import { addDays, currentCheckInTime, latestScheduleEntry, MS_PER_DAY, pendingWindow } from '@/engine';
-import { at, DAY0, DENVER, newGoal, TOKYO, yesDays } from '@/engine/__tests__/fixtures';
+import { answerDay, at, DAY0, DENVER, newGoal, TOKYO, yesDays } from '@/engine/__tests__/fixtures';
 
-import { createAppStore, type AppStore } from '../createAppStore';
+import { createAppStore, UNDO_MS, UNDO_MS_SCREEN_READER, type AppStore } from '../createAppStore';
 import { startLifecycle } from '../lifecycle';
 import { STORE_KEY, STORE_VERSION } from '../types';
 import { fakeAppState, flush, harness, ready, withGoal } from './harness';
@@ -317,6 +317,125 @@ describe('where an answer leads', () => {
     h.store.setState({ route: '/notice', rejection: 'not-open' });
     h.store.getState().setupGoal({ goal: 'Read', checkInTime: '20:00', morningTime: '09:00' });
     expect(h.store.getState()).toMatchObject({ route: null, rejection: null });
+  });
+});
+
+describe('undo Not today', () => {
+  it('puts back the goal and the round it dropped, so the check-in can be answered again', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 4)); // through 10-16
+    h.setTime('2026-10-17', '21:00');
+    h.store.getState().answer('yes'); // streak 5, its round unplayed
+    const round = h.store.getState().round;
+    const before = h.store.getState().goal;
+
+    h.setTime('2026-10-18', '21:00');
+    h.store.getState().answer('not-today');
+    expect(h.store.getState()).toMatchObject({ round: null, route: '/notice', goal: { streak: 4 } });
+    expect(h.store.getState().undo).toMatchObject({ day: '2026-10-18', at: h.clock.t });
+    expect(h.store.getState().undo?.notice).toBe(h.store.getState().nextNotice()?.notice);
+
+    h.clock.t += UNDO_MS - 1;
+    expect(h.store.getState().undoNotToday()).toBe(true);
+    expect(h.store.getState()).toMatchObject({ goal: before, round, notice: null, route: null, undo: null });
+    expect(pendingWindow(h.store.getState().goal!, h.store.getState().now())?.day).toBe('2026-10-18');
+    expect(h.store.getState().undoNotToday()).toBe(false); // once
+
+    expect(h.store.getState().answer('yes')).toMatchObject({ ok: true, outcome: { day: '2026-10-18', streak: 6 } });
+  });
+
+  it('gives back a shield a Shielded answer spent, and a streak a Reset took', async () => {
+    const shielded = await withGoal({ ...yesDays(newGoal(), DAY0, 10), slide: 6, shields: 1 }); // through 10-22
+    shielded.setTime('2026-10-23', '21:00');
+    expect(shielded.store.getState().answer('not-today')).toMatchObject({ outcome: { kind: 'shielded' } });
+    expect(shielded.store.getState().undoNotToday()).toBe(true);
+    expect(shielded.store.getState().goal).toMatchObject({ streak: 10, shields: 1, slide: 6 });
+
+    const reset = await withGoal({ ...yesDays(newGoal(), DAY0, 10), slide: 6, shields: 0 });
+    reset.setTime('2026-10-23', '21:00');
+    expect(reset.store.getState().answer('not-today')).toMatchObject({ outcome: { kind: 'reset' } });
+    expect(reset.store.getState().undoNotToday()).toBe(true);
+    expect(reset.store.getState().goal).toMatchObject({ streak: 10, slide: 6, lastSettledDay: '2026-10-22' });
+  });
+
+  it("works for a Not today that cost nothing, and for one from a notification's button", async () => {
+    const noted = await withGoal(newGoal());
+    noted.setTime(DAY0, '21:00');
+    noted.store.getState().answer('not-today');
+    expect(noted.store.getState().notice).toEqual({ kind: 'noted' });
+    expect(noted.store.getState().undoNotToday()).toBe(true);
+    expect(noted.store.getState().goal?.history).toEqual([]);
+
+    const h = await withGoal(yesDays(newGoal(), DAY0, 2)); // through 10-14
+    h.setTime('2026-10-16', '09:00'); // the morning reminder for 10-15
+    h.store.getState().answer('not-today', '2026-10-15', 'notification');
+    expect(h.store.getState().undoNotToday()).toBe(true);
+    expect(pendingWindow(h.store.getState().goal!, h.store.getState().now())?.day).toBe('2026-10-15');
+  });
+
+  it('lasts UNDO_MS, or the longer window passed in for a screen reader', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 2));
+    h.setTime('2026-10-15', '21:00');
+    h.store.getState().answer('not-today');
+    h.clock.t += UNDO_MS;
+    expect(h.store.getState().undoNotToday()).toBe(false);
+    expect(h.store.getState().undo).toBeNull(); // the Notice screen drops its button
+    expect(h.store.getState().goal?.lastSettledDay).toBe('2026-10-15');
+
+    const s = await withGoal(yesDays(newGoal(), DAY0, 2));
+    s.setTime('2026-10-15', '21:00');
+    s.store.getState().answer('not-today');
+    s.clock.t += UNDO_MS_SCREEN_READER - 1;
+    expect(s.store.getState().undoNotToday(UNDO_MS_SCREEN_READER)).toBe(true);
+  });
+
+  it('is turned down once the check-in has closed', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 2)); // through 10-14
+    h.clock.t = at('2026-10-17', '00:00').getTime() - 2000; // 10-15 closes at midnight
+    h.store.getState().answer('not-today', '2026-10-15');
+    h.clock.t += 3000;
+    expect(h.store.getState().undoNotToday()).toBe(false);
+    expect(h.store.getState().goal?.history.at(-1)).toMatchObject({ day: '2026-10-15', result: 'no' });
+  });
+
+  it('is turned down once another day has settled, but not by a time zone change', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 2)); // through 10-14
+    h.setTime('2026-10-16', '21:00'); // 10-15 and 10-16 both open
+    h.store.getState().answer('not-today', '2026-10-15');
+    h.store.setState({ goal: answerDay(h.store.getState().goal!, '2026-10-16', 'yes').state });
+    expect(h.store.getState().undoNotToday()).toBe(false);
+
+    const t = await withGoal(yesDays(newGoal(), DAY0, 2));
+    t.setTime('2026-10-15', '21:00');
+    t.store.getState().answer('not-today');
+    t.zone.tz = TOKYO;
+    t.store.getState().refresh(); // a new goal object, with nothing new settled
+    expect(t.store.getState().undoNotToday()).toBe(true);
+    expect(latestScheduleEntry(t.store.getState().goal!).tz).toBe(TOKYO);
+  });
+
+  it('ends with any other answer, erase or setup', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 2));
+    h.setTime('2026-10-15', '21:00');
+    h.store.getState().answer('not-today');
+    h.store.getState().answer('yes', '2026-10-15'); // turned down: already answered
+    expect(h.store.getState().undo).toBeNull();
+
+    h.setTime('2026-10-16', '21:00');
+    h.store.getState().answer('not-today');
+    h.store.getState().erase();
+    expect(h.store.getState().undo).toBeNull();
+    expect(h.store.getState().undoNotToday()).toBe(false);
+
+    const s = await withGoal(yesDays(newGoal(), DAY0, 2));
+    s.setTime('2026-10-15', '21:00');
+    s.store.getState().answer('not-today');
+    s.store.getState().setupGoal({ goal: 'Read', checkInTime: '20:00', morningTime: '09:00' });
+    expect(s.store.getState().undo).toBeNull();
+
+    const y = await withGoal(yesDays(newGoal(), DAY0, 2));
+    y.setTime('2026-10-15', '21:00');
+    y.store.getState().answer('yes');
+    expect(y.store.getState().undo).toBeNull();
   });
 });
 

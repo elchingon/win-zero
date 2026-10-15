@@ -1,4 +1,4 @@
-import type { DayKey, GoalState, WeaponId } from '@/engine';
+import type { DayKey, GoalState, HistoryEntry, WeaponId } from '@/engine';
 
 /** Bump when PersistedState changes shape, and teach migratePersisted the old one. */
 export const STORE_VERSION = 1;
@@ -66,6 +66,23 @@ export type Notice =
   | { kind: 'reset'; cause: NoticeCause; lostStreak: number; bestStreak: number; days: number; stopped: boolean }
   /** A Not today that cost nothing, because the streak was already 0. */
   | { kind: 'noted' };
+
+/**
+ * A Not today that can still be taken back, for a mis-tap. It holds the state from just before
+ * the answer, which comes back whole. Not persisted.
+ */
+export interface UndoNotToday {
+  /** The day that was answered. */
+  day: DayKey;
+  /** When it was answered, in epoch ms on the app clock. */
+  at: number;
+  /** The notice that answer left, so the Notice screen knows the Undo is its own. */
+  notice: Notice | null;
+  /** The history entry the answer recorded. Once another day settles, it's too late. */
+  entry: HistoryEntry | undefined;
+  /** The goal and round from just before (a Not today drops yesterday's round). */
+  before: { goal: GoalState; round: RoundRecord | null };
+}
 
 /**
  * The next one-time screen and where it came from. An answer's notice waits in the store;

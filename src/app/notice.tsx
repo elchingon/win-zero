@@ -2,12 +2,13 @@
 // Shown once. The copy is supportive and plain: some people here are working on sobriety.
 import { Redirect, router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Linking, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, Linking, StyleSheet, Text, View } from 'react-native';
 
 import { pendingWindow } from '@/engine';
 import { plural } from '@/lib/format';
-import { appStore, useApp, type Notice } from '@/store';
+import { appStore, UNDO_MS, UNDO_MS_SCREEN_READER, useApp, type Notice } from '@/store';
 import { colors, space, type } from '@/theme/tokens';
+import { useScreenReader } from '@/ui/a11y';
 import { Em, Eyebrow, Lede } from '@/ui/bits';
 import { Button, LinkButton } from '@/ui/Button';
 import { NoticeZero, noticeColors, type NoticeMotion } from '@/ui/NoticeZero';
@@ -23,6 +24,7 @@ interface Copy {
 }
 
 const KEEPSAKES = 'your weapons, bombs and shields are still yours';
+const UNDONE = 'Undone. Your check-in is open again.';
 
 function copyFor(n: Notice): Copy {
   switch (n.kind) {
@@ -106,10 +108,23 @@ export default function NoticeScreen() {
   const [pending] = useState(() => appStore.getState().nextNotice());
   const goal = useApp((s) => s.goal);
   const route = useApp((s) => s.route);
+  const undo = useApp((s) => s.undo);
+  const screenReader = useScreenReader();
+  const [, setTick] = useState(0);
 
   useEffect(() => {
     if (pending) appStore.getState().noticeShown(pending);
   }, [pending]);
+
+  // A Not today shown here can be taken back for a few seconds, in case it was a mis-tap.
+  const undoMs = screenReader ? UNDO_MS_SCREEN_READER : UNDO_MS;
+  const undoEndsAt = pending?.source === 'answer' && undo?.notice === pending.notice ? undo.at + undoMs : null;
+  const canUndo = undoEndsAt !== null && appStore.getState().now().getTime() < undoEndsAt;
+  useEffect(() => {
+    if (undoEndsAt === null) return;
+    const id = setTimeout(() => setTick((t) => t + 1), Math.max(0, undoEndsAt - appStore.getState().now().getTime()));
+    return () => clearTimeout(id);
+  }, [undoEndsAt]);
 
   if (!pending || !goal) return <Redirect href="/" />;
 
@@ -120,6 +135,12 @@ export default function NoticeScreen() {
   const canAnswer = pendingWindow(goal, appStore.getState().now()) !== null;
   const next = route === '/play' ? 'Play your round' : canAnswer && notice.kind !== 'noted' ? 'Check in now' : 'Got it';
   const close = () => router.dismissTo('/');
+  const takeBack = () => {
+    // Turned down (the check-in just closed, say): the button goes, as the store drops the undo.
+    if (!appStore.getState().undoNotToday(undoMs)) return;
+    AccessibilityInfo.announceForAccessibility(UNDONE);
+    close();
+  };
 
   return (
     <Screen centered>
@@ -138,6 +159,14 @@ export default function NoticeScreen() {
       </View>
       <View style={styles.block}>
         <Button label={next} onPress={close} />
+        {canUndo ? (
+          <Button
+            variant="ghost"
+            label="Undo Not today"
+            accessibilityHint="Puts the check-in back so you can answer again"
+            onPress={takeBack}
+          />
+        ) : null}
         {copy.support ? (
           <LinkButton
             label={`Need support? ${SUPPORT_LINE.name}, ${SUPPORT_LINE.display}`}

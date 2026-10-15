@@ -293,6 +293,8 @@ describe('startReminderSync', () => {
       ['goal in reminders', () => s().setPref('goalInReminders', true)],
       ['dev clock', () => s().advanceDevClock(60_000)],
       ['check-in', () => (h.setTime(DAY0, '21:30'), s().answer('yes'))],
+      ['not today', () => (h.setTime('2026-10-14', '21:30'), s().answer('not-today'))],
+      ['undo', () => s().undoNotToday()],
       ['erase', () => s().erase()],
     ];
     for (const [name, change] of changes) {
