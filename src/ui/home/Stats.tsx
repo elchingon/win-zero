@@ -1,10 +1,13 @@
+// Home's numbers: the streak, the best run (and when it was), Yes days in all and this month,
+// bombs and shields.
 import { StyleSheet, View } from 'react-native';
 
-import { SHIELD_CAP, type GoalState } from '@/engine';
-import { plural } from '@/lib/format';
+import { historyStats, SHIELD_CAP, type DayKey, type GoalState } from '@/engine';
+import { formatDayRange, plural } from '@/lib/format';
 import { StatTile } from '@/ui/bits';
 
-export function Stats({ goal }: { goal: GoalState }) {
+export function Stats({ goal, today }: { goal: GoalState; today: DayKey }) {
+  const { yesDays, yesThisMonth, bestRun } = historyStats(goal, today);
   return (
     <View style={styles.grid}>
       <View style={styles.row}>
@@ -17,7 +20,18 @@ export function Stats({ goal }: { goal: GoalState }) {
         <StatTile
           label="Best run"
           value={String(goal.bestStreak)}
-          accessibilityLabel={`Best run: ${plural(goal.bestStreak, 'day')}`}
+          caption={bestRun ? formatDayRange(bestRun.from, bestRun.to, today) : undefined}
+          accessibilityLabel={`Best run: ${plural(goal.bestStreak, 'day')}${
+            bestRun ? `, ${formatDayRange(bestRun.from, bestRun.to, today, ' to ')}` : ''
+          }`}
+        />
+      </View>
+      <View style={styles.row}>
+        <StatTile label="Yes days" value={String(yesDays)} accessibilityLabel={`Yes days: ${yesDays}`} />
+        <StatTile
+          label="Yes this month"
+          value={String(yesThisMonth)}
+          accessibilityLabel={`Yes days this month: ${yesThisMonth}`}
         />
       </View>
       <View style={styles.row}>

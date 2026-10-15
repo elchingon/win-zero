@@ -58,3 +58,41 @@ export function notTodayPreview(state: GoalState): NotTodayPreview {
   if (s.final === 'reset') return { kind: 'reset', lose: state.streak };
   return { kind: 'slip', lose: state.streak - s.streak };
 }
+
+export interface HistoryStats {
+  /** Every day answered Yes. */
+  yesDays: number;
+  /** Days answered Yes in the month `today` falls in. */
+  yesThisMonth: number;
+  /**
+   * The most recent run that reached the best streak: from its first Yes to the Yes that set
+   * the best. A run lasts while the streak stays above 0, so slips inside it widen the dates.
+   * Null before the first Yes, or if history doesn't show the best (data from elsewhere).
+   */
+  bestRun: { from: DayKey; to: DayKey } | null;
+}
+
+/** Counts from the history the goal already keeps, for Home's stats. */
+export function historyStats(state: GoalState, today: DayKey): HistoryStats {
+  const { history, bestStreak } = state;
+  const month = today.slice(0, 7); // 'YYYY-MM'
+  let yesDays = 0;
+  let yesThisMonth = 0;
+  let peak = -1;
+  history.forEach((e, i) => {
+    if (e.result !== 'yes') return;
+    yesDays++;
+    if (e.day.startsWith(month)) yesThisMonth++;
+    if (bestStreak > 0 && e.streakAfter === bestStreak) peak = i;
+  });
+
+  let bestRun: HistoryStats['bestRun'] = null;
+  const to = history[peak];
+  if (to) {
+    let start = peak;
+    for (let i = peak - 1; i >= 0 && (history[i]?.streakAfter ?? 0) > 0; i--) start = i;
+    const first = history.slice(start, peak + 1).find((e) => e.result === 'yes');
+    if (first) bestRun = { from: first.day, to: to.day };
+  }
+  return { yesDays, yesThisMonth, bestRun };
+}

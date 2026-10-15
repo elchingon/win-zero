@@ -44,9 +44,11 @@ export function Chip(props: { label: string; selected: boolean; onPress: () => v
   );
 }
 
-export function StatTile(props: { label: string; value: string; hero?: boolean; accessibilityLabel?: string }) {
+/** A number with its label, and an optional caption under it (say, the dates it covers). */
+export function StatTile(props: { label: string; value: string; hero?: boolean; caption?: string; accessibilityLabel?: string }) {
+  const spoken = `${props.label}: ${props.value}${props.caption ? `, ${props.caption}` : ''}`;
   return (
-    <View style={styles.stat} accessible accessibilityLabel={props.accessibilityLabel ?? `${props.label}: ${props.value}`}>
+    <View style={styles.stat} accessible accessibilityLabel={props.accessibilityLabel ?? spoken}>
       <Text style={type.statLabel} numberOfLines={2}>
         {props.label}
       </Text>
@@ -58,6 +60,11 @@ export function StatTile(props: { label: string; value: string; hero?: boolean; 
       >
         {props.value}
       </Text>
+      {props.caption ? (
+        <Text style={type.fine} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+          {props.caption}
+        </Text>
+      ) : null}
     </View>
   );
 }

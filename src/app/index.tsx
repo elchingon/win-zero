@@ -68,6 +68,7 @@ function HomeScreen({ goal }: { goal: GoalState }) {
   const store = appStore.getState();
   const now = store.now();
   const tz = store.timeZone();
+  const today = dayKeyAt(now, tz);
   const pending = pendingWindow(goal, now);
   const next = nextWindow(goal);
   const boundary = (pending ? pending.closesAt : next.opensAt).getTime();
@@ -118,7 +119,7 @@ function HomeScreen({ goal }: { goal: GoalState }) {
         <Text style={type.goal}>{goal.goal}</Text>
       </View>
 
-      <Stats goal={goal} />
+      <Stats goal={goal} today={today} />
 
       {banner ? (
         <Card style={styles.banner}>
@@ -177,7 +178,7 @@ function HomeScreen({ goal }: { goal: GoalState }) {
 
       <Arsenal goal={goal} pick={pick} onEquip={selectWeapon} />
 
-      <HistoryCalendar goal={goal} today={dayKeyAt(now, tz)} pendingDay={pending?.day ?? null} firstWeekday={firstWeekday} />
+      <HistoryCalendar goal={goal} today={today} pendingDay={pending?.day ?? null} firstWeekday={firstWeekday} />
 
       {DemoControls ? <DemoControls /> : null}
     </Screen>

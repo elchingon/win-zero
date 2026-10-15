@@ -113,6 +113,14 @@ describe('Home', () => {
     expect(screen.getByRole('button', { name: 'Yes, I did' })).toBeOnTheScreen();
   });
 
+  it('shows Yes days, this month, and the dates of the best run', async () => {
+    await open('/', { goal: twoDays() }); // Yes on 10-13 and 10-14
+    expect(screen.getByLabelText('Best run: 2 days, Oct 13 to Oct 14')).toBeOnTheScreen();
+    expect(screen.getByText('Oct 13 – Oct 14')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Yes days: 2')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Yes days this month: 2')).toBeOnTheScreen();
+  });
+
   it('takes Not today to its notice, and Undo back to the open check-in', async () => {
     const app = await open('/', { goal: twoDays() });
     await fireEvent.press(screen.getByRole('button', { name: 'Not today' }));

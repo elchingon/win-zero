@@ -73,6 +73,17 @@ export function formatDayShort(day: DayKey): string {
   return `${MONTHS[(m ?? 1) - 1]?.slice(0, 3)} ${d}`;
 }
 
+/**
+ * 'Oct 2 – Oct 15'. Years show when the range isn't all in `today`'s year:
+ * 'Dec 28, 2025 – Jan 3, 2026'. Screen readers get `sep` ' to ' rather than a dash.
+ */
+export function formatDayRange(from: DayKey, to: DayKey, today: DayKey, sep = ' – '): string {
+  const year = today.slice(0, 4);
+  const withYear = from.slice(0, 4) !== year || to.slice(0, 4) !== year;
+  const one = (day: DayKey) => (withYear ? `${formatDayShort(day)}, ${day.slice(0, 4)}` : formatDayShort(day));
+  return from === to ? one(from) : `${one(from)}${sep}${one(to)}`;
+}
+
 /** 'October 2026' for a 'YYYY-MM' month key. */
 export function formatMonth(month: string): string {
   const [y, m] = month.split('-').map(Number);
