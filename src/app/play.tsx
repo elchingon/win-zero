@@ -4,7 +4,7 @@
 // Development builds, and release builds made with EXPO_PUBLIC_PERF_BUILD=1 (eas build
 // --profile perf), can open /play?practice=N to play any N with every weapon and a frame
 // meter, and nothing about the streak changes.
-import { Redirect, router, Stack, useLocalSearchParams } from 'expo-router';
+import { Redirect, router, Stack, useLocalSearchParams, type ErrorBoundaryProps } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,6 +20,7 @@ import { appStore, useApp, type RoundRecord } from '@/store';
 import { colors, fonts } from '@/theme/tokens';
 import { feedback } from '@/ui/feedback';
 import { useReduceMotion, useScreenReader } from '@/ui/a11y';
+import { CrashScreen } from '@/ui/CrashScreen';
 
 /** Practice rounds: development builds, and release builds made for measuring frame rate. */
 const PRACTICE_ENABLED = __DEV__ || process.env.EXPO_PUBLIC_PERF_BUILD === '1';
@@ -60,6 +61,25 @@ function StoreRound() {
 
 /** Back to Home: underneath Play, or taking its place when a link opened Play directly. */
 const toBase = () => router.dismissTo('/');
+
+/**
+ * A render crash in the round. The Yes and its rewards were saved when it was answered, so
+ * nothing is lost, and Home still offers a round that wasn't finished. Errors thrown in the
+ * UI-thread worklets (Skia drawing, Reanimated) aren't React render errors, so no boundary
+ * catches them.
+ */
+export function ErrorBoundary({ error }: ErrorBoundaryProps) {
+  return (
+    <CrashScreen
+      eyebrow="Round stopped"
+      title={['The round hit ', 'a snag.']}
+      body={['Your Yes counts, and its rewards are already banked. Nothing is lost.']}
+      action="Back to base"
+      onAction={toBase}
+      error={error}
+    />
+  );
+}
 
 function Round(props: { initialMode: ResultMode; n: number; best: number; record: RoundRecord | null }) {
   const { initialMode, n, best, record } = props;
