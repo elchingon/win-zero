@@ -8,6 +8,11 @@ module.exports = defineConfig([
     ignores: ['dist/*', 'docs/*', '.expo/*'],
   },
   {
+    // jest.mock factories load their stand-ins with require(), which is how jest expects it.
+    files: ['src/**/__tests__/**/*.{ts,tsx}'],
+    rules: { '@typescript-eslint/no-require-imports': 'off' },
+  },
+  {
     // The rules engine is pure: no UI or platform imports, and `now` is always injected.
     files: ['src/engine/**/*.ts'],
     rules: {

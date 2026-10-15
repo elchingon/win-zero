@@ -47,7 +47,6 @@ describe('sim purity', () => {
   });
 
   it.each(sources)('$file exports only worklets', ({ file }) => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const mod = require(join(SIM_DIR, file)) as Record<string, unknown>;
     const bad = Object.entries(mod).flatMap(([name, value]) => nonWorklets(value, name));
     expect(bad).toEqual([]);
