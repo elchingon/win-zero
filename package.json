@@ -9,7 +9,7 @@
     "test": "jest",
     "test:tz": "TZ=UTC jest && TZ=America/Denver jest && TZ=Pacific/Chatham jest",
     "typecheck": "tsc --noEmit",
-    "lint": "expo lint",
+    "lint": "expo lint .",
     "gen:sfx": "node scripts/gen-sfx.mjs",
     "gen:brand": "node scripts/gen-brand.mjs",
     "eas-build-pre-install": "node scripts/check-release.mjs"
