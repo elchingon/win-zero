@@ -1,7 +1,7 @@
 // Home: the goal, the numbers, today's check-in (or when the next one comes), the arsenal,
 // and the history calendar.
 import { Redirect, router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useRef, useState, type ComponentType } from 'react';
+import { useCallback, useEffect, useState, type ComponentType } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { dayKeyAt, nextWindow, pendingWindow, type AnswerRejection, type GoalState } from '@/engine';
@@ -46,10 +46,10 @@ function HomeScreen({ goal }: { goal: GoalState }) {
   const round = useApp((s) => s.round);
   const pick = useApp((s) => s.weapon);
   const selectWeapon = useApp((s) => s.selectWeapon);
+  const rejection = useApp((s) => s.rejection);
   const clockOffset = useApp((s) => s.devClockOffsetMs); // re-render when the debug clock moves
   const { h24, firstWeekday } = useDeviceCalendar();
   const [tick, setTick] = useState(0);
-  const [banner, setBanner] = useState<string | null>(null);
 
   const store = appStore.getState();
   const now = store.now();
@@ -68,56 +68,46 @@ function HomeScreen({ goal }: { goal: GoalState }) {
     return () => clearTimeout(id);
   }, [boundary, tick, clockOffset]);
 
-  // On focus, and whenever days settle while Home is showing (the app comes back to the
+  // An answer, from the card here or a notification's buttons, leaves a screen to open: the
+  // round for Yes, the notice for Not today. Open it on focus and the moment it's set. Otherwise,
+  // on focus and whenever days settle while Home is showing (the app comes back to the
   // foreground, a window closes): catch up, then show any Slipping / Reset / Shielded news once.
-  const answering = useRef(false);
+  // An answer comes first, so missed-day news waits until the round is over.
   useFocusEffect(
     useCallback(() => {
+      const openRoute = () => {
+        const route = appStore.getState().takeRoute();
+        if (route) router.push(route);
+        return route !== null;
+      };
       const showNews = () => {
-        if (answering.current) return; // an answer routes to its own screen
         const s = appStore.getState();
         s.refresh();
         if (s.takeMissNotice()) router.push('/notice');
       };
-      showNews();
-      return appStore.subscribe((s, prev) => {
-        if (s.goal?.lastSettledDay !== prev.goal?.lastSettledDay) showNews();
+      if (!openRoute()) showNews();
+      const unsubscribe = appStore.subscribe((s, prev) => {
+        if (s.route) openRoute();
+        else if (s.goal?.lastSettledDay !== prev.goal?.lastSettledDay) showNews();
       });
+      return () => {
+        unsubscribe();
+        appStore.getState().clearRejection(); // a turned-down answer's banner lasts this visit
+      };
     }, []),
   );
 
-  const answer = (a: 'yes' | 'not-today') => {
-    answering.current = true;
-    try {
-      return appStore.getState().answer(a);
-    } finally {
-      answering.current = false;
-    }
-  };
-
   const onYes = () => {
     feedback.success();
-    const r = answer('yes');
-    if (!r) return;
-    if (r.ok) {
-      setBanner(null);
-      router.push('/play');
-    } else {
-      setBanner(REJECTED[r.reason]);
-    }
+    appStore.getState().answer('yes');
   };
 
   const onNotToday = () => {
     feedback.soft();
-    const r = answer('not-today');
-    if (!r) return;
-    if (r.ok) {
-      setBanner(null);
-      router.push('/notice');
-    } else {
-      setBanner(REJECTED[r.reason]);
-    }
+    appStore.getState().answer('not-today');
   };
+
+  const banner = rejection ? REJECTED[rejection] : null;
 
   const unplayed = round && !round.played ? round : null;
   const nextWhen = formatWhen(next.opensAt, now, tz, h24);

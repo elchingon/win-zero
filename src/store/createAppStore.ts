@@ -18,8 +18,10 @@ import {
   setMorningTime as setGoalMorningTime,
   spendBomb as spendGoalBomb,
   type Answer,
+  type AnswerRejection,
   type AnswerResult,
   type ClockTime,
+  type DayKey,
   type GoalState,
   type ResolveEvent,
   type TimeZone,
@@ -29,7 +31,15 @@ import { SEED_MAX_N, seedYesRun } from '@/dev/seedRun';
 
 import { DEFAULT_PERSISTED, migratePersisted, normalizePersisted } from './migrate';
 import { noticeForAnswer, noticeForMisses } from './notice';
-import { STORE_KEY, STORE_VERSION, type Notice, type PersistedState, type Prefs, type RoundRecord } from './types';
+import {
+  STORE_KEY,
+  STORE_VERSION,
+  type AnswerRoute,
+  type Notice,
+  type PersistedState,
+  type Prefs,
+  type RoundRecord,
+} from './types';
 
 export interface StoreDeps {
   storage: StateStorage;
@@ -50,15 +60,29 @@ export interface AppState extends PersistedState {
   hydrated: boolean;
   /** A one-time screen waiting to be shown. Not persisted. */
   notice: Notice | null;
+  /**
+   * Where the latest answer leads (its round, or its notice), waiting for Home to open it.
+   * Set in the same update as the answer, whether it came from Home or a notification.
+   * Not persisted.
+   */
+  route: AnswerRoute | null;
+  /** Why the latest answer was turned down, for Home's banner. Not persisted. */
+  rejection: AnswerRejection | null;
 
   /** The clock the app runs on: the device clock, plus the debug offset in development. */
   now: () => Date;
+  /** How far `now` runs ahead of the device clock: the debug offset, or 0 outside development. */
+  clockOffsetMs: () => number;
   timeZone: () => TimeZone;
 
   /** Settle closed windows and follow a time zone change. Run on launch and on foreground. */
   refresh: () => ResolveEvent[];
   setupGoal: (input: { goal: string; checkInTime: ClockTime; morningTime: ClockTime }) => SetupResult;
-  answer: (answer: Answer) => AnswerResult | null;
+  /** Answer a check-in: `day` when it comes from a notification, otherwise the open window. */
+  answer: (answer: Answer, day?: DayKey) => AnswerResult | null;
+  /** The route the latest answer left, once. */
+  takeRoute: () => AnswerRoute | null;
+  clearRejection: () => void;
   finishRound: () => void;
   selectWeapon: (id: WeaponId) => void;
   spendBomb: () => boolean;
@@ -106,7 +130,8 @@ export function createAppStore(deps: StoreDeps) {
   const store = createStore<AppState>()(
     persist(
       (set, get, api) => {
-        const now = () => new Date(deps.now().getTime() + (deps.dev ? get().devClockOffsetMs : 0));
+        const clockOffsetMs = () => (deps.dev ? get().devClockOffsetMs : 0);
+        const now = () => new Date(deps.now().getTime() + clockOffsetMs());
         const timeZone = () => deps.timeZone();
         /** The goal, once storage has been read. Acting earlier would overwrite saved data. */
         const ready = () => (get().hydrated ? get().goal : null);
@@ -121,7 +146,10 @@ export function createAppStore(deps: StoreDeps) {
           ...DEFAULT_PERSISTED,
           hydrated: false,
           notice: null,
+          route: null,
+          rejection: null,
           now,
+          clockOffsetMs,
           timeZone,
 
           refresh: () => {
@@ -137,16 +165,16 @@ export function createAppStore(deps: StoreDeps) {
             if (!goal.trim()) return { ok: false, reason: 'empty-goal' };
             if (!isMorningBeforeCheckIn(morningTime, checkInTime)) return { ok: false, reason: 'order' };
             const state = createGoal({ goalId: deps.makeId(), goal, checkInTime, morningTime, now: now(), tz: timeZone() });
-            set({ goal: state, weapon: null, seenThrough: null, round: null, notice: null });
+            set({ goal: state, weapon: null, seenThrough: null, round: null, notice: null, route: null, rejection: null });
             return { ok: true };
           },
 
-          answer: (ans) => {
+          answer: (ans, day) => {
             const goal = ready();
             if (!goal) return null;
-            const r = answerCheckIn(goal, { answer: ans }, now(), timeZone());
+            const r = answerCheckIn(goal, { answer: ans, day }, now(), timeZone());
             if (!r.ok) {
-              setGoal(r.state);
+              setGoal(r.state, { rejection: r.reason });
             } else if (r.outcome.kind === 'yes') {
               const { day, streak, rewards } = r.outcome;
               const newest = rewards.weapons.at(-1);
@@ -165,11 +193,23 @@ export function createAppStore(deps: StoreDeps) {
                   played: false,
                 },
                 notice: null,
+                route: '/play',
+                rejection: null,
               });
             } else {
-              setGoal(r.state, { notice: noticeForAnswer(r.outcome, r.state) });
+              setGoal(r.state, { notice: noticeForAnswer(r.outcome, r.state), route: '/notice', rejection: null });
             }
             return r;
+          },
+
+          takeRoute: () => {
+            const { route } = get();
+            if (route) set({ route: null });
+            return route;
+          },
+
+          clearRejection: () => {
+            if (get().rejection) set({ rejection: null });
           },
 
           finishRound: () => {
@@ -230,7 +270,7 @@ export function createAppStore(deps: StoreDeps) {
           },
 
           erase: () => {
-            set({ ...DEFAULT_PERSISTED, notice: null });
+            set({ ...DEFAULT_PERSISTED, notice: null, route: null, rejection: null });
             api.persist.clearStorage();
           },
 

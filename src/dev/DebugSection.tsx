@@ -1,16 +1,21 @@
 // Development builds only (Settings and Home load this behind __DEV__, so production bundles
-// leave it out). Moves the app's clock to test missed days, slips and resets on a device, and
-// jumps to a long run to try later weapons, armored zeros and big fills.
-import { router } from 'expo-router';
-import { useState } from 'react';
+// leave it out). Moves the app's clock to test missed days, slips and resets on a device, jumps
+// to a long run to try later weapons, armored zeros and big fills, and sends a test check-in.
+import * as Notifications from 'expo-notifications';
+import { router, usePathname } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { clockTimeAt, dayKeyAt, MS_PER_DAY, MS_PER_HOUR, nextWindow, pendingWindow } from '@/engine';
+import { onSynced } from '@/notifications';
+import { getReminderPermission } from '@/notifications/permissions';
+import { TEST_DELAY_SECONDS, testCheckInRequest } from '@/notifications/schedule';
 import { appStore, useApp } from '@/store';
 import { colors, fonts, radii, space } from '@/theme/tokens';
 import { Eyebrow, Fine, TextField } from '@/ui/bits';
 import { Button, LinkButton } from '@/ui/Button';
 
+import { summarizePending, type PendingSummary } from './pending';
 import { SEED_MAX_N } from './seedRun';
 
 /** One per milestone: twin, scatter + first shield, first standard round, rocket, chain, first armored, nuke, a big fill. */
@@ -35,6 +40,7 @@ const PRACTICE_MAX_N = 100_000;
 export function DebugSection() {
   const goal = useApp((s) => s.goal);
   const offset = useApp((s) => s.devClockOffsetMs);
+  const pathname = usePathname();
   const [customDay, setCustomDay] = useState('');
   const [practiceN, setPracticeN] = useState('60');
   const store = appStore.getState();
@@ -45,6 +51,39 @@ export function DebugSection() {
   const at = (d: Date) => `${dayKeyAt(d, tz)} ${clockTimeAt(d, tz)}`;
   const custom = parseCount(customDay, SEED_MAX_N);
   const practice = parseCount(practiceN, PRACTICE_MAX_N);
+  const [scheduled, setScheduled] = useState<PendingSummary | null>(null);
+  const [testNote, setTestNote] = useState<string | null>(null);
+
+  // What the OS has scheduled, re-read after every sync.
+  const readScheduled = useCallback(() => {
+    Notifications.getAllScheduledNotificationsAsync()
+      .then((list) => setScheduled(summarizePending(list)))
+      .catch(() => setScheduled(null));
+  }, []);
+  useEffect(() => {
+    readScheduled();
+    return onSynced(readScheduled);
+  }, [readScheduled]);
+
+  const sendTest = async () => {
+    const s = appStore.getState();
+    if (!s.goal) return;
+    if ((await getReminderPermission()) !== 'granted') {
+      setTestNote('Reminders are off. Turn them on in Settings first.');
+      return;
+    }
+    const request = testCheckInRequest(
+      { goal: s.goal, now: s.now(), tz: s.timeZone(), showGoal: s.prefs.goalInReminders },
+      `test-${Date.now()}`,
+    );
+    try {
+      await Notifications.scheduleNotificationAsync(request);
+      setTestNote(`A check-in for ${request.content.data.day} arrives in ${TEST_DELAY_SECONDS} s.`);
+    } catch (e) {
+      setTestNote(`Couldn't schedule it: ${String(e)}`);
+    }
+    readScheduled();
+  };
 
   const lines = [
     `Now ${at(now)} (${offsetLabel(offset)})`,
@@ -55,8 +94,9 @@ export function DebugSection() {
     pending ? `Open: ${pending.day} until ${at(pending.closesAt)}` : next ? `Next opens ${at(next.opensAt)}` : '',
   ].filter(Boolean);
 
+  // The answer leaves Home the round to open, so from Settings, go back to Home.
   const jump = (n: number) => {
-    if (store.devJumpToDay(n)?.ok) router.push('/play');
+    if (store.devJumpToDay(n)?.ok && pathname !== '/') router.dismissTo('/');
   };
 
   return (
@@ -87,6 +127,29 @@ export function DebugSection() {
         />
         <Button small variant="ghost" label="Real time" onPress={() => store.resetDevClock()} disabled={offset === 0} />
       </View>
+
+      <Eyebrow>Notifications</Eyebrow>
+      <Fine>
+        Reminders follow the debug clock: each is scheduled for its time minus the offset. The test check-in asks about
+        the open window (or the next one, which is turned down as not open yet), and its buttons answer for real. Home
+        and Play keep it quiet, so lock the phone or stay in Settings to see the banner.
+      </Fine>
+      <Text style={styles.line}>
+        {scheduled
+          ? `Pending ${scheduled.count}${scheduled.next ? ` · next: ${scheduled.next}` : ''}`
+          : 'Pending: unknown'}
+      </Text>
+      <View style={styles.row}>
+        <Button
+          small
+          variant="ghost"
+          label={`Send test check-in in ${TEST_DELAY_SECONDS} s`}
+          onPress={sendTest}
+          disabled={!goal}
+        />
+        <Button small variant="ghost" label="Refresh" onPress={readScheduled} />
+      </View>
+      {testNote ? <Fine>{testNote}</Fine> : null}
 
       <Eyebrow>Jump to day</Eyebrow>
       <Fine>

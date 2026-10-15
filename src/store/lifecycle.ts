@@ -3,7 +3,7 @@ import { AppState, type AppStateStatus } from 'react-native';
 
 import type { AppStore } from './createAppStore';
 
-type AppStateLike = {
+export type AppStateLike = {
   addEventListener: (type: 'change', listener: (state: AppStateStatus) => void) => { remove: () => void };
 };
 
