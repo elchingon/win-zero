@@ -1,5 +1,5 @@
 // Settings: goal wording, times (through the engine, so an open window is respected),
-// sound / haptics / weekly nudge, reminder permission, support, and erase.
+// sound / haptics / weekly nudge, reminder permission, how it works, support, and erase.
 import { router } from 'expo-router';
 import { useState, type ComponentType } from 'react';
 import { Linking, StyleSheet, Text, View } from 'react-native';
@@ -143,6 +143,13 @@ export default function Settings() {
               <Button small variant="ghost" label="Turn on" onPress={turnOn} />
             ) : null
           }
+        />
+        <Row
+          label="How it works"
+          detail="The slide, shields, missed days and rewards."
+          right={<Text style={styles.call}>Read</Text>}
+          hint="Opens the rules in plain words"
+          onPress={() => router.push('/how-it-works')}
         />
         <Row
           label="Need support?"
