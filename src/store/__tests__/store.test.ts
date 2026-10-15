@@ -3,7 +3,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { beforeEach, describe, expect, it } from '@jest/globals';
 import type { AppStateStatus } from 'react-native';
 
-import { currentCheckInTime, latestScheduleEntry, MS_PER_DAY, type ClockTime, type DayKey, type GoalState } from '@/engine';
+import {
+  addDays,
+  currentCheckInTime,
+  latestScheduleEntry,
+  MS_PER_DAY,
+  pendingWindow,
+  type ClockTime,
+  type DayKey,
+  type GoalState,
+} from '@/engine';
 import { at, DAY0, DENVER, newGoal, TOKYO, yesDays } from '@/engine/__tests__/fixtures';
 
 import { createAppStore, type AppStore } from '../createAppStore';
@@ -354,5 +363,60 @@ describe('debug clock', () => {
     expect(h.store.getState().devClockOffsetMs).toBe(0);
     h.store.setState({ devClockOffsetMs: MS_PER_DAY }); // e.g. left over in storage
     expect(h.store.getState().now().getTime()).toBe(h.clock.t);
+  });
+});
+
+describe('debug jump to day', () => {
+  it('rebuilds a run and readies the Day N round in development', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 2)); // a short run, clock at 10-13 12:00
+    const r = h.store.getState().devJumpToDay(30);
+    expect(r?.ok).toBe(true);
+    const s = h.store.getState();
+    expect(s.goal).toMatchObject({ goalId: 'g1', streak: 30, bestStreak: 30, bombs: 6, shields: 3 });
+    expect(s.goal?.history.every((e) => e.result === 'yes')).toBe(true);
+    expect(s.round).toMatchObject({ day: addDays(DAY0, -1), n: 30, played: false, rewards: { bomb: true, weapons: ['chain'] } });
+    expect(s.weapon).toBe('chain');
+    expect(s.notice).toBeNull();
+    expect(s.takeMissNotice()).toBeNull();
+  });
+
+  it('turns down run lengths it cannot build', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 2));
+    const before = h.store.getState().goal;
+    for (const n of [0, 2.5, 100_000]) expect(h.store.getState().devJumpToDay(n)).toBeNull();
+    expect(h.store.getState().goal).toBe(before);
+  });
+
+  it('is ignored outside development', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 2), { dev: false });
+    const before = h.store.getState().goal;
+    expect(h.store.getState().devJumpToDay(30)).toBeNull();
+    expect(h.store.getState().goal).toBe(before);
+    expect(h.store.getState().round).toBeNull();
+  });
+});
+
+describe('debug skip to next check-in', () => {
+  it('moves the clock to just after the next window opens', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 1)); // answered 10-13; clock at 10-13 12:00
+    h.store.getState().devSkipToNextCheckIn();
+    const s = h.store.getState();
+    expect(s.now().getTime()).toBe(at(addDays(DAY0, 1), '20:00').getTime() + 1000);
+    expect(pendingWindow(s.goal!, s.now())?.day).toBe(addDays(DAY0, 1));
+    expect(s.goal?.history).toHaveLength(1); // nothing was missed on the way
+  });
+
+  it('does nothing while a window is open', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 1));
+    h.store.getState().devSkipToNextCheckIn(); // 10-14's window is now open
+    const offset = h.store.getState().devClockOffsetMs;
+    h.store.getState().devSkipToNextCheckIn();
+    expect(h.store.getState().devClockOffsetMs).toBe(offset);
+  });
+
+  it('is ignored outside development', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 1), { dev: false });
+    h.store.getState().devSkipToNextCheckIn();
+    expect(h.store.getState().devClockOffsetMs).toBe(0);
   });
 });

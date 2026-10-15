@@ -1,7 +1,7 @@
 // Home: the goal, the numbers, today's check-in (or when the next one comes), the arsenal,
 // and the history calendar.
 import { Redirect, router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ComponentType } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { dayKeyAt, nextWindow, pendingWindow, type AnswerRejection, type GoalState } from '@/engine';
@@ -18,6 +18,12 @@ import { HistoryCalendar } from '@/ui/home/HistoryCalendar';
 import { Stats } from '@/ui/home/Stats';
 import { Screen } from '@/ui/Screen';
 import { useDeviceCalendar } from '@/ui/useDevice';
+
+// Development builds only: Metro folds __DEV__ to false in production and drops the require.
+const DemoControls: ComponentType | null = __DEV__
+  ? // eslint-disable-next-line @typescript-eslint/no-require-imports
+    require('@/dev/DebugSection').DemoControls
+  : null;
 
 /** Re-check at least this often, in case the device clock jumps. */
 const MAX_TIMER_MS = 60 * 60 * 1000;
@@ -173,6 +179,8 @@ function HomeScreen({ goal }: { goal: GoalState }) {
       <Arsenal goal={goal} pick={pick} onEquip={selectWeapon} />
 
       <HistoryCalendar goal={goal} today={dayKeyAt(now, tz)} pendingDay={pending?.day ?? null} firstWeekday={firstWeekday} />
+
+      {DemoControls ? <DemoControls /> : null}
     </Screen>
   );
 }

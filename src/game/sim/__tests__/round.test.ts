@@ -1,0 +1,126 @@
+// Whole rounds, played by a simple bot through the same calls the gesture makes: every weapon
+// can finish, the round ends once and shows its result once, and nothing overflows on the way.
+import { describe, expect, it } from '@jest/globals';
+
+import { type WeaponId } from '@/engine';
+
+import { dropBomb } from '../bomb';
+import { BIG_BULLET_SPEED, BULLET_SPEED, MAX_BOLTS, MAX_BULLETS, MAX_PARTICLES, MAX_RINGS } from '../constants';
+import { hittable } from '../hit';
+import { moveAim, pressFire } from '../input';
+import { resetReport } from '../report';
+import { step } from '../step';
+import type { GameState, Zero } from '../types';
+import { game } from './fixtures';
+
+const FPS = 60;
+/** Give up on a round after this long. */
+const LIMIT_S = 240;
+
+/** Where to aim to meet `z`, leading it by the bullet's flight time (bounces aside). */
+function lead(s: GameState, z: Zero): { x: number; y: number } {
+  const speed = s.weapon.pattern === 'beam' ? Infinity : s.weapon.splash ? BIG_BULLET_SPEED : BULLET_SPEED;
+  let x = z.x;
+  let y = z.y;
+  for (let i = 0; i < 2; i++) {
+    const t = Math.hypot(x - s.muzzleX, y - s.muzzleY) / speed;
+    x = z.x + z.vx * t;
+    y = z.y + z.vy * t;
+  }
+  return { x, y };
+}
+
+function target(s: GameState): Zero | null {
+  let best: Zero | null = null;
+  for (const z of s.zeros) if (hittable(z) && (!best || z.y > best.y)) best = z;
+  return best;
+}
+
+interface Played {
+  seconds: number;
+  finals: number;
+  results: number;
+  shots: number;
+  peakParticles: number;
+  state: GameState;
+}
+
+function play(n: number, weapon: WeaponId, opts: { bombs?: number; seed?: number; reduceMotion?: boolean } = {}): Played {
+  const s = game(n, { weapon, seed: opts.seed ?? n, reduceMotion: opts.reduceMotion ?? false });
+  let peakParticles = 0;
+  let bombs = opts.bombs ?? 0;
+  let finals = 0;
+  let results = 0;
+  let shots = 0;
+  let held = false;
+  let frame = 0;
+  for (; frame < LIMIT_S * FPS && s.phase !== 'done'; frame++) {
+    const z = target(s);
+    if (z && s.phase === 'play') {
+      const aim = lead(s, z);
+      if (held) moveAim(s, aim.x, aim.y);
+      else pressFire(s, aim.x, aim.y);
+      held = true;
+    }
+    // Bombs once everything has popped in.
+    if (bombs > 0 && frame === FPS) {
+      dropBomb(s);
+      bombs--;
+    }
+    step(s, 1 / FPS);
+    for (const z2 of s.zeros) {
+      if (!Number.isFinite(z2.x) || !Number.isFinite(z2.y)) throw new Error('A zero left the number line');
+    }
+    expect(s.bullets.count).toBeLessThanOrEqual(MAX_BULLETS);
+    expect(s.particles.count).toBeLessThanOrEqual(MAX_PARTICLES);
+    peakParticles = Math.max(peakParticles, s.particles.count);
+    expect(s.rings.count).toBeLessThanOrEqual(MAX_RINGS);
+    expect(s.bolts.count).toBeLessThanOrEqual(MAX_BOLTS);
+    // What GameCanvas does after each frame.
+    if (s.report.final) finals++;
+    if (s.report.showResult) results++;
+    shots += s.report.shots;
+    resetReport(s.report);
+  }
+  return { seconds: frame / FPS, finals, results, shots, peakParticles, state: s };
+}
+
+describe('a whole round', () => {
+  it.each<[number, WeaponId]>([
+    [1, 'pea'],
+    [7, 'pea'],
+    [3, 'twin'],
+    [8, 'scatter'],
+    [30, 'rocket'],
+    [60, 'chain'],
+    [61, 'laser'],
+    [250, 'nuke'],
+    [1000, 'nuke'],
+  ])('n = %i with the %s: finishes, ends once, shows the result once', (n, weapon) => {
+    const { seconds, finals, results, state } = play(n, weapon);
+    expect(state.phase).toBe('done');
+    expect(state.valueLeft).toBe(0);
+    expect(state.zeros.every((z) => !z.alive)).toBe(true);
+    expect([finals, results]).toEqual([1, 1]);
+    expect(seconds).toBeLessThan(LIMIT_S);
+  });
+
+  it('plays out the same for the same seed', () => {
+    const a = play(60, 'scatter', { seed: 5 });
+    const b = play(60, 'scatter', { seed: 5 });
+    expect([a.seconds, a.shots]).toEqual([b.seconds, b.shots]);
+  });
+
+  it('goes faster with a bomb', () => {
+    const plain = play(60, 'pea');
+    const bombed = play(60, 'pea', { bombs: 1 });
+    expect(bombed.seconds).toBeLessThan(plain.seconds);
+  });
+
+  it('plays a reduce-motion round through, with far fewer particles', () => {
+    const calm = play(30, 'rocket', { reduceMotion: true });
+    const full = play(30, 'rocket');
+    expect(calm.state.phase).toBe('done');
+    expect(calm.peakParticles).toBeLessThan(full.peakParticles * 0.7);
+  });
+});

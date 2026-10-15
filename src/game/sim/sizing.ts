@@ -1,3 +1,4 @@
+'worklet';
 // Zero sizes, ported from the prototype's zeroRadius(). Shared by the background field and the game.
 
 /** Zeros never get smaller than this, in points. */

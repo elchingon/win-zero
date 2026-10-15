@@ -2,7 +2,7 @@ import { describe, expect, it } from '@jest/globals';
 
 import { at, DENVER, iso, TOKYO } from '@/engine/__tests__/fixtures';
 
-import { formatClockTime, formatDayShort, formatMonth, formatWhen, plural, relativeDay } from '../format';
+import { formatClockTime, formatCount, formatDayShort, formatMonth, formatWhen, plural, relativeDay } from '../format';
 
 describe('format', () => {
   it('formats clock times for 12- and 24-hour devices', () => {
@@ -33,5 +33,9 @@ describe('format', () => {
     expect(formatMonth('2026-10')).toBe('October 2026');
     expect(plural(1, 'zero')).toBe('1 zero');
     expect(plural(3, 'zero')).toBe('3 zeros');
+  });
+
+  it('groups big counts with commas', () => {
+    expect([formatCount(7), formatCount(501), formatCount(1000), formatCount(100000)]).toEqual(['7', '501', '1,000', '100,000']);
   });
 });

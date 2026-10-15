@@ -64,3 +64,8 @@ export function formatMonth(month: string): string {
 export function plural(n: number, one: string, many = `${one}s`): string {
   return `${n} ${n === 1 ? one : many}`;
 }
+
+/** '1,000': grouped the way the rest of the (English) copy reads, in characters Bungee has. */
+export function formatCount(n: number): string {
+  return n.toLocaleString('en-US');
+}
