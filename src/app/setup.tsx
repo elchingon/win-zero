@@ -71,7 +71,8 @@ export default function Setup() {
         </View>
         <Lede>
           Win Zero asks at your check-in time, and once more at {formatClockTime(morningTime, h24)} the next morning
-          if you haven&apos;t answered yet. You can answer Yes or Not today right from the notification.
+          if you haven&apos;t answered yet. There&apos;s no rush: you can answer until midnight the next day, right
+          from the notification or in the app.
         </Lede>
         <Lede>If you&apos;re away for a while, reminders ease off to one gentle nudge a week.</Lede>
         <Fine>

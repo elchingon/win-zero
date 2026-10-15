@@ -1,5 +1,15 @@
 // Display formatting. Rules live in the engine; this only turns its values into words.
-import { clockMinutes, clockTimeAt, dayKeyAt, diffDays, weekdayOf, type ClockTime, type DayKey, type TimeZone } from '@/engine';
+import {
+  addDays,
+  clockMinutes,
+  clockTimeAt,
+  dayKeyAt,
+  diffDays,
+  weekdayOf,
+  type ClockTime,
+  type DayKey,
+  type TimeZone,
+} from '@/engine';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -46,6 +56,15 @@ export function relativeDay(day: DayKey, today: DayKey): string {
 /** 'tomorrow at 8:00 PM', judged by the calendar in `tz`. */
 export function formatWhen(instant: Date, now: Date, tz: TimeZone, h24: boolean): string {
   return `${relativeDay(dayKeyAt(instant, tz), dayKeyAt(now, tz))} at ${formatInstantTime(instant, tz, h24)}`;
+}
+
+/**
+ * A deadline: 'the end of today' when it falls on midnight on the clock in `tz`, which reads
+ * better than '12:00 AM tomorrow'. Any other instant reads like formatWhen.
+ */
+export function formatUntil(instant: Date, now: Date, tz: TimeZone, h24: boolean): string {
+  if (clockTimeAt(instant, tz) !== '00:00') return formatWhen(instant, now, tz, h24);
+  return `the end of ${relativeDay(addDays(dayKeyAt(instant, tz), -1), dayKeyAt(now, tz))}`;
 }
 
 /** 'Oct 13'. */

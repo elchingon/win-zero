@@ -3,7 +3,7 @@ import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { isWindowToday, type CheckInWindow, type GoalState, type TimeZone } from '@/engine';
-import { formatInstantTime } from '@/lib/format';
+import { formatInstantTime, formatUntil } from '@/lib/format';
 import { colors, fonts, fontScale, radii, space } from '@/theme/tokens';
 import { Button } from '@/ui/Button';
 
@@ -37,7 +37,10 @@ export function CheckInCard(props: {
       <Text style={styles.question}>
         Did you stick to “{goal.goal}” {when}?
       </Text>
-      <Text style={styles.stakes}>{stakesLine(stakes)}</Text>
+      <View style={styles.lines}>
+        <Text style={styles.stakes}>{stakesLine(stakes)}</Text>
+        <Text style={styles.until}>Open until {formatUntil(window.closesAt, now, tz, h24)}.</Text>
+      </View>
       <View style={[styles.actions, stack && styles.stacked]}>
         <Button
           label="Yes, I did"
@@ -83,6 +86,8 @@ const styles = StyleSheet.create({
   when: { marginLeft: 'auto' },
   question: { fontFamily: fonts.bodyBold, fontSize: 19, lineHeight: 24, color: colors.fg },
   stakes: { fontFamily: fonts.body, fontSize: 14, lineHeight: 20, color: colors.muted },
+  lines: { gap: space.xs },
+  until: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18, color: colors.muted },
   actions: { flexDirection: 'row', gap: 10 },
   stacked: { flexDirection: 'column' },
   yes: { flex: 1.2 },

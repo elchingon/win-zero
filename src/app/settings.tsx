@@ -5,7 +5,7 @@ import { useCallback, useState, type ComponentType } from 'react';
 import { AppState, Linking, StyleSheet, Text, View } from 'react-native';
 
 import { currentCheckInTime, nextWindow, pendingWindow, type ClockTime } from '@/engine';
-import { formatWhen } from '@/lib/format';
+import { formatUntil, formatWhen } from '@/lib/format';
 import { requestSync } from '@/notifications';
 import { getReminderPermission, requestReminderPermission, type ReminderPermission } from '@/notifications/permissions';
 import { appStore, useApp, type EditResult } from '@/store';
@@ -118,7 +118,7 @@ export default function Settings() {
           error={timeError.checkIn}
           hint={
             pending
-              ? `A check-in is open now. The next one opens ${formatWhen(next.closesAt, now, tz, h24)}.`
+              ? `A check-in is open until ${formatUntil(pending.closesAt, now, tz, h24)}. A new time starts with the next one.`
               : `Next check-in: ${formatWhen(next.opensAt, now, tz, h24)}.`
           }
         />
