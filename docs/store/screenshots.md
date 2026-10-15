@@ -54,7 +54,8 @@ Stage each shot with the development build's debug tools (**Settings → Debug c
      1. Jump to day 20.
      2. **Next check-in**, then Not today.
      3. **Next check-in**, then Yes.
-     4. **+1 day** twice, so one check-in closes unanswered (missed), then Yes on the open one.
+     4. **+1 day** twice, then **+1 hour** four times. The clock passes midnight, so the skipped
+        check-in closes unanswered (missed). Then Yes on the open one.
    - Caption: *See your month at a glance.*
 7. **Shielded.**
    - Show: the "Your shield held." notice.

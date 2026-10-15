@@ -1,6 +1,6 @@
 # Win Zero: Product & Game Spec
 
-Version 0.3 · October 13, 2026 · Owner: e7sal
+Version 0.4 · October 15, 2026 · Owner: e7sal
 
 Win Zero is a daily habit app for iOS and Android. The user sets one daily goal (for example "Stop drinking" or "Exercise more"). Every evening the app asks whether they did it. Each "yes" adds a zero to a shooting round. The streak is the number of zeros on screen.
 
@@ -12,24 +12,27 @@ The playable web prototype at `docs/prototype/win-zero.html` sets the **look, fe
 
 1. User sets a goal and a check-in time (default 8:00 PM local).
 2. At check-in time, a notification asks: *Did you stick to "<goal>" today?* with **Yes** and **Not today** buttons.
-3. **Yes** opens the app into a shooting round with `streak` zeros.
+3. **Yes** from the notification opens the app on Home, with a shooting round of `streak` zeros ready to play whenever the user likes. **Yes** on Home's check-in card starts the round straight away.
 4. Shooting the last zero triggers the big celebration explosion. Then the screen fills with `streak` giant zeros, and a result sheet appears.
 5. Rewards (weapons, bombs, shields) are granted on the result sheet.
 
 ## 2. Check-in windows
 
-Each goal day `D` has one answer window:
+Each goal day `D` has one answer window. It is generous on purpose: this is a supportive app, and a busy evening shouldn't cost anything.
 
 - **Opens:** check-in time on day `D` (first notification).
 - **Second reminder:** morning reminder time on day `D+1` (default 9:00 AM). It asks *"Did you stick to '<goal>' yesterday?"*.
-- **Closes:** check-in time on day `D+1`, when day `D+1`'s window opens.
+- **Closes:** midnight at the end of day `D+1`, on the clock in the time zone the window opened in. It never closes before day `D+1`'s window opens.
 
-Only one window can be pending at a time. If a window closes unanswered, day `D` is **missed** (see section 3).
+With the defaults, Monday can be answered from 8:00 PM Monday until midnight Tuesday night. If a window closes unanswered, day `D` is **missed** (see section 3).
+
+Day `D+1`'s window opens at its own check-in time, so the two overlap until midnight. Days still settle strictly in order: Home asks about the earliest open day first, then the next. While yesterday is still open, today's check-in notification has no Yes / Not today buttons (a Yes couldn't say which day it means). Tapping it opens Home. Once yesterday is answered, today's is rescheduled with its buttons.
 
 Notifications are **local** (scheduled on device; no push server needed for v1):
 
 - While a day is unanswered, send 2 reminders per day (evening check-in + morning reminder).
-- Pre-schedule reminders for every window up to the one whose miss would reset the streak (section 3), at most 14 windows ahead. On every check-in or app open, cancel and reschedule.
+- Pre-schedule reminders for every window up to the one whose miss would reset the streak (section 3), at most 14 windows ahead. That reset lands at midnight after the next day, so the next day's evening check-in still goes out: answering then keeps the streak. On every check-in or app open, cancel and reschedule.
+- Every notification opens the app on Home.
 - Reminders stop once a run of missed days resets the streak (section 3). After that, send one gentle re-engagement notification per week (setting, default on). Any answer brings daily reminders back.
 
 ## 3. Streak rules (the rules engine)

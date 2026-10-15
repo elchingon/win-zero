@@ -22,6 +22,6 @@ Phase 3 — Game
 - Skia + Reanimated play screen ported from the prototype: moving oval zeros, turret, hold-to-fire, all 7 weapons with the SPEC 5 damage model, energy bars, armored zeros, bombs, particles, shockwaves, screen shake, haptics, sound, the final-zero celebration, and the screen-filling zeros. Must hold 60 fps on a mid-range Android phone.
 
 Phase 4 — Notifications
-- Local notifications per SPEC 2: evening check-in plus morning reminder while unanswered, Yes / Not today action buttons, 7-day rolling schedule *(outdated: up to 14 windows ahead, SPEC §2)* rebuilt on every check-in and app open, stop after the 7-missed reset *(v0.2, outdated: they stop when a run of missed days resets the streak, SPEC §2–3)*, weekly re-engagement nudge. Tapping Yes opens straight into the round.
+- Local notifications per SPEC 2: evening check-in plus morning reminder while unanswered, Yes / Not today action buttons, 7-day rolling schedule *(outdated: up to 14 windows ahead, SPEC §2)* rebuilt on every check-in and app open, stop after the 7-missed reset *(v0.2, outdated: they stop when a run of missed days resets the streak, SPEC §2–3)*, weekly re-engagement nudge. Tapping Yes opens straight into the round *(v0.3, outdated: Yes from a notification opens Home with the round ready, SPEC §1)*.
 
 Before writing code, list any SPEC open questions or ambiguities you find, state the assumption you'll use for each, and give me a short plan for Phase 1. Then build Phase 1.

@@ -13,8 +13,10 @@ is free, confidential and open 24/7 in the US: **1-800-662-4357**. The number is
   stuck to your goal today.
 - If you haven't answered by the next morning, a reminder asks about yesterday (9:00 AM unless you
   change it).
-- You can answer until your next evening check-in opens. Use the notification's buttons, or open
-  the app.
+- There's no rush: you can answer until midnight the next day. Use the notification's buttons, or
+  open the app. If yesterday's check-in is still open when today's arrives, the app asks about
+  yesterday first.
+- A **Yes** from the notification opens the app with your round ready. Play it whenever you like.
 
 ## Yes, Not today, and missed days
 
