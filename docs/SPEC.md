@@ -114,7 +114,7 @@ Hold to fire at about 6 shots/sec.
 - **Reset / Shielded / Slipping:** supportive copy, never shaming. Slipping covers any slip that cost a zero, from a Not today or from missed days found on opening: "You've lost a zero. Check in to stop the slide." The final shows Reset (encouraging) or Shielded. After a Not today, the screen offers **Undo Not today** for 10 seconds (30 with a screen reader on), in case it was a mis-tap: the goal and round go back to just before the answer, as long as that check-in is still open.
 - **Settings:** edit goal and times, sound/haptics, re-engagement toggle, erase data, support link, an **About** section (privacy policy, support page, support email, app version), and **How it works**: the rules in plain words (the daily question, the slide and the final, a fresh run, missed days, banked rewards), with numbers taken from the engine.
 
-**Support link:** goals like quitting drinking are health-related. Settings should include a "Need support?" row. In the US, list the SAMHSA National Helpline, 1-800-662-4357 (free, confidential, 24/7). On a device that can't place calls (an iPad, say), tapping it shows the number to call from any phone, and SAMHSA's text option, instead of failing silently. Localize later.
+**Support link:** goals like quitting drinking are health-related. Settings should include a "Need support?" row, and the Slipping and Reset screens link to it too. In the US, list the SAMHSA National Helpline, 1-800-662-4357 (free, confidential, 24/7). On a device that can't place calls (an iPad, say), tapping it shows the number to call from any phone, and SAMHSA's text option, instead of failing silently. Localize later.
 
 ## 7. Visual identity (from the prototype)
 

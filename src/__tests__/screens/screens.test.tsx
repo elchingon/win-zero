@@ -158,6 +158,20 @@ describe('Home', () => {
 });
 
 describe('Notice', () => {
+  it('offers the helpline when zeros slip, after a Not today or missed days', async () => {
+    appStore.setState({ notice: { kind: 'slipping', cause: 'answer', lost: 1, streak: 1, days: 1, stopped: false } });
+    await open('/notice', { goal: twoDays() });
+    expect(screen.getByText(/You've lost/)).toBeOnTheScreen();
+    expect(screen.getByText(`Need support? ${SUPPORT_LINE.name}, ${SUPPORT_LINE.display}`)).toBeOnTheScreen();
+  });
+
+  it('leaves the helpline off a Not today that cost nothing', async () => {
+    appStore.setState({ notice: { kind: 'noted' } });
+    await open('/notice', { goal: twoDays() });
+    expect(screen.getByText(/Thanks for/)).toBeOnTheScreen();
+    expect(screen.queryByText(/Need support\?/)).not.toBeOnTheScreen();
+  });
+
   it('offers the helpline after a reset, and calls it', async () => {
     const call = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
     appStore.setState({

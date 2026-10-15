@@ -41,6 +41,7 @@ function copyFor(n: Notice): Copy {
               : 'A Yes at your next check-in starts a new run.',
           ],
           motion: 'shed',
+          support: true,
         };
       }
       return {
@@ -53,6 +54,7 @@ function copyFor(n: Notice): Copy {
           'Missed days are free for a week; after that, each one takes a zero.',
         ],
         motion: 'shed',
+        support: true,
       };
     }
     case 'shielded':
