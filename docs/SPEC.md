@@ -21,7 +21,7 @@ The playable web prototype at `docs/prototype/win-zero.html` sets the **look, fe
 Each goal day `D` has one answer window. It is generous on purpose: this is a supportive app, and a busy evening shouldn't cost anything.
 
 - **Opens:** check-in time on day `D` (first notification).
-- **Second reminder:** the reminder time on day `D+1` (default 9:00 AM), any time up to the check-in time. It asks *"Did you stick to '<goal>' yesterday?"*. Set to the check-in time, it isn't sent on its own: day `D+1`'s check-in already says yesterday's is still open, so there's one notification a day.
+- **Second reminder:** the next time the clock reads the reminder time (default 9:00 AM) after the window opens. Set earlier than the check-in time, that's the next morning, day `D+1`, and it asks *"Did you stick to '<goal>' yesterday?"*. Set later than the check-in time, for shift workers (say check-in 6:00 AM after a night shift, reminder 2:00 PM after sleeping), it comes later on day `D` and asks about *today*. Set to the check-in time, it isn't sent on its own: day `D+1`'s check-in already says yesterday's is still open, so there's one notification a day.
 - **Closes:** midnight at the end of day `D+1`, on the clock in the time zone the window opened in. It never closes before day `D+1`'s window opens.
 
 With the defaults, Monday can be answered from 8:00 PM Monday until midnight Tuesday night. If a window closes unanswered, day `D` is **missed** (see section 3).
@@ -107,7 +107,7 @@ Hold to fire at about 6 shots/sec.
 
 ## 6. Screens
 
-- **Onboarding / Setup:** goal (free text plus suggestion chips), check-in time, reminder time (no later than check-in time), notification permission request with a short explanation first.
+- **Onboarding / Setup:** goal (free text plus suggestion chips), check-in time, reminder time (any time of day), notification permission request with a short explanation first.
 - **Home:** goal, current streak, best run, bombs, shields; pending check-in card (same Yes / Not today as the notification); arsenal list with next-unlock progress; history calendar (yes / no / shielded / missed). While reminders are off (never turned on, or off in system settings), a card offers to turn them on; its "Not now" hides it for a week.
 - **Play:** full-screen Skia canvas, HUD (value left, day, weapon switch, bomb button, sound toggle), turret at bottom center.
 - **Result sheet:** over the filled screen, showing day, "N zeros down", rewards earned, next unlock, and buttons for Back to base and Replay (replay has no streak effect).

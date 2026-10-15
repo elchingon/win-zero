@@ -52,7 +52,7 @@ Answer each question honestly. These are the ones that apply:
 ### App Review notes (paste into "Notes")
 ```
 Win Zero needs no account. To see the main flow quickly:
-1. Open the app and enter any goal. Set the check-in time to a time that has already passed today (the morning reminder must be earlier than it). Today's check-in then opens right away on Home.
+1. Open the app and enter any goal. Set the check-in time to a time that has already passed today. Today's check-in then opens right away on Home.
 2. Tap "Yes, I did" to play the round: hold anywhere to fire. Clearing the last zero shows the celebration and the result sheet.
 3. Notifications (optional): allow them in Setup or Settings. Each evening's check-in arrives as a notification with Yes / Not today buttons.
 All data stays on the device. Notifications are scheduled locally; there is no server.

@@ -6,8 +6,6 @@ import { createStore } from 'zustand/vanilla';
 import {
   answer as answerCheckIn,
   createGoal,
-  currentCheckInTime,
-  isMorningAtOrBeforeCheckIn,
   isUnlocked,
   missDigest,
   MS_PER_DAY,
@@ -62,8 +60,8 @@ export interface StoreDeps {
   devTools?: Pick<typeof SeedRun, 'seedYesRun' | 'SEED_MAX_N'>;
 }
 
-export type SetupResult = { ok: true } | { ok: false; reason: 'not-ready' | 'empty-goal' | 'order' };
-export type EditResult = { ok: true } | { ok: false; reason: 'no-goal' | 'empty-goal' | 'order' };
+export type SetupResult = { ok: true } | { ok: false; reason: 'not-ready' | 'empty-goal' };
+export type EditResult = { ok: true } | { ok: false; reason: 'no-goal' | 'empty-goal' };
 
 export interface AppState extends PersistedState {
   /** Storage has been read (or failed to read). Actions wait for it. */
@@ -220,7 +218,6 @@ export function createAppStore(deps: StoreDeps) {
           setupGoal: ({ goal, checkInTime, morningTime }) => {
             if (!get().hydrated) return { ok: false, reason: 'not-ready' };
             if (!goal.trim()) return { ok: false, reason: 'empty-goal' };
-            if (!isMorningAtOrBeforeCheckIn(morningTime, checkInTime)) return { ok: false, reason: 'order' };
             const state = createGoal({ goalId: deps.makeId(), goal, checkInTime, morningTime, now: now(), tz: timeZone() });
             set({
               goal: state,
@@ -336,7 +333,6 @@ export function createAppStore(deps: StoreDeps) {
           setCheckInTime: (time) => {
             const goal = ready();
             if (!goal) return { ok: false, reason: 'no-goal' };
-            if (!isMorningAtOrBeforeCheckIn(goal.morningTime, time)) return { ok: false, reason: 'order' };
             setGoal(setGoalCheckInTime(goal, time, now(), timeZone()).state);
             return { ok: true };
           },
@@ -344,7 +340,6 @@ export function createAppStore(deps: StoreDeps) {
           setMorningTime: (time) => {
             const goal = ready();
             if (!goal) return { ok: false, reason: 'no-goal' };
-            if (!isMorningAtOrBeforeCheckIn(time, currentCheckInTime(goal))) return { ok: false, reason: 'order' };
             set({ goal: setGoalMorningTime(goal, time) });
             return { ok: true };
           },

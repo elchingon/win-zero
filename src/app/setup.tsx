@@ -3,7 +3,7 @@ import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { DEFAULT_CHECK_IN_TIME, DEFAULT_MORNING_TIME, isMorningAtOrBeforeCheckIn } from '@/engine';
+import { DEFAULT_CHECK_IN_TIME, DEFAULT_MORNING_TIME } from '@/engine';
 import { formatClockTime } from '@/lib/format';
 import { requestReminderPermission } from '@/notifications/permissions';
 import { useApp } from '@/store';
@@ -43,7 +43,6 @@ export default function Setup() {
 
   if (hasGoal && !busy) return <Redirect href="/" />;
 
-  const orderOk = isMorningAtOrBeforeCheckIn(morningTime, checkInTime);
   const goalOk = goal.trim().length > 0;
 
   const finish = async (askPermission: boolean) => {
@@ -131,13 +130,12 @@ export default function Setup() {
           value={morningTime}
           onChange={setMorningTime}
           h24={h24}
-          hint="The next day, only if you haven't answered by then."
-          error={orderOk ? null : 'Pick a time no later than your check-in time.'}
+          hint="Only if you haven't answered by then: the next morning, or later the same day if it's after check-in time."
         />
         <Button
           label="Start my streak"
           onPress={() => setStep('reminders')}
-          disabled={!goalOk || !orderOk}
+          disabled={!goalOk}
           accessibilityHint={goalOk ? undefined : 'Enter a goal first'}
         />
       </View>

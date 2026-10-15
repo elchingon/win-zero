@@ -78,7 +78,11 @@ export interface CheckInWindow {
   day: DayKey;
   tz: TimeZone;
   opensAt: Date;
-  /** Morning reminder on day+1, or null when that time falls outside the window. */
+  /**
+   * The reminder: the next time the clock reads the reminder time after the window opens (later
+   * on `day`, or on day+1). Null when that comes with or after day+1's check-in, which serves as
+   * the reminder, or outside the window.
+   */
   remindAt: Date | null;
   closesAt: Date;
 }

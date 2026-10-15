@@ -64,22 +64,22 @@ describe('lifecycle', () => {
 });
 
 describe('setup and settings', () => {
-  it('creates a goal and keeps the morning reminder before check-in', async () => {
+  it('creates a goal, and takes a reminder at any time of day', async () => {
     const { store } = harness();
     await ready(store);
     expect(store.getState().setupGoal({ goal: ' ', checkInTime: '20:00', morningTime: '09:00' })).toMatchObject({
       reason: 'empty-goal',
     });
-    expect(store.getState().setupGoal({ goal: 'Read', checkInTime: '08:00', morningTime: '09:00' })).toMatchObject({
-      reason: 'order',
-    });
+    // A shift worker: check in after the night shift, reminder after sleeping.
+    expect(store.getState().setupGoal({ goal: 'Read', checkInTime: '06:00', morningTime: '14:00' })).toEqual({ ok: true });
+    expect(store.getState().goal).toMatchObject({ checkInSchedule: [{ time: '06:00' }], morningTime: '14:00' });
     expect(store.getState().setupGoal({ goal: ' Stop drinking ', checkInTime: '20:00', morningTime: '09:00' })).toEqual({
       ok: true,
     });
-    expect(store.getState().goal).toMatchObject({ goalId: 'goal-1', goal: 'Stop drinking', firstDay: DAY0 });
+    expect(store.getState().goal).toMatchObject({ goalId: 'goal-2', goal: 'Stop drinking', firstDay: DAY0 });
 
-    expect(store.getState().setCheckInTime('08:30')).toEqual({ ok: false, reason: 'order' });
-    expect(store.getState().setMorningTime('21:00')).toEqual({ ok: false, reason: 'order' });
+    expect(store.getState().setCheckInTime('08:30')).toEqual({ ok: true }); // now before the reminder
+    expect(store.getState().setMorningTime('21:00')).toEqual({ ok: true }); // later than check-in
     expect(store.getState().setMorningTime('20:00')).toEqual({ ok: true }); // the same as check-in time
     expect(store.getState().setCheckInTime('21:00')).toEqual({ ok: true });
     expect(currentCheckInTime(store.getState().goal!)).toBe('21:00');

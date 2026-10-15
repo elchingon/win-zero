@@ -4,7 +4,7 @@ import { readReminderData, type ReminderData } from '@/notifications/shared';
 
 export interface PendingSummary {
   count: number;
-  /** The next to arrive, e.g. "check-in 10-14" or "morning 10-14" (sent the morning after). */
+  /** The next to arrive, e.g. "check-in 10-14" or "morning 10-14" (that day's reminder). */
   next: string | null;
   /** Dev test check-ins still on their way. */
   tests: number;
@@ -12,7 +12,10 @@ export interface PendingSummary {
 
 const LABELS: Record<ReminderData['kind'], string> = { checkin: 'check-in', morning: 'morning', reengage: 'nudge' };
 
-/** When it fires, as a sortable key: a morning reminder for D goes out on D+1, before D+1's check-in. */
+/**
+ * When it fires, as a sortable key: a reminder for D goes out after D's check-in and before
+ * D+1's (the next morning, or later on D when it's set after check-in time).
+ */
 function orderKey(d: ReminderData): [DayKey, number] {
   return d.kind === 'morning' ? [addDays(d.day, 1), 0] : [d.day, 1];
 }

@@ -9,7 +9,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { currentCheckInTime, firstUpcomingDay, opensAt, pendingWindow, type ClockTime } from '@/engine';
 import { formatUntil, formatWhen } from '@/lib/format';
 import type { ReminderPermission } from '@/notifications/permissions';
-import { appStore, useApp, type EditResult } from '@/store';
+import { appStore, useApp } from '@/store';
 import { colors, space, type } from '@/theme/tokens';
 import { Card, Eyebrow, Field, Fine, Row, shared, TextField, ToggleRow } from '@/ui/bits';
 import { TopBar } from '@/ui/Brand';
@@ -34,17 +34,12 @@ const APP_NAME = APP_VERSION ? `Win Zero ${APP_VERSION}` : 'Win Zero';
 /** From the environment; a build without them leaves their rows out (see APP_LINKS). */
 const PRIVACY_URL = APP_LINKS.privacy;
 const SUPPORT_URL = APP_LINKS.support;
-const ORDER_ERROR = "The reminder can't come later than check-in time.";
 
 const PERMISSION_WORDS: Record<ReminderPermission, string> = {
   granted: 'On',
   denied: 'Off in system settings',
   undetermined: 'Not turned on yet',
 };
-
-function errorText(r: EditResult): string | null {
-  return r.ok ? null : r.reason === 'order' ? ORDER_ERROR : null;
-}
 
 export default function Settings() {
   const goal = useApp((s) => s.goal);
@@ -53,7 +48,6 @@ export default function Settings() {
   const { h24 } = useDeviceCalendar();
   const [draft, setDraft] = useState(goal?.goal ?? '');
   const [saved, setSaved] = useState(false);
-  const [timeError, setTimeError] = useState<{ checkIn?: string | null; morning?: string | null }>({});
   const { permission, turnOn } = useReminderPermission();
   const [eraseArmed, setEraseArmed] = useState(false);
 
@@ -74,8 +68,8 @@ export default function Settings() {
     }
   };
 
-  const changeCheckIn = (time: ClockTime) => setTimeError((e) => ({ ...e, checkIn: errorText(store.setCheckInTime(time)) }));
-  const changeMorning = (time: ClockTime) => setTimeError((e) => ({ ...e, morning: errorText(store.setMorningTime(time)) }));
+  const changeCheckIn = (time: ClockTime) => store.setCheckInTime(time);
+  const changeMorning = (time: ClockTime) => store.setMorningTime(time);
 
   const erase = () => {
     feedback.press();
@@ -113,7 +107,6 @@ export default function Settings() {
           value={currentCheckInTime(goal)}
           onChange={changeCheckIn}
           h24={h24}
-          error={timeError.checkIn}
           hint={`${pending ? `A check-in is open until ${formatUntil(pending.closesAt, now, tz, h24)}. ` : ''}Next check-in: ${formatWhen(upcoming, now, tz, h24)}.`}
         />
         <TimeField
@@ -121,8 +114,7 @@ export default function Settings() {
           value={goal.morningTime}
           onChange={changeMorning}
           h24={h24}
-          error={timeError.morning}
-          hint="Sent the next day, only if you haven't answered. Set it to check-in time to get one notification a day."
+          hint="Only if you haven't answered by then: the next morning, or later the same day if it's after check-in time. Set it to check-in time to get one notification a day."
         />
       </View>
 
