@@ -7,7 +7,7 @@ import { answerDay, at, DAY0, DENVER, newGoal, TOKYO, yesDays } from '@/engine/_
 
 import { createAppStore, REMINDER_CARD_HIDE_MS, UNDO_MS, UNDO_MS_SCREEN_READER, type AppStore } from '../createAppStore';
 import { startLifecycle } from '../lifecycle';
-import { STORE_KEY, STORE_VERSION } from '../types';
+import { STORE_BACKUP_KEY, STORE_KEY, STORE_VERSION } from '../types';
 import { fakeAppState, flush, harness, ready, withGoal } from './harness';
 
 beforeEach(async () => {
@@ -549,6 +549,37 @@ describe('persistence', () => {
     expect(Object.keys(raw.state).sort()).toEqual(
       ['devClockOffsetMs', 'goal', 'prefs', 'reminderCardHiddenUntil', 'round', 'seenThrough', 'weapon'].sort(),
     );
+    expect(await AsyncStorage.getItem(STORE_BACKUP_KEY)).toBeNull(); // nothing unreadable
+  });
+
+  it('keeps a goal saved by a newer build, after a downgrade', async () => {
+    const goal = { ...yesDays(newGoal(), DAY0, 3), version: 2, mood: 'steady' };
+    await AsyncStorage.setItem(STORE_KEY, JSON.stringify({ version: STORE_VERSION + 1, state: { goal } }));
+    const { store } = harness();
+    await ready(store);
+    expect(store.getState().goal).toMatchObject({ goalId: 'g1', streak: 3, version: 2, mood: 'steady' });
+    await flush();
+    expect(await AsyncStorage.getItem(STORE_BACKUP_KEY)).toBeNull();
+  });
+
+  it("backs up a goal it can't read before starting fresh, and keeps the rest", async () => {
+    // Same version, and an older one that goes through migrate first.
+    for (const version of [STORE_VERSION, 0]) {
+      await AsyncStorage.clear();
+      const { history: _history, ...broken } = yesDays(newGoal(), DAY0, 3);
+      await AsyncStorage.setItem(STORE_KEY, JSON.stringify({ version, state: { goal: broken, prefs: { sound: false } } }));
+      const { store } = harness();
+      await ready(store);
+      expect(store.getState().goal).toBeNull();
+      expect(store.getState().prefs.sound).toBe(false);
+
+      await flush();
+      const backup = JSON.parse((await AsyncStorage.getItem(STORE_BACKUP_KEY)) ?? '{}');
+      expect(backup.state.goal).toEqual(broken);
+      expect(backup.at).toBe(at(DAY0, '12:00').toISOString());
+      const saved = JSON.parse((await AsyncStorage.getItem(STORE_KEY)) ?? '{}');
+      expect(saved.state.goal).toBeNull(); // the main copy moved on; the backup didn't
+    }
   });
 
   it('migrates an unversioned blob, keeping the goal and filling in defaults', async () => {
@@ -581,14 +612,16 @@ describe('persistence', () => {
     expect(store.getState().goal).toBeNull();
   });
 
-  it('erase clears the state and storage', async () => {
+  it('erase clears the state and storage, backup included', async () => {
     const h = await withGoal(yesDays(newGoal(), DAY0, 3));
+    await AsyncStorage.setItem(STORE_BACKUP_KEY, '{"state":{}}');
     h.store.getState().setPref('haptics', false);
     h.store.getState().erase();
     expect(h.store.getState().goal).toBeNull();
     expect(h.store.getState().prefs.haptics).toBe(true);
     await flush();
     expect(await AsyncStorage.getItem(STORE_KEY)).toBeNull();
+    expect(await AsyncStorage.getItem(STORE_BACKUP_KEY)).toBeNull();
   });
 });
 

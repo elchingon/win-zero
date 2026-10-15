@@ -3,6 +3,8 @@ import type { DayKey, GoalState, HistoryEntry, IsoInstant, WeaponId } from '@/en
 /** Bump when PersistedState changes shape, and teach migratePersisted the old one. */
 export const STORE_VERSION = 1;
 export const STORE_KEY = 'winzero';
+/** Where stored data goes when its goal can't be read, so a later fix can bring it back. */
+export const STORE_BACKUP_KEY = `${STORE_KEY}:unreadable`;
 
 export interface Prefs {
   sound: boolean;

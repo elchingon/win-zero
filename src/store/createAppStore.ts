@@ -30,9 +30,10 @@ import {
 } from '@/engine';
 import type * as SeedRun from '@/dev/seedRun';
 
-import { DEFAULT_PERSISTED, migratePersisted, normalizePersisted } from './migrate';
+import { DEFAULT_PERSISTED, hasUnreadableGoal, migratePersisted, normalizePersisted } from './migrate';
 import { noticeForAnswer, noticeForMisses } from './notice';
 import {
+  STORE_BACKUP_KEY,
   STORE_KEY,
   STORE_VERSION,
   type AnswerRoute,
@@ -159,6 +160,15 @@ function persisted(s: AppState): PersistedState {
 }
 
 export function createAppStore(deps: StoreDeps) {
+  /** Write to storage without waiting. A failure leaves the app running as it is. */
+  const writeAside = (write: () => unknown) => {
+    try {
+      void Promise.resolve(write()).catch(() => {});
+    } catch {
+      // as above
+    }
+  };
+
   const store = createStore<AppState>()(
     persist(
       (set, get, api) => {
@@ -368,6 +378,7 @@ export function createAppStore(deps: StoreDeps) {
           erase: () => {
             set({ ...DEFAULT_PERSISTED, notice: null, route: null, rejection: null, undo: null });
             api.persist.clearStorage();
+            writeAside(() => deps.storage.removeItem(STORE_BACKUP_KEY));
           },
 
           advanceDevClock: (ms) => {
@@ -406,8 +417,17 @@ export function createAppStore(deps: StoreDeps) {
         version: STORE_VERSION,
         storage: createJSONStorage(() => deps.storage),
         partialize: persisted,
-        migrate: migratePersisted,
-        merge: (stored, current) => ({ ...current, ...normalizePersisted(stored) }),
+        // Upgraded, not yet read: `merge` reads it.
+        migrate: (stored, version) => migratePersisted(stored, version) as PersistedState,
+        merge: (stored, current) => {
+          // A goal that can't be read would be lost the next time state is saved. Keep a copy
+          // where nothing writes over it, so a fix can bring it back.
+          if (hasUnreadableGoal(stored)) {
+            const backup = JSON.stringify({ at: deps.now().toISOString(), state: stored });
+            writeAside(() => deps.storage.setItem(STORE_BACKUP_KEY, backup));
+          }
+          return { ...current, ...normalizePersisted(stored) };
+        },
         // Runs after a successful read and after a failed one (a corrupt blob), so the app
         // never waits on the splash screen forever.
         onRehydrateStorage: () => () => {
