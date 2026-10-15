@@ -107,7 +107,7 @@ Hold to fire at about 6 shots/sec.
 
 ## 6. Screens
 
-- **Onboarding / Setup:** goal (free text plus suggestion chips), check-in time, reminder time (any time of day), notification permission request with a short explanation first.
+- **Onboarding / Setup:** goal (free text plus suggestion chips), check-in time, reminder time (any time of day), notification permission request with a short explanation first. Set up after the check-in time, today counts: today's check-in is open straight away, and both Setup's last step and Home (until the first answer) say so plainly.
 - **Home:** goal, current streak, best run, bombs, shields; pending check-in card (same Yes / Not today as the notification); arsenal list with next-unlock progress; history calendar (yes / no / shielded / missed). While reminders are off (never turned on, or off in system settings), a card offers to turn them on; its "Not now" hides it for a week.
 - **Play:** full-screen Skia canvas, HUD (value left, day, weapon switch, bomb button, sound toggle), turret at bottom center.
 - **Result sheet:** over the filled screen, showing day, "N zeros down", rewards earned, next unlock, and buttons for Back to base and Replay (replay has no streak effect).

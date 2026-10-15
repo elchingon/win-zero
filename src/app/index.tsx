@@ -4,7 +4,15 @@ import { Redirect, router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState, type ComponentType } from 'react';
 import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
 
-import { currentCheckInTime, dayKeyAt, nextWindow, pendingWindow, type AnswerRejection, type GoalState } from '@/engine';
+import {
+  currentCheckInTime,
+  dayKeyAt,
+  nextWindow,
+  openedAtSetup,
+  pendingWindow,
+  type AnswerRejection,
+  type GoalState,
+} from '@/engine';
 import { formatClockTime, formatWhen } from '@/lib/format';
 import { appStore, useApp } from '@/store';
 import { colors, fonts, space, type } from '@/theme/tokens';
@@ -97,6 +105,8 @@ function HomeScreen({ goal }: { goal: GoalState }) {
   }, [banner]);
 
   const unplayed = round && !round.played ? round : null;
+  // Set up after check-in time: until the first answer, say plainly that this question is about today.
+  const firstToday = goal.history.length === 0 && pending?.day === goal.firstDay && openedAtSetup(goal);
   const nextWhen = formatWhen(next.opensAt, now, tz, h24);
 
   return (
@@ -125,16 +135,19 @@ function HomeScreen({ goal }: { goal: GoalState }) {
       ) : null}
 
       {pending ? (
-        <CheckInCard
-          key={pending.day}
-          goal={goal}
-          window={pending}
-          now={now}
-          tz={tz}
-          h24={h24}
-          onYes={onYes}
-          onNotToday={onNotToday}
-        />
+        <>
+          {firstToday ? <Text style={type.lede}>Today counts: your first check-in is open now.</Text> : null}
+          <CheckInCard
+            key={pending.day}
+            goal={goal}
+            window={pending}
+            now={now}
+            tz={tz}
+            h24={h24}
+            onYes={onYes}
+            onNotToday={onNotToday}
+          />
+        </>
       ) : goal.history.length === 0 ? (
         <Card>
           <Text style={styles.cardTitle}>You&apos;re all set.</Text>

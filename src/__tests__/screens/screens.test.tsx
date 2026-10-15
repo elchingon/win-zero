@@ -82,11 +82,27 @@ describe('Setup', () => {
     await fireEvent.changeText(screen.getByLabelText('Your daily goal'), 'Read 20 minutes');
     await fireEvent.press(screen.getByRole('button', { name: 'Start my streak' }));
     expect(screen.getByRole('button', { name: 'Turn on reminders' })).toBeOnTheScreen();
+    // 21:00, past the 20:00 check-in: the first question is about today, straight away.
+    expect(screen.getByText(/It's already past .+, so today counts/)).toBeOnTheScreen();
+    expect(screen.getByText(/Once more at .+ the next day if you haven't answered yet/)).toBeOnTheScreen();
 
     await fireEvent.press(screen.getByText('Not now'));
     expect(app.pathname()).toBe('/');
     expect(appStore.getState().goal?.goal).toBe('Read 20 minutes');
     expect(await screen.findByText('Read 20 minutes')).toBeOnTheScreen();
+    expect(screen.getByText('Today counts: your first check-in is open now.')).toBeOnTheScreen();
+    expect(screen.getByText('Did you stick to “Read 20 minutes” today?')).toBeOnTheScreen();
+  });
+
+  it('before check-in time, says when the first check-in comes instead', async () => {
+    await open('/', { time: '12:00' });
+    await fireEvent.changeText(screen.getByLabelText('Your daily goal'), 'Exercise more');
+    await fireEvent.press(screen.getByRole('button', { name: 'Start my streak' }));
+    expect(screen.queryByText(/so today counts/)).not.toBeOnTheScreen();
+
+    await fireEvent.press(screen.getByText('Not now'));
+    expect(await screen.findByText("You're all set.")).toBeOnTheScreen();
+    expect(screen.queryByText(/Today counts/)).not.toBeOnTheScreen();
   });
 });
 

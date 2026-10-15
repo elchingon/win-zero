@@ -3,10 +3,10 @@ import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { DEFAULT_CHECK_IN_TIME, DEFAULT_MORNING_TIME } from '@/engine';
+import { clockMinutes, DEFAULT_CHECK_IN_TIME, DEFAULT_MORNING_TIME, firstCheckInOpenAt, type ClockTime } from '@/engine';
 import { formatClockTime } from '@/lib/format';
 import { requestReminderPermission } from '@/notifications/permissions';
-import { useApp } from '@/store';
+import { appStore, useApp } from '@/store';
 import { colors, fonts, space, type } from '@/theme/tokens';
 import { Chip, Em, Eyebrow, Field, Fine, Lede, TextField } from '@/ui/bits';
 import { TopBar } from '@/ui/Brand';
@@ -18,6 +18,13 @@ import { useDeviceCalendar } from '@/ui/useDevice';
 
 const GOAL_MAX_LENGTH = 60;
 const SUGGESTIONS = ['Stop drinking', 'Exercise more', 'Quit vaping', 'No phone after 10pm', 'Read 20 minutes'];
+
+/** When the reminder comes, in words: later the same day, the next day, or with the check-in. */
+function reminderWhen(checkIn: ClockTime, reminder: string, morning: ClockTime): string {
+  const after = clockMinutes(morning) - clockMinutes(checkIn);
+  if (after === 0) return "If you haven't answered, the next day's check-in asks again, so it's one notification a day.";
+  return `Once more at ${reminder} ${after > 0 ? 'that day' : 'the next day'} if you haven't answered yet.`;
+}
 
 const RULES: { mark: string; tone?: 'flare'; text: string }[] = [
   { mark: '?', text: 'Each evening at your check-in time, Win Zero asks one question: did you do it today?' },
@@ -59,6 +66,9 @@ export default function Setup() {
   };
 
   if (step === 'reminders') {
+    const store = appStore.getState();
+    // Past check-in time already: the first question is about today, straight away.
+    const todayCounts = firstCheckInOpenAt({ checkInTime, now: store.now(), tz: store.timeZone() });
     return (
       <Screen>
         <TopBar right={<LinkButton label="Back" onPress={() => setStep('goal')} />} />
@@ -68,10 +78,15 @@ export default function Setup() {
             One question at <Em>{formatClockTime(checkInTime, h24)}</Em>.
           </Text>
         </View>
+        {todayCounts ? (
+          <Lede>
+            It&apos;s already past {formatClockTime(checkInTime, h24)}, so today counts. Your first check-in opens as
+            soon as you start, and you can answer it until midnight tomorrow.
+          </Lede>
+        ) : null}
         <Lede>
-          Win Zero asks at your check-in time, and once more at {formatClockTime(morningTime, h24)} the next day if
-          you haven&apos;t answered yet. There&apos;s no rush: you can answer until midnight the next day, right
-          from the notification or in the app.
+          Win Zero asks at your check-in time. {reminderWhen(checkInTime, formatClockTime(morningTime, h24), morningTime)}{' '}
+          There&apos;s no rush: you can answer until midnight the next day, right from the notification or in the app.
         </Lede>
         <Lede>If you&apos;re away for a while, reminders ease off to one gentle nudge a week.</Lede>
         <Fine>

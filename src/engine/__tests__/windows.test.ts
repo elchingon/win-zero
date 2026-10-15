@@ -1,7 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
 
 import { addDays } from '../dates';
-import { createGoal, resolve, setMorningTime } from '../resolve';
+import { createGoal, firstCheckInOpenAt, openedAtSetup, resolve, setMorningTime } from '../resolve';
 import {
   closesAt,
   firstUpcomingDay,
@@ -126,6 +126,33 @@ describe('windowFor (SPEC 2)', () => {
 });
 
 describe('the first goal day', () => {
+  it('says whether today counts: the first check-in is open as soon as the goal is set up', () => {
+    const check = (day: string, time: string, checkInTime: string, tz = DENVER) => {
+      const now = at(day, time, tz);
+      const input = { goalId: 'g', goal: 'Read', checkInTime, now, tz };
+      const open = firstCheckInOpenAt({ checkInTime, now, tz });
+      // The same answer as the goal Setup creates.
+      expect(open).toBe(pendingWindow(createGoal(input), now) !== null);
+      expect(openedAtSetup(createGoal(input))).toBe(open);
+      return open;
+    };
+    expect(check(DAY0, '21:00', '20:00')).toBe(true);
+    expect(check(DAY0, '20:00', '20:00')).toBe(true); // on the minute
+    expect(check(DAY0, '19:59', '20:00')).toBe(false);
+    expect(check(DAY0, '12:00', '20:00')).toBe(false);
+    expect(check('2026-10-14', '00:30', '20:00')).toBe(false); // after midnight: today hasn't opened
+    expect(check(DAY0, '02:00', '01:00')).toBe(true); // a check-in just after midnight
+    expect(check('2026-11-01', '01:30', '01:15')).toBe(true); // the repeated hour, fall back
+    expect(check('2027-03-14', '03:30', '02:30')).toBe(true); // a check-in in the skipped hour
+    expect(check(DAY0, '21:00', '20:00', TOKYO)).toBe(true);
+  });
+
+  it('stays false for a goal set up before check-in time, after its first answer too', () => {
+    const s = newGoal({ time: '12:00' }); // check-in 20:00
+    expect(openedAtSetup(s)).toBe(false);
+    expect(openedAtSetup(answerDay(s, DAY0, 'yes').state)).toBe(false);
+  });
+
   it('waits for check-in time when set up earlier in the day', () => {
     const s = newGoal({ time: '12:00' });
     expect(s.firstDay).toBe(DAY0);
