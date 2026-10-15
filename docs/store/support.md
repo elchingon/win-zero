@@ -1,7 +1,7 @@
 # Win Zero Support
 
 Need a hand? Here's how Win Zero works, and fixes for the most common questions. If you're still
-stuck, email [SUPPORT_EMAIL].
+stuck, email e7urgent@gmail.com.
 
 **If you need support with drinking, drugs or your mental health:** the SAMHSA National Helpline
 is free, confidential and open 24/7 in the US: **1-800-662-4357**. The number is also under

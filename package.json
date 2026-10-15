@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
     "gen:sfx": "node scripts/gen-sfx.mjs",
-    "gen:brand": "node scripts/gen-brand.mjs"
+    "gen:brand": "node scripts/gen-brand.mjs",
+    "eas-build-pre-install": "node scripts/check-release.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/barlow": "^0.4.1",

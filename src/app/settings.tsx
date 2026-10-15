@@ -1,5 +1,7 @@
 // Settings: goal wording, times (through the engine, so an open window is respected),
-// sound / haptics / weekly nudge, reminder permission, how it works, support, and erase.
+// sound / haptics / weekly nudge, reminder permission, how it works, support, about (privacy
+// policy, help, email, version), and erase.
+import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { useState, type ComponentType } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -14,7 +16,7 @@ import { TopBar } from '@/ui/Brand';
 import { Button, LinkButton } from '@/ui/Button';
 import { feedback } from '@/ui/feedback';
 import { Screen } from '@/ui/Screen';
-import { callSupportLine, SUPPORT_LINE } from '@/ui/support';
+import { APP_LINKS, callSupportLine, emailSupport, openPage, SUPPORT_LINE } from '@/ui/support';
 import { TimeField } from '@/ui/TimeField';
 import { useDeviceCalendar } from '@/ui/useDevice';
 import { useReminderPermission } from '@/ui/useReminderPermission';
@@ -26,6 +28,9 @@ const DebugSection: ComponentType | null = __DEV__
   : null;
 
 const GOAL_MAX_LENGTH = 60;
+/** The app version from app.json, as built. */
+const APP_VERSION = Constants.expoConfig?.version;
+const APP_NAME = APP_VERSION ? `Win Zero ${APP_VERSION}` : 'Win Zero';
 const ORDER_ERROR = "The reminder can't come later than check-in time.";
 
 const PERMISSION_WORDS: Record<ReminderPermission, string> = {
@@ -160,6 +165,34 @@ export default function Settings() {
         />
       </View>
 
+      <View style={shared.section}>
+        <Eyebrow header>About</Eyebrow>
+        <View style={shared.list}>
+          <Row
+            label="Privacy policy"
+            detail="Your goal and history stay on this phone."
+            right={<Text style={styles.call}>Open</Text>}
+            hint="Opens the privacy policy in your browser"
+            onPress={() => openPage(APP_LINKS.privacy)}
+          />
+          <Row
+            label="Help and support"
+            detail="How Win Zero works, and fixes for common questions."
+            right={<Text style={styles.call}>Open</Text>}
+            hint="Opens the support page in your browser"
+            onPress={() => openPage(APP_LINKS.support)}
+          />
+          <Row
+            label="Email us"
+            detail={APP_LINKS.email}
+            right={<Text style={styles.call}>Email</Text>}
+            hint="Starts an email to Win Zero support"
+            onPress={() => emailSupport(APP_NAME)}
+          />
+        </View>
+        <Fine>{APP_NAME} · © 2026 E7 Systems</Fine>
+      </View>
+
       {eraseArmed ? (
         <Card style={styles.erase}>
           <Text style={styles.eraseTitle}>Erase everything?</Text>
@@ -174,8 +207,6 @@ export default function Settings() {
       )}
 
       {DebugSection ? <DebugSection /> : null}
-
-      <Eyebrow>Win Zero</Eyebrow>
     </Screen>
   );
 }

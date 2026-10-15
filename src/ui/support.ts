@@ -1,5 +1,6 @@
-// SPEC 6: a US support line for health-related goals, and opening links with a fallback for
-// devices that can't (an iPad can't place calls; a phone may have no mail app).
+// SPEC 6: a US support line for health-related goals, the app's own pages and support email,
+// and opening links with a fallback for devices that can't (an iPad can't place calls; a phone
+// may have no mail app).
 import { Alert, Linking } from 'react-native';
 
 /** SPEC 6: a US support line for health-related goals. Localize later. */
@@ -9,6 +10,17 @@ export const SUPPORT_LINE = {
   tel: 'tel:18006624357',
   detail: 'Free, confidential, 24/7.',
   text: 'Or text your ZIP code to 435748 (HELP4U) to find help near you.',
+} as const;
+
+/**
+ * The privacy policy and support pages (App Review needs the privacy link in the app), and the
+ * support email. The pages go up on e7systems.com before release (docs/RELEASE.md). Until then
+ * the URLs are placeholders, and a production EAS build stops (scripts/check-release.mjs).
+ */
+export const APP_LINKS = {
+  privacy: '[PRIVACY_URL]',
+  support: '[SUPPORT_URL]',
+  email: 'e7urgent@gmail.com',
 } as const;
 
 /**
@@ -26,5 +38,17 @@ export function callSupportLine(): void {
       "Calls aren't available on this device",
       `${SUPPORT_LINE.name}: ${SUPPORT_LINE.display}, from any phone. ${SUPPORT_LINE.detail}\n\n${SUPPORT_LINE.text}`,
     ),
+  );
+}
+
+/** Open one of the app's pages in the browser, or say where it is. */
+export function openPage(url: string): void {
+  openOr(url, () => Alert.alert("Couldn't open the page", `It's at ${url}.`));
+}
+
+/** Start an email to support, or give the address when no mail app is set up. */
+export function emailSupport(subject: string): void {
+  openOr(`mailto:${APP_LINKS.email}?subject=${encodeURIComponent(subject)}`, () =>
+    Alert.alert('No mail app is set up', `Email us at ${APP_LINKS.email}.`),
   );
 }

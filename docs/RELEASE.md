@@ -11,8 +11,10 @@ answers are in `docs/store/`.
   - Some are native modules, so do it on its own, before the QA builds.
 - [ ] **Publish the two pages on e7systems.com.**
   - Sources: `docs/store/privacy-policy.md` and `docs/store/support.md`.
-  - Fill in `[COMPANY_NAME]`, `[SUPPORT_EMAIL]`, `[EFFECTIVE_DATE]` and `[PRIVACY_URL]`.
+  - Fill in `[EFFECTIVE_DATE]` and `[PRIVACY_URL]`.
   - Note the two URLs for the listings.
+  - Set both URLs in `src/ui/support.ts` (`APP_LINKS`), which Settings → About opens. A
+    production EAS build fails until you do (`scripts/check-release.mjs`).
 - [ ] **Optional: iOS dark and tinted icons.** The brand set has one iOS icon, which iOS 18 uses in
   every appearance. To add variants, render them in `scripts/gen-brand.mjs` and set
   `ios.icon: { light, dark, tinted }` in `app.json`.
