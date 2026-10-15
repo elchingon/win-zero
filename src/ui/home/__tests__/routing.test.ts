@@ -80,7 +80,7 @@ const stoppedSlip = { source: 'missed', notice: { ...missedSlip.notice, stopped:
 const answerSlip = { source: 'answer', notice: { kind: 'slipping', cause: 'answer', lost: 1 } };
 
 describe('Home after a long time in the background', () => {
-  it('foreground first, then Yes: the news, then the round, never one over the other', async () => {
+  it('foreground first, then Yes: the news, and the round waits on Home', async () => {
     const t = await scene();
     t.focus();
     t.away();
@@ -89,15 +89,15 @@ describe('Home after a long time in the background', () => {
 
     t.yes(); // lands while the notice is on its way
     expect(t.pushed).toEqual(['/notice']);
-    expect(t.s().route).toBe('/play');
+    expect(t.s().route).toBeNull();
+    expect(t.s().round).toMatchObject({ day: BACK, played: false });
     expect(t.s().seenThrough).toBe('2026-10-22'); // nothing shown yet
 
     expect(t.showNotice()).toMatchObject(stoppedSlip);
     expect(t.s().seenThrough).toBe('2026-11-01');
     t.refocus();
-    expect(t.pushed).toEqual(['/notice', '/play']);
-    t.refocus();
-    expect(t.pushed).toEqual(['/notice', '/play']);
+    expect(t.pushed).toEqual(['/notice']);
+    expect(t.s().round).toMatchObject({ day: BACK, played: false }); // still there to play
   });
 
   it('foreground first, the notice showing before the Yes lands', async () => {
@@ -109,26 +109,23 @@ describe('Home after a long time in the background', () => {
     expect(t.s().seenThrough).toBe('2026-10-31');
     t.yes();
     t.refocus();
-    expect(t.pushed).toEqual(['/notice', '/play']);
-    t.refocus();
-    expect(t.pushed).toHaveLength(2);
+    expect(t.pushed).toEqual(['/notice']);
+    expect(t.s().round).toMatchObject({ day: BACK, played: false });
   });
 
-  it('Yes first, then foreground: the round, then the news', async () => {
+  it('Yes first, then foreground: the news, with the round waiting on Home', async () => {
     const t = await scene();
     t.focus();
     t.away();
     t.yes();
-    expect(t.pushed).toEqual(['/play']);
+    expect(t.pushed).toEqual(['/notice']); // the days the Yes caught up on
     t.app.emit('active');
-    expect(t.pushed).toEqual(['/play']);
-
-    t.refocus(); // back from the round
-    expect(t.pushed).toEqual(['/play', '/notice']);
+    expect(t.pushed).toEqual(['/notice']);
     expect(t.showNotice()).toMatchObject(stoppedSlip); // "Your Yes stopped the slide"
 
     t.refocus();
-    expect(t.pushed).toHaveLength(2);
+    expect(t.pushed).toHaveLength(1);
+    expect(t.s().round).toMatchObject({ day: BACK, played: false });
   });
 
   it('Not today after the news has shown: each notice once, the news first', async () => {
@@ -184,19 +181,21 @@ describe('Home after a long time in the background', () => {
     expect(t.s().seenThrough).toBe('2026-10-27');
   });
 
-  it('from another screen: back to Home, then the round, then the news', async () => {
+  it('from another screen: back to Home, then the news; the round waits', async () => {
     const t = await scene();
     t.away();
     t.app.emit('active');
     t.yes();
     expect(t.nav.toHome).toHaveBeenCalledTimes(1);
     t.focus();
-    expect(t.pushed).toEqual(['/play']);
+    expect(t.pushed).toEqual(['/notice']);
+    expect(t.showNotice()).toMatchObject(stoppedSlip);
     t.refocus();
-    expect(t.pushed).toEqual(['/play', '/notice']);
+    expect(t.pushed).toEqual(['/notice']);
+    expect(t.s().round).toMatchObject({ day: BACK, played: false });
   });
 
-  it('cold start with missed days and a Yes: the round, then the news', async () => {
+  it('cold start with missed days and a Yes: the news, with the round waiting on Home', async () => {
     const first = harness();
     await ready(first.store);
     first.store.setState({ goal: yesDays(newGoal(), DAY0, 10) }); // through 10-22, saved
@@ -213,14 +212,31 @@ describe('Home after a long time in the background', () => {
 
     const screen = home(h.store);
     screen.focus();
-    expect(screen.pushed).toEqual(['/play']);
+    expect(screen.pushed).toEqual(['/notice']);
+    expect(screen.showNotice()).toMatchObject(stoppedSlip);
     screen.refocus();
-    expect(screen.pushed).toEqual(['/play', '/notice']);
-    expect(screen.showNotice()).toMatchObject(missedSlip);
+    expect(screen.pushed).toEqual(['/notice']);
+    expect(h.store.getState().round).toMatchObject({ day: BACK, played: false });
   });
 });
 
 describe('Home routing', () => {
+  it("opens the round for a Yes on Home's card, and leaves a notification's Yes waiting", async () => {
+    const t = await scene();
+    t.setTime('2026-10-23', '21:00');
+    t.focus();
+    t.s().answer('yes'); // Home's card
+    expect(t.pushed).toEqual(['/play']);
+    t.blur();
+
+    t.setTime('2026-10-24', '21:00');
+    t.focus();
+    t.s().answer('yes', '2026-10-24', 'notification');
+    t.refocus();
+    expect(t.pushed).toEqual(['/play']);
+    expect(t.s().round).toMatchObject({ day: '2026-10-24', n: 12, played: false });
+  });
+
   it("drops a Not today's route when its notice has already been shown", async () => {
     const t = await scene();
     t.setTime('2026-10-23', '20:30');

@@ -1,6 +1,7 @@
-// Tapping a notification or one of its buttons (SPEC 1–2). Yes answers through the store and
-// opens the round; Not today answers and opens its notice; a plain tap opens Home. The store
-// records where the answer leads (or why it was turned down) and Home opens it.
+// Tapping a notification or one of its buttons (SPEC 1–2). Every response opens Home. Yes answers
+// through the store, and Home shows the round ready to play whenever the user likes; Not today
+// answers and Home opens its notice; a plain tap only opens Home. The store records where the
+// answer leads (or why it was turned down).
 import type { Answer, DayKey } from '@/engine';
 import type { AppStore } from '@/store/createAppStore';
 import { whenHydrated } from '@/store/lifecycle';
@@ -67,7 +68,7 @@ export function startResponses(store: AppStore, api: ResponseApi, nav: ResponseN
     const goal = store.getState().goal;
     if (!goal) return; // erased: Setup is showing, and stays
     const decision = decideResponse(response, goal.goalId);
-    if (decision.kind === 'answer') store.getState().answer(decision.answer, decision.day);
+    if (decision.kind === 'answer') store.getState().answer(decision.answer, decision.day, 'notification');
     nav.toHome();
   };
 

@@ -45,8 +45,14 @@ export interface PersistedState {
   devClockOffsetMs: number;
 }
 
-/** The screen an accepted answer opens: Yes plays the round, Not today shows its notice. */
+/**
+ * The screen an accepted answer opens: Yes on Home's card plays the round, Not today shows its
+ * notice. A Yes from a notification opens nothing: Home shows the round, ready when the user is.
+ */
 export type AnswerRoute = '/play' | '/notice';
+
+/** Where an answer came from: Home's card, or a notification's buttons. */
+export type AnswerSource = 'app' | 'notification';
 
 export type NoticeCause = 'answer' | 'missed';
 

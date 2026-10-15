@@ -35,6 +35,7 @@ import {
   STORE_KEY,
   STORE_VERSION,
   type AnswerRoute,
+  type AnswerSource,
   type Notice,
   type PendingNotice,
   type PersistedState,
@@ -68,7 +69,8 @@ export interface AppState extends PersistedState {
   notice: Notice | null;
   /**
    * Where the latest answer leads (its round, or its notice), waiting for Home to open it.
-   * Set in the same update as the answer, whether it came from Home or a notification.
+   * Set in the same update as the answer. A Yes from a notification leaves none: its round
+   * waits on Home.
    * Not persisted.
    */
   route: AnswerRoute | null;
@@ -85,7 +87,7 @@ export interface AppState extends PersistedState {
   refresh: () => ResolveEvent[];
   setupGoal: (input: { goal: string; checkInTime: ClockTime; morningTime: ClockTime }) => SetupResult;
   /** Answer a check-in: `day` when it comes from a notification, otherwise the open window. */
-  answer: (answer: Answer, day?: DayKey) => AnswerResult | null;
+  answer: (answer: Answer, day?: DayKey, source?: AnswerSource) => AnswerResult | null;
   /** The route the latest answer left, once. */
   takeRoute: () => AnswerRoute | null;
   clearRejection: () => void;
@@ -195,7 +197,7 @@ export function createAppStore(deps: StoreDeps) {
             return { ok: true };
           },
 
-          answer: (ans, day) => {
+          answer: (ans, day, source = 'app') => {
             const goal = ready();
             if (!goal) return null;
             const r = answerCheckIn(goal, { answer: ans, day }, now(), timeZone());
@@ -219,7 +221,7 @@ export function createAppStore(deps: StoreDeps) {
                   played: false,
                 },
                 notice: null,
-                route: '/play',
+                route: source === 'notification' ? null : '/play',
                 rejection: null,
               });
             } else {

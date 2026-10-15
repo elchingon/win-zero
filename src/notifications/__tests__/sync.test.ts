@@ -247,6 +247,19 @@ describe('staleDelivered', () => {
     ]);
     expect(staleDelivered(shown, input(null))).toEqual(shown.slice(0, 5).map((s) => s.identifier));
   });
+
+  it("keeps today's check-in while yesterday is still open, and clears yesterday's once answered", () => {
+    const goal = yesDays(newGoal(), DAY0, 1); // 10-13 answered; 10-14 open until midnight ending 10-15
+    const shown = [
+      { identifier: 'checkin-2026-10-14', data: { goalId: 'g1', day: '2026-10-14', kind: 'checkin' } },
+      { identifier: 'morning-2026-10-14', data: { goalId: 'g1', day: '2026-10-14', kind: 'morning' } },
+      { identifier: 'checkin-2026-10-15', data: { goalId: 'g1', day: '2026-10-15', kind: 'checkin' } },
+    ];
+    const evening = at('2026-10-15', '21:00');
+    expect(staleDelivered(shown, input(goal, evening))).toEqual([]);
+    const answered = yesDays(goal, '2026-10-14', 1);
+    expect(staleDelivered(shown, input(answered, evening))).toEqual(['checkin-2026-10-14', 'morning-2026-10-14']);
+  });
 });
 
 describe('startReminderSync', () => {

@@ -280,6 +280,17 @@ describe('where an answer leads', () => {
     stop();
   });
 
+  it("leaves a notification's Yes on Home: the round waits, nothing opens", async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 2)); // through 10-14
+    h.setTime('2026-10-15', '21:00');
+    expect(h.store.getState().answer('yes', '2026-10-15', 'notification')).toMatchObject({ ok: true });
+    expect(h.store.getState()).toMatchObject({ route: null, round: { day: '2026-10-15', n: 3, played: false } });
+
+    h.setTime('2026-10-16', '21:00');
+    h.store.getState().answer('not-today', '2026-10-16', 'notification');
+    expect(h.store.getState().route).toBe('/notice'); // Not today still shows its notice
+  });
+
   it("records why an answer was turned down for Home's banner, and keeps a route still waiting", async () => {
     const h = await withGoal(yesDays(newGoal(), DAY0, 2)); // through 10-14
     h.setTime('2026-10-15', '21:00');

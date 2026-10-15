@@ -17,6 +17,7 @@ import {
 import { at, DAY0, DENVER, newGoal, TOKYO, yesDays } from '@/engine/__tests__/fixtures';
 
 import {
+  BOTH_OPEN_BODY,
   MAX_SCHEDULED,
   NUDGES,
   reminderRequests,
@@ -67,6 +68,30 @@ describe('reminderRequests', () => {
       trigger: { type: SchedulableTriggerInputTypes.DATE, date: at('2026-10-14', '09:00'), channelId: 'checkin' },
     });
     expect(reqs.some((r) => JSON.stringify(r).includes('Stop drinking'))).toBe(false);
+  });
+
+  it("asks without buttons when yesterday is still open, so a tap opens Home on yesterday's card", () => {
+    const reqs = reminderRequests(input(newGoal(), at(DAY0, '12:00'), { showGoal: true }));
+    const both = reqs.find((r) => r.identifier === 'checkin-2026-10-14');
+    expect(both).toEqual({
+      identifier: 'checkin-2026-10-14',
+      content: {
+        title: 'Daily check-in',
+        body: BOTH_OPEN_BODY,
+        data: { goalId: 'g1', day: '2026-10-14', kind: 'checkin' },
+        sound: 'default',
+      },
+      trigger: { type: SchedulableTriggerInputTypes.DATE, date: at('2026-10-14', '20:00'), channelId: 'checkin' },
+    });
+    expect(BOTH_OPEN_BODY).not.toContain('Stop drinking');
+
+    // Once yesterday is answered, today's check-in has its buttons again.
+    const answered = yesDays(newGoal(), DAY0, 1);
+    const plain = reminderRequests(input(answered, at('2026-10-14', '09:00')));
+    expect(plain[0]).toMatchObject({
+      identifier: 'checkin-2026-10-14',
+      content: { body: 'Did you stick to your goal today?', categoryIdentifier: 'checkin' },
+    });
   });
 
   it('names the goal only when the user turned that on', () => {

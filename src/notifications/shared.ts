@@ -12,9 +12,9 @@ export const ACTION_YES = 'yes';
 export const ACTION_NOT_TODAY = 'not-today';
 
 /**
- * The check-in's buttons, the same two as Home's card. Both open the app: Yes into the round,
- * Not today to its notice (answering without opening the app would need a background task,
- * which iOS doesn't run reliably for a closed app).
+ * The check-in's buttons, the same two as Home's card. Both open the app on Home: Yes with the
+ * round ready to play, Not today then its notice (answering without opening the app would need a
+ * background task, which iOS doesn't run reliably for a closed app).
  */
 export const CHECKIN_ACTIONS: NotificationAction[] = [
   { identifier: ACTION_YES, buttonTitle: 'Yes, I did', options: { opensAppToForeground: true } },

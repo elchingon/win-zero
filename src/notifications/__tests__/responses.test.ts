@@ -78,7 +78,7 @@ describe('startResponses', () => {
     const s = h.store.getState();
     expect(s.goal).toMatchObject({ streak: 3, lastSettledDay: '2026-10-15' });
     expect(s.round).toMatchObject({ day: '2026-10-15', n: 3, played: false });
-    expect(s.route).toBe('/play'); // Home opens the round as it mounts
+    expect(s.route).toBeNull(); // Home shows the round, ready to play whenever they like
     expect(s.rejection).toBeNull(); // answered once, not "already answered"
     expect(fake.dismissed).toEqual(['checkin-2026-10-15']);
     expect(fake.cleared()).toBe(1);
@@ -97,8 +97,9 @@ describe('startResponses', () => {
   it("answers yesterday's window from the morning reminder", async () => {
     const r = await running(yesDays(newGoal(), DAY0, 2), '2026-10-16', '09:05');
     r.fake.tap(response(ACTION_YES, { day: '2026-10-15', kind: 'morning' }));
-    expect(r.s().round).toMatchObject({ day: '2026-10-15', n: 3 });
-    expect(r.s().route).toBe('/play');
+    expect(r.s().round).toMatchObject({ day: '2026-10-15', n: 3, played: false });
+    expect(r.s().route).toBeNull();
+    expect(r.nav.toHome).toHaveBeenCalledTimes(1);
     expect(r.fake.dismissed).toEqual(['morning-2026-10-15']);
   });
 

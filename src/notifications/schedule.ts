@@ -33,6 +33,8 @@ export const TEST_DELAY_SECONDS = 10;
 
 const CHECKIN_TITLE = 'Daily check-in';
 const MORNING_TITLE = 'Still time to check in';
+/** Today's check-in while yesterday's is still open. Home asks about yesterday first. */
+export const BOTH_OPEN_BODY = "Yesterday's check-in is still open, and today's is ready. Tap to answer.";
 
 /** The weekly nudge, one per week in turn. Never names the goal; never counts what was missed. */
 export const NUDGES: readonly { title: string; body: string }[] = [
@@ -79,6 +81,9 @@ function nudgeFor(state: GoalState, day: DayKey): { title: string; body: string 
 function contentFor(state: GoalState, r: PlannedReminder, showGoal: boolean): ReminderContent {
   const data: ReminderData = { goalId: state.goalId, day: r.day, kind: r.kind };
   if (r.kind === 'reengage') return { ...nudgeFor(state, r.day), data };
+  // No buttons: a Yes here couldn't say which day it means. A tap opens Home, which asks about
+  // yesterday first. Answering yesterday reschedules this as a plain check-in.
+  if (r.earlier) return { title: CHECKIN_TITLE, body: BOTH_OPEN_BODY, data, sound: 'default' };
   const when = isWindowToday(windowFor(state, r.day), r.at) ? 'today' : 'yesterday';
   return {
     title: r.kind === 'checkin' ? CHECKIN_TITLE : MORNING_TITLE,
