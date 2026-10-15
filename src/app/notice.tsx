@@ -2,7 +2,7 @@
 // Shown once. The copy is supportive and plain: some people here are working on sobriety.
 import { Redirect, router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { AccessibilityInfo, Linking, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
 
 import { pendingWindow } from '@/engine';
 import { plural } from '@/lib/format';
@@ -13,7 +13,7 @@ import { Em, Eyebrow, Lede } from '@/ui/bits';
 import { Button, LinkButton } from '@/ui/Button';
 import { NoticeZero, noticeColors, type NoticeMotion } from '@/ui/NoticeZero';
 import { Screen } from '@/ui/Screen';
-import { SUPPORT_LINE } from '@/ui/support';
+import { callSupportLine, SUPPORT_LINE } from '@/ui/support';
 
 interface Copy {
   eyebrow: string;
@@ -171,7 +171,7 @@ export default function NoticeScreen() {
           <LinkButton
             label={`Need support? ${SUPPORT_LINE.name}, ${SUPPORT_LINE.display}`}
             accessibilityHint="Calls the helpline"
-            onPress={() => Linking.openURL(SUPPORT_LINE.tel)}
+            onPress={callSupportLine}
           />
         ) : null}
       </View>

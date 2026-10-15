@@ -2,7 +2,7 @@
 // sound / haptics / weekly nudge, reminder permission, how it works, support, and erase.
 import { router } from 'expo-router';
 import { useState, type ComponentType } from 'react';
-import { Linking, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { currentCheckInTime, firstUpcomingDay, opensAt, pendingWindow, type ClockTime } from '@/engine';
 import { formatUntil, formatWhen } from '@/lib/format';
@@ -14,7 +14,7 @@ import { TopBar } from '@/ui/Brand';
 import { Button, LinkButton } from '@/ui/Button';
 import { feedback } from '@/ui/feedback';
 import { Screen } from '@/ui/Screen';
-import { SUPPORT_LINE } from '@/ui/support';
+import { callSupportLine, SUPPORT_LINE } from '@/ui/support';
 import { TimeField } from '@/ui/TimeField';
 import { useDeviceCalendar } from '@/ui/useDevice';
 import { useReminderPermission } from '@/ui/useReminderPermission';
@@ -156,7 +156,7 @@ export default function Settings() {
           detail={`${SUPPORT_LINE.name}: ${SUPPORT_LINE.display}. ${SUPPORT_LINE.detail}`}
           right={<Text style={styles.call}>Call</Text>}
           hint="Calls the helpline"
-          onPress={() => Linking.openURL(SUPPORT_LINE.tel)}
+          onPress={callSupportLine}
         />
       </View>
 
