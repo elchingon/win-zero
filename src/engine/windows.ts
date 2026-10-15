@@ -1,5 +1,6 @@
 // Check-in windows (SPEC 2). Day D's window opens at check-in time on D and stays open through
-// all of D+1, closing at midnight at its end. The morning reminder falls on D+1, inside the window.
+// all of D+1, closing at midnight at its end. The morning reminder falls on D+1, before D+1's
+// check-in; set to the same time, that check-in serves as the reminder.
 // D+1's own window opens at its check-in time, so the two overlap until midnight; days still
 // settle strictly in order, so only the earliest unsettled day is ever pending.
 import { addDays, clockMinutes, dayKeyAt, diffDays, MS_PER_HOUR, wallTimeToInstant } from './dates';
@@ -59,13 +60,14 @@ export function windowFor(state: GoalState, day: DayKey): CheckInWindow {
   const next = addDays(day, 1);
   const opens = opensAt(state, day);
   const closes = closesAt(state, day);
-  const remind = wallTimeToInstant(next, state.morningTime, scheduleEntryFor(state, next).tz);
-  const inside = remind.getTime() > opens.getTime() && remind.getTime() < closes.getTime();
+  const remind = wallTimeToInstant(next, state.morningTime, scheduleEntryFor(state, next).tz).getTime();
+  // Not with or after D+1's check-in, which already says yesterday's is still open: one notification, not two.
+  const inside = remind > opens.getTime() && remind < Math.min(closes.getTime(), opensAt(state, next).getTime());
   return {
     day,
     tz: scheduleEntryFor(state, day).tz,
     opensAt: opens,
-    remindAt: inside ? remind : null,
+    remindAt: inside ? new Date(remind) : null,
     closesAt: closes,
   };
 }
@@ -103,7 +105,10 @@ export function isWindowToday(window: CheckInWindow, now: Date): boolean {
   return dayKeyAt(now, window.tz) === window.day;
 }
 
-/** Settings rule: the morning reminder must come before check-in time, so it asks about yesterday before today's check-in arrives. */
-export function isMorningBeforeCheckIn(morning: ClockTime, checkIn: ClockTime): boolean {
-  return clockMinutes(morning) < clockMinutes(checkIn);
+/**
+ * Settings rule: the morning reminder comes no later than check-in time. At the same time, the
+ * day's check-in serves as the reminder, so there's always something to answer when it arrives.
+ */
+export function isMorningAtOrBeforeCheckIn(morning: ClockTime, checkIn: ClockTime): boolean {
+  return clockMinutes(morning) <= clockMinutes(checkIn);
 }

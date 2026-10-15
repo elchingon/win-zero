@@ -80,6 +80,7 @@ describe('setup and settings', () => {
 
     expect(store.getState().setCheckInTime('08:30')).toEqual({ ok: false, reason: 'order' });
     expect(store.getState().setMorningTime('21:00')).toEqual({ ok: false, reason: 'order' });
+    expect(store.getState().setMorningTime('20:00')).toEqual({ ok: true }); // the same as check-in time
     expect(store.getState().setCheckInTime('21:00')).toEqual({ ok: true });
     expect(currentCheckInTime(store.getState().goal!)).toBe('21:00');
     expect(store.getState().setMorningTime('07:30')).toEqual({ ok: true });

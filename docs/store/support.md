@@ -11,8 +11,9 @@ is free, confidential and open 24/7 in the US: **1-800-662-4357**. The number is
 
 - Each evening at your check-in time (8:00 PM unless you change it), Win Zero asks whether you
   stuck to your goal today.
-- If you haven't answered by the next morning, a reminder asks about yesterday (9:00 AM unless you
-  change it).
+- If you haven't answered by the next day, a reminder asks about yesterday (9:00 AM unless you
+  change it). It can be any time up to your check-in time; at the same time, you get one
+  notification a day.
 - There's no rush: you can answer until midnight the next day. Use the notification's buttons, or
   open the app. If yesterday's check-in is still open when today's arrives, the app asks about
   yesterday first.

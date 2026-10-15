@@ -3,7 +3,7 @@ import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { DEFAULT_CHECK_IN_TIME, DEFAULT_MORNING_TIME, isMorningBeforeCheckIn } from '@/engine';
+import { DEFAULT_CHECK_IN_TIME, DEFAULT_MORNING_TIME, isMorningAtOrBeforeCheckIn } from '@/engine';
 import { formatClockTime } from '@/lib/format';
 import { requestReminderPermission } from '@/notifications/permissions';
 import { useApp } from '@/store';
@@ -43,7 +43,7 @@ export default function Setup() {
 
   if (hasGoal && !busy) return <Redirect href="/" />;
 
-  const orderOk = isMorningBeforeCheckIn(morningTime, checkInTime);
+  const orderOk = isMorningAtOrBeforeCheckIn(morningTime, checkInTime);
   const goalOk = goal.trim().length > 0;
 
   const finish = async (askPermission: boolean) => {
@@ -70,8 +70,8 @@ export default function Setup() {
           </Text>
         </View>
         <Lede>
-          Win Zero asks at your check-in time, and once more at {formatClockTime(morningTime, h24)} the next morning
-          if you haven&apos;t answered yet. There&apos;s no rush: you can answer until midnight the next day, right
+          Win Zero asks at your check-in time, and once more at {formatClockTime(morningTime, h24)} the next day if
+          you haven&apos;t answered yet. There&apos;s no rush: you can answer until midnight the next day, right
           from the notification or in the app.
         </Lede>
         <Lede>If you&apos;re away for a while, reminders ease off to one gentle nudge a week.</Lede>
@@ -127,12 +127,12 @@ export default function Setup() {
           hint="An evening time works best, once your day is done."
         />
         <TimeField
-          label="Morning reminder"
+          label="Reminder"
           value={morningTime}
           onChange={setMorningTime}
           h24={h24}
-          hint="Only if you haven't answered by then."
-          error={orderOk ? null : 'Pick a morning time before your check-in time.'}
+          hint="The next day, only if you haven't answered by then."
+          error={orderOk ? null : 'Pick a time no later than your check-in time.'}
         />
         <Button
           label="Start my streak"

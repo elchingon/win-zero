@@ -5,7 +5,7 @@ import { createGoal, resolve, setMorningTime } from '../resolve';
 import {
   closesAt,
   firstUpcomingDay,
-  isMorningBeforeCheckIn,
+  isMorningAtOrBeforeCheckIn,
   isWindowToday,
   nextWindow,
   pendingWindow,
@@ -49,11 +49,16 @@ describe('windowFor (SPEC 2)', () => {
     expect(pendingWindow(answered, tuesdayEvening)?.day).toBe('2026-10-14');
   });
 
-  it('keeps the morning reminder inside the window', () => {
+  it("drops the morning reminder when it would come with or after the next day's check-in", () => {
+    // At check-in time, D+1's check-in already says yesterday's is still open: one notification.
+    const same = setMorningTime(newGoal(), '20:00');
+    expect(windowFor(same, DAY0).remindAt).toBeNull();
     const late = setMorningTime(newGoal(), '21:00');
-    expect(windowFor(late, DAY0).remindAt).toEqual(at('2026-10-14', '21:00'));
-    expect(isMorningBeforeCheckIn('09:00', '20:00')).toBe(true);
-    expect(isMorningBeforeCheckIn('20:00', '20:00')).toBe(false);
+    expect(windowFor(late, DAY0).remindAt).toBeNull();
+    expect(windowFor(setMorningTime(newGoal(), '19:59'), DAY0).remindAt).toEqual(at('2026-10-14', '19:59'));
+    expect(isMorningAtOrBeforeCheckIn('09:00', '20:00')).toBe(true);
+    expect(isMorningAtOrBeforeCheckIn('20:00', '20:00')).toBe(true);
+    expect(isMorningAtOrBeforeCheckIn('20:01', '20:00')).toBe(false);
   });
 
   it('is 29 hours long across the fall-back change and 27 hours across spring-forward', () => {

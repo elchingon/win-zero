@@ -26,7 +26,7 @@ const DebugSection: ComponentType | null = __DEV__
   : null;
 
 const GOAL_MAX_LENGTH = 60;
-const ORDER_ERROR = 'The morning reminder has to come before check-in time.';
+const ORDER_ERROR = "The reminder can't come later than check-in time.";
 
 const PERMISSION_WORDS: Record<ReminderPermission, string> = {
   granted: 'On',
@@ -119,12 +119,12 @@ export default function Settings() {
           hint={`${pending ? `A check-in is open until ${formatUntil(pending.closesAt, now, tz, h24)}. ` : ''}Next check-in: ${formatWhen(upcoming, now, tz, h24)}.`}
         />
         <TimeField
-          label="Morning reminder"
+          label="Reminder"
           value={goal.morningTime}
           onChange={changeMorning}
           h24={h24}
           error={timeError.morning}
-          hint="Sent the next morning, only if you haven't answered."
+          hint="Sent the next day, only if you haven't answered. Set it to check-in time to get one notification a day."
         />
       </View>
 

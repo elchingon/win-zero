@@ -21,7 +21,7 @@ The playable web prototype at `docs/prototype/win-zero.html` sets the **look, fe
 Each goal day `D` has one answer window. It is generous on purpose: this is a supportive app, and a busy evening shouldn't cost anything.
 
 - **Opens:** check-in time on day `D` (first notification).
-- **Second reminder:** morning reminder time on day `D+1` (default 9:00 AM). It asks *"Did you stick to '<goal>' yesterday?"*.
+- **Second reminder:** the reminder time on day `D+1` (default 9:00 AM), any time up to the check-in time. It asks *"Did you stick to '<goal>' yesterday?"*. Set to the check-in time, it isn't sent on its own: day `D+1`'s check-in already says yesterday's is still open, so there's one notification a day.
 - **Closes:** midnight at the end of day `D+1`, on the clock in the time zone the window opened in. It never closes before day `D+1`'s window opens.
 
 With the defaults, Monday can be answered from 8:00 PM Monday until midnight Tuesday night. If a window closes unanswered, day `D` is **missed** (see section 3).
@@ -107,7 +107,7 @@ Hold to fire at about 6 shots/sec.
 
 ## 6. Screens
 
-- **Onboarding / Setup:** goal (free text plus suggestion chips), check-in time, morning reminder time, notification permission request with a short explanation first.
+- **Onboarding / Setup:** goal (free text plus suggestion chips), check-in time, reminder time (no later than check-in time), notification permission request with a short explanation first.
 - **Home:** goal, current streak, best run, bombs, shields; pending check-in card (same Yes / Not today as the notification); arsenal list with next-unlock progress; history calendar (yes / no / shielded / missed).
 - **Play:** full-screen Skia canvas, HUD (value left, day, weapon switch, bomb button, sound toggle), turret at bottom center.
 - **Result sheet:** over the filled screen, showing day, "N zeros down", rewards earned, next unlock, and buttons for Back to base and Replay (replay has no streak effect).

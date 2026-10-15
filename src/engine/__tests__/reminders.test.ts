@@ -60,9 +60,13 @@ describe('planReminders', () => {
     });
   });
 
-  it('keeps a morning time after check-in time inside the window', () => {
-    const plan = planReminders(setMorningTime(newGoal(), '21:00'), at(DAY0, '12:00'), OFF);
-    expect(kinds(plan, 'morning')[0]).toEqual({ at: at('2026-10-14', '21:00'), kind: 'morning', day: DAY0 });
+  it('sends one notification a day when the reminder is at check-in time', () => {
+    const plan = planReminders(setMorningTime(newGoal(), '20:00'), at(DAY0, '12:00'), OFF);
+    expect(kinds(plan, 'morning')).toEqual([]);
+    // Each check-in after the first asks about yesterday too.
+    expect(kinds(plan, 'checkin').slice(1).every((r) => r.earlier === addDays(r.day, -1))).toBe(true);
+    const times = isoOf(plan);
+    expect(new Set(times).size).toBe(times.length);
   });
 
   it('stops sooner when the slide is already under way', () => {

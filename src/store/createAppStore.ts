@@ -7,7 +7,7 @@ import {
   answer as answerCheckIn,
   createGoal,
   currentCheckInTime,
-  isMorningBeforeCheckIn,
+  isMorningAtOrBeforeCheckIn,
   isUnlocked,
   missDigest,
   nextWindow,
@@ -191,7 +191,7 @@ export function createAppStore(deps: StoreDeps) {
           setupGoal: ({ goal, checkInTime, morningTime }) => {
             if (!get().hydrated) return { ok: false, reason: 'not-ready' };
             if (!goal.trim()) return { ok: false, reason: 'empty-goal' };
-            if (!isMorningBeforeCheckIn(morningTime, checkInTime)) return { ok: false, reason: 'order' };
+            if (!isMorningAtOrBeforeCheckIn(morningTime, checkInTime)) return { ok: false, reason: 'order' };
             const state = createGoal({ goalId: deps.makeId(), goal, checkInTime, morningTime, now: now(), tz: timeZone() });
             set({ goal: state, weapon: null, seenThrough: null, round: null, notice: null, route: null, rejection: null });
             return { ok: true };
@@ -268,7 +268,7 @@ export function createAppStore(deps: StoreDeps) {
           setCheckInTime: (time) => {
             const goal = ready();
             if (!goal) return { ok: false, reason: 'no-goal' };
-            if (!isMorningBeforeCheckIn(goal.morningTime, time)) return { ok: false, reason: 'order' };
+            if (!isMorningAtOrBeforeCheckIn(goal.morningTime, time)) return { ok: false, reason: 'order' };
             setGoal(setGoalCheckInTime(goal, time, now(), timeZone()).state);
             return { ok: true };
           },
@@ -276,7 +276,7 @@ export function createAppStore(deps: StoreDeps) {
           setMorningTime: (time) => {
             const goal = ready();
             if (!goal) return { ok: false, reason: 'no-goal' };
-            if (!isMorningBeforeCheckIn(time, currentCheckInTime(goal))) return { ok: false, reason: 'order' };
+            if (!isMorningAtOrBeforeCheckIn(time, currentCheckInTime(goal))) return { ok: false, reason: 'order' };
             set({ goal: setGoalMorningTime(goal, time) });
             return { ok: true };
           },
