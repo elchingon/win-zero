@@ -19,9 +19,11 @@ describe('planReminders', () => {
     expect(REMINDER_MAX_WINDOWS).toBe(14);
     const plan = planReminders(newGoal(), at(DAY0, '12:00'), OFF);
     const days = daysFrom(DAY0, 14); // 10-13 .. 10-26
-    expect(kinds(plan, 'checkin').map((r) => [r.day, r.at])).toEqual(days.map((d) => [d, at(d, '20:00')]));
+    // Plus 10-27's check-in, while 10-26 is still open: the reset only lands at midnight after it.
+    const checkInDays = daysFrom(DAY0, 15);
+    expect(kinds(plan, 'checkin').map((r) => [r.day, r.at])).toEqual(checkInDays.map((d) => [d, at(d, '20:00')]));
     expect(kinds(plan, 'morning').map((r) => [r.day, r.at])).toEqual(days.map((d) => [d, at(addDays(d, 1), '09:00')]));
-    expect(plan).toHaveLength(28);
+    expect(plan).toHaveLength(29);
     expect(isoOf(plan)).toEqual([...isoOf(plan)].sort());
   });
 
@@ -37,25 +39,44 @@ describe('planReminders', () => {
     const plan = planReminders(s, at(DAY0, '21:00'), OFF);
     expect(plan.some((r) => r.day === DAY0)).toBe(false);
     expect(plan[0]).toEqual({ at: at('2026-10-14', '20:00'), kind: 'checkin', day: '2026-10-14' });
-    expect(kinds(plan, 'checkin')).toHaveLength(14);
+    expect(kinds(plan, 'checkin')).toHaveLength(15); // 14 windows, then the day after the reset day
   });
 
-  it('skips morning reminders that would fall outside the window', () => {
+  it('marks a check-in that arrives while the day before is still open', () => {
+    const plan = planReminders(newGoal(), at(DAY0, '12:00'), OFF);
+    const checkIns = kinds(plan, 'checkin');
+    expect(checkIns[0]).toEqual({ at: at(DAY0, '20:00'), kind: 'checkin', day: DAY0 });
+    expect(checkIns.slice(1).map((r) => [r.day, r.earlier])).toEqual(
+      daysFrom('2026-10-14', 14).map((d) => [d, addDays(d, -1)]),
+    );
+    expect(kinds(plan, 'morning').every((r) => r.earlier === undefined)).toBe(true);
+
+    // Once yesterday is answered, today's check-in is a plain one again.
+    const answered = answerDay(newGoal(), DAY0, 'yes', { timeDay: '2026-10-14', time: '09:30' }).state;
+    expect(kinds(planReminders(answered, at('2026-10-14', '09:30'), OFF), 'checkin')[0]).toEqual({
+      at: at('2026-10-14', '20:00'),
+      kind: 'checkin',
+      day: '2026-10-14',
+    });
+  });
+
+  it('keeps a morning time after check-in time inside the window', () => {
     const plan = planReminders(setMorningTime(newGoal(), '21:00'), at(DAY0, '12:00'), OFF);
-    expect(kinds(plan, 'morning')).toEqual([]);
+    expect(kinds(plan, 'morning')[0]).toEqual({ at: at('2026-10-14', '21:00'), kind: 'morning', day: DAY0 });
   });
 
   it('stops sooner when the slide is already under way', () => {
     let s = { ...yesDays(newGoal(), DAY0, 10), shields: 0 }; // through 10-22
     s = notTodays(s, '2026-10-23', 5); // streak 5, slide 5
-    s = resolve(s, at('2026-10-31', '20:30'), DENVER).state; // 10-28 .. 10-30 missed, free
+    s = resolve(s, at('2026-11-01', '00:30'), DENVER).state; // 10-28 .. 10-30 missed, free
     expect(s).toMatchObject({ consecutiveMissed: 3, slide: 5 });
-    const plan = planReminders(s, at('2026-10-31', '20:30'), OFF);
+    const plan = planReminders(s, at('2026-11-01', '00:30'), OFF);
     // Misses #4–#7 are free (10-31 .. 11-03); #8 is slip 6 (11-04); #9 is the final (11-05).
-    // Nothing for 11-06, which opens as the reset lands.
-    expect(kinds(plan, 'checkin').map((r) => r.day)).toEqual(daysFrom('2026-11-01', 5));
+    // 11-06's check-in comes while 11-05 is still open; the reset lands at midnight after it.
+    expect(kinds(plan, 'checkin').map((r) => r.day)).toEqual(daysFrom('2026-11-01', 6));
     expect(kinds(plan, 'morning').map((r) => r.day)).toEqual(daysFrom('2026-10-31', 6));
-    expect(plan.at(-1)?.at).toEqual(at('2026-11-06', '09:00')); // last reminder, before the 20:00 reset
+    expect(plan.at(-1)).toEqual({ at: at('2026-11-06', '20:00'), kind: 'checkin', day: '2026-11-06', earlier: '2026-11-05' });
+    expect(plan.at(-1)!.at.getTime()).toBeLessThan(at('2026-11-07', '00:00').getTime()); // before the reset
   });
 
   it('keeps going while shields would save the streak, up to the window cap', () => {
@@ -68,11 +89,11 @@ describe('planReminders', () => {
   });
 
   it('after a missed-day reset, sends only weekly nudges, starting a week later', () => {
-    const s = resolve({ ...yesDays(newGoal(), DAY0, 20), shields: 0 }, at('2026-11-16', '20:00'), DENVER).state;
+    const s = resolve({ ...yesDays(newGoal(), DAY0, 20), shields: 0 }, at('2026-11-17', '00:00'), DENVER).state;
     expect(s).toMatchObject({ paused: true, consecutiveMissed: 14 }); // reset when 11-15 closed
-    expect(planReminders(s, at('2026-11-16', '20:00'), OFF)).toEqual([]);
+    expect(planReminders(s, at('2026-11-17', '00:00'), OFF)).toEqual([]);
 
-    const plan = planReminders(s, at('2026-11-16', '20:00'), ON);
+    const plan = planReminders(s, at('2026-11-17', '00:00'), ON);
     expect(plan).toHaveLength(REENGAGE_NUDGE_COUNT);
     expect(plan.every((r) => r.kind === 'reengage')).toBe(true);
     expect(plan.slice(0, 3).map((r) => r.at)).toEqual([
@@ -91,19 +112,21 @@ describe('planReminders', () => {
 
   it('pre-schedules nudges after the projected reset, in case the app is never opened again', () => {
     const plan = planReminders(newGoal(), at(DAY0, '12:00'), ON);
-    expect(kinds(plan, 'checkin')).toHaveLength(14);
-    // Misses #1–#14 would be 10-13 .. 10-26; the reset lands at 20:00 on 10-27.
+    expect(kinds(plan, 'checkin')).toHaveLength(15);
+    // Misses #1–#14 would be 10-13 .. 10-26; the reset lands at midnight ending 10-27.
     expect(kinds(plan, 'reengage')[0]?.at).toEqual(at('2026-11-03', '20:00'));
     expect(plan.length).toBeLessThanOrEqual(64); // iOS keeps at most 64 pending notifications
   });
 
   it('brings daily reminders back after any answer, with the slide carried over', () => {
-    const dormant = resolve(yesDays(newGoal(), DAY0, 3), at('2026-11-02', '21:00'), DENVER).state;
+    const back = at('2026-11-03', '00:30');
+    const dormant = resolve(yesDays(newGoal(), DAY0, 3), back, DENVER).state;
     expect(dormant.paused).toBe(true);
-    const yes = answerDay(dormant, '2026-11-02', 'yes').state;
-    expect(kinds(planReminders(yes, at('2026-11-02', '21:00'), OFF), 'checkin')).toHaveLength(14);
-    const no = answerDay(dormant, '2026-11-02', 'not-today').state; // slip 1 of a new slide
-    expect(kinds(planReminders(no, at('2026-11-02', '21:00'), OFF), 'checkin')).toHaveLength(13);
+    const yes = answerDay(dormant, '2026-11-02', 'yes', { timeDay: '2026-11-03', time: '00:30' }).state;
+    // 14 windows to the projected reset, plus the next day's check-in before it lands.
+    expect(kinds(planReminders(yes, back, OFF), 'checkin')).toHaveLength(15);
+    const no = answerDay(dormant, '2026-11-02', 'not-today', { timeDay: '2026-11-03', time: '00:30' }).state; // slip 1
+    expect(kinds(planReminders(no, back, OFF), 'checkin')).toHaveLength(14);
   });
 
   it('lands on the right local wall times across the fall-back change', () => {

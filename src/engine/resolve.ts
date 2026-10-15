@@ -131,7 +131,7 @@ export function resolve(state: GoalState, now: Date, tz: TimeZone): Resolved {
 /**
  * Start a new check-in time or time zone from the next window that hasn't opened.
  * - An open window keeps at least the close time it already had, so an edit or a flight
- *   never closes it early.
+ *   never closes it early: its own entry is left alone, and the next opening never moves earlier.
  * - A window that hasn't opened may open right away under the new schedule, never earlier.
  * - Openings stay strictly increasing, so no day is skipped or repeated.
  * Expects a state already resolved at `now`.

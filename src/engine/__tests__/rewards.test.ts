@@ -73,7 +73,7 @@ describe('shields (SPEC 5)', () => {
   });
 
   it('a missed-day final spends one too', () => {
-    const s = resolve(yesDays(newGoal(), DAY0, 14), at('2026-11-10', '20:00'), DENVER).state; // answered through 10-26
+    const s = resolve(yesDays(newGoal(), DAY0, 14), at('2026-11-11', '00:00'), DENVER).state; // answered through 10-26
     // 10-27 .. 11-02 free, 11-03 .. 11-08 slip to 8, 11-09 is the final.
     expect(s).toMatchObject({ streak: 8, shields: 1, paused: false });
   });

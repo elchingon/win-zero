@@ -103,7 +103,7 @@ describe('startResponses', () => {
   });
 
   it("shows Home's banner when the check-in has closed, was answered, or hasn't opened", async () => {
-    const r = await running(yesDays(newGoal(), DAY0, 2), '2026-10-16', '20:30'); // 10-15 closed
+    const r = await running(yesDays(newGoal(), DAY0, 2), '2026-10-17', '00:30'); // 10-15 closed at midnight
     r.fake.tap(response(ACTION_YES, { day: '2026-10-15' }));
     expect(r.s()).toMatchObject({ rejection: 'expired', route: null, round: null });
     expect(r.s().goal?.lastSettledDay).toBe('2026-10-15'); // caught up all the same

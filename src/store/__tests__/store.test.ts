@@ -20,7 +20,7 @@ describe('lifecycle', () => {
     const app = fakeAppState();
     const stop = startLifecycle(h.store, app);
 
-    h.setTime('2026-11-01', '20:30'); // 10-23 .. 10-31 have closed
+    h.setTime('2026-11-02', '00:30'); // 10-23 .. 10-31 have closed
     app.emit('background');
     expect(h.store.getState().goal?.history).toHaveLength(10);
 
@@ -44,7 +44,7 @@ describe('lifecycle', () => {
     await flush();
 
     const h = harness();
-    h.setTime('2026-10-20', '21:00'); // 10-16 .. 10-19 closed
+    h.setTime('2026-10-21', '00:30'); // 10-16 .. 10-19 closed
     const stop = startLifecycle(h.store, fakeAppState());
     expect(h.store.getState().hydrated).toBe(false);
     await ready(h.store);
@@ -93,13 +93,13 @@ describe('setup and settings', () => {
 describe('notices', () => {
   it('shows a missed-day notice once, and nothing for the free week', async () => {
     const h = await withGoal(yesDays(newGoal(), DAY0, 10)); // through 10-22
-    h.setTime('2026-10-30', '20:30');
+    h.setTime('2026-10-31', '00:30');
     h.store.getState().refresh(); // seven free misses
     expect(h.store.getState().nextNotice()).toBeNull();
     h.store.getState().markQuietMisses();
     expect(h.store.getState().seenThrough).toBe('2026-10-29');
 
-    h.setTime('2026-11-01', '20:30');
+    h.setTime('2026-11-02', '00:30');
     h.store.getState().refresh(); // two slips
     const pending = h.store.getState().nextNotice();
     expect(pending).toEqual({
@@ -114,7 +114,7 @@ describe('notices', () => {
 
   it('only marks missed days seen once their news is shown', async () => {
     const h = await withGoal(yesDays(newGoal(), DAY0, 10)); // through 10-22
-    h.setTime('2026-11-01', '20:30');
+    h.setTime('2026-11-02', '00:30');
     h.store.getState().refresh(); // 7 free misses, then 2 slips
     const first = h.store.getState().nextNotice();
     expect(h.store.getState().nextNotice()).toEqual(first); // reading it changes nothing
@@ -129,10 +129,10 @@ describe('notices', () => {
 
   it('never moves the seen mark back', async () => {
     const h = await withGoal(yesDays(newGoal(), DAY0, 10)); // through 10-22
-    h.setTime('2026-11-01', '20:30');
+    h.setTime('2026-11-02', '00:30');
     h.store.getState().refresh();
     const early = h.store.getState().nextNotice()!; // through 10-31
-    h.setTime('2026-11-02', '20:30');
+    h.setTime('2026-11-03', '00:30');
     h.store.getState().refresh(); // one more slip
     const late = h.store.getState().nextNotice()!;
     expect(late).toMatchObject({ through: '2026-11-01', notice: { lost: 3 } });
@@ -143,7 +143,7 @@ describe('notices', () => {
 
   it("puts an answer's notice ahead of missed-day news, and clears only the one shown", async () => {
     const h = await withGoal({ ...yesDays(newGoal(), DAY0, 10), shields: 0 }); // through 10-22
-    h.setTime('2026-11-01', '20:30');
+    h.setTime('2026-11-02', '00:30');
     h.store.getState().refresh(); // 2 slips, not yet shown
     const missed = h.store.getState().nextNotice()!;
     h.store.getState().answer('not-today'); // one more
@@ -159,7 +159,7 @@ describe('notices', () => {
 
   it('shows Reset or Shielded for a missed-day final', async () => {
     const reset = await withGoal({ ...yesDays(newGoal(), DAY0, 20), shields: 0 });
-    reset.setTime('2026-11-16', '20:00');
+    reset.setTime('2026-11-17', '00:00');
     reset.store.getState().refresh();
     expect(reset.store.getState().nextNotice()?.notice).toEqual({
       kind: 'reset',
@@ -171,7 +171,7 @@ describe('notices', () => {
     });
 
     const shielded = await withGoal(yesDays(newGoal(), DAY0, 20)); // 2 shields
-    shielded.setTime('2026-11-16', '20:00');
+    shielded.setTime('2026-11-17', '00:00');
     shielded.store.getState().refresh();
     expect(shielded.store.getState().nextNotice()?.notice).toEqual({
       kind: 'shielded',
@@ -235,7 +235,7 @@ describe('answering a given day', () => {
 
   it("answers yesterday's window from the morning reminder", async () => {
     const h = await withGoal(yesDays(newGoal(), DAY0, 2)); // through 10-14
-    h.setTime('2026-10-16', '09:00'); // 10-15 stays open until 20:00 today
+    h.setTime('2026-10-16', '09:00'); // 10-15 stays open until midnight tonight
     expect(h.store.getState().answer('not-today', '2026-10-15')).toMatchObject({
       ok: true,
       outcome: { kind: 'slipped', day: '2026-10-15' },
@@ -246,7 +246,7 @@ describe('answering a given day', () => {
 
   it("turns down a day that closed, was answered, or hasn't opened", async () => {
     const h = await withGoal(yesDays(newGoal(), DAY0, 2)); // through 10-14
-    h.setTime('2026-10-16', '20:30'); // 10-15 closed unanswered
+    h.setTime('2026-10-17', '00:30'); // 10-15 closed unanswered at midnight
     expect(h.store.getState().answer('yes', '2026-10-15')).toMatchObject({ ok: false, reason: 'expired' });
     expect(h.store.getState().goal?.lastSettledDay).toBe('2026-10-15'); // caught up all the same
     expect(h.store.getState().answer('yes', '2026-10-14')).toMatchObject({ ok: false, reason: 'already-answered' });
@@ -290,7 +290,7 @@ describe('where an answer leads', () => {
     h.store.getState().clearRejection();
     expect(h.store.getState().rejection).toBeNull();
 
-    h.setTime('2026-10-17', '21:00'); // 10-16 closed unanswered
+    h.setTime('2026-10-18', '00:30'); // 10-16 closed unanswered at midnight
     h.store.getState().answer('not-today', '2026-10-16');
     expect(h.store.getState().rejection).toBe('expired');
     h.store.getState().answer('not-today');

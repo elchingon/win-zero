@@ -17,8 +17,10 @@ beforeEach(async () => {
   await AsyncStorage.clear();
 });
 
-/** The day the user comes back to: 10-23 .. 10-31 went unanswered (7 free, then 2 slips). */
+/** The day the user answers on coming back: 10-23 .. 10-31 went unanswered (7 free, then 2 slips). */
 const BACK = '2026-11-01';
+/** They come back just after midnight ending BACK, when 10-31 has closed and BACK is still open. */
+const RETURN_DAY = '2026-11-02';
 
 /** Home, as screens come and go over it. */
 function home(store: AppStore) {
@@ -66,7 +68,7 @@ async function scene() {
     nav,
     s: () => h.store.getState(),
     /** Nine days pass with the app in the background. */
-    away: () => h.setTime(BACK, '20:30'),
+    away: () => h.setTime(RETURN_DAY, '00:30'),
     yes: () => fake.tap(response(ACTION_YES, { day: BACK })),
     notToday: () => fake.tap(response(ACTION_NOT_TODAY, { day: BACK })),
   };
@@ -165,9 +167,9 @@ describe('Home after a long time in the background', () => {
   it('opens one screen, however many times days settle before Home leaves', async () => {
     const t = await scene();
     t.focus();
-    t.setTime('2026-10-31', '20:30');
+    t.setTime(BACK, '00:30');
     t.s().refresh(); // Home's own timer: 7 free, then a slip
-    t.setTime(BACK, '20:30');
+    t.setTime(RETURN_DAY, '00:30');
     t.s().refresh(); // another slip
     t.app.emit('active');
     expect(t.pushed).toEqual(['/notice']);
@@ -176,7 +178,7 @@ describe('Home after a long time in the background', () => {
   it('shows nothing for the free week, and counts those days as seen', async () => {
     const t = await scene();
     t.focus();
-    t.setTime('2026-10-28', '20:30');
+    t.setTime('2026-10-29', '00:30');
     t.app.emit('active');
     expect(t.pushed).toEqual([]);
     expect(t.s().seenThrough).toBe('2026-10-27');
@@ -201,7 +203,7 @@ describe('Home after a long time in the background', () => {
     await flush();
 
     const h = harness();
-    h.setTime(BACK, '20:30');
+    h.setTime(RETURN_DAY, '00:30');
     const fake = fakeResponses();
     fake.launchWith(response(ACTION_YES, { day: BACK }));
     // The root layout starts these before storage is read; Home mounts after.
