@@ -13,11 +13,10 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { colors } from '@/theme/tokens';
-
 import { useReduceMotion } from './a11y';
+import type { NoticeMotion } from './copy/notice';
 
-export type NoticeMotion = 'settle' | 'absorb' | 'shed' | 'none';
+export { noticeColors, type NoticeMotion } from './copy/notice';
 
 const ZERO_W = 84;
 const ZERO_H = 112;
@@ -89,5 +88,3 @@ const styles = StyleSheet.create({
     borderRadius: '50%',
   },
 });
-
-export const noticeColors = { reset: colors.flare, shielded: colors.teal, slipping: colors.amber, noted: colors.amber };

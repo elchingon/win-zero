@@ -5,105 +5,15 @@ import { useEffect, useState } from 'react';
 import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
 
 import { pendingWindow } from '@/engine';
-import { plural } from '@/lib/format';
-import { appStore, UNDO_MS, UNDO_MS_SCREEN_READER, useApp, type Notice } from '@/store';
+import { appStore, UNDO_MS, UNDO_MS_SCREEN_READER, useApp } from '@/store';
 import { colors, space, type } from '@/theme/tokens';
 import { useScreenReader } from '@/ui/a11y';
 import { Em, Eyebrow, Lede } from '@/ui/bits';
 import { Button, LinkButton } from '@/ui/Button';
-import { NoticeZero, noticeColors, type NoticeMotion } from '@/ui/NoticeZero';
+import { copyFor, noticeColors, UNDONE } from '@/ui/copy/notice';
+import { NoticeZero } from '@/ui/NoticeZero';
 import { Screen } from '@/ui/Screen';
 import { callSupportLine, SUPPORT_LINE } from '@/ui/support';
-
-interface Copy {
-  eyebrow: string;
-  title: [before: string, em: string];
-  body: string[];
-  motion: NoticeMotion;
-  support?: boolean;
-}
-
-const KEEPSAKES = 'your weapons, bombs and shields are still yours';
-const UNDONE = 'Undone. Your check-in is open again.';
-
-function copyFor(n: Notice): Copy {
-  switch (n.kind) {
-    case 'slipping': {
-      const lostLine = n.lost === 1 ? 'a zero.' : `${n.lost} zeros.`;
-      if (n.cause === 'answer') {
-        return {
-          eyebrow: 'Not today',
-          title: ["You've lost ", lostLine],
-          body: [
-            'Thanks for being honest.',
-            n.streak > 0
-              ? `Your streak is at ${plural(n.streak, 'zero')}. A Yes at your next check-in stops the slide.`
-              : 'A Yes at your next check-in starts a new run.',
-          ],
-          motion: 'shed',
-          support: true,
-        };
-      }
-      return {
-        eyebrow: 'While you were away',
-        title: ["You've lost ", lostLine],
-        body: [
-          n.stopped
-            ? `Your Yes stopped the slide. Your streak is at ${plural(n.streak, 'zero')}.`
-            : `Check in to stop the slide. Your streak is at ${plural(n.streak, 'zero')}.`,
-          'Missed days are free for a week; after that, each one takes a zero.',
-        ],
-        motion: 'shed',
-        support: true,
-      };
-    }
-    case 'shielded':
-      return {
-        eyebrow: n.cause === 'answer' ? 'Shield used' : 'While you were away',
-        title: ['Your shield ', 'held.'],
-        body: [
-          n.cause === 'answer'
-            ? `That Not today would have started a fresh run, so a shield stepped in. Your streak stays at ${plural(n.streak, 'zero')}.`
-            : n.lost > 0
-              ? `You lost ${plural(n.lost, 'zero')} while you were away, and then a shield stopped the slide. Your streak is at ${plural(n.streak, 'zero')}.`
-              : `A shield kept your streak at ${plural(n.streak, 'zero')}.`,
-          `The count starts over. Shields left: ${n.shieldsLeft}.`,
-        ],
-        motion: 'absorb',
-      };
-    case 'reset':
-      return n.cause === 'answer'
-        ? {
-            eyebrow: 'A fresh start',
-            title: ['Back to ', 'one zero.'],
-            body: [
-              "Thanks for being honest. Hard stretches happen, and you're still here checking in.",
-              `Your next Yes starts a new run. Your best run stays on the board at ${plural(n.bestStreak, 'day')}, and ${KEEPSAKES}.`,
-            ],
-            motion: 'settle',
-            support: true,
-          }
-        : {
-            eyebrow: 'Welcome back',
-            title: ['A fresh ', 'start.'],
-            body: [
-              "It's been a while since your last check-in, so your streak has started over.",
-              n.stopped
-                ? `Your Yes started a new run. Your best run stays at ${plural(n.bestStreak, 'day')}, and ${KEEPSAKES}.`
-                : `Your best run stays at ${plural(n.bestStreak, 'day')}, and ${KEEPSAKES}. Check in whenever you're ready.`,
-            ],
-            motion: 'settle',
-            support: true,
-          };
-    case 'noted':
-      return {
-        eyebrow: 'Not today',
-        title: ['Thanks for ', 'checking in.'],
-        body: ['Honest answers keep the streak real. A Yes at your next check-in puts your first zero on the board.'],
-        motion: 'none',
-      };
-  }
-}
 
 export default function NoticeScreen() {
   // Snapshot it, and mark it shown: it appears once, and the store may move on while it's up.
