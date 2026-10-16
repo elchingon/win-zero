@@ -13,6 +13,18 @@ export interface ResultLine {
   news?: boolean;
 }
 
+/** What covers the round: the HUD while it plays, then the encouragement popup, then the sheet. */
+export type RoundOverlay = 'hud' | 'cheer' | 'sheet';
+
+/**
+ * Until the fill lands, the HUD. Then a line of encouragement until it's dismissed (`cheered`),
+ * then the result sheet. Practice has no streak to cheer on, so it goes straight to the sheet.
+ */
+export function roundOverlay(landed: boolean, mode: ResultMode, cheered: boolean): RoundOverlay {
+  if (!landed) return 'hud';
+  return mode === 'practice' || cheered ? 'sheet' : 'cheer';
+}
+
 /** The sheet's lines for a Day `n` round. `record` is absent for practice. */
 export function resultLines(n: number, mode: ResultMode, record: RoundRecord | null, goal: GoalState | null): ResultLine[] {
   const lines: ResultLine[] = [];
