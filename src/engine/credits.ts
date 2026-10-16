@@ -3,6 +3,7 @@
 // round. The wallet sits apart from GoalState so credits outlive a goal, and every grant carries a
 // claim key so it pays once: a reward's id today (creditRewards.ts), a purchase's id later.
 import type { GoalState } from './types';
+import { lockedWeapons, type WeaponDef, type WeaponId } from './weapons';
 
 export type CreditKind = 'game' | 'weapon';
 
@@ -51,6 +52,15 @@ export function grantCredits(
 export function spendCredit(wallet: CreditWallet, kind: CreditKind): CreditWallet {
   if (wallet.balance[kind] < 1) throw new RangeError(`No ${kind} credits to spend`);
   return { ...wallet, balance: { ...wallet.balance, [kind]: wallet.balance[kind] - 1 } };
+}
+
+/**
+ * What a Weapon credit could lend a round about to start: the weapons not yet unlocked, while a
+ * credit is held and the round hasn't borrowed its share. Empty means there's nothing to ask.
+ */
+export function weaponCreditOffer(wallet: CreditWallet, bestStreak: number, borrowed: readonly WeaponId[]): WeaponDef[] {
+  if (wallet.balance.weapon < 1 || borrowed.length >= WEAPON_CREDITS_PER_ROUND) return [];
+  return lockedWeapons(bestStreak).filter((w) => !borrowed.includes(w.id));
 }
 
 /** A bonus round can have this many zeros. */

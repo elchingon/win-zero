@@ -7,6 +7,8 @@ import {
   grantCredits,
   isBonusSize,
   spendCredit,
+  WEAPON_CREDITS_PER_ROUND,
+  weaponCreditOffer,
   yesInRow,
   type CreditWallet,
 } from '../credits';
@@ -90,6 +92,30 @@ describe('credit wallet (SPEC 5)', () => {
     expect(isBonusSize(BONUS_MAX_N + 1)).toBe(false);
     expect(isBonusSize(2.5)).toBe(false);
     expect(isBonusSize(NaN)).toBe(false);
+  });
+});
+
+describe('weaponCreditOffer (SPEC 5)', () => {
+  const holding = (weapon: number): CreditWallet => ({ ...EMPTY_WALLET, balance: { game: 0, weapon } });
+  const ids = (ws: { id: string }[]) => ws.map((w) => w.id);
+
+  it('offers every weapon not yet unlocked while a credit is held', () => {
+    expect(ids(weaponCreditOffer(holding(1), 3, []))).toEqual(['scatter', 'rocket', 'chain', 'laser', 'nuke']);
+    expect(ids(weaponCreditOffer(holding(2), 60, []))).toEqual(['nuke']);
+  });
+
+  it('offers nothing without a credit, with every weapon unlocked, or once the round has borrowed its share', () => {
+    expect(WEAPON_CREDITS_PER_ROUND).toBe(1);
+    expect(weaponCreditOffer(holding(0), 3, [])).toEqual([]);
+    expect(weaponCreditOffer(holding(3), 100, [])).toEqual([]);
+    expect(weaponCreditOffer(holding(3), 3, ['rocket'])).toEqual([]);
+  });
+
+  it('is offered after the Yes, so a weapon that Yes unlocked is not on it', () => {
+    const s = yesDays(newGoal(), DAY0, 3); // the 3rd Yes unlocks the Twin Barrel and earns a credit
+    const { wallet } = claimCredits(EMPTY_WALLET, { type: 'yes', goal: s });
+    expect(wallet.balance.weapon).toBe(1);
+    expect(ids(weaponCreditOffer(wallet, s.bestStreak, []))).toEqual(['scatter', 'rocket', 'chain', 'laser', 'nuke']);
   });
 });
 

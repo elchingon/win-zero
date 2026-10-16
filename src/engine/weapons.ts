@@ -1,4 +1,5 @@
-// Weapons (SPEC 5). Unlocked by bestStreak, so a reset never takes one away.
+// Weapons (SPEC 5). Unlocked by bestStreak, so a reset never takes one away. A Weapon credit
+// (credits.ts) lends one not yet unlocked for a single round: the round's `borrowed` list.
 
 export type WeaponId = 'pea' | 'twin' | 'scatter' | 'rocket' | 'chain' | 'laser' | 'nuke';
 
@@ -127,6 +128,16 @@ export function isUnlocked(id: WeaponId, bestStreak: number): boolean {
   return weaponById(id).unlockAt <= Math.max(STARTER_UNLOCK, bestStreak);
 }
 
+/** The weapons not yet unlocked, lowest first. */
+export function lockedWeapons(bestStreak: number): WeaponDef[] {
+  return WEAPONS.filter((w) => !isUnlocked(w.id, bestStreak));
+}
+
+/** A round's weapons: the unlocked ones and any it borrowed, in unlock order. */
+export function roundWeapons(bestStreak: number, borrowed: readonly WeaponId[] = []): WeaponDef[] {
+  return WEAPONS.filter((w) => isUnlocked(w.id, bestStreak) || borrowed.includes(w.id));
+}
+
 /** The highest unlocked weapon. */
 export function defaultWeapon(bestStreak: number): WeaponDef {
   const unlocked = unlockedWeapons(bestStreak);
@@ -139,9 +150,14 @@ export function newlyUnlocked(prevBest: number, nextBest: number): WeaponDef[] {
   return unlockedWeapons(nextBest).filter((w) => w.unlockAt > before);
 }
 
-/** The player's pick while it's unlocked; otherwise the default, the highest unlocked weapon. */
-export function equippedWeapon(pick: WeaponId | null, bestStreak: number): WeaponDef {
-  return pick && isUnlocked(pick, bestStreak) ? weaponById(pick) : defaultWeapon(bestStreak);
+/**
+ * The player's pick while the round has it (unlocked, or borrowed). Otherwise the weapon the round
+ * borrowed last, or with none borrowed, the default: the highest unlocked weapon.
+ */
+export function equippedWeapon(pick: WeaponId | null, bestStreak: number, borrowed: readonly WeaponId[] = []): WeaponDef {
+  if (pick && (isUnlocked(pick, bestStreak) || borrowed.includes(pick))) return weaponById(pick);
+  const lent = borrowed.at(-1);
+  return lent ? weaponById(lent) : defaultWeapon(bestStreak);
 }
 
 export interface ArsenalRow {

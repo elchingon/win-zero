@@ -7,10 +7,13 @@ import {
   BOMB_DAMAGE,
   BOMB_RADIUS_FRACTION,
   defaultWeapon,
+  equippedWeapon,
   FIRE_RATE_HZ,
   isUnlocked,
+  lockedWeapons,
   newlyUnlocked,
   nextUnlock,
+  roundWeapons,
   unlockedWeapons,
   WEAPONS,
   weaponById,
@@ -142,6 +145,28 @@ describe('weapons (SPEC 5)', () => {
     expect(unlockedWeapons(100).length).toBe(7);
     expect(defaultWeapon(0).id).toBe('pea');
     expect(defaultWeapon(59).id).toBe('chain');
+  });
+
+  it('lists the weapons still locked, lowest first', () => {
+    expect(lockedWeapons(0).map((w) => w.id)).toEqual(['twin', 'scatter', 'rocket', 'chain', 'laser', 'nuke']);
+    expect(lockedWeapons(13).map((w) => w.id)).toEqual(['rocket', 'chain', 'laser', 'nuke']);
+    expect(lockedWeapons(100)).toEqual([]);
+  });
+
+  it("adds a round's borrowed weapons to the unlocked ones, in unlock order", () => {
+    expect(roundWeapons(3).map((w) => w.id)).toEqual(['pea', 'twin']);
+    expect(roundWeapons(3, ['rocket']).map((w) => w.id)).toEqual(['pea', 'twin', 'rocket']);
+    expect(roundWeapons(0, ['nuke']).map((w) => w.id)).toEqual(['pea', 'nuke']);
+    // Borrowed, then unlocked anyway: listed once.
+    expect(roundWeapons(14, ['rocket']).map((w) => w.id)).toEqual(['pea', 'twin', 'scatter', 'rocket']);
+  });
+
+  it('equips a borrowed weapon unless the player picks another the round has', () => {
+    expect(equippedWeapon(null, 3, ['rocket']).id).toBe('rocket');
+    expect(equippedWeapon('twin', 3, ['rocket']).id).toBe('twin');
+    expect(equippedWeapon('rocket', 3, ['rocket']).id).toBe('rocket');
+    expect(equippedWeapon('laser', 3, ['rocket']).id).toBe('rocket'); // not this round's
+    expect(equippedWeapon('rocket', 3).id).toBe('twin'); // nothing borrowed: the default
   });
 
   it('stays unlocked after a reset', () => {
