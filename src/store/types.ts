@@ -50,6 +50,9 @@ export interface BonusRound {
   played: boolean;
 }
 
+/** The round a Weapon credit lends to: the day's round, or the bonus round. */
+export type CreditRound = 'daily' | 'bonus';
+
 export interface PersistedState {
   goal: GoalState | null;
   /** The player's weapon pick. null means the default, the highest unlocked. */

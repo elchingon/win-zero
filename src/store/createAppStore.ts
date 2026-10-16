@@ -5,7 +5,10 @@ import { createStore } from 'zustand/vanilla';
 
 import {
   answer as answerCheckIn,
+  claimCredits,
   createGoal,
+  EMPTY_WALLET,
+  isBonusSize,
   isUnlocked,
   missDigest,
   MS_PER_DAY,
@@ -16,6 +19,8 @@ import {
   setGoalText as setGoalWording,
   setMorningTime as setGoalMorningTime,
   spendBomb as spendGoalBomb,
+  spendCredit,
+  weaponCreditOffer,
   type Answer,
   type AnswerRejection,
   type AnswerResult,
@@ -36,6 +41,7 @@ import {
   STORE_VERSION,
   type AnswerRoute,
   type AnswerSource,
+  type CreditRound,
   type Notice,
   type PendingNotice,
   type PersistedState,
@@ -100,6 +106,18 @@ export interface AppState extends PersistedState {
   takeRoute: () => AnswerRoute | null;
   clearRejection: () => void;
   finishRound: () => void;
+  /**
+   * Spend a Game credit on a bonus round of `n` zeros. Turned down without a goal or a credit,
+   * for a size out of range, or while a bonus round waits to be played.
+   */
+  startBonusRound: (n: number) => boolean;
+  /** The bonus round's last zero went. */
+  finishBonusRound: () => void;
+  /**
+   * Spend a Weapon credit to lend `target`'s round weapon `id`: one the round's offer holds (not
+   * yet unlocked, within the round's share), while that round waits to be played.
+   */
+  borrowWeapon: (target: CreditRound, id: WeaponId) => boolean;
   selectWeapon: (id: WeaponId) => void;
   spendBomb: () => boolean;
   setGoalText: (text: string) => EditResult;
@@ -127,6 +145,8 @@ export interface AppState extends PersistedState {
   devJumpToDay: (n: number) => AnswerResult | null;
   /** Development only: move the clock to the moment the next check-in opens. */
   devSkipToNextCheckIn: () => void;
+  /** Development only: an empty wallet with nothing claimed, so every credit can be earned again. */
+  devResetCredits: () => void;
 }
 
 /** The debug skip lands just after the next window opens, not on its edge. */
@@ -223,6 +243,7 @@ export function createAppStore(deps: StoreDeps) {
             const state = createGoal({ goalId: deps.makeId(), goal, checkInTime, morningTime, now: now(), tz: timeZone() });
             set({
               goal: state,
+              credits: claimCredits(get().credits, { type: 'goal', goal: state }).wallet,
               weapon: null,
               seenThrough: null,
               round: null,
@@ -244,9 +265,11 @@ export function createAppStore(deps: StoreDeps) {
             } else if (r.outcome.kind === 'yes') {
               const { day, streak, rewards } = r.outcome;
               const newest = rewards.weapons.at(-1);
+              const earned = claimCredits(get().credits, { type: 'yes', goal: r.state });
               setGoal(r.state, {
                 // A newly unlocked weapon equips itself; otherwise the player's pick stands.
                 weapon: newest ? newest.id : get().weapon,
+                credits: earned.wallet,
                 round: {
                   day,
                   n: streak,
@@ -255,7 +278,7 @@ export function createAppStore(deps: StoreDeps) {
                     shield: rewards.shield,
                     shieldCapped: rewards.shieldCapped,
                     weapons: rewards.weapons.map((w) => w.id),
-                    credits: [],
+                    credits: earned.granted,
                   },
                   borrowed: [],
                   played: false,
@@ -312,6 +335,31 @@ export function createAppStore(deps: StoreDeps) {
           finishRound: () => {
             const { round } = get();
             if (round && !round.played) set({ round: { ...round, played: true } });
+          },
+
+          startBonusRound: (n) => {
+            const { credits, bonus } = get();
+            if (!ready() || !isBonusSize(n) || credits.balance.game < 1 || (bonus && !bonus.played)) return false;
+            set({ credits: spendCredit(credits, 'game'), bonus: { n, borrowed: [], played: false } });
+            return true;
+          },
+
+          finishBonusRound: () => {
+            const { bonus } = get();
+            if (bonus && !bonus.played) set({ bonus: { ...bonus, played: true } });
+          },
+
+          borrowWeapon: (target, id) => {
+            const goal = ready();
+            const { credits, round, bonus } = get();
+            const record = target === 'daily' ? round : bonus;
+            if (!goal || !record || record.played) return false;
+            if (!weaponCreditOffer(credits, goal.bestStreak, record.borrowed).some((w) => w.id === id)) return false;
+            const borrowed = [...record.borrowed, id];
+            const spent = spendCredit(credits, 'weapon');
+            if (target === 'daily' && round) set({ credits: spent, round: { ...round, borrowed } });
+            else if (target === 'bonus' && bonus) set({ credits: spent, bonus: { ...bonus, borrowed } });
+            return true;
           },
 
           selectWeapon: (id) => {
@@ -408,6 +456,10 @@ export function createAppStore(deps: StoreDeps) {
             const goal = get().goal;
             if (!goal || pendingWindow(goal, now())) return;
             get().advanceDevClock(nextWindow(goal).opensAt.getTime() - now().getTime() + DEV_SKIP_SLACK_MS);
+          },
+
+          devResetCredits: () => {
+            if (deps.dev && get().hydrated) set({ credits: EMPTY_WALLET });
           },
         };
       },

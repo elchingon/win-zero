@@ -2,7 +2,16 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { beforeEach, describe, expect, it } from '@jest/globals';
 
-import { addDays, currentCheckInTime, EMPTY_WALLET, latestScheduleEntry, MS_PER_DAY, pendingWindow } from '@/engine';
+import {
+  addDays,
+  BONUS_MAX_N,
+  currentCheckInTime,
+  EMPTY_WALLET,
+  latestScheduleEntry,
+  MS_PER_DAY,
+  pendingWindow,
+  type CreditWallet,
+} from '@/engine';
 import { answerDay, at, DAY0, DENVER, newGoal, TOKYO, yesDays } from '@/engine/__tests__/fixtures';
 
 import { createAppStore, REMINDER_CARD_HIDE_MS, UNDO_MS, UNDO_MS_SCREEN_READER, type AppStore } from '../createAppStore';
@@ -489,7 +498,17 @@ describe('weapons and rounds', () => {
     expect(h.store.getState().round).toEqual({
       day: '2026-10-17',
       n: 5,
-      rewards: { bomb: true, shield: false, shieldCapped: false, weapons: [], credits: [] },
+      rewards: {
+        bomb: true,
+        shield: false,
+        shieldCapped: false,
+        weapons: [],
+        // The wallet started empty, so this Yes collects the credits the run already reached.
+        credits: [
+          { kind: 'game', amount: 1, key: 'zeros-2' },
+          { kind: 'weapon', amount: 1, key: 'yes-run-3' },
+        ],
+      },
       borrowed: [],
       played: false,
     });
@@ -510,6 +529,149 @@ describe('weapons and rounds', () => {
     expect(h.store.getState().spendBomb()).toBe(true);
     expect(h.store.getState().goal?.bombs).toBe(0);
     expect(h.store.getState().spendBomb()).toBe(false);
+  });
+});
+
+describe('credits (SPEC 5)', () => {
+  const holding = (game: number, weapon: number): CreditWallet => ({ balance: { game, weapon }, claimed: [] });
+
+  it('pays the goal its Game credit at setup, once until everything is erased', async () => {
+    const h = harness();
+    await ready(h.store);
+    const setup = () => h.store.getState().setupGoal({ goal: 'Exercise more', checkInTime: '19:00', morningTime: '08:00' });
+    setup();
+    expect(h.store.getState().credits).toEqual({ balance: { game: 1, weapon: 0 }, claimed: ['goal-set'] });
+    setup();
+    expect(h.store.getState().credits.balance.game).toBe(1);
+    h.store.getState().erase();
+    setup();
+    expect(h.store.getState().credits.balance.game).toBe(1);
+  });
+
+  it('pays what a Yes earned into the wallet, and records it on the round', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 1)); // through 10-13
+    h.setTime('2026-10-14', '21:00');
+    h.store.getState().answer('yes'); // 2 zeros
+    expect(h.store.getState().round?.rewards.credits).toEqual([{ kind: 'game', amount: 1, key: 'zeros-2' }]);
+    expect(h.store.getState().credits).toEqual({ balance: { game: 1, weapon: 0 }, claimed: ['zeros-2'] });
+
+    h.setTime('2026-10-15', '21:00');
+    h.store.getState().answer('yes', '2026-10-15', 'notification'); // 3 in a row, from a notification
+    expect(h.store.getState().round?.rewards).toMatchObject({
+      weapons: ['twin'],
+      credits: [{ kind: 'weapon', amount: 1, key: 'yes-run-3' }],
+    });
+    expect(h.store.getState().credits.balance).toEqual({ game: 1, weapon: 1 });
+
+    h.setTime('2026-10-16', '21:00');
+    h.store.getState().answer('yes');
+    expect(h.store.getState().round?.rewards.credits).toEqual([]);
+  });
+
+  it('earns nothing for a Not today', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 1));
+    h.setTime('2026-10-14', '21:00');
+    h.store.getState().answer('not-today');
+    expect(h.store.getState().credits).toEqual(EMPTY_WALLET);
+  });
+
+  it('spends a Game credit on a bonus round, one waiting at a time', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 3));
+    expect(h.store.getState().startBonusRound(250)).toBe(false); // no credit
+    h.store.setState({ credits: holding(2, 0) });
+    expect(h.store.getState().startBonusRound(0)).toBe(false);
+    expect(h.store.getState().startBonusRound(BONUS_MAX_N + 1)).toBe(false);
+    expect(h.store.getState().startBonusRound(250)).toBe(true);
+    expect(h.store.getState().bonus).toEqual({ n: 250, borrowed: [], played: false });
+    expect(h.store.getState().credits.balance.game).toBe(1);
+
+    expect(h.store.getState().startBonusRound(10)).toBe(false); // the first is still waiting
+    h.store.getState().finishBonusRound();
+    expect(h.store.getState().bonus?.played).toBe(true);
+    expect(h.store.getState().startBonusRound(BONUS_MAX_N)).toBe(true);
+    expect(h.store.getState().bonus).toEqual({ n: BONUS_MAX_N, borrowed: [], played: false });
+    expect(h.store.getState().credits.balance.game).toBe(0);
+    // Nothing about the goal changes.
+    expect(h.store.getState().goal).toMatchObject({ streak: 3, bombs: 0 });
+  });
+
+  it('plays no bonus round without a goal', async () => {
+    const h = harness();
+    await ready(h.store);
+    h.store.setState({ credits: holding(1, 0) });
+    expect(h.store.getState().startBonusRound(10)).toBe(false);
+  });
+
+  it("spends a Weapon credit to lend a round a weapon it hasn't unlocked, once per round", async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 3)); // best 3, through 10-15
+    h.setTime('2026-10-16', '21:00');
+    h.store.getState().answer('yes');
+    h.store.setState({ credits: holding(0, 0) });
+    expect(h.store.getState().borrowWeapon('daily', 'rocket')).toBe(false); // no credit
+    h.store.setState({ credits: holding(0, 2) });
+    expect(h.store.getState().borrowWeapon('daily', 'twin')).toBe(false); // already unlocked
+    expect(h.store.getState().borrowWeapon('daily', 'rocket')).toBe(true);
+    expect(h.store.getState().round?.borrowed).toEqual(['rocket']);
+    expect(h.store.getState().credits.balance.weapon).toBe(1);
+    expect(h.store.getState().borrowWeapon('daily', 'laser')).toBe(false); // the round's share is spent
+    expect(h.store.getState().weapon).toBeNull(); // the saved pick stays an unlocked one
+
+    h.store.setState({ credits: holding(1, 1) });
+    expect(h.store.getState().borrowWeapon('bonus', 'nuke')).toBe(false); // no bonus round
+    h.store.getState().startBonusRound(500);
+    expect(h.store.getState().borrowWeapon('bonus', 'nuke')).toBe(true);
+    expect(h.store.getState().bonus?.borrowed).toEqual(['nuke']);
+    expect(h.store.getState().round?.borrowed).toEqual(['rocket']);
+  });
+
+  it('lends nothing to a round already played', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 3));
+    h.setTime('2026-10-16', '21:00');
+    h.store.getState().answer('yes');
+    h.store.getState().finishRound();
+    h.store.setState({ credits: holding(0, 1) });
+    expect(h.store.getState().borrowWeapon('daily', 'rocket')).toBe(false);
+    expect(h.store.getState().credits.balance.weapon).toBe(1);
+  });
+
+  it('lets a borrowed weapon go with its round when the round goes unplayed', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 3));
+    h.setTime('2026-10-16', '21:00');
+    h.store.getState().answer('yes');
+    h.store.setState({ credits: holding(0, 1) });
+    h.store.getState().borrowWeapon('daily', 'rocket');
+    h.setTime('2026-10-19', '12:00'); // 10-17's check-in closed unanswered at midnight
+    h.store.getState().refresh();
+    expect(h.store.getState().round).toBeNull();
+    expect(h.store.getState().credits.balance.weapon).toBe(0);
+  });
+
+  it('brings a borrowed weapon back with its round when a Not today is undone', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 3));
+    h.setTime('2026-10-16', '21:00');
+    h.store.getState().answer('yes');
+    h.store.setState({ credits: holding(0, 1) });
+    h.store.getState().borrowWeapon('daily', 'rocket');
+    h.setTime('2026-10-17', '21:00');
+    h.store.getState().answer('not-today');
+    expect(h.store.getState().round).toBeNull();
+    expect(h.store.getState().undoNotToday()).toBe(true);
+    expect(h.store.getState().round).toMatchObject({ day: '2026-10-16', borrowed: ['rocket'] });
+    expect(h.store.getState().credits.balance.weapon).toBe(0);
+  });
+
+  it('pays every credit a debug jump reaches, and can empty the wallet, in development only', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 2));
+    h.store.getState().devJumpToDay(30);
+    expect(h.store.getState().round?.rewards.credits.map((g) => g.key)).toEqual(['zeros-2', 'yes-run-3', 'yes-run-14', 'yes-run-30']);
+    expect(h.store.getState().credits.balance).toEqual({ game: 1, weapon: 3 });
+    h.store.getState().devResetCredits();
+    expect(h.store.getState().credits).toEqual(EMPTY_WALLET);
+
+    const prod = await withGoal(newGoal(), { dev: false });
+    prod.store.setState({ credits: holding(1, 1) });
+    prod.store.getState().devResetCredits();
+    expect(prod.store.getState().credits).toEqual(holding(1, 1));
   });
 });
 
