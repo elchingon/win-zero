@@ -21,7 +21,9 @@
       "@assets/*": ["../assets/*"],
       // Shared files import zustand from ../src; resolve it here, not from the app's node_modules.
       "zustand": ["./node_modules/zustand"],
-      "zustand/*": ["./node_modules/zustand/*"]
+      "zustand/*": ["./node_modules/zustand/*"],
+      // The shared drawing code imports Skia's types; the website's canvas adapter stands in.
+      "@shopify/react-native-skia": ["./src/play/game/skia/types.ts"]
     }
   },
   "include": ["src"],
