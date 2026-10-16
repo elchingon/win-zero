@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { PRACTICE_BEST, PRACTICE_BOMBS, PRACTICE_MAX_N } from '@/dev/demo';
 import { composeRound, equippedWeapon, fillPlan, unlockedWeapons, type WeaponId } from '@/engine';
 import { makeCues } from '@/game/cues';
 import { GameCanvas, type FrameStats, type GameHandle, type RoundSetup } from '@/game/GameCanvas';
@@ -24,12 +25,6 @@ import { CrashScreen } from '@/ui/CrashScreen';
 
 /** Practice rounds: development builds, and release builds made for measuring frame rate. */
 const PRACTICE_ENABLED = __DEV__ || process.env.EXPO_PUBLIC_PERF_BUILD === '1';
-/** Practice rounds have every weapon. */
-const PRACTICE_BEST = 100;
-/** Practice rounds go up to this many zeros. */
-const PRACTICE_MAX_N = 100_000;
-/** Practice rounds come with this many free bombs, to try them without a long run. */
-const PRACTICE_BOMBS = 9;
 
 const newSeed = () => Math.floor(Math.random() * 2 ** 31);
 
