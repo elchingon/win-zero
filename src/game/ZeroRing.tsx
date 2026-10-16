@@ -14,17 +14,8 @@ import { useMemo } from 'react';
 
 import { colors } from '@/theme/tokens';
 
+import { HIGHLIGHT_ALPHA, HIGHLIGHT_INSET, HIGHLIGHT_START, HIGHLIGHT_SWEEP, HIGHLIGHT_WIDTH, ZERO_GLOW } from './look';
 import { ZERO_ASPECT, ZERO_STROKE } from './sim/sizing';
-
-/** Glow size as a fraction of the vertical radius (the prototype's shadowBlur, as a blur sigma). */
-export const ZERO_GLOW = 0.22;
-export const HIGHLIGHT_ALPHA = 0.35;
-/** The highlight arc, in degrees clockwise from 3 o'clock: 1.1π to 1.45π. */
-export const HIGHLIGHT_START = 198;
-export const HIGHLIGHT_SWEEP = 63;
-/** The highlight sits this many ring widths in from the outer edge, and is this fraction of one thick. */
-export const HIGHLIGHT_INSET = 0.75;
-export const HIGHLIGHT_WIDTH = 0.18;
 
 export function highlightPath(rx: number, ry: number, lw: number): SkPath {
   const hx = Math.max(1, rx - lw * HIGHLIGHT_INSET);

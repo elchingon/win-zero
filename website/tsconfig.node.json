@@ -1,0 +1,19 @@
+{
+  // Build tooling: the Vite config, its plugins and the post-build checks.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": ["node"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true
+  },
+  "include": ["vite.config.ts", "plugins", "scripts", "eslint.config.js"]
+}

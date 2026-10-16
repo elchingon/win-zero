@@ -9,14 +9,16 @@ answers are in `docs/store/`.
   expo-asset, expo-constants, expo-linking, expo-notifications, expo-router).
   - Run `npx expo install --fix`, then rebuild the dev client.
   - Some are native modules, so do it on its own, before the QA builds.
-- [ ] **Publish the two pages on e7systems.com.**
-  - Sources: `docs/store/privacy-policy.md` and `docs/store/support.md`.
-  - Fill in `[EFFECTIVE_DATE]` and `[PRIVACY_URL]`.
-  - Note the two URLs for the listings.
+- [ ] **Check the two pages are live on winzero.app.**
+  - The website (`website/`, deployed by Cloudflare Pages) builds them from
+    `docs/store/privacy-policy.md` and `docs/store/support.md`. See `website/README.md`.
+  - `curl -sI https://winzero.app/privacy` and `https://winzero.app/support` both return 200,
+    with no redirect.
   - Set both URLs, which Settings → About opens, as `EXPO_PUBLIC_PRIVACY_URL` and
     `EXPO_PUBLIC_SUPPORT_URL`:
     - EAS builds: `eas env:create --environment production --visibility plaintext --name
-      EXPO_PUBLIC_PRIVACY_URL --value https://…`, and the same for `EXPO_PUBLIC_SUPPORT_URL`.
+      EXPO_PUBLIC_PRIVACY_URL --value https://winzero.app/privacy`, and the same for
+      `EXPO_PUBLIC_SUPPORT_URL` with `https://winzero.app/support`.
       EAS doesn't upload the gitignored `.env`. A production build fails until both are https
       URLs (`scripts/check-release.mjs`).
     - Local runs: copy `.env.example` to `.env` and fill it in.
@@ -70,6 +72,22 @@ answers are in `docs/store/`.
   no crash SDK in v1.
 
 ---
+
+## Website (winzero.app)
+
+The website deploys on its own: Cloudflare Pages builds `website/` on every push to `main`, and
+a preview for every pull request. It doesn't wait on, or trigger, an EAS build. Setup and the
+Cloudflare settings are in `website/README.md`.
+
+- [ ] **First deploy:** connect the repo in Cloudflare Pages, add the `winzero.app` domain, and
+  check the curl list at the end of `website/README.md` (200s for `/privacy` and `/support`, the
+  security headers, a 404 for unknown paths).
+- [ ] **Each change:** CI's `website` job passes (build, verify, typecheck, lint, tests). Check the
+  pull request's preview link on a phone: set up, check in, play a round, and the demo controls.
+- [ ] **When the apps are live:** put the App Store and Google Play links in
+  `website/partials/stores.html`.
+- [ ] **Policy or support changes:** edit `docs/store/*.md` and update the policy's effective date.
+  The website picks them up on its next deploy.
 
 ## QA matrix
 

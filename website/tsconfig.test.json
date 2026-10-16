@@ -1,0 +1,9 @@
+{
+  // Tests under src/ run in Node (Vitest), so they also get Node's types.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["vite/client", "node"]
+  },
+  "include": ["src"],
+  "exclude": []
+}

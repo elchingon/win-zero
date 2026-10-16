@@ -1,6 +1,7 @@
 # Win Zero
 
 Daily habit app (iOS + Android): check in on one goal each day; every "yes" adds a zero to a shooting round.
+The website at winzero.app (`website/`) hosts the privacy and support pages and a playable browser version.
 
 - **Spec (source of truth):** `docs/SPEC.md`
 - **Look & feel reference:** `docs/prototype/win-zero.html`, a playable single-file web prototype. Port its visuals, particle effects, celebration fill, and game feel. Do NOT port its streak rules; the spec replaces them.
@@ -24,9 +25,15 @@ src/game/           the round: GameCanvas, Hud, ResultSheet (shown inside play),
   sim/              worklet physics, weapons, effects, fill (runs on the UI thread; unit-tested)
   draw/             worklet Skia scene, drawn from the baked atlas
   bake/             the per-round sprite atlas and paints, built on the JS thread
+  look.ts           the round's look as numbers (glow, sprite sizes), shared with the website
 src/notifications/  scheduling + response handling
 src/store/          zustand store wrapping the engine
 src/theme/          tokens.ts (palette + fonts from SPEC section 7)
+src/ui/copy/        notice, rules and support copy, shared with the website
+src/dev/            demo tools: seedRun.ts and demo.ts are shared with the website
+website/            winzero.app: Vite + React, deployed by Cloudflare Pages (see website/README.md)
+  src/play/         the browser app under /play; draws the round with src/game/draw via a Canvas 2D adapter
+  plugins/          shared-code guard, pages from docs/store/*.md, brand assets
 ```
 
 ## Rules for working in this repo
@@ -37,6 +44,8 @@ src/theme/          tokens.ts (palette + fonts from SPEC section 7)
 - Copy tone: supportive and plain. Never shaming; users may be working on sobriety.
 - Keep the game at 60 fps on a mid-range Android phone with 60 objects + particles. Cap particle counts.
 - Commit in small, working steps with clear messages.
+- The website imports pure code from `src/` (the allowlist in `website/plugins/shared-guard.ts`, mirrored in the root ESLint config). Keep those files free of React Native, Expo and runtime Skia; move new shared logic into such a module rather than copying it into `website/`.
+- `/privacy` and `/support` on winzero.app are built from `docs/store/privacy-policy.md` and `support.md`, and their URLs are in the app binaries and store listings: keep them working.
 
 ## Commands
 - `npx expo start --dev-client`: run against the dev build
@@ -45,3 +54,4 @@ src/theme/          tokens.ts (palette + fonts from SPEC section 7)
 - `npm run gen:sfx`: re-render the game's sound effects into assets/sfx/ (from scripts/gen-sfx.mjs)
 - `npm run gen:brand`: re-render the icons, splash and store art into assets/brand/ (from scripts/gen-brand.mjs)
 - `eas build --profile development --platform ios|android`: build dev clients
+- Website, from `website/`: `npm run dev`, `npm run build && npm run verify`, `npm run typecheck`, `npm run lint`, `npm test` (Vitest)

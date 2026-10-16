@@ -15,29 +15,25 @@ import { useEffect, useMemo } from 'react';
 import { StyleSheet, useWindowDimensions } from 'react-native';
 import { useDerivedValue, useFrameCallback, useSharedValue, type SharedValue } from 'react-native-reanimated';
 
+import {
+  DOT_ALPHA,
+  DOT_ORIGIN,
+  DOT_SIZE,
+  DOT_SPACING,
+  FIELD_ALPHA,
+  FIELD_DRIFT_SPEED as DRIFT_SPEED,
+  FIELD_MAX_STEP_S as MAX_STEP_S,
+  FIELD_SIZE_AS_IF as SIZE_AS_IF,
+  FIELD_SIZE_JITTER as SIZE_JITTER,
+  FIELD_ZEROS,
+  GLOW_RADIUS,
+  GLOW_Y,
+} from '@/game/look';
 import { zeroRadius } from '@/game/sim/sizing';
 import { ZeroRing } from '@/game/ZeroRing';
 import { colors, withAlpha, zeroPalette } from '@/theme/tokens';
 
 import { useReduceMotion } from './a11y';
-
-const FIELD_ZEROS = 7;
-const FIELD_ALPHA = 0.2;
-/** The prototype sizes attract-mode zeros as if 6 shared the screen. */
-const SIZE_AS_IF = 6;
-const SIZE_JITTER = 0.3;
-/** Drift speed, points per second, before jitter. */
-const DRIFT_SPEED = 28;
-const MAX_STEP_S = 0.05;
-
-export const DOT_SPACING = 26;
-export const DOT_SIZE = 1.5;
-export const DOT_ALPHA = 0.35;
-/** The first dot's offset from the top-left corner. */
-export const DOT_ORIGIN = { x: 13, y: 14 };
-/** The backdrop glow sits a little above center. */
-export const GLOW_Y = 0.38;
-export const GLOW_RADIUS = 0.8;
 /** The screen wash: ink at 40% at the top, deepening to 82% by 55% of the height. */
 const WASH = [withAlpha(colors.ink, 0.4), withAlpha(colors.ink, 0.82)];
 const WASH_STOPS = [0, 0.55];
