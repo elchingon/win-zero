@@ -1348,8 +1348,8 @@ a {
   }
 }
 
-/* The encouragement over the fill, before the result sheet. */
-.cheer-backdrop {
+/* A card over the round: the encouragement over the fill, and the question before a round. */
+.popup-backdrop {
   position: absolute;
   inset: 0;
   display: flex;
@@ -1360,7 +1360,7 @@ a {
   touch-action: auto;
 }
 
-.cheer {
+.popup {
   width: 100%;
   max-width: 360px;
   gap: 16px;
@@ -1377,11 +1377,11 @@ a {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .cheer-backdrop {
+  .popup-backdrop {
     animation: fade-in 320ms ease-out both;
   }
 
-  .cheer {
+  .popup {
     animation: pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
   }
 }
