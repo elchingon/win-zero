@@ -1,17 +1,19 @@
-// The shooting round: the canvas filling the screen, the HUD over it, and the result sheet over
-// the fill once the round is won. A real round is the one the latest Yes earned (its rewards are
-// already banked); Replay plays it again in place, with no effect on the streak. ?practice=N plays
-// any N with every weapon and a frame meter (the demo controls offer it), changing nothing.
+// The shooting round: the canvas filling the screen, the HUD over it, and once the round is won,
+// a line of encouragement and then the result sheet over the fill. A real round is the one the
+// latest Yes earned (its rewards are already banked); Replay plays it again in place, with no
+// effect on the streak. ?practice=N plays any N with every weapon and a frame meter (the demo
+// controls offer it), changing nothing.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router';
 
 import { parseCount, PRACTICE_BEST, PRACTICE_BOMBS, PRACTICE_MAX_N } from '@/dev/demo';
 import { composeRound, equippedWeapon, fillPlan, unlockedWeapons, type WeaponId } from '@/engine';
 import { makeCues } from '@/game/cues';
-import type { ResultMode } from '@/game/result';
+import { roundOverlay, type ResultMode } from '@/game/result';
 import type { Report } from '@/game/sim/types';
 import type { RoundRecord } from '@/store/types';
 
+import { CheerPopup } from '../game/CheerPopup';
 import { GameCanvas, type FrameStats, type GameHandle, type RoundSetup } from '../game/GameCanvas';
 import { Hud } from '../game/Hud';
 import { ResultSheet } from '../game/ResultSheet';
@@ -60,6 +62,8 @@ function Play(props: { initialMode: ResultMode; n: number; best: number; record:
   const [left, setLeft] = useState(n);
   const [over, setOver] = useState(false);
   const [landed, setLanded] = useState(false);
+  const [cheered, setCheered] = useState(false);
+  const overlay = roundOverlay(landed, mode, cheered);
   // A real round spends banked bombs. Replays and practice get free ones: a replay as many as
   // are banked, which it never touches.
   const [freeBombs, setFreeBombs] = useState(() => (mode === 'practice' ? PRACTICE_BOMBS : bankedBombs));
@@ -103,6 +107,11 @@ function Play(props: { initialMode: ResultMode; n: number; best: number; record:
     if (over && mode === 'real') appStore.getState().finishRound();
   }, [over, mode]);
 
+  // The encouragement arrives with a fanfare.
+  useEffect(() => {
+    if (overlay === 'cheer') play('fanfare');
+  }, [overlay, play]);
+
   // The fill runs a few seconds before the result sheet; say the round is won right away.
   useEffect(() => {
     if (over) announce('Round cleared.');
@@ -113,6 +122,8 @@ function Play(props: { initialMode: ResultMode; n: number; best: number; record:
     if (!over) game.current?.finishAll();
   };
 
+  const dismissCheer = useCallback(() => setCheered(true), []);
+
   /** Play the same round again, right here, with fresh positions and free bombs. */
   const replay = () => {
     const next = newSeed();
@@ -122,6 +133,7 @@ function Play(props: { initialMode: ResultMode; n: number; best: number; record:
     setLeft(n);
     setOver(false);
     setLanded(false);
+    setCheered(false);
     setFreeBombs(mode === 'practice' ? PRACTICE_BOMBS : bankedBombs);
   };
 
@@ -153,8 +165,10 @@ function Play(props: { initialMode: ResultMode; n: number; best: number; record:
         onReport={onReport}
         onFrameStats={mode === 'practice' ? setStats : undefined}
       />
-      {landed ? (
+      {overlay === 'sheet' ? (
         <ResultSheet n={n} mode={mode} record={record} onBack={goHome} onReplay={replay} />
+      ) : overlay === 'cheer' ? (
+        <CheerPopup onDismiss={dismissCheer} />
       ) : (
         <Hud
           left={left}

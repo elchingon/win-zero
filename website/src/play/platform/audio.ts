@@ -3,6 +3,7 @@
 // as the app's round-robin players do. Browsers only start audio after a tap, so the context
 // resumes on the first press.
 import boom from '@assets/sfx/boom.wav?url';
+import fanfare from '@assets/sfx/fanfare.wav?url';
 import pop from '@assets/sfx/pop.wav?url';
 import shoot from '@assets/sfx/shoot.wav?url';
 
@@ -10,6 +11,7 @@ const SOUNDS = {
   shoot: { url: shoot, voices: 4 },
   pop: { url: pop, voices: 4 },
   boom: { url: boom, voices: 2 },
+  fanfare: { url: fanfare, voices: 1 },
 } as const;
 
 export type Sound = keyof typeof SOUNDS;

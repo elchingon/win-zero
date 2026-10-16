@@ -21,4 +21,6 @@ export const feedback = {
   bomb: () => on() && quiet(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)),
   /** The last zero: the big explosion. */
   boom: () => on() && quiet(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)),
+  /** The encouragement popping up after the round: a small tap. */
+  cheer: () => on() && quiet(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)),
 };
