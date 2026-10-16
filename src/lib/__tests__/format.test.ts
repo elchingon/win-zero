@@ -10,6 +10,7 @@ import {
   formatMonth,
   formatUntil,
   formatWhen,
+  parseCount,
   plural,
   relativeDay,
 } from '../format';
@@ -63,5 +64,13 @@ describe('format', () => {
 
   it('groups big counts with commas', () => {
     expect([formatCount(7), formatCount(501), formatCount(1000), formatCount(100000)]).toEqual(['7', '501', '1,000', '100,000']);
+  });
+});
+
+describe('parseCount', () => {
+  it('takes whole numbers from 1 to max only', () => {
+    expect(parseCount('30', 1000)).toBe(30);
+    expect(parseCount('1000', 1000)).toBe(1000);
+    for (const bad of ['', '0', '1001', '2.5', '-3', '1e3', ' 4', '1,000']) expect(parseCount(bad, 1000)).toBeNull();
   });
 });
