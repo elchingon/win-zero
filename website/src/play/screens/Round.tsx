@@ -9,7 +9,7 @@ import { Navigate, useSearchParams } from 'react-router';
 import { parseCount, PRACTICE_BEST, PRACTICE_BOMBS, PRACTICE_MAX_N } from '@/dev/demo';
 import { composeRound, equippedWeapon, fillPlan, unlockedWeapons, type WeaponId } from '@/engine';
 import { makeCues } from '@/game/cues';
-import { roundOverlay, type ResultMode } from '@/game/result';
+import { hudLabel, replayMode, roundOverlay, type ResultMode } from '@/game/result';
 import type { Report } from '@/game/sim/types';
 import type { RoundRecord } from '@/store/types';
 
@@ -129,7 +129,7 @@ function Play(props: { initialMode: ResultMode; n: number; best: number; record:
     const next = newSeed();
     seedRef.current = next;
     setSeed(next);
-    setMode(mode === 'practice' ? 'practice' : 'replay');
+    setMode(replayMode(mode));
     setLeft(n);
     setOver(false);
     setLanded(false);
@@ -173,7 +173,7 @@ function Play(props: { initialMode: ResultMode; n: number; best: number; record:
         <Hud
           left={left}
           total={n}
-          label={mode === 'practice' ? 'PRACTICE' : `DAY ${n}`}
+          label={hudLabel(mode, n)}
           weaponName={weapon.name}
           canSwitch={unlocked.length > 1}
           onSwitchWeapon={switchWeapon}

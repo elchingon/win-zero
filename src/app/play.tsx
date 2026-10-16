@@ -16,7 +16,7 @@ import { CheerPopup } from '@/game/CheerPopup';
 import { makeCues } from '@/game/cues';
 import { GameCanvas, type FrameStats, type GameHandle, type RoundSetup } from '@/game/GameCanvas';
 import { Hud } from '@/game/Hud';
-import { roundOverlay } from '@/game/result';
+import { hudLabel, replayMode, roundOverlay } from '@/game/result';
 import { ResultSheet, type ResultMode } from '@/game/ResultSheet';
 import { useSfx } from '@/game/sfx';
 import type { Report } from '@/game/sim/types';
@@ -165,7 +165,7 @@ function Round(props: { initialMode: ResultMode; n: number; best: number; record
     const next = newSeed();
     seedRef.current = next;
     setSeed(next);
-    setMode(mode === 'practice' ? 'practice' : 'replay');
+    setMode(replayMode(mode));
     setLeft(n);
     setOver(false);
     setLanded(false);
@@ -210,7 +210,7 @@ function Round(props: { initialMode: ResultMode; n: number; best: number; record
         <Hud
           left={left}
           total={n}
-          label={mode === 'practice' ? 'PRACTICE' : `DAY ${n}`}
+          label={hudLabel(mode, n)}
           weaponName={weapon.name}
           canSwitch={unlocked.length > 1}
           onSwitchWeapon={switchWeapon}

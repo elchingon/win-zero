@@ -2,13 +2,8 @@
 // weapon, a bomb or a shield (credits aren't shared). The goal's wording is never in the text: it may be private
 // (someone working on sobriety shares a streak, not a reason). Shared by the app and the website.
 import { weaponById } from '@/engine';
-import { formatCount } from '@/lib/format';
+import { formatCount, joinAnd } from '@/lib/format';
 import type { RoundRewards } from '@/store/types';
-
-/** 'a', 'a and b', 'a, b and c'. */
-function joinAnd(parts: string[]): string {
-  return parts.length < 2 ? (parts[0] ?? '') : `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}`;
-}
 
 /** What to share for a Day `n` round, or null when it earned nothing to share. */
 export function milestoneShareText(n: number, rewards: RoundRewards): string | null {

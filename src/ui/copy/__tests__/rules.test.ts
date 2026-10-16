@@ -1,6 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { MISSED_GRACE_DAYS, SLIDE_FINAL } from '@/engine';
+import { BONUS_MAX_N, MISSED_GRACE_DAYS, SLIDE_FINAL, WEAPON_CREDIT_YES_RUNS } from '@/engine';
+import { formatCount } from '@/lib/format';
 
 import { howItWorks, reminderWhen } from '../rules';
 
@@ -28,6 +29,14 @@ describe('howItWorks', () => {
       expect(words(notifications)).toContain(`the first ${MISSED_GRACE_DAYS} days in a row`);
       expect(words(notifications)).toContain(`If slips reach ${SLIDE_FINAL} before your next Yes`);
     }
+  });
+
+  it('explains credits, with their numbers from the engine', () => {
+    const credits = howItWorks({ notifications: false }).find((s) => s.title === 'Credits')?.body.join(' ') ?? '';
+    expect(credits).toContain(`up to ${formatCount(BONUS_MAX_N)}`);
+    expect(credits).toContain('for reaching 2 zeros');
+    for (const n of WEAPON_CREDIT_YES_RUNS) expect(credits).toContain(`for ${n} Yeses in a row`);
+    expect(credits).toContain('Each one is earned once');
   });
 });
 

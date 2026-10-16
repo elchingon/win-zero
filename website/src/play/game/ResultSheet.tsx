@@ -2,7 +2,7 @@
 // next unlock (the shared resultLines), Back to base, Replay, and sharing a milestone.
 import { useEffect, useRef, useState } from 'react';
 
-import { resultLines, type ResultMode } from '@/game/result';
+import { resultLines, sheetEyebrow, type ResultMode } from '@/game/result';
 import { milestoneShareText } from '@/game/shareText';
 import { formatCount } from '@/lib/format';
 import type { RoundRecord } from '@/store/types';
@@ -18,11 +18,12 @@ const RISE_MS = 500;
 export function ResultSheet(props: { n: number; mode: ResultMode; record: RoundRecord | null; onBack: () => void; onReplay: () => void }) {
   const { n, mode, record, onBack, onReplay } = props;
   const goal = useApp((s) => s.goal);
+  const credits = useApp((s) => s.credits);
   const heading = useRef<HTMLHeadingElement>(null);
   const [shareNote, setShareNote] = useState<string | null>(null);
   // A round that earned something can be shared; practice rounds earn nothing.
   const share = mode !== 'practice' && record ? milestoneShareText(record.n, record.rewards) : null;
-  const lines = resultLines(n, mode, record, goal);
+  const lines = resultLines(n, mode, record, goal, credits);
 
   // Keyboard and screen reader users land on "N zeros down" as the sheet arrives.
   useEffect(() => {
@@ -32,7 +33,7 @@ export function ResultSheet(props: { n: number; mode: ResultMode; record: RoundR
 
   return (
     <section className="result" role="dialog" aria-modal="true" aria-labelledby="result-title">
-      <p className="eyebrow">{mode === 'practice' ? 'Practice' : `Day ${n}${goal ? ` · ${goal.goal}` : ''}`}</p>
+      <p className="eyebrow">{sheetEyebrow(mode, n, goal)}</p>
       <h2 id="result-title" className="h2" ref={heading} tabIndex={-1}>
         <Em>{formatCount(n)}</Em> {n === 1 ? 'zero' : 'zeros'} down
       </h2>

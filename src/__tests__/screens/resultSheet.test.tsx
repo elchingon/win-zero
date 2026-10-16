@@ -5,7 +5,7 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { Share } from 'react-native';
 
 import { DAY0, newGoal, yesDays } from '@/engine/__tests__/fixtures';
-import { ResultSheet } from '@/game/ResultSheet';
+import { ResultSheet, type ResultMode } from '@/game/ResultSheet';
 import { appStore, type RoundRecord } from '@/store';
 
 jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock'));
@@ -26,12 +26,12 @@ const round = (n: number, rewards: Partial<RoundRecord['rewards']>, played = fal
   played,
 });
 
-const show = (n: number, mode: 'real' | 'replay' | 'practice', record: RoundRecord | null) =>
+const show = (n: number, mode: ResultMode, record: RoundRecord | null) =>
   render(<ResultSheet n={n} mode={mode} record={record} onBack={() => {}} onReplay={() => {}} />);
 
 beforeAll(async () => {
   for (let i = 0; i < 50 && !appStore.getState().hydrated; i++) await new Promise((r) => setTimeout(r, 0));
-  appStore.setState({ goal: yesDays(newGoal(), DAY0, 5) });
+  appStore.setState({ goal: yesDays(newGoal(), DAY0, 5), credits: { balance: { game: 1, weapon: 2 }, claimed: [] } });
 });
 
 afterEach(() => {
@@ -59,6 +59,20 @@ describe('result sheet', () => {
     expect(screen.queryByRole('button', { name: 'Share this milestone' })).not.toBeOnTheScreen();
 
     await show(40, 'practice', null);
+    expect(screen.queryByRole('button', { name: 'Share this milestone' })).not.toBeOnTheScreen();
+  });
+
+  it('shows the credits a Yes earned, but has nothing to share for them', async () => {
+    await show(3, 'real', round(3, { credits: [{ kind: 'weapon', amount: 1, key: 'yes-run-3' }] }));
+    expect(screen.getByText('Weapon credit earned for 3 Yeses in a row. You have 2.')).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Share this milestone' })).not.toBeOnTheScreen();
+  });
+
+  it('names a bonus round and says it changes nothing', async () => {
+    await show(250, 'bonus', null);
+    expect(screen.getByText('Bonus round')).toBeOnTheScreen();
+    expect(screen.getByText("Bonus round: your streak and rewards don't change.")).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Replay' })).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Share this milestone' })).not.toBeOnTheScreen();
   });
 });
