@@ -1,6 +1,7 @@
-// The demo controls, folded away like the prototype's and the phone app's development tools.
-// Practice rounds work anywhere: they change nothing. Moving the clock and jumping to a day run in
-// demo mode, on a copy of the progress (platform/mode.ts), so the real streak is never touched.
+// The demo controls, folded away like the prototype's and the phone app's development tools. They
+// run in demo mode, on a copy of the progress (platform/mode.ts), so the real streak is never
+// touched: moving the clock, jumping to a day, and practice rounds of any size with every weapon.
+// Outside demo mode, a round of any size is a bonus round, paid for with a Game credit.
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 
@@ -136,8 +137,8 @@ function StartDemo() {
     <>
       <Eyebrow>Demo mode</Eyebrow>
       <Fine>
-        Move the clock, jump to any day to try later weapons and armored zeros, and see how missed days and slips play
-        out. Demo mode works on a copy of your progress, so your real streak isn&apos;t touched.
+        Move the clock, jump to any day to try later weapons and armored zeros, play practice rounds, and see how missed
+        days and slips play out. Demo mode works on a copy of your progress, so your real streak isn&apos;t touched.
       </Fine>
       <Button
         small
@@ -151,7 +152,6 @@ function StartDemo() {
       {!storagePersistent || failed ? (
         <Fine>Demo mode needs this browser to keep site data, which it isn&apos;t doing right now.</Fine>
       ) : null}
-      <PracticeRound />
     </>
   );
 }

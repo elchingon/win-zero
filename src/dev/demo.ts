@@ -12,6 +12,9 @@ import {
   type TimeZone,
 } from '@/engine';
 
+// Typed counts read the same everywhere: bonus rounds take one too.
+export { parseCount } from '@/lib/format';
+
 /** One per milestone: twin, scatter + first shield, first standard round, rocket, chain, first armored, nuke, a big fill. */
 export const JUMP_DAYS = [3, 7, 8, 14, 30, 61, 100, 250];
 
@@ -28,12 +31,6 @@ export function offsetLabel(ms: number): string {
   const days = Math.floor(ms / MS_PER_DAY);
   const hours = Math.round((ms - days * MS_PER_DAY) / MS_PER_HOUR);
   return `+${days}d ${hours}h`;
-}
-
-/** A whole number from 1 to `max`, or null. */
-export function parseCount(text: string, max: number): number | null {
-  const n = Number(text);
-  return /^\d+$/.test(text) && n >= 1 && n <= max ? n : null;
 }
 
 /** The debug clock's readout: the time, zone, streak state, and the open or next check-in. */

@@ -2,9 +2,28 @@
 // `migrate` first upgrades it step by step. Then, on every launch, the persist `merge` reads it
 // field by field, keeping everything still valid. Saved data is only ever upgraded or kept as
 // is: a goal is dropped only when it can't be read at all, and the store backs it up first.
-import { isValidDayKey, WEAPONS, type GoalState, type WeaponId } from '@/engine';
+import {
+  claimCredits,
+  CREDIT_KINDS,
+  EMPTY_WALLET,
+  isBonusSize,
+  isValidDayKey,
+  WEAPONS,
+  type CreditGrant,
+  type CreditKind,
+  type CreditWallet,
+  type GoalState,
+  type WeaponId,
+} from '@/engine';
 
-import { STORE_VERSION, type PersistedState, type Prefs, type RoundRecord, type RoundRewards } from './types';
+import {
+  STORE_VERSION,
+  type BonusRound,
+  type PersistedState,
+  type Prefs,
+  type RoundRecord,
+  type RoundRewards,
+} from './types';
 
 export const DEFAULT_PREFS: Prefs = { sound: true, haptics: true, reengage: true, goalInReminders: false };
 
@@ -14,6 +33,8 @@ export const DEFAULT_PERSISTED: PersistedState = {
   prefs: DEFAULT_PREFS,
   seenThrough: null,
   round: null,
+  credits: EMPTY_WALLET,
+  bonus: null,
   reminderCardHiddenUntil: null,
   devClockOffsetMs: 0,
 };
@@ -24,6 +45,8 @@ const isRecord = (v: unknown): v is Rec => typeof v === 'object' && v !== null &
 const bool = (v: unknown, fallback: boolean) => (typeof v === 'boolean' ? v : fallback);
 const count = (v: unknown, fallback: number) => (typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : fallback);
 const isWeaponId = (v: unknown): v is WeaponId => WEAPONS.some((w) => w.id === v);
+const weaponIds = (v: unknown): WeaponId[] => (Array.isArray(v) ? v.filter(isWeaponId) : []);
+const isCreditKind = (v: unknown): v is CreditKind => CREDIT_KINDS.some((k) => k === v);
 const dayOrNull = (v: unknown) => (typeof v === 'string' && isValidDayKey(v) ? v : null);
 const instantOrNull = (v: unknown) => (typeof v === 'string' && !Number.isNaN(Date.parse(v)) ? v : null);
 
@@ -59,7 +82,13 @@ const GOAL_UPGRADES: Readonly<Record<number, Upgrade>> = {};
  * no step, as the field-by-field read fills in what's missing. To change PersistedState's
  * shape: bump STORE_VERSION, add the step from the old version here, and test it.
  */
-const STORE_UPGRADES: Readonly<Record<number, Upgrade>> = {};
+const STORE_UPGRADES: Readonly<Record<number, Upgrade>> = {
+  // 1 → 2, credits (SPEC v0.5): a goal set up before them earns its Game credit now.
+  1: (v) => {
+    const goal = normalizeGoal(v.goal);
+    return { ...v, credits: goal ? claimCredits(EMPTY_WALLET, { type: 'goal', goal }).wallet : EMPTY_WALLET, bonus: null };
+  },
+};
 
 /**
  * A stored goal, upgraded to this build's shape, with fields added after it was saved filled
@@ -91,6 +120,12 @@ export function hasUnreadableGoal(raw: unknown): boolean {
   return isRecord(raw) && raw.goal != null && normalizeGoal(raw.goal) === null;
 }
 
+function normalizeGrant(v: unknown): CreditGrant | null {
+  if (!isRecord(v) || !isCreditKind(v.kind) || typeof v.key !== 'string') return null;
+  const amount = count(v.amount, 0);
+  return amount > 0 ? { kind: v.kind, amount, key: v.key } : null;
+}
+
 function normalizeRound(v: unknown): RoundRecord | null {
   if (!isRecord(v) || !isRecord(v.rewards)) return null;
   const day = dayOrNull(v.day);
@@ -100,9 +135,27 @@ function normalizeRound(v: unknown): RoundRecord | null {
     bomb: bool(r.bomb, false),
     shield: bool(r.shield, false),
     shieldCapped: bool(r.shieldCapped, false),
-    weapons: Array.isArray(r.weapons) ? r.weapons.filter(isWeaponId) : [],
+    weapons: weaponIds(r.weapons),
+    // Added with credits (SPEC v0.5).
+    credits: Array.isArray(r.credits) ? r.credits.map(normalizeGrant).filter((g) => g !== null) : [],
   };
-  return { day, n: v.n, rewards, played: bool(v.played, true) };
+  return { day, n: v.n, rewards, borrowed: weaponIds(v.borrowed), played: bool(v.played, true) };
+}
+
+/** A paid-for bonus round. When in doubt it's still there to play: the credit was spent. */
+function normalizeBonus(v: unknown): BonusRound | null {
+  if (!isRecord(v) || typeof v.n !== 'number' || !isBonusSize(v.n)) return null;
+  return { n: v.n, borrowed: weaponIds(v.borrowed), played: bool(v.played, false) };
+}
+
+function normalizeWallet(v: unknown): CreditWallet {
+  if (!isRecord(v)) return EMPTY_WALLET;
+  const balance = isRecord(v.balance) ? v.balance : {};
+  const claimed = Array.isArray(v.claimed) ? v.claimed.filter((k): k is string => typeof k === 'string') : [];
+  return {
+    balance: { game: count(balance.game, 0), weapon: count(balance.weapon, 0) },
+    claimed: [...new Set(claimed)],
+  };
 }
 
 export function normalizePersisted(raw: unknown): PersistedState {
@@ -120,6 +173,8 @@ export function normalizePersisted(raw: unknown): PersistedState {
     },
     seenThrough: dayOrNull(r.seenThrough),
     round: normalizeRound(r.round),
+    credits: normalizeWallet(r.credits),
+    bonus: normalizeBonus(r.bonus),
     reminderCardHiddenUntil: instantOrNull(r.reminderCardHiddenUntil),
     devClockOffsetMs: typeof offset === 'number' && Number.isFinite(offset) ? offset : 0,
   };

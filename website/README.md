@@ -66,20 +66,21 @@ missed days and rewards behave exactly as on the phone.
   no haptics, sounds through Web Audio, and progress saved in the browser's storage. If storage is
   blocked (a private window), the app runs from memory and says so. Changes in another tab are
   read back in.
-- **Demo controls,** folded on Home and Settings: practice rounds (`/play/round?practice=N`)
-  anywhere, and demo mode (`platform/mode.ts`) for the debug clock and Jump to day. Demo mode
-  copies the progress into its own storage keys (`demo:`), so the real streak is never touched;
-  leaving it throws the copy away.
+- **Demo controls,** folded on Home and Settings: demo mode (`platform/mode.ts`) for the debug
+  clock, Jump to day and practice rounds (`/play/round?practice=N`, honoured only in demo mode).
+  Demo mode copies the progress into its own storage keys (`demo:`), so the real streak is never
+  touched; leaving it throws the copy away. Outside it, a round of any size is a bonus round,
+  paid for with a Game credit (`/play/round?round=bonus`).
 
 ## Testing
 
 `npm test` runs Vitest: the canvas adapter (transforms, tints, blending), the shared round played
 through every weapon to the result sheet and drawn through the adapter, storage and demo mode,
 the build plugins and `verify-dist`, and the screens in jsdom (setup, Yes to the round, Not
-today to the notice and Undo). The rules engine and sim keep their own Jest tests at the repo root.
+today to the notice and Undo, credits: a bonus round and the Weapon credit question). The rules engine and sim keep their own Jest tests at the repo root.
 
 Before a release, play it on real phones, a mid-range Android especially: a Day 60 round and a
-practice round of 1,000 should hold about 60 fps.
+practice round of 1,000 (in demo mode) should hold about 60 fps.
 
 ## Editing the pages
 

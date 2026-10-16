@@ -14,6 +14,9 @@ export const ROUTES = {
   howItWorks: '/how-it-works',
 } as const;
 
+/** The bonus round a Game credit paid for. */
+export const BONUS_ROUND = `${ROUTES.round}?round=bonus`;
+
 /** The screen an answer opens, as a path in the website's app. */
 export function pathForAnswer(route: AnswerRoute): string {
   return route === '/play' ? ROUTES.round : ROUTES.notice;

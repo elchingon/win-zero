@@ -1,5 +1,5 @@
-// Home: the goal, the numbers, today's check-in (or when the next one comes), the arsenal,
-// and the history calendar.
+// Home: the goal, the numbers, today's check-in (or when the next one comes), credits and the
+// bonus round, the arsenal, and the history calendar.
 import { Redirect, router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState, type ComponentType } from 'react';
 import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
@@ -22,6 +22,7 @@ import { REJECTED } from '@/ui/copy/rules';
 import { feedback } from '@/ui/feedback';
 import { Arsenal } from '@/ui/home/Arsenal';
 import { CheckInCard } from '@/ui/home/CheckInCard';
+import { CreditsCard } from '@/ui/home/CreditsCard';
 import { HistoryCalendar } from '@/ui/home/HistoryCalendar';
 import { RemindersCard } from '@/ui/home/RemindersCard';
 import { remindersCardVisible } from '@/ui/home/remindersOff';
@@ -52,6 +53,8 @@ function HomeScreen({ goal }: { goal: GoalState }) {
   const round = useApp((s) => s.round);
   const pick = useApp((s) => s.weapon);
   const selectWeapon = useApp((s) => s.selectWeapon);
+  const credits = useApp((s) => s.credits);
+  const bonus = useApp((s) => s.bonus);
   const rejection = useApp((s) => s.rejection);
   const clockOffset = useApp((s) => s.devClockOffsetMs); // re-render when the debug clock moves
   const reminderCardHiddenUntil = useApp((s) => s.reminderCardHiddenUntil);
@@ -91,6 +94,11 @@ function HomeScreen({ goal }: { goal: GoalState }) {
   const onNotToday = () => {
     feedback.soft();
     appStore.getState().answer('not-today');
+  };
+
+  const playBonus = () => router.push({ pathname: '/play', params: { round: 'bonus' } });
+  const startBonus = (n: number) => {
+    if (appStore.getState().startBonusRound(n)) playBonus();
   };
 
   const banner = rejection ? REJECTED[rejection] : null;
@@ -169,6 +177,8 @@ function HomeScreen({ goal }: { goal: GoalState }) {
       {goal.paused ? (
         <Fine>Reminders are paused after a long break. Check in whenever you&apos;re ready and they&apos;ll pick back up.</Fine>
       ) : null}
+
+      <CreditsCard goal={goal} credits={credits} bonus={bonus} onStartBonus={startBonus} onPlayBonus={playBonus} />
 
       <Arsenal goal={goal} pick={pick} onEquip={selectWeapon} />
 

@@ -1,6 +1,6 @@
 # Win Zero: Product & Game Spec
 
-Version 0.4 · October 15, 2026 · Owner: e7sal
+Version 0.5 · October 16, 2026 · Owner: e7sal
 
 Win Zero is a daily habit app for iOS and Android. The user sets one daily goal (for example "Stop drinking" or "Exercise more"). Every evening the app asks whether they did it. Each "yes" adds a zero to a shooting round. The streak is the number of zeros on screen.
 
@@ -12,9 +12,9 @@ The playable web prototype at `docs/prototype/win-zero.html` sets the **look, fe
 
 1. User sets a goal and a check-in time (default 8:00 PM local).
 2. At check-in time, a notification asks: *Did you stick to "<goal>" today?* with **Yes** and **Not today** buttons.
-3. **Yes** from the notification opens the app on Home, with a shooting round of `streak` zeros ready to play whenever the user likes. **Yes** on Home's check-in card starts the round straight away.
+3. **Yes** from the notification opens the app on Home, with a shooting round of `streak` zeros ready to play whenever the user likes. **Yes** on Home's check-in card starts the round straight away. A player holding a Weapon credit is asked first whether to use one (section 5).
 4. Shooting the last zero triggers the big celebration explosion. Then the screen fills with `streak` giant zeros, a line of encouragement pops up with a horn fanfare, and a result sheet appears.
-5. Rewards (weapons, bombs, shields) are granted on the result sheet.
+5. Rewards (weapons, bombs, shields, credits) are granted on the result sheet.
 
 ## 2. Check-in windows
 
@@ -105,15 +105,39 @@ Hold to fire at about 6 shots/sec.
 
 **Streak shields:** +1 every time `streak` hits a multiple of 7. Maximum 3 banked. Consumed per section 3.
 
+### Credits
+
+Two banked currencies, spent only when the player chooses. They live in a wallet beside the goal (`src/engine/credits.ts`), not inside it, so a new goal keeps them. **Erase all data** clears them with everything else.
+
+- **Game credit:** plays a **bonus round** of any number of zeros from 1 to 100,000, chosen on Home. The credit is spent when the round is started; the round then waits on Home until played, so a closed app never loses it, and only one waits at a time. A bonus round changes nothing: no streak effect, no rewards, and free bombs as many as are banked, like a replay. Replay keeps it a bonus round. The HUD reads **BONUS**.
+- **Weapon credit:** lends one weapon not yet unlocked for one round and its replays, a daily round or a bonus round. Before a round not yet played, a player holding a Weapon credit, with a weapon still locked, is asked **Use a Weapon credit?**, with each locked weapon listed like the arsenal, or **Not this time** (tapping outside, Escape and Android back too; on the web the keyboard starts there). The borrowed weapon starts equipped, the HUD switch cycles it with the unlocked ones, and it never becomes the saved pick. The borrow is saved on the round, so coming back to it doesn't ask again, and a round that goes unplayed takes its borrow with it. One per round. With every weapon unlocked there's nothing to ask, and credits wait for new weapons.
+
+**Earning.** Each reward pays once per install, keyed by its id. A reward tests whether its mark has been reached, so a player already past it collects it the next time it's checked: a save from before credits gets the goal's credit when it's upgraded, and the rest on the next Yes.
+
+| Reward | Credit |
+|---|---|
+| Setting the goal | +1 Game |
+| The Yes that makes 2 zeros (`streak` ≥ 2) | +1 Game |
+| The first Yes after an unanswered day (a Not today doesn't count) | +1 Weapon |
+| 3 Yeses in a row | +1 Weapon |
+| 14 Yeses in a row | +1 Weapon |
+| 30 Yeses in a row | +1 Weapon |
+
+**In a row** counts consecutive check-ins answered Yes, apart from the sliding `streak`: any other day (a Not today, a shielded day, a missed day) starts it over, even one of the free missed days.
+
+New ways to earn (accomplishments) are new entries in `CREDIT_REWARDS` (`src/engine/creditRewards.ts`). Credit packs, if they come, grant into the same wallet keyed by the purchase's transaction id, so a purchase delivered twice pays once.
+
+On the website, practice rounds (any size, every weapon) run only in demo mode, on a copy of the progress. Outside it, a round of any size is a bonus round.
+
 ## 6. Screens
 
 - **Onboarding / Setup:** goal (free text plus suggestion chips), check-in time, reminder time (any time of day), notification permission request with a short explanation first. Set up after the check-in time, today counts: today's check-in is open straight away, and both Setup's last step and Home (until the first answer) say so plainly.
-- **Home:** goal, current streak, best run (with the dates it ran), Yes days in all and this month, bombs, shields; pending check-in card (same Yes / Not today as the notification); arsenal list with next-unlock progress; history calendar (yes / no / shielded / missed). While reminders are off (never turned on, or off in system settings), a card offers to turn them on; its "Not now" hides it for a week.
-- **Play:** full-screen Skia canvas, HUD (value left, day, weapon switch, bomb button, sound toggle), turret at bottom center.
-- **Encouragement:** when the fill lands after a real round or a replay, a popup over the zeros shows one line of encouragement, picked at random with no repeat back to back (`src/ui/copy/cheers.ts`). A short horn fanfare and a light haptic play as it appears, following the sound and haptics settings. **Got it**, tapping outside, Escape or Android back dismisses it, and the result sheet rises. None in practice.
-- **Result sheet:** over the filled screen, showing day, "N zeros down", rewards earned, next unlock, and buttons for Back to base and Replay (replay has no streak effect). A round that earned something (a weapon, a bomb or a shield) offers **Share this milestone**: plain text through the phone's share sheet, for example "Day 30 on Win Zero: 30 zeros down. I unlocked the Chain Zapper." It never includes the goal's wording.
+- **Home:** goal, current streak, best run (with the dates it ran), Yes days in all and this month, bombs, shields; pending check-in card (same Yes / Not today as the notification); credits: Game and Weapon counts, a bonus round waiting to be played or **Play a bonus round** (a sheet to choose the size, typed or from 10 · 100 · 1,000 · 10,000), and in plain words how to earn more or when a Weapon credit comes up; arsenal list with next-unlock progress; history calendar (yes / no / shielded / missed). While reminders are off (never turned on, or off in system settings), a card offers to turn them on; its "Not now" hides it for a week.
+- **Play:** full-screen Skia canvas, HUD (value left, day or BONUS, weapon switch, bomb button, sound toggle), turret at bottom center. `/play?round=bonus` plays the bonus round. Before a round not yet played, the Weapon credit question comes first (section 5).
+- **Encouragement:** when the fill lands after a real round or a replay, a popup over the zeros shows one line of encouragement, picked at random with no repeat back to back (`src/ui/copy/cheers.ts`). A short horn fanfare and a light haptic play as it appears, following the sound and haptics settings. **Got it**, tapping outside, Escape or Android back dismisses it, and the result sheet rises. None in practice or bonus rounds, which have no check-in to cheer.
+- **Result sheet:** over the filled screen, showing day (or "Bonus round"), "N zeros down", rewards earned (credits too: "Weapon credit earned for 3 Yeses in a row. You have 1."), next unlock (not after a bonus round), and buttons for Back to base and Replay (replay has no streak effect). A round that earned something (a weapon, a bomb or a shield; credits alone don't count) offers **Share this milestone**: plain text through the phone's share sheet, for example "Day 30 on Win Zero: 30 zeros down. I unlocked the Chain Zapper." It never includes the goal's wording.
 - **Reset / Shielded / Slipping:** supportive copy, never shaming. Slipping covers any slip that cost a zero, from a Not today or from missed days found on opening: "You've lost a zero. Check in to stop the slide." The final shows Reset (encouraging) or Shielded. After a Not today, the screen offers **Undo Not today** for 10 seconds (30 with a screen reader on), in case it was a mis-tap: the goal and round go back to just before the answer, as long as that check-in is still open.
-- **Settings:** edit goal and times, sound/haptics, re-engagement toggle, erase data, support link, an **About** section (privacy policy, support page, support email, app version), and **How it works**: the rules in plain words (the daily question, the slide and the final, a fresh run, missed days, banked rewards), with numbers taken from the engine.
+- **Settings:** edit goal and times, sound/haptics, re-engagement toggle, erase data, support link, an **About** section (privacy policy, support page, support email, app version), and **How it works**: the rules in plain words (the daily question, the slide and the final, a fresh run, missed days, banked rewards, credits), with numbers and ways to earn taken from the engine.
 
 **Support link:** goals like quitting drinking are health-related. Settings should include a "Need support?" row, and the Slipping and Reset screens link to it too. In the US, list the SAMHSA National Helpline, 1-800-662-4357 (free, confidential, 24/7). On a device that can't place calls (an iPad, say), tapping it shows the number to call from any phone, and SAMHSA's text option, instead of failing silently. Localize later.
 
@@ -126,4 +150,4 @@ Hold to fire at about 6 shots/sec.
 - Respect the OS reduce-motion setting: less shake, fewer particles.
 
 ## 8. Out of scope for v1
-Accounts and cloud sync, multiple goals, leaderboards, IAP. Keep the data model ready for a later FastAPI + Postgres sync backend (stable IDs, ISO dates, append-only history).
+Accounts and cloud sync, multiple goals, leaderboards, IAP. Credit packs would grant into the credit wallet (section 5); the store answers (`docs/store/answers.md`) say rewards come only from check-ins and there are no digital purchases, so they'd change with it, as would the privacy policy for a payment provider. Keep the data model ready for a later FastAPI + Postgres sync backend (stable IDs, ISO dates, append-only history).

@@ -13,6 +13,8 @@ import {
 } from '@/engine';
 import { UNDO_MS } from '@/store/createAppStore';
 
+import { CREDIT_USES, creditsEarnedBy } from './credits';
+
 export const GOAL_MAX_LENGTH = 60;
 export const SUGGESTIONS = ['Stop drinking', 'Exercise more', 'Quit vaping', 'No phone after 10pm', 'Read 20 minutes'];
 
@@ -104,6 +106,16 @@ export function howItWorks({ notifications }: { notifications: boolean }): Secti
         `Every ${SHIELD_EVERY} days of streak earns a shield, up to ${SHIELD_CAP} at a time. Shields only step in on the final slip, never on an ordinary one.`,
         `Every ${BOMB_EVERY} days earns a bomb to use in a round. New weapons unlock as your best run grows. Bombs and weapons are never lost.`,
         "Shields and bombs come from new highs in a run, so slipping and climbing back doesn't earn the same ones twice.",
+      ],
+    },
+    {
+      title: 'Credits',
+      body: [
+        CREDIT_USES.game,
+        CREDIT_USES.weapon,
+        [creditsEarnedBy('game'), creditsEarnedBy('weapon'), 'Each one is earned once, and they stay banked until you use them.']
+          .filter(Boolean)
+          .join(' '),
       ],
     },
   ];

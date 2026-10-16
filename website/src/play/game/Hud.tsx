@@ -7,7 +7,7 @@ import type { ReactNode } from 'react';
 export function Hud(props: {
   left: number;
   total: number;
-  /** "DAY 30", or "PRACTICE". */
+  /** "DAY 30", "BONUS" or "PRACTICE". */
   label: string;
   weaponName: string;
   canSwitch: boolean;
@@ -57,7 +57,7 @@ export function Hud(props: {
           <button
             type="button"
             className="hud-btn weapon"
-            aria-label={`Weapon: ${p.weaponName}${p.canSwitch ? '. Switches to your next unlocked weapon' : ''}`}
+            aria-label={`Weapon: ${p.weaponName}${p.canSwitch ? '. Switches to your next weapon' : ''}`}
             disabled={!p.canSwitch}
             onClick={p.onSwitchWeapon}
           >

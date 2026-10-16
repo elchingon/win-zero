@@ -5,7 +5,7 @@ import { Share } from 'react-native';
 
 import { milestoneShareText, shareMilestone } from '../share';
 
-const none = { bomb: false, shield: false, shieldCapped: false, weapons: [] };
+const none = { bomb: false, shield: false, shieldCapped: false, weapons: [], credits: [] };
 
 afterEach(() => {
   jest.restoreAllMocks();
@@ -28,6 +28,8 @@ describe('milestoneShareText', () => {
   it('has nothing to share for a round that earned nothing', () => {
     expect(milestoneShareText(4, none)).toBeNull();
     expect(milestoneShareText(21, { ...none, shieldCapped: true })).toBeNull(); // shields already full
+    // Credits are banked, not shared.
+    expect(milestoneShareText(3, { ...none, credits: [{ kind: 'weapon', amount: 1, key: 'yes-run-3' }] })).toBeNull();
   });
 });
 

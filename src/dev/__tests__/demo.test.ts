@@ -2,21 +2,13 @@ import { describe, expect, it } from '@jest/globals';
 
 import { createGoal, MS_PER_DAY, MS_PER_HOUR } from '@/engine';
 
-import { debugReadout, offsetLabel, parseCount } from '../demo';
+import { debugReadout, offsetLabel } from '../demo';
 
 describe('offsetLabel', () => {
   it('reads the debug offset in days and hours', () => {
     expect(offsetLabel(0)).toBe('real time');
     expect(offsetLabel(MS_PER_HOUR)).toBe('+0d 1h');
     expect(offsetLabel(2 * MS_PER_DAY + 3 * MS_PER_HOUR)).toBe('+2d 3h');
-  });
-});
-
-describe('parseCount', () => {
-  it('takes whole numbers from 1 to max only', () => {
-    expect(parseCount('30', 1000)).toBe(30);
-    expect(parseCount('1000', 1000)).toBe(1000);
-    for (const bad of ['', '0', '1001', '2.5', '-3', '1e3', ' 4']) expect(parseCount(bad, 1000)).toBeNull();
   });
 });
 

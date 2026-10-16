@@ -1,6 +1,6 @@
 // The result sheet, over the filled screen: the day, "N zeros down", what the Yes earned, and
 // the next unlock. Rewards were applied when Yes was answered; this only reveals them. A
-// replay or a practice round changes nothing, and says so.
+// replay, a bonus round or a practice round changes nothing, and says so.
 import { Canvas, LinearGradient, Rect, vec } from '@shopify/react-native-skia';
 import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -13,7 +13,7 @@ import { colors, fonts, fontScale, space, type, withAlpha } from '@/theme/tokens
 import { Em, Eyebrow } from '@/ui/bits';
 import { Button, LinkButton } from '@/ui/Button';
 
-import { resultLines, type ResultMode } from './result';
+import { resultLines, sheetEyebrow, type ResultMode } from './result';
 import { milestoneShareText, shareMilestone } from './share';
 
 export type { ResultMode } from './result';
@@ -29,7 +29,7 @@ const RISE_MS = 500;
 export function ResultSheet(props: {
   n: number;
   mode: ResultMode;
-  /** The round's record: what the Yes earned. Absent for practice. */
+  /** The day's round: what the Yes earned. Absent for bonus and practice rounds. */
   record: RoundRecord | null;
   onBack: () => void;
   onReplay: () => void;
@@ -38,6 +38,7 @@ export function ResultSheet(props: {
   // A round that earned something can be shared; practice rounds earn nothing.
   const shareText = mode !== 'practice' && record ? milestoneShareText(record.n, record.rewards) : null;
   const goal = useApp((s) => s.goal);
+  const credits = useApp((s) => s.credits);
   const { width, height: screenHeight, fontScale: textScale } = useWindowDimensions();
   // At large text sizes the buttons stack, so their labels needn't shrink to fit side by side.
   const stack = textScale > fontScale.stackButtons;
@@ -53,7 +54,7 @@ export function ResultSheet(props: {
     return () => clearTimeout(id);
   }, []);
 
-  const lines = resultLines(n, mode, record, goal);
+  const lines = resultLines(n, mode, record, goal, credits);
 
   return (
     <Animated.View
@@ -67,7 +68,7 @@ export function ResultSheet(props: {
           <LinearGradient start={vec(0, 0)} end={vec(0, height)} colors={SCRIM} positions={SCRIM_STOPS} />
         </Rect>
       </Canvas>
-      <Eyebrow>{mode === 'practice' ? 'Practice' : `Day ${n}${goal ? ` · ${goal.goal}` : ''}`}</Eyebrow>
+      <Eyebrow>{sheetEyebrow(mode, n, goal)}</Eyebrow>
       <Text ref={header} style={type.h2} accessibilityRole="header" maxFontSizeMultiplier={fontScale.overlay}>
         <Em>{formatCount(n)}</Em> {n === 1 ? 'zero' : 'zeros'} down
       </Text>
