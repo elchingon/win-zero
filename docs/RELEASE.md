@@ -9,14 +9,16 @@ answers are in `docs/store/`.
   expo-asset, expo-constants, expo-linking, expo-notifications, expo-router).
   - Run `npx expo install --fix`, then rebuild the dev client.
   - Some are native modules, so do it on its own, before the QA builds.
-- [ ] **Publish the two pages on e7systems.com.**
-  - Sources: `docs/store/privacy-policy.md` and `docs/store/support.md`.
-  - Fill in `[EFFECTIVE_DATE]` and `[PRIVACY_URL]`.
-  - Note the two URLs for the listings.
+- [ ] **Check the two pages are live on winzero.app.**
+  - The website (`website/`, deployed by Cloudflare Pages) builds them from
+    `docs/store/privacy-policy.md` and `docs/store/support.md`. See `website/README.md`.
+  - `curl -sI https://winzero.app/privacy` and `https://winzero.app/support` both return 200,
+    with no redirect.
   - Set both URLs, which Settings → About opens, as `EXPO_PUBLIC_PRIVACY_URL` and
     `EXPO_PUBLIC_SUPPORT_URL`:
     - EAS builds: `eas env:create --environment production --visibility plaintext --name
-      EXPO_PUBLIC_PRIVACY_URL --value https://…`, and the same for `EXPO_PUBLIC_SUPPORT_URL`.
+      EXPO_PUBLIC_PRIVACY_URL --value https://winzero.app/privacy`, and the same for
+      `EXPO_PUBLIC_SUPPORT_URL` with `https://winzero.app/support`.
       EAS doesn't upload the gitignored `.env`. A production build fails until both are https
       URLs (`scripts/check-release.mjs`).
     - Local runs: copy `.env.example` to `.env` and fill it in.
