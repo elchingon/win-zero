@@ -1,7 +1,7 @@
-// Credits in plain words: their names, the result sheet's line for one a Yes earned, and what
-// each is for. Why a credit was earned comes from the engine's rewards, so the words can't drift
+// Credits in plain words: their names, the result sheet's line for one a Yes earned, what each
+// is for, and the question before a round. Why a credit was earned comes from the engine's rewards, so the words can't drift
 // from the rules. Shared by the app and the website.
-import { BONUS_MAX_N, CREDIT_REWARDS, creditRewardById, type CreditGrant, type CreditKind } from '@/engine';
+import { BONUS_MAX_N, CREDIT_REWARDS, creditRewardById, type CreditGrant, type CreditKind, type WeaponDef } from '@/engine';
 import { formatCount, joinAnd, plural } from '@/lib/format';
 
 const NAMES: Record<CreditKind, string> = { game: 'Game credit', weapon: 'Weapon credit' };
@@ -30,3 +30,14 @@ export function creditsEarnedBy(kind: CreditKind): string {
   const reasons = CREDIT_REWARDS.filter((r) => r.kind === kind).map((r) => r.reason);
   return `You earn a ${NAMES[kind]} ${joinAnd(reasons)}.`;
 }
+
+/** Before a round, when a Weapon credit could lend it something. */
+export const WEAPON_PROMPT = {
+  title: 'Use a Weapon credit?',
+  body: (credits: number) =>
+    `You have ${creditCount('weapon', credits)}. Pick a weapon you haven't unlocked yet to use in this round and its replays.`,
+  skip: 'Not this time',
+  /** A screen reader's name for one weapon on offer. */
+  option: (w: WeaponDef) => `${w.name}. ${w.description} Unlocks on day ${w.unlockAt}.`,
+  optionHint: 'Uses 1 Weapon credit for this round',
+};
