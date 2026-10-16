@@ -16,8 +16,9 @@ export function linkFrom(value: string | undefined): string | null {
 /**
  * The privacy policy and support pages (App Review needs the privacy link in the app), and the
  * support email. The page URLs come from the environment, inlined when the app is bundled:
- * `.env` for local builds (see .env.example), EAS environment variables for EAS builds. Unset,
- * Settings leaves the row out, and a production EAS build stops (scripts/check-release.mjs).
+ * `.env` for local runs (see .env.example), each build profile's `env` in eas.json for EAS
+ * builds. Unset, Settings leaves the row out, and a production EAS build stops
+ * (scripts/check-release.mjs).
  */
 export const APP_LINKS = {
   // Written out in full: Expo inlines only literal `process.env.EXPO_PUBLIC_*` reads.

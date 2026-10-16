@@ -54,4 +54,6 @@ website/            winzero.app: Vite + React, deployed by Cloudflare Pages (see
 - `npm run gen:sfx`: re-render the game's sound effects into assets/sfx/ (from scripts/gen-sfx.mjs)
 - `npm run gen:brand`: re-render the icons, splash and store art into assets/brand/ (from scripts/gen-brand.mjs)
 - `eas build --profile development --platform ios|android`: build dev clients
+- `npm run build:android`: build a release APK and AAB locally into build/ (no dev server needed), debug-signed; `npm run build:android:upload` signs with the upload key named in .env.signing; `npm run install:android` puts the APK on a plugged-in phone
+- `npm run open:ios`: refresh ios/ from app.json and open it in Xcode, for building there
 - Website, from `website/`: `npm run dev`, `npm run build && npm run verify`, `npm run typecheck`, `npm run lint`, `npm test` (Vitest)
