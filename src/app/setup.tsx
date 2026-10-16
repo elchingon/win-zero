@@ -3,7 +3,7 @@ import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { clockMinutes, DEFAULT_CHECK_IN_TIME, DEFAULT_MORNING_TIME, firstCheckInOpenAt, type ClockTime } from '@/engine';
+import { DEFAULT_CHECK_IN_TIME, DEFAULT_MORNING_TIME, firstCheckInOpenAt } from '@/engine';
 import { formatClockTime } from '@/lib/format';
 import { requestReminderPermission } from '@/notifications/permissions';
 import { appStore, useApp } from '@/store';
@@ -11,32 +11,11 @@ import { colors, fonts, space, type } from '@/theme/tokens';
 import { Chip, Em, Eyebrow, Field, Fine, Lede, TextField } from '@/ui/bits';
 import { TopBar } from '@/ui/Brand';
 import { Button, LinkButton } from '@/ui/Button';
+import { GOAL_MAX_LENGTH, reminderWhen, RULES, SUGGESTIONS } from '@/ui/copy/rules';
 import { feedback } from '@/ui/feedback';
 import { Screen } from '@/ui/Screen';
 import { TimeField } from '@/ui/TimeField';
 import { useDeviceCalendar } from '@/ui/useDevice';
-
-const GOAL_MAX_LENGTH = 60;
-const SUGGESTIONS = ['Stop drinking', 'Exercise more', 'Quit vaping', 'No phone after 10pm', 'Read 20 minutes'];
-
-/** When the reminder comes, in words: later the same day, the next day, or with the check-in. */
-function reminderWhen(checkIn: ClockTime, reminder: string, morning: ClockTime): string {
-  const after = clockMinutes(morning) - clockMinutes(checkIn);
-  if (after === 0) return "If you haven't answered, the next day's check-in asks again, so it's one notification a day.";
-  return `Once more at ${reminder} ${after > 0 ? 'that day' : 'the next day'} if you haven't answered yet.`;
-}
-
-const RULES: { mark: string; tone?: 'flare'; text: string }[] = [
-  { mark: '?', text: 'Each evening at your check-in time, Win Zero asks one question: did you do it today?' },
-  { mark: '000', text: 'Yes adds a zero. Shoot every one of them. The last zero goes out with a huge explosion.' },
-  {
-    mark: '−1',
-    tone: 'flare',
-    text: 'Not today costs one zero. Seven in a row starts a fresh run, unless a shield saves it. You earn a shield every 7 days.',
-  },
-  { mark: '7D', text: "Missed a check-in? Nothing's lost for a week. After that, each missed day counts like a Not today." },
-  { mark: '+', text: 'Longer streaks unlock new weapons, and every 5 days earns a bomb.' },
-];
 
 export default function Setup() {
   const hasGoal = useApp((s) => s.goal !== null);

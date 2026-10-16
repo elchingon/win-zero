@@ -10,7 +10,6 @@ import {
   nextWindow,
   openedAtSetup,
   pendingWindow,
-  type AnswerRejection,
   type GoalState,
 } from '@/engine';
 import { formatClockTime, formatWhen } from '@/lib/format';
@@ -19,6 +18,7 @@ import { colors, fonts, space, type } from '@/theme/tokens';
 import { Card, Eyebrow, Fine } from '@/ui/bits';
 import { TopBar } from '@/ui/Brand';
 import { Button, LinkButton } from '@/ui/Button';
+import { REJECTED } from '@/ui/copy/rules';
 import { feedback } from '@/ui/feedback';
 import { Arsenal } from '@/ui/home/Arsenal';
 import { CheckInCard } from '@/ui/home/CheckInCard';
@@ -41,12 +41,6 @@ const DemoControls: ComponentType | null = __DEV__
 const MAX_TIMER_MS = 60 * 60 * 1000;
 /** Fire just after a window boundary, not on it. */
 const BOUNDARY_SLACK_MS = 500;
-
-const REJECTED: Record<AnswerRejection, string> = {
-  expired: "That check-in closed before your answer. Here's where things stand now.",
-  'already-answered': "You've already answered that one.",
-  'not-open': "That check-in isn't open yet.",
-};
 
 export default function Home() {
   const goal = useApp((s) => s.goal);
