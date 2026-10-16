@@ -64,6 +64,19 @@ follows your phone's text size and Reduce Motion settings.
 Everything stays on your phone. There's no account, and Win Zero collects no data. Read the
 [privacy policy](https://winzero.app/privacy).
 
+## Playing on the web
+
+You can also play Win Zero in your browser at [winzero.app/play](https://winzero.app/play).
+
+- **Your progress stays in that browser.** It doesn't sync with the app or with other browsers.
+- **The website can't send reminders.** Open it at your check-in time, or use the app for
+  reminders.
+- **Clearing your browser's data for winzero.app erases your progress.** Safari can also clear it
+  after 7 days without a visit. Adding Win Zero to your Home Screen keeps it.
+- **Demo mode** (under Demo controls on Home) lets you move the clock, jump to any day and play
+  practice rounds on a copy of your progress. Your real streak isn't touched, and leaving demo
+  mode takes you back to it.
+
 ## Starting over
 
 **Settings → Erase all data** deletes your goal, history and rewards from your phone. This can't be

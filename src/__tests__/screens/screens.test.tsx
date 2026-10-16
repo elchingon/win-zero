@@ -35,6 +35,8 @@ jest.mock('@/dev/DebugSection', () => ({ DebugSection: () => null, DemoControls:
 const ROUTES = {
   _layout: () => <Stack screenOptions={{ headerShown: false }} />,
   index: HomeScreen,
+  // The round itself (Skia) has its own tests; here it only needs somewhere to land.
+  play: () => null,
   setup: SetupScreen,
   settings: SettingsScreen,
   notice: NoticeScreen,
@@ -103,6 +105,71 @@ describe('Setup', () => {
     await fireEvent.press(screen.getByText('Not now'));
     expect(await screen.findByText("You're all set.")).toBeOnTheScreen();
     expect(screen.queryByText(/Today counts/)).not.toBeOnTheScreen();
+  });
+});
+
+describe('Credits on Home', () => {
+  const wallet = (game: number, weapon: number, claimed: string[] = []) => ({ balance: { game, weapon }, claimed });
+
+  it('shows none yet, and how to earn them', async () => {
+    await open('/', { goal: twoDays() });
+    expect(screen.getByLabelText('0 Game credits')).toBeOnTheScreen();
+    expect(screen.getByLabelText('0 Weapon credits')).toBeOnTheScreen();
+    expect(screen.getByText('You earn a Game credit for setting your goal and for reaching 2 zeros.')).toBeOnTheScreen();
+    expect(screen.getByText(/^You earn a Weapon credit for checking in again after a missed day, for 3 Yeses in a row/)).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Play a bonus round' })).not.toBeOnTheScreen();
+  });
+
+  it("doesn't offer credits already earned", async () => {
+    appStore.setState({ credits: wallet(0, 0, ['goal-set', 'zeros-2']) });
+    await open('/', { goal: twoDays() });
+    expect(screen.queryByText(/You earn a Game credit/)).not.toBeOnTheScreen();
+  });
+
+  it('spends a Game credit on a bonus round of the size chosen, and opens it', async () => {
+    appStore.setState({ credits: wallet(1, 0) });
+    const app = await open('/', { goal: twoDays() });
+    expect(screen.getByLabelText('1 Game credit')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Play a bonus round' }));
+    await fireEvent.press(screen.getByRole('button', { name: '1,000' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Start' }));
+    expect(app.pathname()).toBe('/play');
+    expect(appStore.getState().bonus).toEqual({ n: 1000, borrowed: [], played: false });
+    expect(appStore.getState().credits.balance.game).toBe(0);
+  });
+
+  it('takes a typed size, turns one down out of range, and keeps the credit on Cancel', async () => {
+    appStore.setState({ credits: wallet(1, 0) });
+    await open('/', { goal: twoDays() });
+    await fireEvent.press(screen.getByRole('button', { name: 'Play a bonus round' }));
+    await fireEvent.changeText(screen.getByLabelText('Zeros'), '0');
+    expect(screen.getByText('A whole number from 1 to 100,000, please.')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Start' })).toBeDisabled();
+    await fireEvent.changeText(screen.getByLabelText('Zeros'), '4321');
+    expect(screen.getByRole('button', { name: 'Start' })).toBeEnabled();
+    await fireEvent.press(screen.getByRole('button', { name: 'Cancel' }));
+    expect(appStore.getState().bonus).toBeNull();
+    expect(appStore.getState().credits.balance.game).toBe(1);
+  });
+
+  it('offers the bonus round already paid for', async () => {
+    appStore.setState({ bonus: { n: 250, borrowed: [], played: false } });
+    const app = await open('/', { goal: twoDays() });
+    expect(screen.getByText('Your bonus round of 250 zeros is ready.')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Play bonus round' }));
+    expect(app.pathname()).toBe('/play');
+  });
+
+  it('says when a Weapon credit comes up', async () => {
+    appStore.setState({ credits: wallet(0, 1) });
+    await open('/', { goal: twoDays() });
+    expect(screen.getByText("You'll be asked before your next round whether to use one.")).toBeOnTheScreen();
+  });
+
+  it('keeps Weapon credits for new weapons once every one is unlocked', async () => {
+    appStore.setState({ credits: wallet(0, 2) });
+    await open('/', { goal: { ...twoDays(), bestStreak: 100 } });
+    expect(screen.getByText('Every weapon is unlocked, so your Weapon credits wait here for new ones.')).toBeOnTheScreen();
   });
 });
 

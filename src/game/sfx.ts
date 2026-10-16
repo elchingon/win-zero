@@ -1,12 +1,14 @@
-// The round's sound effects (made by scripts/gen-sfx.mjs from the prototype's synthesis). Each
-// sound has a few players, played round-robin, so quick repeats overlap instead of cutting
-// each other off. Quiet when the player has sound off, and under the silent switch.
+// The round's sound effects (made by scripts/gen-sfx.mjs, mostly from the prototype's
+// synthesis). Each sound has a few players, played round-robin, so quick repeats overlap
+// instead of cutting each other off. Quiet when the player has sound off, and under the
+// silent switch.
 import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { useCallback, useEffect, useRef } from 'react';
 
 import { appStore } from '@/store';
 
 import boom from '../../assets/sfx/boom.wav';
+import fanfare from '../../assets/sfx/fanfare.wav';
 import pop from '../../assets/sfx/pop.wav';
 import shoot from '../../assets/sfx/shoot.wav';
 
@@ -14,6 +16,7 @@ const SOUNDS = {
   shoot: { source: shoot, voices: 4 },
   pop: { source: pop, voices: 4 },
   boom: { source: boom, voices: 2 },
+  fanfare: { source: fanfare, voices: 1 },
 };
 
 export type Sound = keyof typeof SOUNDS;
@@ -32,7 +35,7 @@ function load(): Voices {
     players: Array.from({ length: SOUNDS[sound].voices }, () => createAudioPlayer(SOUNDS[sound].source)),
     next: 0,
   });
-  const pools = { shoot: make('shoot'), pop: make('pop'), boom: make('boom') };
+  const pools = { shoot: make('shoot'), pop: make('pop'), boom: make('boom'), fanfare: make('fanfare') };
   return {
     play: (sound) => {
       const pool = pools[sound];

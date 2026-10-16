@@ -1,4 +1,5 @@
-// Display formatting. Rules live in the engine; this only turns its values into words.
+// Display formatting. Rules live in the engine; this only turns its values into words, and reads
+// back the numbers a player types.
 import {
   addDays,
   clockMinutes,
@@ -95,7 +96,18 @@ export function plural(n: number, one: string, many = `${one}s`): string {
   return `${n} ${n === 1 ? one : many}`;
 }
 
+/** 'a', 'a and b', 'a, b and c'. */
+export function joinAnd(parts: readonly string[]): string {
+  return parts.length < 2 ? (parts[0] ?? '') : `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}`;
+}
+
 /** '1,000': grouped the way the rest of the (English) copy reads, in characters Bungee has. */
 export function formatCount(n: number): string {
   return n.toLocaleString('en-US');
+}
+
+/** A whole number from 1 to `max`, typed as plain digits, or null. */
+export function parseCount(text: string, max: number): number | null {
+  const n = Number(text);
+  return /^\d+$/.test(text) && n >= 1 && n <= max ? n : null;
 }

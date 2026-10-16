@@ -1,9 +1,10 @@
 # Win Zero Privacy Policy
 
-_Effective [EFFECTIVE_DATE]_
+_Effective October 15, 2026_
 
-Win Zero is a daily check-in app made by E7 Systems. This policy explains what the app does
-with your information. The short version: everything stays on your phone, and we never see it.
+Win Zero is a daily check-in app made by E7 Systems. This policy explains what the app, and the
+website at winzero.app, do with your information. The short version: everything stays on your
+device, and we never see it.
 
 ## What the app stores
 
@@ -19,9 +20,22 @@ anyone else.
 
 ## What we collect
 
-Nothing. Win Zero has no accounts and no servers. It does not include analytics, advertising,
-tracking, or crash-reporting tools. We do not collect, sell or share any personal information,
-and we don't know who uses the app.
+Nothing. Win Zero has no accounts, and nothing you enter is sent to a server. It does not include
+analytics, advertising, tracking, or crash-reporting tools. We do not collect, sell or share any
+personal information, and we don't know who uses the app.
+
+## The website
+
+You can also play Win Zero in your browser at winzero.app. The website works the same way as the
+app:
+
+- Your goal, answers and settings are saved in your browser's storage on your device. They are
+  not sent to us, and they don't sync with the app or with other browsers.
+- The website has no accounts, cookies, analytics, advertising or tracking, and it doesn't load
+  anything from other companies.
+- The site is hosted by Cloudflare. Like any web host, Cloudflare handles your IP address and
+  basic details of each request (such as the page and your browser type) to deliver the site and
+  protect it from abuse, under its own privacy policy. We don't use them to identify you.
 
 ## Notifications
 
@@ -44,7 +58,8 @@ dialer. Win Zero doesn't record that you did.
 ## Deleting your data
 
 Open **Settings → Erase all data** to delete everything Win Zero has stored. Uninstalling the
-app also deletes it.
+app also deletes it. On the website, **Settings → Erase all data** works the same way, and so does
+clearing your browser's data for winzero.app.
 
 ## Children
 

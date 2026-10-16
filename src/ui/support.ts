@@ -3,14 +3,9 @@
 // may have no mail app).
 import { Alert, Linking } from 'react-native';
 
-/** SPEC 6: a US support line for health-related goals. Localize later. */
-export const SUPPORT_LINE = {
-  name: 'SAMHSA National Helpline',
-  display: '1-800-662-4357',
-  tel: 'tel:18006624357',
-  detail: 'Free, confidential, 24/7.',
-  text: 'Or text your ZIP code to 435748 (HELP4U) to find help near you.',
-} as const;
+import { SUPPORT_EMAIL, SUPPORT_LINE } from './copy/support';
+
+export { SUPPORT_LINE } from './copy/support';
 
 /** A link from the environment, or null when it isn't set. */
 export function linkFrom(value: string | undefined): string | null {
@@ -29,7 +24,7 @@ export const APP_LINKS = {
   // Written out in full: Expo inlines only literal `process.env.EXPO_PUBLIC_*` reads.
   privacy: linkFrom(process.env.EXPO_PUBLIC_PRIVACY_URL),
   support: linkFrom(process.env.EXPO_PUBLIC_SUPPORT_URL),
-  email: 'e7urgent@gmail.com',
+  email: SUPPORT_EMAIL,
 } as const;
 
 /**

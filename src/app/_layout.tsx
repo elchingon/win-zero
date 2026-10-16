@@ -3,7 +3,7 @@ import { DarkTheme, Stack, ThemeProvider, usePathname, type ErrorBoundaryProps }
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useState } from 'react';
-import { StyleSheet } from 'react-native';
+import { AppState, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { startNotifications } from '@/notifications';
@@ -55,7 +55,7 @@ export default function RootLayout() {
   const finishLaunch = useCallback(() => setLaunched(true), []);
 
   // Catch up on closed windows after storage loads and whenever the app comes back.
-  useEffect(() => startLifecycle(appStore), []);
+  useEffect(() => startLifecycle(appStore, AppState), []);
   // Then keep the scheduled reminders in step with the goal, and answer from notifications.
   useEffect(() => startNotifications(), []);
   // Notification handling needs to know which screen is up, once there is one.

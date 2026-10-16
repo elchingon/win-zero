@@ -1,0 +1,15 @@
+{
+  "name": "Win Zero",
+  "short_name": "Win Zero",
+  "description": "One goal, one check-in a day, and an arcade round for every yes.",
+  "start_url": "/play",
+  "scope": "/play",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0D1130",
+  "theme_color": "#0D1130",
+  "icons": [
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

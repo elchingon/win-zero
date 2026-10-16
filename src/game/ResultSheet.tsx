@@ -1,20 +1,22 @@
 // The result sheet, over the filled screen: the day, "N zeros down", what the Yes earned, and
 // the next unlock. Rewards were applied when Yes was answered; this only reveals them. A
-// replay or a practice round changes nothing, and says so.
+// replay, a bonus round or a practice round changes nothing, and says so.
 import { Canvas, LinearGradient, Rect, vec } from '@shopify/react-native-skia';
 import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { nextUnlock, SHIELD_CAP, weaponById } from '@/engine';
-import { formatCount, plural } from '@/lib/format';
+import { formatCount } from '@/lib/format';
 import { useApp, type RoundRecord } from '@/store';
 import { colors, fonts, fontScale, space, type, withAlpha } from '@/theme/tokens';
 import { Em, Eyebrow } from '@/ui/bits';
 import { Button, LinkButton } from '@/ui/Button';
 
+import { resultLines, sheetEyebrow, type ResultMode } from './result';
 import { milestoneShareText, shareMilestone } from './share';
+
+export type { ResultMode } from './result';
 
 /** The prototype's #result: clear at the top, deepening to ink at 92% by 38% of the way down. */
 const SCRIM = [withAlpha(colors.ink, 0), withAlpha(colors.ink, 0.92)];
@@ -24,17 +26,10 @@ const SCRIM_TOP = 80;
 const BOTTOM = 28;
 const RISE_MS = 500;
 
-export type ResultMode = 'real' | 'replay' | 'practice';
-
-interface Line {
-  text: string;
-  news?: boolean;
-}
-
 export function ResultSheet(props: {
   n: number;
   mode: ResultMode;
-  /** The round's record: what the Yes earned. Absent for practice. */
+  /** The day's round: what the Yes earned. Absent for bonus and practice rounds. */
   record: RoundRecord | null;
   onBack: () => void;
   onReplay: () => void;
@@ -43,6 +38,7 @@ export function ResultSheet(props: {
   // A round that earned something can be shared; practice rounds earn nothing.
   const shareText = mode !== 'practice' && record ? milestoneShareText(record.n, record.rewards) : null;
   const goal = useApp((s) => s.goal);
+  const credits = useApp((s) => s.credits);
   const { width, height: screenHeight, fontScale: textScale } = useWindowDimensions();
   // At large text sizes the buttons stack, so their labels needn't shrink to fit side by side.
   const stack = textScale > fontScale.stackButtons;
@@ -58,28 +54,7 @@ export function ResultSheet(props: {
     return () => clearTimeout(id);
   }, []);
 
-  const lines: Line[] = [];
-  if (mode === 'practice') {
-    lines.push({ text: 'Practice round: nothing about your streak changes.' });
-  } else if (mode === 'replay') {
-    lines.push({ text: "Replay: your streak and rewards don't change." });
-  } else if (record && goal) {
-    for (const id of record.rewards.weapons) {
-      const w = weaponById(id);
-      lines.push({ text: `New weapon unlocked: ${w.name}. ${w.description}`, news: true });
-    }
-    if (record.rewards.bomb) lines.push({ text: `Bomb earned. You have ${goal.bombs}.`, news: true });
-    if (record.rewards.shield) lines.push({ text: `Shield earned. You have ${goal.shields} of ${SHIELD_CAP}.`, news: true });
-    if (record.rewards.shieldCapped) lines.push({ text: `Shields full. You're holding all ${SHIELD_CAP}.` });
-  }
-  if (mode !== 'practice' && goal) {
-    const next = nextUnlock(goal.bestStreak, n);
-    lines.push({
-      text: next
-        ? `Hold the line ${plural(next.daysToGo, 'more day')} for the ${next.weapon.name}.`
-        : `Tomorrow: ${plural(n + 1, 'zero')}.`,
-    });
-  }
+  const lines = resultLines(n, mode, record, goal, credits);
 
   return (
     <Animated.View
@@ -93,7 +68,7 @@ export function ResultSheet(props: {
           <LinearGradient start={vec(0, 0)} end={vec(0, height)} colors={SCRIM} positions={SCRIM_STOPS} />
         </Rect>
       </Canvas>
-      <Eyebrow>{mode === 'practice' ? 'Practice' : `Day ${n}${goal ? ` · ${goal.goal}` : ''}`}</Eyebrow>
+      <Eyebrow>{sheetEyebrow(mode, n, goal)}</Eyebrow>
       <Text ref={header} style={type.h2} accessibilityRole="header" maxFontSizeMultiplier={fontScale.overlay}>
         <Em>{formatCount(n)}</Em> {n === 1 ? 'zero' : 'zeros'} down
       </Text>

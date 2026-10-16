@@ -6,7 +6,7 @@ import { router, usePathname } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { clockTimeAt, dayKeyAt, MS_PER_DAY, MS_PER_HOUR, nextWindow, pendingWindow } from '@/engine';
+import { MS_PER_DAY, MS_PER_HOUR, pendingWindow } from '@/engine';
 import { onSynced } from '@/notifications';
 import { getReminderPermission } from '@/notifications/permissions';
 import { TEST_DELAY_SECONDS, testCheckInRequest } from '@/notifications/schedule';
@@ -15,27 +15,9 @@ import { colors, fonts, radii, space } from '@/theme/tokens';
 import { Eyebrow, Fine, TextField } from '@/ui/bits';
 import { Button, LinkButton } from '@/ui/Button';
 
+import { debugReadout, JUMP_DAYS, parseCount, PRACTICE_MAX_N } from './demo';
 import { summarizePending, type PendingSummary } from './pending';
 import { SEED_MAX_N } from './seedRun';
-
-/** One per milestone: twin, scatter + first shield, first standard round, rocket, chain, first armored, nuke, a big fill. */
-const JUMP_DAYS = [3, 7, 8, 14, 30, 61, 100, 250];
-
-function offsetLabel(ms: number): string {
-  if (ms === 0) return 'real time';
-  const days = Math.floor(ms / MS_PER_DAY);
-  const hours = Math.round((ms - days * MS_PER_DAY) / MS_PER_HOUR);
-  return `+${days}d ${hours}h`;
-}
-
-/** A whole number from 1 to `max`, or null. */
-function parseCount(text: string, max: number): number | null {
-  const n = Number(text);
-  return /^\d+$/.test(text) && n >= 1 && n <= max ? n : null;
-}
-
-/** Practice rounds can be far bigger than a seeded run: the round is built straight from N. */
-const PRACTICE_MAX_N = 100_000;
 
 export function DebugSection() {
   const goal = useApp((s) => s.goal);
@@ -47,8 +29,6 @@ export function DebugSection() {
   const now = store.now();
   const tz = store.timeZone();
   const pending = goal ? pendingWindow(goal, now) : null;
-  const next = goal ? nextWindow(goal) : null;
-  const at = (d: Date) => `${dayKeyAt(d, tz)} ${clockTimeAt(d, tz)}`;
   const custom = parseCount(customDay, SEED_MAX_N);
   const practice = parseCount(practiceN, PRACTICE_MAX_N);
   const [scheduled, setScheduled] = useState<PendingSummary | null>(null);
@@ -85,14 +65,7 @@ export function DebugSection() {
     readScheduled();
   };
 
-  const lines = [
-    `Now ${at(now)} (${offsetLabel(offset)})`,
-    `Zone ${tz}`,
-    goal
-      ? `Streak ${goal.streak} · slide ${goal.slide} · missed in a row ${goal.consecutiveMissed}${goal.paused ? ' · paused' : ''}`
-      : 'No goal',
-    pending ? `Open: ${pending.day} until ${at(pending.closesAt)}` : next ? `Next opens ${at(next.opensAt)}` : '',
-  ].filter(Boolean);
+  const lines = debugReadout(goal, now, tz, offset);
 
   // The answer leaves Home the round to open, so from Settings, go back to Home.
   const jump = (n: number) => {

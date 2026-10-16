@@ -21,68 +21,59 @@ import { PixelRatio } from 'react-native';
 import type { FillPlan, ZeroGroup } from '@/engine';
 import { formatCount } from '@/lib/format';
 import { colors, withAlpha, zeroPalette } from '@/theme/tokens';
-import { DOT_ALPHA, DOT_ORIGIN, DOT_SIZE, DOT_SPACING, GLOW_RADIUS, GLOW_Y } from '@/ui/ZeroField';
 
 import { TURRET_BASE_RADIUS } from '../draw/scene';
 import type { Kit, Rgba, Sprite, SpriteSheet } from '../draw/types';
+import {
+  ARMOR_EDGE_ALPHA,
+  ARMOR_EDGE_WIDTH,
+  ARMOR_SHEEN,
+  ARMOR_SHEEN_STOPS,
+  ARMOR_SHEEN_WIDTH,
+  ARMOR_STROKE_SCALE,
+  BADGE_EDGE,
+  BADGE_EDGE_ALPHA,
+  BADGE_FILL_ALPHA,
+  BADGE_FONT,
+  BADGE_HEIGHT,
+  BADGE_PAD_X,
+  BULLET_LOOKS,
+  BULLET_TAIL_ALPHA,
+  DOT_ALPHA,
+  DOT_ORIGIN,
+  DOT_SIZE,
+  DOT_SPACING,
+  FILL_GLOW_ALPHA,
+  FILL_GLOW_RADIUS,
+  fxDensity,
+  FX_CONFETTI,
+  FX_DOT,
+  FX_RING,
+  FX_RING_STROKE,
+  GLOW_RADIUS,
+  GLOW_REACH,
+  GLOW_Y,
+  GLYPH_GLOW,
+  GLYPH_GLOW_MAX,
+  GLYPH_MAX_PX,
+  HIGHLIGHT_ALPHA,
+  HIGHLIGHT_WIDTH,
+  MEASURE_SIZE,
+  OVERLAY_HEIGHT,
+  OVERLAY_OUTLINE,
+  OVERLAY_WIDTH,
+  ringDensity,
+  spriteRadius,
+  SPRITE_PAD,
+  TINT_BASE,
+  ZERO_GLOW,
+  type BulletLook,
+} from '../look';
 import { armorBadges } from '../sim/badges';
-import { ARMOR_SIZE_SCALE, SIZE_JITTER } from '../sim/constants';
+import { ARMOR_SIZE_SCALE } from '../sim/constants';
 import { fillGrid } from '../sim/fill';
-import { ZERO_ASPECT, ZERO_STROKE, zeroRadius } from '../sim/sizing';
-import { HIGHLIGHT_ALPHA, HIGHLIGHT_WIDTH, highlightPath, ZERO_GLOW } from '../ZeroRing';
-
-/** Sprites are drawn at screen density, up to this. */
-const SPRITE_MAX_DENSITY = 3;
-/** And never with a radius above this many pixels, to keep the sheet small. */
-const SPRITE_MAX_RY_PX = 200;
-/** A blur reaches about this many sigmas. */
-const GLOW_REACH = 3;
-const SPRITE_PAD = 2;
-/** Armored rings: a thicker band with a metallic sheen and a dark inner edge. */
-const ARMOR_STROKE_SCALE = 1.4;
-const ARMOR_SHEEN_WIDTH = 0.55;
-const ARMOR_SHEEN = [0.7, 0, 0.35, 0];
-const ARMOR_SHEEN_STOPS = [0, 0.4, 0.7, 1];
-const ARMOR_EDGE_WIDTH = 0.1;
-const ARMOR_EDGE_ALPHA = 0.55;
-/** Bullet streaks, in points: the prototype's tail length, line width and head radius. */
-const BULLET_LOOKS = [
-  { color: colors.amber, tail: 18, width: 4, head: 3 },
-  { color: colors.teal, tail: 18, width: 4, head: 3 },
-  { color: colors.flare, tail: 26, width: 8, head: 5 },
-];
-const BULLET_TAIL_ALPHA = 0.55;
-/**
- * White effect shapes, in points, tinted per particle when drawn: a square dot, a 2:1 confetti
- * strip, and a fragment ring (an oval with the prototype's stroke).
- */
-const FX_DOT = 8;
-const FX_CONFETTI = 16;
-const FX_RING = 12;
-const FX_RING_STROKE = 0.3;
-/** ×V badges, in points: Bungee on a dark pill with a faint fg edge. */
-const BADGE_FONT = 10;
-const BADGE_HEIGHT = 15;
-const BADGE_PAD_X = 5;
-const BADGE_FILL_ALPHA = 0.9;
-const BADGE_EDGE_ALPHA = 0.45;
-const BADGE_EDGE = 1;
-/** Fill glyphs: baked no bigger than this many px (a one-zero fill scales up a little). */
-const GLYPH_MAX_PX = 1024;
-/** Fills of up to this many glyphs glow, as in the prototype; the glow's blur is this × the size. */
-const GLYPH_GLOW_MAX = 40;
-const GLYPH_GLOW = 0.06;
-/** The fill's glow: amber at this opacity in the middle, out to this × the longer side. */
-const FILL_GLOW_ALPHA = 0.22;
-const FILL_GLOW_RADIUS = 0.7;
-/** The overlaid number: up to this share of the width, this share of the height, outlined this thick (× size). */
-const OVERLAY_WIDTH = 0.86;
-const OVERLAY_HEIGHT = 0.3;
-const OVERLAY_OUTLINE = 0.08;
-/** Measuring size for fitting the overlaid number. */
-const MEASURE_SIZE = 100;
-/** Tinted sprites are baked white, so a tint multiplies straight to its color. */
-const TINT_BASE = '#FFFFFF';
+import { ZERO_ASPECT, ZERO_STROKE } from '../sim/sizing';
+import { highlightPath } from '../ZeroRing';
 
 export function rgba(hex: string, alpha = 1): Rgba {
   const c = Skia.Color(hex);
@@ -172,7 +163,7 @@ function ringCell(ry: number, color: string, armored: boolean): Cell {
 }
 
 /** A bullet streak pointing right, its head on the cell's center. Drawn at `d` px per point. */
-function bulletCell(look: (typeof BULLET_LOOKS)[number], d: number): Cell {
+function bulletCell(look: BulletLook, d: number): Cell {
   const reach = (look.tail + look.width / 2) * d + SPRITE_PAD;
   return {
     w: Math.ceil(2 * reach),
@@ -330,10 +321,7 @@ function pack(rows: Cell[][]): { picture: SkPicture; sprites: Sprite[][]; width:
   return { picture, sprites, width, height };
 }
 
-/** The zero radius (points) the round's sprites are baked at: the biggest a zero gets. */
-export function spriteRadius(objectCount: number, width: number, height: number): number {
-  return zeroRadius(objectCount, width, height) * (1 + SIZE_JITTER / 2);
-}
+export { spriteRadius } from '../look';
 
 export interface BakedSprites {
   picture: SkPicture;
@@ -356,16 +344,16 @@ export function bakeSprites(opts: {
   const armoredRound = badgeValues.length > 0;
   const ryPt = spriteRadius(objectCount, opts.width, opts.height);
   const biggest = ryPt * (armoredRound ? ARMOR_SIZE_SCALE : 1);
-  const density = Math.max(1, Math.min(PixelRatio.get(), SPRITE_MAX_DENSITY, SPRITE_MAX_RY_PX / biggest));
-  const fxDensity = Math.min(PixelRatio.get(), SPRITE_MAX_DENSITY);
+  const density = ringDensity(PixelRatio.get(), biggest);
+  const fxScale = fxDensity(PixelRatio.get());
   const glyphPt = fillGrid(opts.fill.glyphs, opts.width, opts.height).size;
   const rows = {
     zero: zeroPalette.map((c) => ringCell(ryPt * density, c, false)),
     armored: armoredRound ? zeroPalette.map((c) => ringCell(ryPt * ARMOR_SIZE_SCALE * density, c, true)) : [],
-    badges: badgeValues.map((v) => badgeCell(v, opts.font, fxDensity)),
-    bullets: BULLET_LOOKS.map((look) => bulletCell(look, fxDensity)),
-    fx: fxCells(fxDensity),
-    glyph: [glyphCell(Math.min(glyphPt * fxDensity, GLYPH_MAX_PX), opts.font, opts.fill.glyphs <= GLYPH_GLOW_MAX)],
+    badges: badgeValues.map((v) => badgeCell(v, opts.font, fxScale)),
+    bullets: BULLET_LOOKS.map((look) => bulletCell(look, fxScale)),
+    fx: fxCells(fxScale),
+    glyph: [glyphCell(Math.min(glyphPt * fxScale, GLYPH_MAX_PX), opts.font, opts.fill.glyphs <= GLYPH_GLOW_MAX)],
   };
   const { picture, sprites, width, height } = pack(Object.values(rows));
   const [zero = [], armored = [], badges = [], bullets = [], fx = [], glyphs = []] = sprites;

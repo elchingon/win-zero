@@ -1,0 +1,2 @@
+# The app under /play is one page with its own router: every /play/... path serves it.
+/play/* /play 200

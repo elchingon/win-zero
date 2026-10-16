@@ -14,6 +14,7 @@ import { colors, space, type } from '@/theme/tokens';
 import { Card, Eyebrow, Field, Fine, Row, shared, TextField, ToggleRow } from '@/ui/bits';
 import { TopBar } from '@/ui/Brand';
 import { Button, LinkButton } from '@/ui/Button';
+import { GOAL_MAX_LENGTH } from '@/ui/copy/rules';
 import { feedback } from '@/ui/feedback';
 import { Screen } from '@/ui/Screen';
 import { APP_LINKS, callSupportLine, emailSupport, openPage, SUPPORT_LINE } from '@/ui/support';
@@ -27,7 +28,6 @@ const DebugSection: ComponentType | null = __DEV__
     require('@/dev/DebugSection').DebugSection
   : null;
 
-const GOAL_MAX_LENGTH = 60;
 /** The app version from app.json, as built. */
 const APP_VERSION = Constants.expoConfig?.version;
 const APP_NAME = APP_VERSION ? `Win Zero ${APP_VERSION}` : 'Win Zero';

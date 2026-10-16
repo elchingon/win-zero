@@ -1,0 +1,23 @@
+/* The backdrop behind every screen, after the app's ZeroField (src/ui/ZeroField.tsx): a glow a
+   little above center (GLOW_Y 0.38, GLOW_RADIUS 0.8), a dot grid (DOT_SPACING 26, DOT_SIZE 1.5,
+   DOT_ALPHA 0.35, DOT_ORIGIN 13,14), and the darkening wash (ink 40% → 82% by 55%). Fixed to the
+   viewport with a pseudo-element, since iOS ignores background-attachment: fixed. */
+html {
+  background: var(--ink);
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to bottom, rgb(13 17 48 / 0.4) 0%, rgb(13 17 48 / 0.82) 55%),
+    radial-gradient(circle at 13px 14px, rgb(53 61 128 / 0.35) 0.75px, transparent 1.25px),
+    radial-gradient(circle 80vmax at 50% 38%, var(--ink-2), var(--ink));
+  background-size:
+    100% 100%,
+    26px 26px,
+    100% 100%;
+}
