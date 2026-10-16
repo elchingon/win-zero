@@ -48,6 +48,39 @@ can be shared:
 To share something new, move its pure part into a module with no React Native or Expo imports,
 add that path to the allowlist, and keep the app importing it from the same place.
 
+## The app under /play
+
+`src/play/` is the phone app's screens in React: Setup, Home, the round, Notice, Settings and
+How it works, with React Router (`router.tsx`, basename `/play`). It runs on the shared store
+(`createAppStore`, wired to the browser in `store.ts`) and rules engine, so check-ins, the slide,
+missed days and rewards behave exactly as on the phone.
+
+- **The round:** the shared sim (`src/game/sim`) and drawing (`src/game/draw`) run unchanged in a
+  `requestAnimationFrame` loop (`game/GameCanvas.tsx`). `game/skia/canvas.ts` implements the few
+  Skia calls the drawing makes on a 2D canvas, and `tsconfig.json` points Skia's types at
+  `game/skia/types.ts`, so a new Skia call in the app's drawing fails the website's type check.
+  `game/bake.ts` is the web version of the app's sprite bake, from the same numbers
+  (`src/game/look.ts`). The canvas drops from 2× to 1.5× or 1× resolution if a device can't keep
+  up; the practice round's frame meter shows the current scale.
+- **What differs from the phone:** no notifications (the copy says to come back at check-in time),
+  no haptics, sounds through Web Audio, and progress saved in the browser's storage. If storage is
+  blocked (a private window), the app runs from memory and says so. Changes in another tab are
+  read back in.
+- **Demo controls,** folded on Home and Settings: practice rounds (`/play/round?practice=N`)
+  anywhere, and demo mode (`platform/mode.ts`) for the debug clock and Jump to day. Demo mode
+  copies the progress into its own storage keys (`demo:`), so the real streak is never touched;
+  leaving it throws the copy away.
+
+## Testing
+
+`npm test` runs Vitest: the canvas adapter (transforms, tints, blending), the shared round played
+through every weapon to the result sheet and drawn through the adapter, storage and demo mode,
+the build plugins and `verify-dist`, and the screens in jsdom (setup, Yes to the round, Not
+today to the notice and Undo). The rules engine and sim keep their own Jest tests at the repo root.
+
+Before a release, play it on real phones, a mid-range Android especially: a Day 60 round and a
+practice round of 1,000 should hold about 60 fps.
+
 ## Editing the pages
 
 - Privacy policy and support text: edit `../docs/store/privacy-policy.md` or `support.md`. The

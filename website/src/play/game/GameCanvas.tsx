@@ -28,6 +28,13 @@ import { Canvas2D } from './skia/canvas';
 
 /** The canvas is drawn at screen density, up to this. */
 export const MAX_PIXEL_RATIO = 2;
+/** When frames average slower than this over a second, the canvas steps down in resolution... */
+const SLOW_FRAME_MS = 22;
+/** ...by this much, to no lower than this. Sprites keep their baked detail; edges soften a little. */
+const PIXEL_RATIO_STEP = 0.5;
+const MIN_PIXEL_RATIO = 1;
+/** Frames longer than this (a tab coming back from the background) don't count as slow. */
+const STALL_MS = 250;
 /** The frame meter reports this often, in seconds. */
 const METER_WINDOW = 0.5;
 /** Assumed for the first frame, which has no previous one. */
@@ -37,6 +44,8 @@ export interface FrameStats {
   fps: number;
   /** The slowest frame in the window, in ms. */
   worstMs: number;
+  /** The canvas's current pixels per point. */
+  pixelRatio: number;
 }
 
 /** What identifies a round. The weapon and reduce motion can change mid-round. */
@@ -128,9 +137,12 @@ export function GameCanvas(props: {
     const el = canvas.current;
     const ctx = el?.getContext('2d');
     if (!size || !baked || !el || !ctx) return;
-    const pixelRatio = Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO);
-    el.width = Math.round(size.width * pixelRatio);
-    el.height = Math.round(size.height * pixelRatio);
+    let pixelRatio = Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO);
+    const resize = () => {
+      el.width = Math.round(size.width * pixelRatio);
+      el.height = Math.round(size.height * pixelRatio);
+    };
+    resize();
     const insets = safeArea();
     const s = createGame({
       n,
@@ -149,10 +161,25 @@ export function GameCanvas(props: {
     const scratch = makeScratch();
     let frame = 0;
     let last = 0;
+    // A second of frame times, to notice a device that can't keep up.
+    const pace = { t: 0, frames: 0, windows: 0 };
 
     const tick = (t: number) => {
       const dtMs = last ? t - last : FIRST_FRAME_MS;
       last = t;
+      if (dtMs < STALL_MS) {
+        pace.t += dtMs;
+        pace.frames++;
+        if (pace.t >= 1000) {
+          // The first second includes the round's setup; judge from the second on.
+          if (pace.windows++ > 0 && pace.t / pace.frames > SLOW_FRAME_MS && pixelRatio > MIN_PIXEL_RATIO) {
+            pixelRatio = Math.max(MIN_PIXEL_RATIO, pixelRatio - PIXEL_RATIO_STEP);
+            resize();
+          }
+          pace.t = 0;
+          pace.frames = 0;
+        }
+      }
       step(s, dtMs / 1000);
       ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
       drawScene(painter, s, baked.kit, baked.atlas, scratch);
@@ -167,7 +194,7 @@ export function GameCanvas(props: {
         m.frames++;
         if (dtMs > m.worst) m.worst = dtMs;
         if (m.t >= METER_WINDOW) {
-          meterOut({ fps: m.frames / m.t, worstMs: m.worst });
+          meterOut({ fps: m.frames / m.t, worstMs: m.worst, pixelRatio });
           m.t = 0;
           m.frames = 0;
           m.worst = 0;
@@ -208,7 +235,7 @@ export function GameCanvas(props: {
   useEffect(() => {
     if (!size) return;
     const el = box.current;
-    if (!el) return;
+    if (!el || typeof ResizeObserver === 'undefined') return;
     const observer = new ResizeObserver(() => {
       setFit(Math.min(el.clientWidth / size.width, el.clientHeight / size.height));
     });

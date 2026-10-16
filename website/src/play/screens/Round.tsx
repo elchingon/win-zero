@@ -174,7 +174,7 @@ function Play(props: { initialMode: ResultMode; n: number; best: number; record:
           onFinish={finish}
           extra={
             mode === 'practice' ? (
-              <p className="meter">{stats ? `${stats.fps.toFixed(0)} FPS · WORST ${stats.worstMs.toFixed(1)} MS` : 'MEASURING…'}</p>
+              <p className="meter">{stats ? `${stats.fps.toFixed(0)} FPS · WORST ${stats.worstMs.toFixed(1)} MS · ${stats.pixelRatio}×` : 'MEASURING…'}</p>
             ) : null
           }
         />

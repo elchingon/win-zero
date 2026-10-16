@@ -73,6 +73,22 @@ answers are in `docs/store/`.
 
 ---
 
+## Website (winzero.app)
+
+The website deploys on its own: Cloudflare Pages builds `website/` on every push to `main`, and
+a preview for every pull request. It doesn't wait on, or trigger, an EAS build. Setup and the
+Cloudflare settings are in `website/README.md`.
+
+- [ ] **First deploy:** connect the repo in Cloudflare Pages, add the `winzero.app` domain, and
+  check the curl list at the end of `website/README.md` (200s for `/privacy` and `/support`, the
+  security headers, a 404 for unknown paths).
+- [ ] **Each change:** CI's `website` job passes (build, verify, typecheck, lint, tests). Check the
+  pull request's preview link on a phone: set up, check in, play a round, and the demo controls.
+- [ ] **When the apps are live:** put the App Store and Google Play links in
+  `website/partials/stores.html`.
+- [ ] **Policy or support changes:** edit `docs/store/*.md` and update the policy's effective date.
+  The website picks them up on its next deploy.
+
 ## QA matrix
 
 Run each row on one iPhone and one mid-range Android. Rows marked _dev_ need the development build

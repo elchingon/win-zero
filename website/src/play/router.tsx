@@ -1,6 +1,6 @@
 // The app's screens under /play, as the phone app's routes. The round is loaded on demand, so
 // Home opens without the game code.
-import { createBrowserRouter, Navigate, useRouteError } from 'react-router';
+import { Navigate, useRouteError, type RouteObject } from 'react-router';
 
 import { ROUTES } from './nav';
 import { Home } from './screens/Home';
@@ -41,28 +41,28 @@ function RoundError() {
   );
 }
 
-export const router = createBrowserRouter(
-  [
-    {
-      path: ROUTES.home,
-      element: <Layout />,
-      errorElement: <ScreenError />,
-      // Opening /play/round directly waits for the round's code; the backdrop shows meanwhile.
-      hydrateFallbackElement: <div className="loading" aria-busy="true" />,
-      children: [
-        { index: true, element: <Home /> },
-        { path: ROUTES.setup.slice(1), element: <Setup /> },
-        {
-          path: ROUTES.round.slice(1),
-          lazy: async () => ({ Component: (await import('./screens/Round')).Round }),
-          errorElement: <RoundError />,
-        },
-        { path: ROUTES.notice.slice(1), element: <Notice /> },
-        { path: ROUTES.settings.slice(1), element: <Settings /> },
-        { path: ROUTES.howItWorks.slice(1), element: <HowItWorks /> },
-        { path: '*', element: <Navigate to={ROUTES.home} replace /> },
-      ],
-    },
-  ],
-  { basename: '/play' },
-);
+/** Where the app lives on winzero.app. */
+export const BASENAME = '/play';
+
+export const routes: RouteObject[] = [
+  {
+    path: ROUTES.home,
+    element: <Layout />,
+    errorElement: <ScreenError />,
+    // Opening /play/round directly waits for the round's code; the backdrop shows meanwhile.
+    hydrateFallbackElement: <div className="loading" aria-busy="true" />,
+    children: [
+      { index: true, element: <Home /> },
+      { path: ROUTES.setup.slice(1), element: <Setup /> },
+      {
+        path: ROUTES.round.slice(1),
+        lazy: async () => ({ Component: (await import('./screens/Round')).Round }),
+        errorElement: <RoundError />,
+      },
+      { path: ROUTES.notice.slice(1), element: <Notice /> },
+      { path: ROUTES.settings.slice(1), element: <Settings /> },
+      { path: ROUTES.howItWorks.slice(1), element: <HowItWorks /> },
+      { path: '*', element: <Navigate to={ROUTES.home} replace /> },
+    ],
+  },
+];

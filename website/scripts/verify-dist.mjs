@@ -18,6 +18,7 @@ export const REQUIRED = [
   'robots.txt',
   'favicon.png',
   'og.png',
+  'manifest.webmanifest',
 ];
 
 const OWN_ORIGIN = 'https://winzero.app/';
