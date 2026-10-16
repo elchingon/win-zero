@@ -1,5 +1,6 @@
 {
   "cli": {
+    "version": ">= 16.17.0",
     "appVersionSource": "remote"
   },
   "build": {
@@ -26,6 +27,7 @@
       }
     },
     "production": {
+      "environment": "production",
       "autoIncrement": true
     }
   },

@@ -2,7 +2,7 @@
 
 _Effective [EFFECTIVE_DATE]_
 
-Win Zero is a daily check-in app made by [COMPANY_NAME]. This policy explains what the app does
+Win Zero is a daily check-in app made by E7 Systems. This policy explains what the app does
 with your information. The short version: everything stays on your phone, and we never see it.
 
 ## What the app stores
@@ -56,4 +56,4 @@ If this policy changes, we'll update this page and its effective date.
 
 ## Contact
 
-Questions about privacy: [SUPPORT_EMAIL]
+Questions about privacy: e7urgent@gmail.com

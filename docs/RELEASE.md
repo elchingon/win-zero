@@ -11,8 +11,15 @@ answers are in `docs/store/`.
   - Some are native modules, so do it on its own, before the QA builds.
 - [ ] **Publish the two pages on e7systems.com.**
   - Sources: `docs/store/privacy-policy.md` and `docs/store/support.md`.
-  - Fill in `[COMPANY_NAME]`, `[SUPPORT_EMAIL]`, `[EFFECTIVE_DATE]` and `[PRIVACY_URL]`.
+  - Fill in `[EFFECTIVE_DATE]` and `[PRIVACY_URL]`.
   - Note the two URLs for the listings.
+  - Set both URLs, which Settings → About opens, as `EXPO_PUBLIC_PRIVACY_URL` and
+    `EXPO_PUBLIC_SUPPORT_URL`:
+    - EAS builds: `eas env:create --environment production --visibility plaintext --name
+      EXPO_PUBLIC_PRIVACY_URL --value https://…`, and the same for `EXPO_PUBLIC_SUPPORT_URL`.
+      EAS doesn't upload the gitignored `.env`. A production build fails until both are https
+      URLs (`scripts/check-release.mjs`).
+    - Local runs: copy `.env.example` to `.env` and fill it in.
 - [ ] **Optional: iOS dark and tinted icons.** The brand set has one iOS icon, which iOS 18 uses in
   every appearance. To add variants, render them in `scripts/gen-brand.mjs` and set
   `ios.icon: { light, dark, tinted }` in `app.json`.

@@ -39,7 +39,6 @@ describe('draw worklets', () => {
   });
 
   it.each(sources)('$file exports only worklets', ({ file }) => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const mod = require(join(DRAW_DIR, file)) as Record<string, unknown>;
     expect(Object.entries(mod).flatMap(([name, value]) => nonWorklets(value, name))).toEqual([]);
   });

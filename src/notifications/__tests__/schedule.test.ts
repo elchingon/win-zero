@@ -70,6 +70,16 @@ describe('reminderRequests', () => {
     expect(reqs.some((r) => JSON.stringify(r).includes('Stop drinking'))).toBe(false);
   });
 
+  it('asks about today when the reminder comes later the same day', () => {
+    const shift = newGoal({ checkInTime: '06:00', morningTime: '14:00' });
+    const reqs = reminderRequests(input(shift, at(DAY0, '05:00')));
+    expect(reqs[1]).toMatchObject({
+      identifier: 'morning-2026-10-13',
+      content: { title: 'Still time to check in', body: 'Did you stick to your goal today?', categoryIdentifier: 'checkin' },
+      trigger: { date: at(DAY0, '14:00') },
+    });
+  });
+
   it("asks without buttons when yesterday is still open, so a tap opens Home on yesterday's card", () => {
     const reqs = reminderRequests(input(newGoal(), at(DAY0, '12:00'), { showGoal: true }));
     const both = reqs.find((r) => r.identifier === 'checkin-2026-10-14');

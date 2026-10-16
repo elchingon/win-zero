@@ -3,11 +3,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { beforeEach, describe, expect, it } from '@jest/globals';
 
 import { addDays, currentCheckInTime, latestScheduleEntry, MS_PER_DAY, pendingWindow } from '@/engine';
-import { at, DAY0, DENVER, newGoal, TOKYO, yesDays } from '@/engine/__tests__/fixtures';
+import { answerDay, at, DAY0, DENVER, newGoal, TOKYO, yesDays } from '@/engine/__tests__/fixtures';
 
-import { createAppStore, type AppStore } from '../createAppStore';
+import { createAppStore, REMINDER_CARD_HIDE_MS, UNDO_MS, UNDO_MS_SCREEN_READER, type AppStore } from '../createAppStore';
 import { startLifecycle } from '../lifecycle';
-import { STORE_KEY, STORE_VERSION } from '../types';
+import { STORE_BACKUP_KEY, STORE_KEY, STORE_VERSION } from '../types';
 import { fakeAppState, flush, harness, ready, withGoal } from './harness';
 
 beforeEach(async () => {
@@ -64,22 +64,22 @@ describe('lifecycle', () => {
 });
 
 describe('setup and settings', () => {
-  it('creates a goal and keeps the morning reminder before check-in', async () => {
+  it('creates a goal, and takes a reminder at any time of day', async () => {
     const { store } = harness();
     await ready(store);
     expect(store.getState().setupGoal({ goal: ' ', checkInTime: '20:00', morningTime: '09:00' })).toMatchObject({
       reason: 'empty-goal',
     });
-    expect(store.getState().setupGoal({ goal: 'Read', checkInTime: '08:00', morningTime: '09:00' })).toMatchObject({
-      reason: 'order',
-    });
+    // A shift worker: check in after the night shift, reminder after sleeping.
+    expect(store.getState().setupGoal({ goal: 'Read', checkInTime: '06:00', morningTime: '14:00' })).toEqual({ ok: true });
+    expect(store.getState().goal).toMatchObject({ checkInSchedule: [{ time: '06:00' }], morningTime: '14:00' });
     expect(store.getState().setupGoal({ goal: ' Stop drinking ', checkInTime: '20:00', morningTime: '09:00' })).toEqual({
       ok: true,
     });
-    expect(store.getState().goal).toMatchObject({ goalId: 'goal-1', goal: 'Stop drinking', firstDay: DAY0 });
+    expect(store.getState().goal).toMatchObject({ goalId: 'goal-2', goal: 'Stop drinking', firstDay: DAY0 });
 
-    expect(store.getState().setCheckInTime('08:30')).toEqual({ ok: false, reason: 'order' });
-    expect(store.getState().setMorningTime('21:00')).toEqual({ ok: false, reason: 'order' });
+    expect(store.getState().setCheckInTime('08:30')).toEqual({ ok: true }); // now before the reminder
+    expect(store.getState().setMorningTime('21:00')).toEqual({ ok: true }); // later than check-in
     expect(store.getState().setMorningTime('20:00')).toEqual({ ok: true }); // the same as check-in time
     expect(store.getState().setCheckInTime('21:00')).toEqual({ ok: true });
     expect(currentCheckInTime(store.getState().goal!)).toBe('21:00');
@@ -320,6 +320,150 @@ describe('where an answer leads', () => {
   });
 });
 
+describe('undo Not today', () => {
+  it('puts back the goal and the round it dropped, so the check-in can be answered again', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 4)); // through 10-16
+    h.setTime('2026-10-17', '21:00');
+    h.store.getState().answer('yes'); // streak 5, its round unplayed
+    const round = h.store.getState().round;
+    const before = h.store.getState().goal;
+
+    h.setTime('2026-10-18', '21:00');
+    h.store.getState().answer('not-today');
+    expect(h.store.getState()).toMatchObject({ round: null, route: '/notice', goal: { streak: 4 } });
+    expect(h.store.getState().undo).toMatchObject({ day: '2026-10-18', at: h.clock.t });
+    expect(h.store.getState().undo?.notice).toBe(h.store.getState().nextNotice()?.notice);
+
+    h.clock.t += UNDO_MS - 1;
+    expect(h.store.getState().undoNotToday()).toBe(true);
+    expect(h.store.getState()).toMatchObject({ goal: before, round, notice: null, route: null, undo: null });
+    expect(pendingWindow(h.store.getState().goal!, h.store.getState().now())?.day).toBe('2026-10-18');
+    expect(h.store.getState().undoNotToday()).toBe(false); // once
+
+    expect(h.store.getState().answer('yes')).toMatchObject({ ok: true, outcome: { day: '2026-10-18', streak: 6 } });
+  });
+
+  it('gives back a shield a Shielded answer spent, and a streak a Reset took', async () => {
+    const shielded = await withGoal({ ...yesDays(newGoal(), DAY0, 10), slide: 6, shields: 1 }); // through 10-22
+    shielded.setTime('2026-10-23', '21:00');
+    expect(shielded.store.getState().answer('not-today')).toMatchObject({ outcome: { kind: 'shielded' } });
+    expect(shielded.store.getState().undoNotToday()).toBe(true);
+    expect(shielded.store.getState().goal).toMatchObject({ streak: 10, shields: 1, slide: 6 });
+
+    const reset = await withGoal({ ...yesDays(newGoal(), DAY0, 10), slide: 6, shields: 0 });
+    reset.setTime('2026-10-23', '21:00');
+    expect(reset.store.getState().answer('not-today')).toMatchObject({ outcome: { kind: 'reset' } });
+    expect(reset.store.getState().undoNotToday()).toBe(true);
+    expect(reset.store.getState().goal).toMatchObject({ streak: 10, slide: 6, lastSettledDay: '2026-10-22' });
+  });
+
+  it("works for a Not today that cost nothing, and for one from a notification's button", async () => {
+    const noted = await withGoal(newGoal());
+    noted.setTime(DAY0, '21:00');
+    noted.store.getState().answer('not-today');
+    expect(noted.store.getState().notice).toEqual({ kind: 'noted' });
+    expect(noted.store.getState().undoNotToday()).toBe(true);
+    expect(noted.store.getState().goal?.history).toEqual([]);
+
+    const h = await withGoal(yesDays(newGoal(), DAY0, 2)); // through 10-14
+    h.setTime('2026-10-16', '09:00'); // the morning reminder for 10-15
+    h.store.getState().answer('not-today', '2026-10-15', 'notification');
+    expect(h.store.getState().undoNotToday()).toBe(true);
+    expect(pendingWindow(h.store.getState().goal!, h.store.getState().now())?.day).toBe('2026-10-15');
+  });
+
+  it('lasts UNDO_MS, or the longer window passed in for a screen reader', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 2));
+    h.setTime('2026-10-15', '21:00');
+    h.store.getState().answer('not-today');
+    h.clock.t += UNDO_MS;
+    expect(h.store.getState().undoNotToday()).toBe(false);
+    expect(h.store.getState().undo).toBeNull(); // the Notice screen drops its button
+    expect(h.store.getState().goal?.lastSettledDay).toBe('2026-10-15');
+
+    const s = await withGoal(yesDays(newGoal(), DAY0, 2));
+    s.setTime('2026-10-15', '21:00');
+    s.store.getState().answer('not-today');
+    s.clock.t += UNDO_MS_SCREEN_READER - 1;
+    expect(s.store.getState().undoNotToday(UNDO_MS_SCREEN_READER)).toBe(true);
+  });
+
+  it('is turned down once the check-in has closed', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 2)); // through 10-14
+    h.clock.t = at('2026-10-17', '00:00').getTime() - 2000; // 10-15 closes at midnight
+    h.store.getState().answer('not-today', '2026-10-15');
+    h.clock.t += 3000;
+    expect(h.store.getState().undoNotToday()).toBe(false);
+    expect(h.store.getState().goal?.history.at(-1)).toMatchObject({ day: '2026-10-15', result: 'no' });
+  });
+
+  it('is turned down once another day has settled, but not by a time zone change', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 2)); // through 10-14
+    h.setTime('2026-10-16', '21:00'); // 10-15 and 10-16 both open
+    h.store.getState().answer('not-today', '2026-10-15');
+    h.store.setState({ goal: answerDay(h.store.getState().goal!, '2026-10-16', 'yes').state });
+    expect(h.store.getState().undoNotToday()).toBe(false);
+
+    const t = await withGoal(yesDays(newGoal(), DAY0, 2));
+    t.setTime('2026-10-15', '21:00');
+    t.store.getState().answer('not-today');
+    t.zone.tz = TOKYO;
+    t.store.getState().refresh(); // a new goal object, with nothing new settled
+    expect(t.store.getState().undoNotToday()).toBe(true);
+    expect(latestScheduleEntry(t.store.getState().goal!).tz).toBe(TOKYO);
+  });
+
+  it('ends with any other answer, erase or setup', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 2));
+    h.setTime('2026-10-15', '21:00');
+    h.store.getState().answer('not-today');
+    h.store.getState().answer('yes', '2026-10-15'); // turned down: already answered
+    expect(h.store.getState().undo).toBeNull();
+
+    h.setTime('2026-10-16', '21:00');
+    h.store.getState().answer('not-today');
+    h.store.getState().erase();
+    expect(h.store.getState().undo).toBeNull();
+    expect(h.store.getState().undoNotToday()).toBe(false);
+
+    const s = await withGoal(yesDays(newGoal(), DAY0, 2));
+    s.setTime('2026-10-15', '21:00');
+    s.store.getState().answer('not-today');
+    s.store.getState().setupGoal({ goal: 'Read', checkInTime: '20:00', morningTime: '09:00' });
+    expect(s.store.getState().undo).toBeNull();
+
+    const y = await withGoal(yesDays(newGoal(), DAY0, 2));
+    y.setTime('2026-10-15', '21:00');
+    y.store.getState().answer('yes');
+    expect(y.store.getState().undo).toBeNull();
+  });
+});
+
+describe("Home's reminders-off card", () => {
+  it('hides for a week on the app clock, until erase', async () => {
+    const h = await withGoal(newGoal(), { dev: true });
+    h.store.getState().advanceDevClock(60_000);
+    h.store.getState().hideReminderCard();
+    expect(h.store.getState().reminderCardHiddenUntil).toBe(
+      new Date(h.clock.t + 60_000 + REMINDER_CARD_HIDE_MS).toISOString(),
+    );
+    expect(REMINDER_CARD_HIDE_MS).toBe(7 * MS_PER_DAY);
+    h.store.getState().erase();
+    expect(h.store.getState().reminderCardHiddenUntil).toBeNull();
+  });
+
+  it('reads a stored value that is not a time as not hidden', async () => {
+    await AsyncStorage.setItem(
+      STORE_KEY,
+      JSON.stringify({ version: STORE_VERSION, state: { goal: newGoal(), reminderCardHiddenUntil: 'next week' } }),
+    );
+    const { store } = harness();
+    await ready(store);
+    expect(store.getState().goal?.goalId).toBe('g1');
+    expect(store.getState().reminderCardHiddenUntil).toBeNull();
+  });
+});
+
 describe('weapons and rounds', () => {
   it("equips a newly unlocked weapon, and otherwise keeps the player's pick", async () => {
     const h = await withGoal(yesDays(newGoal(), DAY0, 2)); // best 2, through 10-14
@@ -379,6 +523,7 @@ describe('persistence', () => {
     a.store.getState().setPref('reengage', false);
     a.store.getState().setPref('goalInReminders', true);
     a.store.getState().selectWeapon('pea');
+    a.store.getState().hideReminderCard();
     a.store.setState({ notice: { kind: 'noted' } });
     await flush();
 
@@ -390,9 +535,11 @@ describe('persistence', () => {
       prefs: s.prefs,
       seenThrough: s.seenThrough,
       round: s.round,
+      reminderCardHiddenUntil: s.reminderCardHiddenUntil,
       devClockOffsetMs: s.devClockOffsetMs,
     });
     expect(pick(b.store.getState())).toEqual(pick(a.store.getState()));
+    expect(b.store.getState().reminderCardHiddenUntil).not.toBeNull();
     expect(b.store.getState().prefs).toEqual({ sound: false, haptics: true, reengage: false, goalInReminders: true });
     expect(b.store.getState().round).toMatchObject({ n: 1, played: false });
     expect(b.store.getState().notice).toBeNull(); // not persisted
@@ -400,8 +547,39 @@ describe('persistence', () => {
     const raw = JSON.parse((await AsyncStorage.getItem(STORE_KEY)) ?? '{}');
     expect(raw.version).toBe(STORE_VERSION);
     expect(Object.keys(raw.state).sort()).toEqual(
-      ['devClockOffsetMs', 'goal', 'prefs', 'round', 'seenThrough', 'weapon'].sort(),
+      ['devClockOffsetMs', 'goal', 'prefs', 'reminderCardHiddenUntil', 'round', 'seenThrough', 'weapon'].sort(),
     );
+    expect(await AsyncStorage.getItem(STORE_BACKUP_KEY)).toBeNull(); // nothing unreadable
+  });
+
+  it('keeps a goal saved by a newer build, after a downgrade', async () => {
+    const goal = { ...yesDays(newGoal(), DAY0, 3), version: 2, mood: 'steady' };
+    await AsyncStorage.setItem(STORE_KEY, JSON.stringify({ version: STORE_VERSION + 1, state: { goal } }));
+    const { store } = harness();
+    await ready(store);
+    expect(store.getState().goal).toMatchObject({ goalId: 'g1', streak: 3, version: 2, mood: 'steady' });
+    await flush();
+    expect(await AsyncStorage.getItem(STORE_BACKUP_KEY)).toBeNull();
+  });
+
+  it("backs up a goal it can't read before starting fresh, and keeps the rest", async () => {
+    // Same version, and an older one that goes through migrate first.
+    for (const version of [STORE_VERSION, 0]) {
+      await AsyncStorage.clear();
+      const { history: _history, ...broken } = yesDays(newGoal(), DAY0, 3);
+      await AsyncStorage.setItem(STORE_KEY, JSON.stringify({ version, state: { goal: broken, prefs: { sound: false } } }));
+      const { store } = harness();
+      await ready(store);
+      expect(store.getState().goal).toBeNull();
+      expect(store.getState().prefs.sound).toBe(false);
+
+      await flush();
+      const backup = JSON.parse((await AsyncStorage.getItem(STORE_BACKUP_KEY)) ?? '{}');
+      expect(backup.state.goal).toEqual(broken);
+      expect(backup.at).toBe(at(DAY0, '12:00').toISOString());
+      const saved = JSON.parse((await AsyncStorage.getItem(STORE_KEY)) ?? '{}');
+      expect(saved.state.goal).toBeNull(); // the main copy moved on; the backup didn't
+    }
   });
 
   it('migrates an unversioned blob, keeping the goal and filling in defaults', async () => {
@@ -434,14 +612,16 @@ describe('persistence', () => {
     expect(store.getState().goal).toBeNull();
   });
 
-  it('erase clears the state and storage', async () => {
+  it('erase clears the state and storage, backup included', async () => {
     const h = await withGoal(yesDays(newGoal(), DAY0, 3));
+    await AsyncStorage.setItem(STORE_BACKUP_KEY, '{"state":{}}');
     h.store.getState().setPref('haptics', false);
     h.store.getState().erase();
     expect(h.store.getState().goal).toBeNull();
     expect(h.store.getState().prefs.haptics).toBe(true);
     await flush();
     expect(await AsyncStorage.getItem(STORE_KEY)).toBeNull();
+    expect(await AsyncStorage.getItem(STORE_BACKUP_KEY)).toBeNull();
   });
 });
 

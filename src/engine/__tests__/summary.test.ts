@@ -1,8 +1,9 @@
-// Summaries the screens read: missed-day digest, calendar marks, the Not-today preview, arsenal rows.
+// Summaries the screens read: missed-day digest, calendar marks, the Not-today preview, arsenal
+// rows, history stats.
 import { describe, expect, it } from '@jest/globals';
 
 import { resolve } from '../resolve';
-import { calendarMark, missDigest, notTodayPreview } from '../summary';
+import { calendarMark, historyStats, missDigest, notTodayPreview } from '../summary';
 import { arsenal, equippedWeapon } from '../weapons';
 import { at, answerDay, DAY0, DENVER, newGoal, notTodays, stateWith, yesDays } from './fixtures';
 
@@ -132,5 +133,59 @@ describe('arsenal and the equipped weapon', () => {
     expect(equippedWeapon('pea', 20).id).toBe('pea');
     expect(equippedWeapon('laser', 20).id).toBe('rocket');
     expect(equippedWeapon(null, 0).id).toBe('pea');
+  });
+});
+
+describe('historyStats', () => {
+  it('is all zeros before the first Yes', () => {
+    expect(historyStats(newGoal(), DAY0)).toEqual({ yesDays: 0, yesThisMonth: 0, bestRun: null });
+    const noted = notTodays(newGoal(), DAY0, 2); // Not today at streak 0
+    expect(historyStats(noted, '2026-10-14')).toEqual({ yesDays: 0, yesThisMonth: 0, bestRun: null });
+  });
+
+  it('counts Yes days, this month, and dates the best run', () => {
+    const s = yesDays(newGoal(), DAY0, 5); // 10-13 .. 10-17
+    expect(historyStats(s, '2026-10-20')).toEqual({
+      yesDays: 5,
+      yesThisMonth: 5,
+      bestRun: { from: DAY0, to: '2026-10-17' },
+    });
+  });
+
+  it('keeps slips and free misses inside the run they belong to', () => {
+    let s = yesDays(newGoal(), DAY0, 5); // streak 5 on 10-17
+    s = answerDay(s, '2026-10-18', 'not-today').state; // 4
+    s = resolve(s, at('2026-10-21', '00:30'), DENVER).state; // 10-19 missed, free
+    s = yesDays(s, '2026-10-20', 2); // 5, then 6 on 10-21
+    expect(s.bestStreak).toBe(6);
+    expect(historyStats(s, '2026-10-21')).toEqual({
+      yesDays: 7,
+      yesThisMonth: 7,
+      bestRun: { from: DAY0, to: '2026-10-21' },
+    });
+  });
+
+  it('dates the best run, not a later shorter one, across a reset', () => {
+    let s = { ...yesDays(newGoal(), DAY0, 5), slide: 6, shields: 0 }; // 10-13 .. 10-17
+    s = answerDay(s, '2026-10-18', 'not-today').state; // the final: a fresh run
+    expect(s.streak).toBe(0);
+    s = yesDays(s, '2026-10-19', 3); // 10-19 .. 10-21, streak 3
+    expect(historyStats(s, '2026-10-21').bestRun).toEqual({ from: DAY0, to: '2026-10-17' });
+
+    // Matched later: the most recent run that reached it wins.
+    s = yesDays(s, '2026-10-22', 2); // streak 5 on 10-23
+    expect(historyStats(s, '2026-10-23').bestRun).toEqual({ from: '2026-10-19', to: '2026-10-23' });
+  });
+
+  it('counts this month by the calendar month of today', () => {
+    const s = yesDays(newGoal({ day: '2026-10-29' }), '2026-10-29', 5); // 10-29 .. 11-02
+    expect(historyStats(s, '2026-11-02')).toMatchObject({ yesDays: 5, yesThisMonth: 2 });
+    expect(historyStats(s, '2026-10-31')).toMatchObject({ yesThisMonth: 3 });
+    expect(historyStats(s, '2026-12-01')).toMatchObject({ yesThisMonth: 0 });
+  });
+
+  it("leaves the dates out when history doesn't show the best (data from elsewhere)", () => {
+    const s = { ...yesDays(newGoal(), DAY0, 3), bestStreak: 40 };
+    expect(historyStats(s, '2026-10-15')).toEqual({ yesDays: 3, yesThisMonth: 3, bestRun: null });
   });
 });

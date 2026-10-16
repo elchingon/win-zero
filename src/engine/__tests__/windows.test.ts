@@ -1,17 +1,16 @@
 import { describe, expect, it } from '@jest/globals';
 
 import { addDays } from '../dates';
-import { createGoal, resolve, setMorningTime } from '../resolve';
+import { createGoal, firstCheckInOpenAt, openedAtSetup, resolve, setMorningTime } from '../resolve';
 import {
   closesAt,
   firstUpcomingDay,
-  isMorningAtOrBeforeCheckIn,
   isWindowToday,
   nextWindow,
   pendingWindow,
   windowFor,
 } from '../windows';
-import { answerDay, at, DAY0, DENVER, newGoal, SANTIAGO } from './fixtures';
+import { answerDay, at, DAY0, DENVER, newGoal, SANTIAGO, TOKYO } from './fixtures';
 
 const HOUR = 3_600_000;
 
@@ -49,16 +48,52 @@ describe('windowFor (SPEC 2)', () => {
     expect(pendingWindow(answered, tuesdayEvening)?.day).toBe('2026-10-14');
   });
 
-  it("drops the morning reminder when it would come with or after the next day's check-in", () => {
+  it("drops the reminder when it would come with the next day's check-in", () => {
     // At check-in time, D+1's check-in already says yesterday's is still open: one notification.
     const same = setMorningTime(newGoal(), '20:00');
     expect(windowFor(same, DAY0).remindAt).toBeNull();
-    const late = setMorningTime(newGoal(), '21:00');
-    expect(windowFor(late, DAY0).remindAt).toBeNull();
     expect(windowFor(setMorningTime(newGoal(), '19:59'), DAY0).remindAt).toEqual(at('2026-10-14', '19:59'));
-    expect(isMorningAtOrBeforeCheckIn('09:00', '20:00')).toBe(true);
-    expect(isMorningAtOrBeforeCheckIn('20:00', '20:00')).toBe(true);
-    expect(isMorningAtOrBeforeCheckIn('20:01', '20:00')).toBe(false);
+  });
+
+  it('reminds later the same day when the reminder is after check-in time (shift workers)', () => {
+    // Check-in after a night shift, reminder after sleeping: 14:00 the same day.
+    const shift = newGoal({ checkInTime: '06:00', morningTime: '14:00' });
+    expect(windowFor(shift, DAY0)).toMatchObject({
+      opensAt: at(DAY0, '06:00'),
+      remindAt: at(DAY0, '14:00'),
+      closesAt: at('2026-10-15', '00:00'), // the window itself doesn't change
+    });
+    expect(windowFor(shift, '2026-10-14').remindAt).toEqual(at('2026-10-14', '14:00'));
+    // A minute after check-in, and a minute before midnight, are both the same day.
+    expect(windowFor(setMorningTime(newGoal(), '20:01'), DAY0).remindAt).toEqual(at(DAY0, '20:01'));
+    expect(windowFor(setMorningTime(newGoal(), '23:59'), DAY0).remindAt).toEqual(at(DAY0, '23:59'));
+    expect(windowFor(setMorningTime(newGoal(), '21:00'), DAY0).remindAt).toEqual(at(DAY0, '21:00'));
+  });
+
+  it('reminds at the right wall time when the reminder hour repeats or is skipped', () => {
+    // Fall back: 01:30 comes twice on Nov 1. The reminder still lands inside the window, that day.
+    const fall = newGoal({ day: '2026-10-28', checkInTime: '00:30', morningTime: '01:30' });
+    const w = windowFor(fall, '2026-11-01');
+    expect(w.remindAt).toEqual(at('2026-11-01', '01:30'));
+    expect(w.remindAt!.getTime()).toBeGreaterThan(w.opensAt.getTime());
+    expect(w.remindAt!.getTime()).toBeLessThan(windowFor(fall, '2026-11-02').opensAt.getTime());
+
+    // Spring forward: 02:30 doesn't exist on Mar 14, 2027. It lands on the clock's next real time.
+    const spring = newGoal({ day: '2027-03-10', checkInTime: '01:00', morningTime: '02:30' });
+    const s = windowFor(spring, '2027-03-14');
+    expect(s.remindAt).toEqual(at('2027-03-14', '02:30'));
+    expect(s.remindAt!.getTime()).toBeGreaterThan(s.opensAt.getTime());
+  });
+
+  it('follows a flight: the same-day reminder comes on the new clock', () => {
+    const shift = newGoal({ checkInTime: '06:00', morningTime: '14:00' }); // set up at 12:00 Denver
+    // Landing in Tokyo at 13:00 Denver time, 04:00 on 10-14 there, before 10-14's check-in.
+    const moved = resolve(shift, at(DAY0, '13:00'), TOKYO).state;
+    expect(windowFor(moved, DAY0).remindAt).toEqual(at(DAY0, '14:00')); // DAY0 opened in Denver
+    expect(windowFor(moved, '2026-10-14')).toMatchObject({
+      opensAt: at('2026-10-14', '06:00', TOKYO),
+      remindAt: at('2026-10-14', '14:00', TOKYO),
+    });
   });
 
   it('is 29 hours long across the fall-back change and 27 hours across spring-forward', () => {
@@ -91,6 +126,33 @@ describe('windowFor (SPEC 2)', () => {
 });
 
 describe('the first goal day', () => {
+  it('says whether today counts: the first check-in is open as soon as the goal is set up', () => {
+    const check = (day: string, time: string, checkInTime: string, tz = DENVER) => {
+      const now = at(day, time, tz);
+      const input = { goalId: 'g', goal: 'Read', checkInTime, now, tz };
+      const open = firstCheckInOpenAt({ checkInTime, now, tz });
+      // The same answer as the goal Setup creates.
+      expect(open).toBe(pendingWindow(createGoal(input), now) !== null);
+      expect(openedAtSetup(createGoal(input))).toBe(open);
+      return open;
+    };
+    expect(check(DAY0, '21:00', '20:00')).toBe(true);
+    expect(check(DAY0, '20:00', '20:00')).toBe(true); // on the minute
+    expect(check(DAY0, '19:59', '20:00')).toBe(false);
+    expect(check(DAY0, '12:00', '20:00')).toBe(false);
+    expect(check('2026-10-14', '00:30', '20:00')).toBe(false); // after midnight: today hasn't opened
+    expect(check(DAY0, '02:00', '01:00')).toBe(true); // a check-in just after midnight
+    expect(check('2026-11-01', '01:30', '01:15')).toBe(true); // the repeated hour, fall back
+    expect(check('2027-03-14', '03:30', '02:30')).toBe(true); // a check-in in the skipped hour
+    expect(check(DAY0, '21:00', '20:00', TOKYO)).toBe(true);
+  });
+
+  it('stays false for a goal set up before check-in time, after its first answer too', () => {
+    const s = newGoal({ time: '12:00' }); // check-in 20:00
+    expect(openedAtSetup(s)).toBe(false);
+    expect(openedAtSetup(answerDay(s, DAY0, 'yes').state)).toBe(false);
+  });
+
   it('waits for check-in time when set up earlier in the day', () => {
     const s = newGoal({ time: '12:00' });
     expect(s.firstDay).toBe(DAY0);

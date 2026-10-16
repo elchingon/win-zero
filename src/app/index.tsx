@@ -4,8 +4,16 @@ import { Redirect, router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState, type ComponentType } from 'react';
 import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
 
-import { dayKeyAt, nextWindow, pendingWindow, type AnswerRejection, type GoalState } from '@/engine';
-import { formatWhen } from '@/lib/format';
+import {
+  currentCheckInTime,
+  dayKeyAt,
+  nextWindow,
+  openedAtSetup,
+  pendingWindow,
+  type AnswerRejection,
+  type GoalState,
+} from '@/engine';
+import { formatClockTime, formatWhen } from '@/lib/format';
 import { appStore, useApp } from '@/store';
 import { colors, fonts, space, type } from '@/theme/tokens';
 import { Card, Eyebrow, Fine } from '@/ui/bits';
@@ -15,10 +23,13 @@ import { feedback } from '@/ui/feedback';
 import { Arsenal } from '@/ui/home/Arsenal';
 import { CheckInCard } from '@/ui/home/CheckInCard';
 import { HistoryCalendar } from '@/ui/home/HistoryCalendar';
+import { RemindersCard } from '@/ui/home/RemindersCard';
+import { remindersCardVisible } from '@/ui/home/remindersOff';
 import { startHomeRouting } from '@/ui/home/routing';
 import { Stats } from '@/ui/home/Stats';
 import { Screen } from '@/ui/Screen';
 import { useDeviceCalendar } from '@/ui/useDevice';
+import { useReminderPermission } from '@/ui/useReminderPermission';
 
 // Development builds only: Metro folds __DEV__ to false in production and drops the require.
 const DemoControls: ComponentType | null = __DEV__
@@ -49,12 +60,15 @@ function HomeScreen({ goal }: { goal: GoalState }) {
   const selectWeapon = useApp((s) => s.selectWeapon);
   const rejection = useApp((s) => s.rejection);
   const clockOffset = useApp((s) => s.devClockOffsetMs); // re-render when the debug clock moves
+  const reminderCardHiddenUntil = useApp((s) => s.reminderCardHiddenUntil);
+  const reminders = useReminderPermission();
   const { h24, firstWeekday } = useDeviceCalendar();
   const [tick, setTick] = useState(0);
 
   const store = appStore.getState();
   const now = store.now();
   const tz = store.timeZone();
+  const today = dayKeyAt(now, tz);
   const pending = pendingWindow(goal, now);
   const next = nextWindow(goal);
   const boundary = (pending ? pending.closesAt : next.opensAt).getTime();
@@ -92,6 +106,8 @@ function HomeScreen({ goal }: { goal: GoalState }) {
   }, [banner]);
 
   const unplayed = round && !round.played ? round : null;
+  // Set up after check-in time: until the first answer, say plainly that this question is about today.
+  const firstToday = goal.history.length === 0 && pending?.day === goal.firstDay && openedAtSetup(goal);
   const nextWhen = formatWhen(next.opensAt, now, tz, h24);
 
   return (
@@ -103,7 +119,7 @@ function HomeScreen({ goal }: { goal: GoalState }) {
         <Text style={type.goal}>{goal.goal}</Text>
       </View>
 
-      <Stats goal={goal} />
+      <Stats goal={goal} today={today} />
 
       {banner ? (
         <Card style={styles.banner}>
@@ -120,16 +136,19 @@ function HomeScreen({ goal }: { goal: GoalState }) {
       ) : null}
 
       {pending ? (
-        <CheckInCard
-          key={pending.day}
-          goal={goal}
-          window={pending}
-          now={now}
-          tz={tz}
-          h24={h24}
-          onYes={onYes}
-          onNotToday={onNotToday}
-        />
+        <>
+          {firstToday ? <Text style={type.lede}>Today counts: your first check-in is open now.</Text> : null}
+          <CheckInCard
+            key={pending.day}
+            goal={goal}
+            window={pending}
+            now={now}
+            tz={tz}
+            h24={h24}
+            onYes={onYes}
+            onNotToday={onNotToday}
+          />
+        </>
       ) : goal.history.length === 0 ? (
         <Card>
           <Text style={styles.cardTitle}>You&apos;re all set.</Text>
@@ -144,13 +163,22 @@ function HomeScreen({ goal }: { goal: GoalState }) {
         </Card>
       )}
 
+      {remindersCardVisible(reminders.permission, reminderCardHiddenUntil, now) ? (
+        <RemindersCard
+          denied={reminders.permission === 'denied'}
+          checkInTime={formatClockTime(currentCheckInTime(goal), h24)}
+          onTurnOn={reminders.turnOn}
+          onHide={() => appStore.getState().hideReminderCard()}
+        />
+      ) : null}
+
       {goal.paused ? (
         <Fine>Reminders are paused after a long break. Check in whenever you&apos;re ready and they&apos;ll pick back up.</Fine>
       ) : null}
 
       <Arsenal goal={goal} pick={pick} onEquip={selectWeapon} />
 
-      <HistoryCalendar goal={goal} today={dayKeyAt(now, tz)} pendingDay={pending?.day ?? null} firstWeekday={firstWeekday} />
+      <HistoryCalendar goal={goal} today={today} pendingDay={pending?.day ?? null} firstWeekday={firstWeekday} />
 
       {DemoControls ? <DemoControls /> : null}
     </Screen>

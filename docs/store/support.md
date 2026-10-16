@@ -1,7 +1,7 @@
 # Win Zero Support
 
 Need a hand? Here's how Win Zero works, and fixes for the most common questions. If you're still
-stuck, email [SUPPORT_EMAIL].
+stuck, email e7urgent@gmail.com.
 
 **If you need support with drinking, drugs or your mental health:** the SAMHSA National Helpline
 is free, confidential and open 24/7 in the US: **1-800-662-4357**. The number is also under
@@ -11,9 +11,10 @@ is free, confidential and open 24/7 in the US: **1-800-662-4357**. The number is
 
 - Each evening at your check-in time (8:00 PM unless you change it), Win Zero asks whether you
   stuck to your goal today.
-- If you haven't answered by the next day, a reminder asks about yesterday (9:00 AM unless you
-  change it). It can be any time up to your check-in time; at the same time, you get one
-  notification a day.
+- If you haven't answered by your reminder time, one more reminder comes (9:00 AM the next
+  morning unless you change it). It can be any time of day: set it later than your check-in time,
+  for example after a night shift, and it comes later that same day. Set it to your check-in time
+  and you get one notification a day.
 - There's no rush: you can answer until midnight the next day. Use the notification's buttons, or
   open the app. If yesterday's check-in is still open when today's arrives, the app asks about
   yesterday first.

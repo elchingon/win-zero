@@ -247,6 +247,20 @@ describe('Home routing', () => {
     expect(t.s().route).toBeNull();
   });
 
+  it('opens nothing after an Undo, leaving the check-in open', async () => {
+    const t = await scene();
+    t.setTime('2026-10-23', '21:00');
+    t.focus();
+    t.s().answer('not-today'); // Home's card
+    expect(t.pushed).toEqual(['/notice']);
+    t.blur();
+    t.showNotice();
+    expect(t.s().undoNotToday()).toBe(true); // the Notice screen's Undo
+    t.focus();
+    expect(t.pushed).toEqual(['/notice']);
+    expect(t.s().goal?.lastSettledDay).toBe('2026-10-22');
+  });
+
   it('clears a turned-down answer when Home loses focus', async () => {
     const t = await scene();
     t.focus();

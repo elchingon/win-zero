@@ -6,10 +6,9 @@ import { createStore } from 'zustand/vanilla';
 import {
   answer as answerCheckIn,
   createGoal,
-  currentCheckInTime,
-  isMorningAtOrBeforeCheckIn,
   isUnlocked,
   missDigest,
+  MS_PER_DAY,
   nextWindow,
   pendingWindow,
   resolve,
@@ -29,9 +28,10 @@ import {
 } from '@/engine';
 import type * as SeedRun from '@/dev/seedRun';
 
-import { DEFAULT_PERSISTED, migratePersisted, normalizePersisted } from './migrate';
+import { DEFAULT_PERSISTED, hasUnreadableGoal, migratePersisted, normalizePersisted } from './migrate';
 import { noticeForAnswer, noticeForMisses } from './notice';
 import {
+  STORE_BACKUP_KEY,
   STORE_KEY,
   STORE_VERSION,
   type AnswerRoute,
@@ -41,6 +41,7 @@ import {
   type PersistedState,
   type Prefs,
   type RoundRecord,
+  type UndoNotToday,
 } from './types';
 
 export interface StoreDeps {
@@ -59,8 +60,8 @@ export interface StoreDeps {
   devTools?: Pick<typeof SeedRun, 'seedYesRun' | 'SEED_MAX_N'>;
 }
 
-export type SetupResult = { ok: true } | { ok: false; reason: 'not-ready' | 'empty-goal' | 'order' };
-export type EditResult = { ok: true } | { ok: false; reason: 'no-goal' | 'empty-goal' | 'order' };
+export type SetupResult = { ok: true } | { ok: false; reason: 'not-ready' | 'empty-goal' };
+export type EditResult = { ok: true } | { ok: false; reason: 'no-goal' | 'empty-goal' };
 
 export interface AppState extends PersistedState {
   /** Storage has been read (or failed to read). Actions wait for it. */
@@ -76,6 +77,8 @@ export interface AppState extends PersistedState {
   route: AnswerRoute | null;
   /** Why the latest answer was turned down, for Home's banner. Not persisted. */
   rejection: AnswerRejection | null;
+  /** The latest Not today, while it can still be taken back. Not persisted. */
+  undo: UndoNotToday | null;
 
   /** The clock the app runs on: the device clock, plus the debug offset in development. */
   now: () => Date;
@@ -88,6 +91,11 @@ export interface AppState extends PersistedState {
   setupGoal: (input: { goal: string; checkInTime: ClockTime; morningTime: ClockTime }) => SetupResult;
   /** Answer a check-in: `day` when it comes from a notification, otherwise the open window. */
   answer: (answer: Answer, day?: DayKey, source?: AnswerSource) => AnswerResult | null;
+  /**
+   * Take back the latest Not today, within `windowMs` of answering, while its check-in is still
+   * open and no other day has settled. Restores the goal and round from just before it.
+   */
+  undoNotToday: (windowMs?: number) => boolean;
   /** The route the latest answer left, once. */
   takeRoute: () => AnswerRoute | null;
   clearRejection: () => void;
@@ -98,6 +106,8 @@ export interface AppState extends PersistedState {
   setCheckInTime: (time: ClockTime) => EditResult;
   setMorningTime: (time: ClockTime) => EditResult;
   setPref: <K extends keyof Prefs>(key: K, value: Prefs[K]) => void;
+  /** "Not now" on Home's reminders-off card: hide it for REMINDER_CARD_HIDE_MS. */
+  hideReminderCard: () => void;
   /**
    * The next one-time screen, without marking it shown: an answer's notice first, then the
    * Slipping / Reset / Shielded news for missed days not yet shown.
@@ -121,6 +131,12 @@ export interface AppState extends PersistedState {
 
 /** The debug skip lands just after the next window opens, not on its edge. */
 const DEV_SKIP_SLACK_MS = 1000;
+/** How long a Not today can be taken back, for a mis-tap. */
+export const UNDO_MS = 10_000;
+/** With VoiceOver or TalkBack on: reaching the Undo button takes a few swipes. */
+export const UNDO_MS_SCREEN_READER = 30_000;
+/** "Not now" on Home's reminders-off card hides it this long. */
+export const REMINDER_CARD_HIDE_MS = 7 * MS_PER_DAY;
 
 export type AppStore = ReturnType<typeof createAppStore>;
 
@@ -136,11 +152,21 @@ function persisted(s: AppState): PersistedState {
     prefs: s.prefs,
     seenThrough: s.seenThrough,
     round: s.round,
+    reminderCardHiddenUntil: s.reminderCardHiddenUntil,
     devClockOffsetMs: s.devClockOffsetMs,
   };
 }
 
 export function createAppStore(deps: StoreDeps) {
+  /** Write to storage without waiting. A failure leaves the app running as it is. */
+  const writeAside = (write: () => unknown) => {
+    try {
+      void Promise.resolve(write()).catch(() => {});
+    } catch {
+      // as above
+    }
+  };
+
   const store = createStore<AppState>()(
     persist(
       (set, get, api) => {
@@ -176,6 +202,7 @@ export function createAppStore(deps: StoreDeps) {
           notice: null,
           route: null,
           rejection: null,
+          undo: null,
           now,
           clockOffsetMs,
           timeZone,
@@ -191,18 +218,27 @@ export function createAppStore(deps: StoreDeps) {
           setupGoal: ({ goal, checkInTime, morningTime }) => {
             if (!get().hydrated) return { ok: false, reason: 'not-ready' };
             if (!goal.trim()) return { ok: false, reason: 'empty-goal' };
-            if (!isMorningAtOrBeforeCheckIn(morningTime, checkInTime)) return { ok: false, reason: 'order' };
             const state = createGoal({ goalId: deps.makeId(), goal, checkInTime, morningTime, now: now(), tz: timeZone() });
-            set({ goal: state, weapon: null, seenThrough: null, round: null, notice: null, route: null, rejection: null });
+            set({
+              goal: state,
+              weapon: null,
+              seenThrough: null,
+              round: null,
+              notice: null,
+              route: null,
+              rejection: null,
+              undo: null,
+            });
             return { ok: true };
           },
 
           answer: (ans, day, source = 'app') => {
             const goal = ready();
             if (!goal) return null;
-            const r = answerCheckIn(goal, { answer: ans, day }, now(), timeZone());
+            const at = now();
+            const r = answerCheckIn(goal, { answer: ans, day }, at, timeZone());
             if (!r.ok) {
-              setGoal(r.state, { rejection: r.reason });
+              setGoal(r.state, { rejection: r.reason, undo: null });
             } else if (r.outcome.kind === 'yes') {
               const { day, streak, rewards } = r.outcome;
               const newest = rewards.weapons.at(-1);
@@ -223,11 +259,40 @@ export function createAppStore(deps: StoreDeps) {
                 notice: null,
                 route: source === 'notification' ? null : '/play',
                 rejection: null,
+                undo: null,
               });
             } else {
-              setGoal(r.state, { notice: noticeForAnswer(r.outcome, r.state), route: '/notice', rejection: null });
+              const notice = noticeForAnswer(r.outcome, r.state);
+              const undo: UndoNotToday = {
+                day: r.outcome.day,
+                at: at.getTime(),
+                notice,
+                entry: r.state.history.at(-1),
+                before: { goal, round: get().round },
+              };
+              setGoal(r.state, { notice, route: '/notice', rejection: null, undo });
             }
             return r;
+          },
+
+          undoNotToday: (windowMs = UNDO_MS) => {
+            const goal = ready();
+            const { undo } = get();
+            if (!goal || !undo) return false;
+            const t = now();
+            // Restoring the old goal un-settles the answered day. Catch it up to now, then check
+            // that day's check-in is the one still open, so it can be answered again.
+            const restored = resolve(undo.before.goal, t, timeZone()).state;
+            const ok =
+              t.getTime() - undo.at < windowMs &&
+              goal.history.at(-1) === undo.entry &&
+              pendingWindow(restored, t)?.day === undo.day;
+            if (!ok) {
+              set({ undo: null });
+              return false;
+            }
+            setGoal(restored, { round: undo.before.round, notice: null, route: null, rejection: null, undo: null });
+            return true;
           },
 
           takeRoute: () => {
@@ -268,7 +333,6 @@ export function createAppStore(deps: StoreDeps) {
           setCheckInTime: (time) => {
             const goal = ready();
             if (!goal) return { ok: false, reason: 'no-goal' };
-            if (!isMorningAtOrBeforeCheckIn(goal.morningTime, time)) return { ok: false, reason: 'order' };
             setGoal(setGoalCheckInTime(goal, time, now(), timeZone()).state);
             return { ok: true };
           },
@@ -276,12 +340,15 @@ export function createAppStore(deps: StoreDeps) {
           setMorningTime: (time) => {
             const goal = ready();
             if (!goal) return { ok: false, reason: 'no-goal' };
-            if (!isMorningAtOrBeforeCheckIn(time, currentCheckInTime(goal))) return { ok: false, reason: 'order' };
             set({ goal: setGoalMorningTime(goal, time) });
             return { ok: true };
           },
 
           setPref: (key, value) => set({ prefs: { ...get().prefs, [key]: value } }),
+
+          hideReminderCard: () => {
+            set({ reminderCardHiddenUntil: new Date(now().getTime() + REMINDER_CARD_HIDE_MS).toISOString() });
+          },
 
           nextNotice: () => {
             const { notice, seenThrough } = get();
@@ -304,8 +371,9 @@ export function createAppStore(deps: StoreDeps) {
           },
 
           erase: () => {
-            set({ ...DEFAULT_PERSISTED, notice: null, route: null, rejection: null });
+            set({ ...DEFAULT_PERSISTED, notice: null, route: null, rejection: null, undo: null });
             api.persist.clearStorage();
+            writeAside(() => deps.storage.removeItem(STORE_BACKUP_KEY));
           },
 
           advanceDevClock: (ms) => {
@@ -326,7 +394,7 @@ export function createAppStore(deps: StoreDeps) {
             if (!tools || !goal || !Number.isInteger(n) || n < 1 || n > tools.SEED_MAX_N) return null;
             const seeded = tools.seedYesRun(goal, n, now(), timeZone());
             // The old history is gone, so there's no missed-day news left to show.
-            set({ goal: seeded, round: null, weapon: null, notice: null, seenThrough: seeded.lastSettledDay });
+            set({ goal: seeded, round: null, weapon: null, notice: null, undo: null, seenThrough: seeded.lastSettledDay });
             return get().answer('yes');
           },
 
@@ -344,8 +412,17 @@ export function createAppStore(deps: StoreDeps) {
         version: STORE_VERSION,
         storage: createJSONStorage(() => deps.storage),
         partialize: persisted,
-        migrate: migratePersisted,
-        merge: (stored, current) => ({ ...current, ...normalizePersisted(stored) }),
+        // Upgraded, not yet read: `merge` reads it.
+        migrate: (stored, version) => migratePersisted(stored, version) as PersistedState,
+        merge: (stored, current) => {
+          // A goal that can't be read would be lost the next time state is saved. Keep a copy
+          // where nothing writes over it, so a fix can bring it back.
+          if (hasUnreadableGoal(stored)) {
+            const backup = JSON.stringify({ at: deps.now().toISOString(), state: stored });
+            writeAside(() => deps.storage.setItem(STORE_BACKUP_KEY, backup));
+          }
+          return { ...current, ...normalizePersisted(stored) };
+        },
         // Runs after a successful read and after a failed one (a corrupt blob), so the app
         // never waits on the splash screen forever.
         onRehydrateStorage: () => () => {

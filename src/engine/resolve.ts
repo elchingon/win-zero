@@ -1,6 +1,6 @@
 // Catching up on closed windows, answering check-ins, and schedule edits. Every function
 // takes `now` and the device time zone `tz` as inputs and returns a new state.
-import { addDays, dayKeyAt, isValidClockTime, isValidTimeZone } from './dates';
+import { addDays, dayKeyAt, isValidClockTime, isValidTimeZone, wallTimeToInstant } from './dates';
 import { applyMissed, applyNotToday, applyYes, type Final, type YesRewards } from './rules';
 import type { ClockTime, DayKey, GoalState, ScheduleEntry, TimeZone } from './types';
 import {
@@ -70,6 +70,22 @@ export function createGoal(input: CreateGoalInput): GoalState {
     lastSettledDay: null,
     history: [],
   };
+}
+
+/**
+ * True when a goal set up at `now` starts with today's check-in already open: its check-in time
+ * has passed today. Setup says so, since that first question is about today.
+ */
+export function firstCheckInOpenAt(input: { checkInTime: ClockTime; now: Date; tz: TimeZone }): boolean {
+  assertClockTime(input.checkInTime);
+  assertTimeZone(input.tz);
+  const today = dayKeyAt(input.now, input.tz);
+  return wallTimeToInstant(today, input.checkInTime, input.tz).getTime() <= input.now.getTime();
+}
+
+/** True when the goal's first check-in was already open when it was set up. */
+export function openedAtSetup(goal: GoalState): boolean {
+  return opensAt(goal, goal.firstDay).getTime() <= Date.parse(goal.createdAt);
 }
 
 export interface MissedEvent {

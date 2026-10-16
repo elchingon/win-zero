@@ -12,7 +12,9 @@ import { formatCount, plural } from '@/lib/format';
 import { useApp, type RoundRecord } from '@/store';
 import { colors, fonts, fontScale, space, type, withAlpha } from '@/theme/tokens';
 import { Em, Eyebrow } from '@/ui/bits';
-import { Button } from '@/ui/Button';
+import { Button, LinkButton } from '@/ui/Button';
+
+import { milestoneShareText, shareMilestone } from './share';
 
 /** The prototype's #result: clear at the top, deepening to ink at 92% by 38% of the way down. */
 const SCRIM = [withAlpha(colors.ink, 0), withAlpha(colors.ink, 0.92)];
@@ -38,6 +40,8 @@ export function ResultSheet(props: {
   onReplay: () => void;
 }) {
   const { n, mode, record, onBack, onReplay } = props;
+  // A round that earned something can be shared; practice rounds earn nothing.
+  const shareText = mode !== 'practice' && record ? milestoneShareText(record.n, record.rewards) : null;
   const goal = useApp((s) => s.goal);
   const { width, height: screenHeight, fontScale: textScale } = useWindowDimensions();
   // At large text sizes the buttons stack, so their labels needn't shrink to fit side by side.
@@ -105,6 +109,13 @@ export function ResultSheet(props: {
         <Button label="Back to base" onPress={onBack} style={!stack && styles.primary} />
         <Button label="Replay" variant="ghost" onPress={onReplay} style={!stack && styles.secondary} />
       </View>
+      {shareText ? (
+        <LinkButton
+          label="Share this milestone"
+          accessibilityHint="Opens the share sheet. Your goal's wording isn't included."
+          onPress={() => shareMilestone(shareText)}
+        />
+      ) : null}
     </Animated.View>
   );
 }

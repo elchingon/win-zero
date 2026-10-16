@@ -124,7 +124,7 @@ Win Zero works with TalkBack, larger text sizes and Remove animations.
 - Tags: pick the closest offered, such as Habit tracker and Motivation.
 
 ### Contact details
-- Email: `[SUPPORT_EMAIL]`
+- Email: `e7urgent@gmail.com`
 - Website: `[SUPPORT_URL]`
 - Privacy policy: `[PRIVACY_URL]`
 

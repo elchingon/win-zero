@@ -5,6 +5,7 @@ import { at, DENVER, iso, TOKYO } from '@/engine/__tests__/fixtures';
 import {
   formatClockTime,
   formatCount,
+  formatDayRange,
   formatDayShort,
   formatMonth,
   formatUntil,
@@ -49,6 +50,12 @@ describe('format', () => {
 
   it('formats short days, months and plurals', () => {
     expect(formatDayShort('2026-10-03')).toBe('Oct 3');
+    expect(formatDayRange('2026-10-02', '2026-10-15', '2026-11-20')).toBe('Oct 2 – Oct 15');
+    expect(formatDayRange('2026-10-02', '2026-10-15', '2026-11-20', ' to ')).toBe('Oct 2 to Oct 15');
+    expect(formatDayRange('2026-10-02', '2026-10-02', '2026-10-02')).toBe('Oct 2');
+    // Years when it isn't all this year's.
+    expect(formatDayRange('2025-12-28', '2026-01-03', '2026-01-03')).toBe('Dec 28, 2025 – Jan 3, 2026');
+    expect(formatDayRange('2025-03-01', '2025-03-09', '2026-10-15')).toBe('Mar 1, 2025 – Mar 9, 2025');
     expect(formatMonth('2026-10')).toBe('October 2026');
     expect(plural(1, 'zero')).toBe('1 zero');
     expect(plural(3, 'zero')).toBe('3 zeros');

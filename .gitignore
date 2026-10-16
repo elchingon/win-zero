@@ -33,6 +33,15 @@ yarn-error.*
 # local env files
 .env*.local
 
+# secrets: store credentials, signing keys and env files. EAS holds the real ones; never commit them.
+credentials.json
+credentials/
+*service-account*.json
+*.keystore
+.env
+.env.*
+!.env.example
+
 # typescript
 *.tsbuildinfo
 

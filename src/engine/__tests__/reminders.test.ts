@@ -69,6 +69,19 @@ describe('planReminders', () => {
     expect(new Set(times).size).toBe(times.length);
   });
 
+  it('reminds later the same day for a shift worker, before the next check-in', () => {
+    const shift = newGoal({ checkInTime: '06:00', morningTime: '14:00' });
+    const plan = planReminders(shift, at(DAY0, '05:00'), OFF);
+    expect(plan.slice(0, 4)).toEqual([
+      { at: at(DAY0, '06:00'), kind: 'checkin', day: DAY0 },
+      { at: at(DAY0, '14:00'), kind: 'morning', day: DAY0 },
+      { at: at('2026-10-14', '06:00'), kind: 'checkin', day: '2026-10-14', earlier: DAY0 },
+      { at: at('2026-10-14', '14:00'), kind: 'morning', day: '2026-10-14' },
+    ]);
+    expect(isoOf(plan)).toEqual([...isoOf(plan)].sort());
+    expect(kinds(plan, 'morning')).toHaveLength(14);
+  });
+
   it('stops sooner when the slide is already under way', () => {
     let s = { ...yesDays(newGoal(), DAY0, 10), shields: 0 }; // through 10-22
     s = notTodays(s, '2026-10-23', 5); // streak 5, slide 5

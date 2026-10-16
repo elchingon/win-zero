@@ -1,10 +1,12 @@
 // Check-in windows (SPEC 2). Day D's window opens at check-in time on D and stays open through
-// all of D+1, closing at midnight at its end. The morning reminder falls on D+1, before D+1's
-// check-in; set to the same time, that check-in serves as the reminder.
+// all of D+1, closing at midnight at its end. The reminder comes the next time the clock reads
+// the reminder time after D opens: the next morning, or later on D when it's after check-in time
+// (shift workers). Never with or after D+1's check-in; set to the same time, that check-in
+// serves as the reminder.
 // D+1's own window opens at its check-in time, so the two overlap until midnight; days still
 // settle strictly in order, so only the earliest unsettled day is ever pending.
-import { addDays, clockMinutes, dayKeyAt, diffDays, MS_PER_HOUR, wallTimeToInstant } from './dates';
-import type { CheckInWindow, ClockTime, DayKey, GoalState, ScheduleEntry, TimeZone } from './types';
+import { addDays, dayKeyAt, diffDays, MS_PER_HOUR, wallTimeToInstant } from './dates';
+import type { CheckInWindow, DayKey, GoalState, ScheduleEntry, TimeZone } from './types';
 
 /** After a schedule change, consecutive openings are kept at least this far apart. */
 export const MIN_WINDOW_MS = MS_PER_HOUR;
@@ -60,7 +62,13 @@ export function windowFor(state: GoalState, day: DayKey): CheckInWindow {
   const next = addDays(day, 1);
   const opens = opensAt(state, day);
   const closes = closesAt(state, day);
-  const remind = wallTimeToInstant(next, state.morningTime, scheduleEntryFor(state, next).tz).getTime();
+  // The next reminder time after D opens: later on D itself when the reminder is set after
+  // check-in time, otherwise on D+1.
+  const sameDay = wallTimeToInstant(day, state.morningTime, scheduleEntryFor(state, day).tz).getTime();
+  const remind =
+    sameDay > opens.getTime()
+      ? sameDay
+      : wallTimeToInstant(next, state.morningTime, scheduleEntryFor(state, next).tz).getTime();
   // Not with or after D+1's check-in, which already says yesterday's is still open: one notification, not two.
   const inside = remind > opens.getTime() && remind < Math.min(closes.getTime(), opensAt(state, next).getTime());
   return {
@@ -103,12 +111,4 @@ export function nextWindow(state: GoalState): CheckInWindow {
 /** True when the window's day is today's local date, so copy can say "today" instead of "yesterday". */
 export function isWindowToday(window: CheckInWindow, now: Date): boolean {
   return dayKeyAt(now, window.tz) === window.day;
-}
-
-/**
- * Settings rule: the morning reminder comes no later than check-in time. At the same time, the
- * day's check-in serves as the reminder, so there's always something to answer when it arrives.
- */
-export function isMorningAtOrBeforeCheckIn(morning: ClockTime, checkIn: ClockTime): boolean {
-  return clockMinutes(morning) <= clockMinutes(checkIn);
 }

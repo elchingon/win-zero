@@ -23,6 +23,7 @@ export function useApp<T>(selector: (state: AppState) => T): T {
   return useStore(appStore, selector);
 }
 
+export { REMINDER_CARD_HIDE_MS, UNDO_MS, UNDO_MS_SCREEN_READER } from './createAppStore';
 export type { AppState, AppStore, EditResult, SetupResult } from './createAppStore';
 export { startLifecycle, whenHydrated } from './lifecycle';
 export type { AnswerRoute, AnswerSource, Notice, PendingNotice, Prefs, RoundRecord } from './types';

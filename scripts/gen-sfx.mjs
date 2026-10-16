@@ -5,6 +5,7 @@
 // is seeded, so running it again writes the same files.
 //
 //   node scripts/gen-sfx.mjs        (or: npm run gen:sfx)
+import { Buffer } from 'node:buffer';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';

@@ -1,5 +1,5 @@
 import { useFonts } from 'expo-font';
-import { DarkTheme, Stack, ThemeProvider, usePathname } from 'expo-router';
+import { DarkTheme, Stack, ThemeProvider, usePathname, type ErrorBoundaryProps } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useState } from 'react';
@@ -11,6 +11,8 @@ import { reportPath } from '@/notifications/route';
 import { appStore, startLifecycle, useApp } from '@/store';
 import { fontAssets } from '@/theme/fonts';
 import { colors } from '@/theme/tokens';
+import { CrashScreen } from '@/ui/CrashScreen';
+import { APP_LINKS } from '@/ui/support';
 import { ZeroField } from '@/ui/ZeroField';
 import { LaunchSplash } from '@/ui/LaunchSplash';
 
@@ -21,6 +23,27 @@ const navTheme = {
   ...DarkTheme,
   colors: { ...DarkTheme.colors, background: 'transparent', card: colors.ink, text: colors.fg, primary: colors.amber },
 };
+
+/**
+ * A render crash anywhere outside the round (which has its own). Everything is saved as it
+ * changes, so nothing is lost. The navigator went down with the layout, so the router can't be
+ * used here: Back to base renders the app again, and its fresh stack starts at Home.
+ */
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  return (
+    <CrashScreen
+      eyebrow="Something went wrong"
+      title={['Win Zero hit ', 'a snag.']}
+      body={[
+        'Your streak, history and rewards are saved on this phone.',
+        `If it keeps happening, email us at ${APP_LINKS.email}.`,
+      ]}
+      action="Back to base"
+      onAction={() => void retry()}
+      error={error}
+    />
+  );
+}
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts(fontAssets);
