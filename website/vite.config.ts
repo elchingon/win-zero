@@ -55,6 +55,12 @@ export default defineConfig({
         play: here('./play.html'),
         404: here('./404.html'),
       },
+      onLog(level, log, handler) {
+        // The shared sim and drawing code start with 'worklet', which only the app's Babel plugin
+        // reads. In the browser they're plain functions, so the directive can go.
+        if (log.code === 'MODULE_LEVEL_DIRECTIVE' && log.message.includes('"worklet"')) return;
+        handler(level, log);
+      },
     },
   },
   test: {
