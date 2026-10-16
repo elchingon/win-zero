@@ -7,7 +7,7 @@ import type { ReactNode } from 'react';
 export function Hud(props: {
   left: number;
   total: number;
-  /** "DAY 30", or "PRACTICE". */
+  /** "DAY 30", "BONUS" or "PRACTICE". */
   label: string;
   weaponName: string;
   canSwitch: boolean;

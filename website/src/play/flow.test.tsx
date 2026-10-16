@@ -105,6 +105,17 @@ describe('the app on the web', () => {
     expect(appStore.getState().credits.balance.weapon).toBe(0);
   });
 
+  it('keeps practice rounds inside demo mode', async () => {
+    const router = await setUp('Read 20 minutes');
+    fireEvent.click(screen.getByRole('button', { name: 'Demo controls' }));
+    expect(screen.getByRole('button', { name: 'Start demo mode' })).toBeTruthy();
+    expect(screen.queryByLabelText('Zeros in the practice round')).toBeNull();
+
+    // With no round to play, a practice link goes back to base.
+    await router.navigate('/round?practice=60');
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'));
+  });
+
   it('keeps Settings and How it works free of notification talk', async () => {
     await setUp('Exercise more');
     cleanup();

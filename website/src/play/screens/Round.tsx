@@ -3,8 +3,8 @@
 // latest Yes earned (its rewards are already banked); Replay plays it again in place, with no
 // effect on the streak. ?round=bonus plays the bonus round a Game credit paid for, which changes
 // nothing either. Before a round not yet played, a player holding a Weapon credit is asked
-// whether to borrow a weapon they haven't unlocked for it. ?practice=N plays any N with every
-// weapon and a frame meter (the demo controls offer it), changing nothing.
+// whether to borrow a weapon they haven't unlocked for it. In demo mode, ?practice=N plays any N
+// with every weapon and a frame meter (the demo controls offer it), changing nothing.
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Navigate, useSearchParams } from 'react-router';
 
@@ -24,7 +24,7 @@ import { ROUTES, useGoHome } from '../nav';
 import { announce } from '../platform/announce';
 import { loadSounds, playSound, resumeAudio, type Sound } from '../platform/audio';
 import { useReduceMotion } from '../platform/motion';
-import { appStore, useApp } from '../store';
+import { appStore, demoMode, useApp } from '../store';
 
 const newSeed = () => Math.floor(Math.random() * 2 ** 31);
 
@@ -32,7 +32,8 @@ const NONE_BORROWED: WeaponId[] = [];
 
 export function Round() {
   const [params] = useSearchParams();
-  const practice = parseCount(params.get('practice') ?? '', PRACTICE_MAX_N);
+  // Outside demo mode, a round of any size is a bonus round, paid for with a Game credit.
+  const practice = demoMode ? parseCount(params.get('practice') ?? '', PRACTICE_MAX_N) : null;
   if (practice) return <Play initialMode="practice" n={practice} best={PRACTICE_BEST} record={null} borrowed={NONE_BORROWED} />;
   return params.get('round') === 'bonus' ? <BonusStoreRound /> : <StoreRound />;
 }
