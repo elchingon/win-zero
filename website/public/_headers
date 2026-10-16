@@ -1,0 +1,19 @@
+# Cloudflare Pages response headers. The site loads nothing from other origins and has no inline
+# scripts or style attributes (scripts/verify-dist.mjs checks the build), so one strict policy
+# covers every page. Keep Cloudflare features that inject scripts turned off (website/README.md).
+/*
+  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; media-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()
+  Cross-Origin-Opener-Policy: same-origin
+
+# Vite fingerprints everything under /assets/, so it can be cached for good.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Keep the pages.dev addresses (production alias and previews) out of search results.
+https://:project.pages.dev/*
+  X-Robots-Tag: noindex

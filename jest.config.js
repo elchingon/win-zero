@@ -5,7 +5,8 @@ module.exports = {
   setupFiles: ['<rootDir>/jest.setup.js'],
   testMatch: ['<rootDir>/src/**/*.test.ts?(x)'],
   testPathIgnorePatterns: ['/node_modules/', '<rootDir>/docs/'],
-  modulePathIgnorePatterns: ['<rootDir>/docs/'],
+  // website/ is its own package, tested with Vitest.
+  modulePathIgnorePatterns: ['<rootDir>/docs/', '<rootDir>/website/'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },

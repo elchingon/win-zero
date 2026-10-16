@@ -5,7 +5,8 @@ const expoConfig = require('eslint-config-expo/flat');
 module.exports = defineConfig([
   expoConfig,
   {
-    ignores: ['dist/*', 'docs/*', '.expo/*'],
+    // website/ has its own lint config.
+    ignores: ['dist/*', 'docs/*', '.expo/*', 'website/*'],
   },
   {
     // jest.mock factories load their stand-ins with require(), which is how jest expects it.

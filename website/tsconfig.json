@@ -1,0 +1,29 @@
+{
+  // Browser code (src/) plus the shared app modules it imports from ../src, checked with the
+  // same strictness as the app. Build tooling is checked by tsconfig.node.json.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "types": ["vite/client"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noFallthroughCasesInSwitch": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "paths": {
+      "@/*": ["../src/*"],
+      "~/*": ["./src/*"],
+      "@assets/*": ["../assets/*"],
+      // Shared files import zustand from ../src; resolve it here, not from the app's node_modules.
+      "zustand": ["./node_modules/zustand"],
+      "zustand/*": ["./node_modules/zustand/*"]
+    }
+  },
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
+}

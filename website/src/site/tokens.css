@@ -1,0 +1,31 @@
+/* The palette and type from src/theme/tokens.ts (SPEC 7), as CSS variables. tokens.test.ts checks
+   the colors stay in step with the app. Dark only. */
+:root {
+  --ink: #0d1130;
+  --ink-2: #151a44;
+  --panel: #1b2150;
+  --panel-2: #252c68;
+  --line: #353d80;
+  --fg: #f5f0e6;
+  --muted: #aab0d8;
+  --amber: #ffb52e;
+  --amber-deep: #b9770a;
+  --flare: #ff4f6d;
+  --teal: #3fdccb;
+  --card: #2b2f54;
+
+  --font-display: 'Bungee', system-ui, sans-serif;
+  --font-body: 'Barlow', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --radius-sm: 10px;
+  --radius-md: 12px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-xxl: 22px;
+
+  --gutter: 20px;
+  --section-gap: 22px;
+
+  color-scheme: dark;
+}
