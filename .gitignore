@@ -48,3 +48,6 @@ credentials/
 # generated native folders
 /ios
 /android
+
+# local release builds (npm run build:android)
+/build
