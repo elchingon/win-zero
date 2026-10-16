@@ -1,5 +1,5 @@
 # Type check, lint, and the unit tests in three time zones (UTC, Denver, Chatham), as each
-# commit does locally. Native builds stay on EAS.
+# commit does locally. Native builds stay on EAS; the website deploys from Cloudflare Pages.
 name: CI
 
 on:
@@ -25,3 +25,25 @@ jobs:
       - run: npx tsc --noEmit
       - run: npm run lint
       - run: npm run test:tz
+
+  # The website (winzero.app). Cloudflare Pages builds it from website/ with only website's own
+  # node_modules installed, so this job does the same: no root `npm ci`.
+  website:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: website
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: website/.nvmrc
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm run verify
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
