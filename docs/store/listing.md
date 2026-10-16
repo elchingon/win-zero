@@ -4,9 +4,8 @@ Copy for App Store Connect and the Google Play Console. Every field with a limit
 character count, checked against that limit. The tone matches the app: supportive and plain. No
 medical claims, and no promises about outcomes.
 
-Placeholders to fill before publishing:
-- `[PRIVACY_URL]`: the privacy policy page on e7systems.com (from `privacy-policy.md`).
-- `[SUPPORT_URL]`: the support page on e7systems.com (from `support.md`).
+The privacy policy and support pages live on winzero.app (sources: `privacy-policy.md` and
+`support.md`). The app links to the same URLs from Settings → About.
 
 ---
 
@@ -69,8 +68,8 @@ habit,streak,daily,check-in,goal,tracker,sober,quit,routine,motivation,game,arca
 - Secondary: **Lifestyle**
 
 ### URLs
-- Privacy policy: `[PRIVACY_URL]`
-- Support: `[SUPPORT_URL]`
+- Privacy policy: `https://winzero.app/privacy`
+- Support: `https://winzero.app/support`
 - Marketing (optional): leave empty
 
 ---
@@ -125,8 +124,8 @@ Win Zero works with TalkBack, larger text sizes and Remove animations.
 
 ### Contact details
 - Email: `e7urgent@gmail.com`
-- Website: `[SUPPORT_URL]`
-- Privacy policy: `[PRIVACY_URL]`
+- Website: `https://winzero.app/support`
+- Privacy policy: `https://winzero.app/privacy`
 
 ### Graphics
 - App icon (512 × 512): `assets/brand/google-play-icon.png`

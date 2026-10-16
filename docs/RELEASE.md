@@ -9,17 +9,16 @@ answers are in `docs/store/`.
   expo-asset, expo-constants, expo-linking, expo-notifications, expo-router).
   - Run `npx expo install --fix`, then rebuild the dev client.
   - Some are native modules, so do it on its own, before the QA builds.
-- [ ] **Publish the two pages on e7systems.com.**
-  - Sources: `docs/store/privacy-policy.md` and `docs/store/support.md`.
-  - Fill in `[EFFECTIVE_DATE]` and `[PRIVACY_URL]`.
-  - Note the two URLs for the listings.
-  - Set both URLs, which Settings → About opens, as `EXPO_PUBLIC_PRIVACY_URL` and
-    `EXPO_PUBLIC_SUPPORT_URL`:
-    - EAS builds: `eas env:create --environment production --visibility plaintext --name
-      EXPO_PUBLIC_PRIVACY_URL --value https://…`, and the same for `EXPO_PUBLIC_SUPPORT_URL`.
-      EAS doesn't upload the gitignored `.env`. A production build fails until both are https
-      URLs (`scripts/check-release.mjs`).
-    - Local runs: copy `.env.example` to `.env` and fill it in.
+- [ ] **Publish the two pages on winzero.app.**
+  - Privacy policy at https://winzero.app/privacy, from `docs/store/privacy-policy.md`.
+  - Support at https://winzero.app/support, from `docs/store/support.md`.
+  - Fill in `[EFFECTIVE_DATE]` first.
+  - The app already links to both from Settings → About:
+    - EAS builds take `EXPO_PUBLIC_PRIVACY_URL` and `EXPO_PUBLIC_SUPPORT_URL` from the
+      production and preview profiles' `env` in `eas.json`. A production build fails unless both
+      are https URLs (`scripts/check-release.mjs`).
+    - Local runs read `.env` (copy `.env.example`).
+  - If a URL changes, update `eas.json`, `.env.example` and `docs/store/*` together.
 - [ ] **Optional: iOS dark and tinted icons.** The brand set has one iOS icon, which iOS 18 uses in
   every appearance. To add variants, render them in `scripts/gen-brand.mjs` and set
   `ios.icon: { light, dark, tinted }` in `app.json`.

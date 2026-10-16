@@ -62,7 +62,7 @@ follows your phone's text size and Reduce Motion settings.
 ## Privacy
 
 Everything stays on your phone. There's no account, and Win Zero collects no data. Read the
-[privacy policy]([PRIVACY_URL]).
+[privacy policy](https://winzero.app/privacy).
 
 ## Starting over
 
