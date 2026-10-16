@@ -113,7 +113,9 @@ export function howItWorks({ notifications }: { notifications: boolean }): Secti
       body: [
         CREDIT_USES.game,
         CREDIT_USES.weapon,
-        `${creditsEarnedBy('game')} ${creditsEarnedBy('weapon')} Each one is earned once, and they stay banked until you use them.`,
+        [creditsEarnedBy('game'), creditsEarnedBy('weapon'), 'Each one is earned once, and they stay banked until you use them.']
+          .filter(Boolean)
+          .join(' '),
       ],
     },
   ];

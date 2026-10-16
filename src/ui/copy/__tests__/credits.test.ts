@@ -3,7 +3,7 @@ import { describe, expect, it } from '@jest/globals';
 import { BONUS_MAX_N, CREDIT_REWARDS } from '@/engine';
 import { formatCount } from '@/lib/format';
 
-import { CREDIT_USES, creditCount, creditEarned, creditsEarnedBy } from '../credits';
+import { BONUS_SHEET, CREDIT_USES, creditCount, creditEarned, creditsEarnedBy, CREDITS_HOME } from '../credits';
 
 describe('credit copy', () => {
   it('counts credits', () => {
@@ -25,12 +25,24 @@ describe('credit copy', () => {
     for (const r of CREDIT_REWARDS) expect(creditsEarnedBy(r.kind)).toContain(r.reason);
   });
 
+  it('leaves out the ways already used, as each pays once', () => {
+    expect(creditsEarnedBy('game', ['goal-set'])).toBe('You earn a Game credit for reaching 2 zeros.');
+    expect(creditsEarnedBy('game', ['goal-set', 'zeros-2'])).toBeNull();
+    expect(creditsEarnedBy('weapon', ['comeback', 'yes-run-3', 'yes-run-14'])).toBe('You earn a Weapon credit for 30 Yeses in a row.');
+  });
+
   it('takes the bonus round ceiling from the engine', () => {
     expect(CREDIT_USES.game).toContain(`up to ${formatCount(BONUS_MAX_N)}`);
   });
 
   it('stays plain and kind', () => {
-    const all = [...Object.values(CREDIT_USES), creditsEarnedBy('game'), creditsEarnedBy('weapon')].join(' ');
+    const all = [
+      ...Object.values(CREDIT_USES),
+      creditsEarnedBy('game'),
+      creditsEarnedBy('weapon'),
+      ...Object.values(CREDITS_HOME).map((v) => (typeof v === 'function' ? v(250) : v)),
+      ...Object.values(BONUS_SHEET),
+    ].join(' ');
     expect(all).not.toMatch(/fail|lose|lost|broke|shame|relapse/i);
   });
 });

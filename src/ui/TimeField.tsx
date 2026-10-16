@@ -1,23 +1,14 @@
 // A time setting: a field showing the time, and a bottom sheet of snapping wheels to change it.
 // Pure JS (no native picker), so it needs no new dev build and matches the app's look.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Pressable, ScrollView, StyleSheet, Text, View, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 
 import { clockMinutes, type ClockTime } from '@/engine';
 import { formatClockTime } from '@/lib/format';
-import { colors, fonts, radii, space, withAlpha } from '@/theme/tokens';
+import { colors, fonts, radii, space } from '@/theme/tokens';
 
 import { Field } from './bits';
+import { BottomSheet } from './BottomSheet';
 import { Button } from './Button';
 import { feedback } from './feedback';
 
@@ -97,14 +88,8 @@ function Wheel(props: { items: string[]; selected: number; onSelect: (index: num
   );
 }
 
-function TimeSheet(props: {
-  title: string;
-  value: ClockTime;
-  h24: boolean;
-  onDone: (time: ClockTime) => void;
-  onCancel: () => void;
-}) {
-  const { title, value, h24, onDone, onCancel } = props;
+function TimeSheet(props: { value: ClockTime; h24: boolean; onDone: (time: ClockTime) => void; onCancel: () => void }) {
+  const { value, h24, onDone, onCancel } = props;
   const start = clockMinutes(value);
   const [hour, setHour] = useState(Math.floor(start / 60));
   const [minute, setMinute] = useState(start % 60);
@@ -119,48 +104,39 @@ function TimeSheet(props: {
   const pm = hour >= 12;
 
   return (
-    <View style={styles.backdrop}>
-      <Pressable style={StyleSheet.absoluteFill} onPress={onCancel} accessibilityLabel="Close" />
-      <SafeAreaView edges={['bottom']} style={styles.sheet}>
-        <Text style={styles.title}>{title}</Text>
-        <View style={styles.wheels}>
-          {h24 ? (
-            <Wheel
-              label="Hour"
-              items={Array.from({ length: 24 }, (_, h) => pad(h))}
-              selected={hour}
-              onSelect={setHour}
-            />
-          ) : (
-            <Wheel
-              label="Hour"
-              items={hours12.map(String)}
-              selected={hour % 12}
-              onSelect={(i) => setHour((i % 12) + (pm ? 12 : 0))}
-            />
-          )}
-          <Text style={styles.colon}>:</Text>
+    <>
+      <View style={styles.wheels}>
+        {h24 ? (
+          <Wheel label="Hour" items={Array.from({ length: 24 }, (_, h) => pad(h))} selected={hour} onSelect={setHour} />
+        ) : (
           <Wheel
-            label="Minute"
-            items={minutes.map(pad)}
-            selected={Math.max(0, minutes.indexOf(minute))}
-            onSelect={(i) => setMinute(minutes[i] ?? 0)}
+            label="Hour"
+            items={hours12.map(String)}
+            selected={hour % 12}
+            onSelect={(i) => setHour((i % 12) + (pm ? 12 : 0))}
           />
-          {h24 ? null : (
-            <Wheel
-              label="AM or PM"
-              items={['AM', 'PM']}
-              selected={pm ? 1 : 0}
-              onSelect={(i) => setHour((h) => (h % 12) + (i === 1 ? 12 : 0))}
-            />
-          )}
-        </View>
-        <View style={styles.actions}>
-          <Button label="Cancel" variant="ghost" onPress={onCancel} style={styles.action} />
-          <Button label="Done" onPress={() => onDone(`${pad(hour)}:${pad(minute)}`)} style={styles.action} />
-        </View>
-      </SafeAreaView>
-    </View>
+        )}
+        <Text style={styles.colon}>:</Text>
+        <Wheel
+          label="Minute"
+          items={minutes.map(pad)}
+          selected={Math.max(0, minutes.indexOf(minute))}
+          onSelect={(i) => setMinute(minutes[i] ?? 0)}
+        />
+        {h24 ? null : (
+          <Wheel
+            label="AM or PM"
+            items={['AM', 'PM']}
+            selected={pm ? 1 : 0}
+            onSelect={(i) => setHour((h) => (h % 12) + (i === 1 ? 12 : 0))}
+          />
+        )}
+      </View>
+      <View style={styles.actions}>
+        <Button label="Cancel" variant="ghost" onPress={onCancel} style={styles.action} />
+        <Button label="Done" onPress={() => onDone(`${pad(hour)}:${pad(minute)}`)} style={styles.action} />
+      </View>
+    </>
   );
 }
 
@@ -190,20 +166,17 @@ export function TimeField(props: {
         <Text style={styles.fieldText}>{shown}</Text>
         <Text style={styles.fieldEdit}>Change</Text>
       </Pressable>
-      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)} statusBarTranslucent>
-        {open ? (
-          <TimeSheet
-            title={label}
-            value={value}
-            h24={h24}
-            onCancel={() => setOpen(false)}
-            onDone={(time) => {
-              setOpen(false);
-              onChange(time);
-            }}
-          />
-        ) : null}
-      </Modal>
+      <BottomSheet visible={open} title={label} onClose={() => setOpen(false)}>
+        <TimeSheet
+          value={value}
+          h24={h24}
+          onCancel={() => setOpen(false)}
+          onDone={(time) => {
+            setOpen(false);
+            onChange(time);
+          }}
+        />
+      </BottomSheet>
     </Field>
   );
 }
@@ -222,18 +195,6 @@ const styles = StyleSheet.create({
   fieldError: { borderColor: colors.flare },
   fieldText: { fontFamily: fonts.bodySemiBold, fontSize: 18, color: colors.fg },
   fieldEdit: { fontFamily: fonts.monoSemiBold, fontSize: 11, letterSpacing: 1.3, color: colors.muted, textTransform: 'uppercase' },
-  backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: withAlpha(colors.ink, 0.7) },
-  sheet: {
-    backgroundColor: colors.ink2,
-    borderTopLeftRadius: radii.xxl,
-    borderTopRightRadius: radii.xxl,
-    borderWidth: 1,
-    borderColor: colors.line,
-    paddingHorizontal: space.xl,
-    paddingTop: space.xl,
-    gap: space.lg,
-  },
-  title: { fontFamily: fonts.monoSemiBold, fontSize: 11, letterSpacing: 1.54, textTransform: 'uppercase', color: colors.muted },
   wheels: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: space.sm },
   wheel: { width: 76, height: ITEM_HEIGHT * VISIBLE_ITEMS },
   wheelContent: { paddingVertical: ITEM_HEIGHT * Math.floor(VISIBLE_ITEMS / 2) },

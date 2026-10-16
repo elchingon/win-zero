@@ -1,5 +1,5 @@
 // Credits in plain words: their names, the result sheet's line for one a Yes earned, what each
-// is for, and the question before a round. Why a credit was earned comes from the engine's rewards, so the words can't drift
+// is for, Home's Credits section and bonus round sheet, and the question before a round. Why a credit was earned comes from the engine's rewards, so the words can't drift
 // from the rules. Shared by the app and the website.
 import { BONUS_MAX_N, CREDIT_REWARDS, creditRewardById, type CreditGrant, type CreditKind, type WeaponDef } from '@/engine';
 import { formatCount, joinAnd, plural } from '@/lib/format';
@@ -25,11 +25,45 @@ export const CREDIT_USES: Record<CreditKind, string> = {
     "A Weapon credit lends you a weapon you haven't unlocked yet, for one round. When you have one, you're asked before your daily round or a bonus round starts.",
 };
 
-/** How credits are earned, from the rewards themselves: 'You earn a Game credit for … and for ….' */
-export function creditsEarnedBy(kind: CreditKind): string {
-  const reasons = CREDIT_REWARDS.filter((r) => r.kind === kind).map((r) => r.reason);
-  return `You earn a ${NAMES[kind]} ${joinAnd(reasons)}.`;
+/**
+ * How a credit is earned, from the rewards themselves: 'You earn a Game credit for … and for ….'
+ * Rewards in `claimed` are left out, as each pays once; null when none are left.
+ */
+export function creditsEarnedBy(kind: CreditKind, claimed: readonly string[] = []): string | null {
+  const reasons = CREDIT_REWARDS.filter((r) => r.kind === kind && !claimed.includes(r.id)).map((r) => r.reason);
+  return reasons.length > 0 ? `You earn a ${NAMES[kind]} ${joinAnd(reasons)}.` : null;
 }
+
+/** '250 zeros'. */
+const zeros = (n: number) => `${formatCount(n)} ${n === 1 ? 'zero' : 'zeros'}`;
+
+/** Home's Credits section. */
+export const CREDITS_HOME = {
+  title: 'Credits',
+  playBonus: 'Play a bonus round',
+  playBonusHint: 'Uses 1 Game credit. You choose how many zeros.',
+  bonusAbout: 'As many zeros as you like. Your streak and rewards stay as they are.',
+  bonusReady: (n: number) => `Your bonus round of ${zeros(n)} is ready.`,
+  bonusReadyLede: "It's paid for. Play it whenever you like.",
+  playBonusNow: 'Play bonus round',
+  weaponWaiting: "You'll be asked before your next round whether to use one.",
+  weaponAllUnlocked: 'Every weapon is unlocked, so your Weapon credits wait here for new ones.',
+};
+
+/** Ready-made sizes for a bonus round, and the one the sheet starts on. */
+export const BONUS_PRESETS: readonly number[] = [10, 100, 1_000, 10_000];
+export const BONUS_DEFAULT_N = 100;
+
+/** Choosing a bonus round's size. */
+export const BONUS_SHEET = {
+  title: 'Bonus round',
+  field: 'Zeros',
+  hint: `Any number from 1 to ${formatCount(BONUS_MAX_N)}.`,
+  invalid: `A whole number from 1 to ${formatCount(BONUS_MAX_N)}, please.`,
+  start: 'Start',
+  startHint: 'Uses 1 Game credit',
+  cancel: 'Cancel',
+};
 
 /** Before a round, when a Weapon credit could lend it something. */
 export const WEAPON_PROMPT = {
