@@ -9,6 +9,51 @@ module.exports = defineConfig([
     ignores: ['dist/*', 'docs/*', '.expo/*', 'website/*'],
   },
   {
+    // Shared with the website (the same list as website/plugins/shared-guard.ts): pure TypeScript
+    // that runs in a browser too. Skia is allowed for types only, which the website stands in for.
+    files: [
+      'src/engine/**/*.ts',
+      'src/game/sim/**/*.ts',
+      'src/game/draw/**/*.ts',
+      'src/game/cues.ts',
+      'src/game/look.ts',
+      'src/game/result.ts',
+      'src/game/shareText.ts',
+      'src/store/createAppStore.ts',
+      'src/store/migrate.ts',
+      'src/store/notice.ts',
+      'src/store/types.ts',
+      'src/store/id.ts',
+      'src/store/lifecycle.ts',
+      'src/lib/format.ts',
+      'src/lib/calendar.ts',
+      'src/theme/tokens.ts',
+      'src/ui/home/stakes.ts',
+      'src/ui/home/routing.ts',
+      'src/ui/copy/**/*.ts',
+      'src/dev/seedRun.ts',
+      'src/dev/demo.ts',
+    ],
+    ignores: ['src/**/__tests__/**'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            { regex: '^(react|react-dom|react-native)(/.*)?$', message: 'Shared with the website: no React or React Native.' },
+            { regex: '^(react-native-|@react-native)', message: 'Shared with the website: no React Native packages.' },
+            { regex: '^(expo|expo-[^/]+|@expo/.+)(/.*)?$', message: 'Shared with the website: no Expo.' },
+            {
+              regex: '^@shopify/',
+              allowTypeImports: true,
+              message: 'Shared with the website: Skia for types only (`import type`).',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // jest.mock factories load their stand-ins with require(), which is how jest expects it.
     files: ['src/**/__tests__/**/*.{ts,tsx}'],
     rules: { '@typescript-eslint/no-require-imports': 'off' },
