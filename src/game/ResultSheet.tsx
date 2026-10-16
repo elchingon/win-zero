@@ -7,14 +7,16 @@ import { AccessibilityInfo, ScrollView, StyleSheet, Text, useWindowDimensions, V
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { nextUnlock, SHIELD_CAP, weaponById } from '@/engine';
-import { formatCount, plural } from '@/lib/format';
+import { formatCount } from '@/lib/format';
 import { useApp, type RoundRecord } from '@/store';
 import { colors, fonts, fontScale, space, type, withAlpha } from '@/theme/tokens';
 import { Em, Eyebrow } from '@/ui/bits';
 import { Button, LinkButton } from '@/ui/Button';
 
+import { resultLines, type ResultMode } from './result';
 import { milestoneShareText, shareMilestone } from './share';
+
+export type { ResultMode } from './result';
 
 /** The prototype's #result: clear at the top, deepening to ink at 92% by 38% of the way down. */
 const SCRIM = [withAlpha(colors.ink, 0), withAlpha(colors.ink, 0.92)];
@@ -23,13 +25,6 @@ const SCRIM_STOPS = [0, 0.38];
 const SCRIM_TOP = 80;
 const BOTTOM = 28;
 const RISE_MS = 500;
-
-export type ResultMode = 'real' | 'replay' | 'practice';
-
-interface Line {
-  text: string;
-  news?: boolean;
-}
 
 export function ResultSheet(props: {
   n: number;
@@ -58,28 +53,7 @@ export function ResultSheet(props: {
     return () => clearTimeout(id);
   }, []);
 
-  const lines: Line[] = [];
-  if (mode === 'practice') {
-    lines.push({ text: 'Practice round: nothing about your streak changes.' });
-  } else if (mode === 'replay') {
-    lines.push({ text: "Replay: your streak and rewards don't change." });
-  } else if (record && goal) {
-    for (const id of record.rewards.weapons) {
-      const w = weaponById(id);
-      lines.push({ text: `New weapon unlocked: ${w.name}. ${w.description}`, news: true });
-    }
-    if (record.rewards.bomb) lines.push({ text: `Bomb earned. You have ${goal.bombs}.`, news: true });
-    if (record.rewards.shield) lines.push({ text: `Shield earned. You have ${goal.shields} of ${SHIELD_CAP}.`, news: true });
-    if (record.rewards.shieldCapped) lines.push({ text: `Shields full. You're holding all ${SHIELD_CAP}.` });
-  }
-  if (mode !== 'practice' && goal) {
-    const next = nextUnlock(goal.bestStreak, n);
-    lines.push({
-      text: next
-        ? `Hold the line ${plural(next.daysToGo, 'more day')} for the ${next.weapon.name}.`
-        : `Tomorrow: ${plural(n + 1, 'zero')}.`,
-    });
-  }
+  const lines = resultLines(n, mode, record, goal);
 
   return (
     <Animated.View
