@@ -4,12 +4,12 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { lockedWeapons, type CreditWallet, type GoalState } from '@/engine';
+import type { CreditWallet, GoalState } from '@/engine';
 import type { BonusRound } from '@/store';
 import { colors, fonts, type } from '@/theme/tokens';
 import { Card, Eyebrow, Fine, shared, StatTile } from '@/ui/bits';
 import { Button } from '@/ui/Button';
-import { creditCount, creditsEarnedBy, CREDITS_HOME } from '@/ui/copy/credits';
+import { creditCount, creditNotes, CREDITS_HOME } from '@/ui/copy/credits';
 
 import { BonusRoundSheet } from './BonusRoundSheet';
 
@@ -26,15 +26,7 @@ export function CreditsCard(props: {
   const [choosing, setChoosing] = useState(false);
   const { game, weapon } = credits.balance;
   const ready = bonus && !bonus.played ? bonus : null;
-
-  const notes = [
-    game > 0 ? (ready ? null : CREDITS_HOME.bonusAbout) : creditsEarnedBy('game', credits.claimed),
-    weapon > 0
-      ? lockedWeapons(goal.bestStreak).length > 0
-        ? CREDITS_HOME.weaponWaiting
-        : CREDITS_HOME.weaponAllUnlocked
-      : creditsEarnedBy('weapon', credits.claimed),
-  ].filter((n): n is string => n !== null);
+  const notes = creditNotes(credits, goal.bestStreak, ready !== null);
 
   return (
     <View style={shared.section}>

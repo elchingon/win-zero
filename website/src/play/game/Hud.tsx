@@ -57,7 +57,7 @@ export function Hud(props: {
           <button
             type="button"
             className="hud-btn weapon"
-            aria-label={`Weapon: ${p.weaponName}${p.canSwitch ? '. Switches to your next unlocked weapon' : ''}`}
+            aria-label={`Weapon: ${p.weaponName}${p.canSwitch ? '. Switches to your next weapon' : ''}`}
             disabled={!p.canSwitch}
             onClick={p.onSwitchWeapon}
           >

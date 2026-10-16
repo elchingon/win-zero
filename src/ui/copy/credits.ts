@@ -1,7 +1,16 @@
 // Credits in plain words: their names, the result sheet's line for one a Yes earned, what each
 // is for, Home's Credits section and bonus round sheet, and the question before a round. Why a credit was earned comes from the engine's rewards, so the words can't drift
 // from the rules. Shared by the app and the website.
-import { BONUS_MAX_N, CREDIT_REWARDS, creditRewardById, type CreditGrant, type CreditKind, type WeaponDef } from '@/engine';
+import {
+  BONUS_MAX_N,
+  CREDIT_REWARDS,
+  creditRewardById,
+  lockedWeapons,
+  type CreditGrant,
+  type CreditKind,
+  type CreditWallet,
+  type WeaponDef,
+} from '@/engine';
 import { formatCount, joinAnd, plural } from '@/lib/format';
 
 const NAMES: Record<CreditKind, string> = { game: 'Game credit', weapon: 'Weapon credit' };
@@ -49,6 +58,22 @@ export const CREDITS_HOME = {
   weaponWaiting: "You'll be asked before your next round whether to use one.",
   weaponAllUnlocked: 'Every weapon is unlocked, so your Weapon credits wait here for new ones.',
 };
+
+/**
+ * Home's notes under the credit counts, in plain words: with none of a kind, how to earn one; with
+ * some, what it's for, or when it comes up. `bonusWaiting`: a bonus round is already paid for.
+ */
+export function creditNotes(credits: CreditWallet, bestStreak: number, bonusWaiting: boolean): string[] {
+  const { game, weapon } = credits.balance;
+  const gameNote = game > 0 ? (bonusWaiting ? null : CREDITS_HOME.bonusAbout) : creditsEarnedBy('game', credits.claimed);
+  const weaponNote =
+    weapon > 0
+      ? lockedWeapons(bestStreak).length > 0
+        ? CREDITS_HOME.weaponWaiting
+        : CREDITS_HOME.weaponAllUnlocked
+      : creditsEarnedBy('weapon', credits.claimed);
+  return [gameNote, weaponNote].filter((n): n is string => n !== null);
+}
 
 /** Ready-made sizes for a bonus round, and the one the sheet starts on. */
 export const BONUS_PRESETS: readonly number[] = [10, 100, 1_000, 10_000];

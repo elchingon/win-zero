@@ -131,7 +131,7 @@ export function Hud(props: {
               p.onSwitchWeapon();
             }}
             label={`Weapon: ${p.weaponName}`}
-            hint={p.canSwitch ? 'Switches to your next unlocked weapon' : undefined}
+            hint={p.canSwitch ? 'Switches to your next weapon' : undefined}
             disabled={!p.canSwitch}
             style={styles.weapon}
           >

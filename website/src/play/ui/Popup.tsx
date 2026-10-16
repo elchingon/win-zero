@@ -1,6 +1,6 @@
 // A card that pops up over the round and dims what's behind it: the encouragement after a round,
 // and the question before one. Escape or a click outside the card dismisses it, and keyboard and
-// screen reader users land on its first button.
+// screen reader users land on its first button, or on the one marked data-autofocus.
 import { useEffect, useRef, type ReactNode } from 'react';
 
 export function Popup(props: { onDismiss: () => void; labelledBy: string; children: ReactNode }) {
@@ -8,7 +8,8 @@ export function Popup(props: { onDismiss: () => void; labelledBy: string; childr
   const card = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    card.current?.querySelector('button')?.focus();
+    const target = card.current?.querySelector<HTMLElement>('[data-autofocus]') ?? card.current?.querySelector('button');
+    target?.focus();
   }, []);
 
   useEffect(() => {

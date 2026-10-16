@@ -3,7 +3,7 @@ import { describe, expect, it } from '@jest/globals';
 import { BONUS_MAX_N, CREDIT_REWARDS } from '@/engine';
 import { formatCount } from '@/lib/format';
 
-import { BONUS_SHEET, CREDIT_USES, creditCount, creditEarned, creditsEarnedBy, CREDITS_HOME } from '../credits';
+import { BONUS_SHEET, CREDIT_USES, creditCount, creditEarned, creditNotes, creditsEarnedBy, CREDITS_HOME } from '../credits';
 
 describe('credit copy', () => {
   it('counts credits', () => {
@@ -29,6 +29,16 @@ describe('credit copy', () => {
     expect(creditsEarnedBy('game', ['goal-set'])).toBe('You earn a Game credit for reaching 2 zeros.');
     expect(creditsEarnedBy('game', ['goal-set', 'zeros-2'])).toBeNull();
     expect(creditsEarnedBy('weapon', ['comeback', 'yes-run-3', 'yes-run-14'])).toBe('You earn a Weapon credit for 30 Yeses in a row.');
+  });
+
+  it("notes what's next for each kind of credit on Home", () => {
+    const wallet = (game: number, weapon: number, claimed: string[] = []) => ({ balance: { game, weapon }, claimed });
+    expect(creditNotes(wallet(0, 0, ['goal-set', 'zeros-2', 'comeback', 'yes-run-3', 'yes-run-14']), 3, false)).toEqual([
+      'You earn a Weapon credit for 30 Yeses in a row.',
+    ]);
+    expect(creditNotes(wallet(1, 1), 3, false)).toEqual([CREDITS_HOME.bonusAbout, CREDITS_HOME.weaponWaiting]);
+    // With a bonus round waiting, its card says enough.
+    expect(creditNotes(wallet(1, 1), 100, true)).toEqual([CREDITS_HOME.weaponAllUnlocked]);
   });
 
   it('takes the bonus round ceiling from the engine', () => {

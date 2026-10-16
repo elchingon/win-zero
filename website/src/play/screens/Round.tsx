@@ -1,22 +1,25 @@
 // The shooting round: the canvas filling the screen, the HUD over it, and once the round is won,
 // a line of encouragement and then the result sheet over the fill. A real round is the one the
 // latest Yes earned (its rewards are already banked); Replay plays it again in place, with no
-// effect on the streak. ?practice=N plays any N with every weapon and a frame meter (the demo
-// controls offer it), changing nothing.
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+// effect on the streak. ?round=bonus plays the bonus round a Game credit paid for, which changes
+// nothing either. Before a round not yet played, a player holding a Weapon credit is asked
+// whether to borrow a weapon they haven't unlocked for it. ?practice=N plays any N with every
+// weapon and a frame meter (the demo controls offer it), changing nothing.
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Navigate, useSearchParams } from 'react-router';
 
 import { parseCount, PRACTICE_BEST, PRACTICE_BOMBS, PRACTICE_MAX_N } from '@/dev/demo';
-import { composeRound, equippedWeapon, fillPlan, unlockedWeapons, type WeaponId } from '@/engine';
+import { composeRound, equippedWeapon, fillPlan, roundWeapons, weaponCreditOffer, type WeaponId } from '@/engine';
 import { makeCues } from '@/game/cues';
 import { hudLabel, replayMode, roundOverlay, type ResultMode } from '@/game/result';
 import type { Report } from '@/game/sim/types';
-import type { RoundRecord } from '@/store/types';
+import type { CreditRound, RoundRecord } from '@/store/types';
 
 import { CheerPopup } from '../game/CheerPopup';
 import { GameCanvas, type FrameStats, type GameHandle, type RoundSetup } from '../game/GameCanvas';
 import { Hud } from '../game/Hud';
 import { ResultSheet } from '../game/ResultSheet';
+import { WeaponCreditPrompt } from '../game/WeaponCreditPrompt';
 import { ROUTES, useGoHome } from '../nav';
 import { announce } from '../platform/announce';
 import { loadSounds, playSound, resumeAudio, type Sound } from '../platform/audio';
@@ -25,10 +28,13 @@ import { appStore, useApp } from '../store';
 
 const newSeed = () => Math.floor(Math.random() * 2 ** 31);
 
+const NONE_BORROWED: WeaponId[] = [];
+
 export function Round() {
   const [params] = useSearchParams();
   const practice = parseCount(params.get('practice') ?? '', PRACTICE_MAX_N);
-  return practice ? <Play initialMode="practice" n={practice} best={PRACTICE_BEST} record={null} /> : <StoreRound />;
+  if (practice) return <Play initialMode="practice" n={practice} best={PRACTICE_BEST} record={null} borrowed={NONE_BORROWED} />;
+  return params.get('round') === 'bonus' ? <BonusStoreRound /> : <StoreRound />;
 }
 
 function StoreRound() {
@@ -37,21 +43,80 @@ function StoreRound() {
   const best = useApp((s) => s.goal?.bestStreak);
   if (!record || best === undefined) return <Navigate to={ROUTES.home} replace />;
   // Home only offers rounds not yet played; one that was is a replay.
-  return <Play initialMode={record.played ? 'replay' : 'real'} n={record.n} best={best} record={record} />;
+  return (
+    <WeaponCreditGate target="daily" fresh={!record.played} best={best} borrowed={record.borrowed}>
+      {(borrowed) => (
+        <Play initialMode={record.played ? 'replay' : 'real'} n={record.n} best={best} record={record} borrowed={borrowed} />
+      )}
+    </WeaponCreditGate>
+  );
 }
 
-function Play(props: { initialMode: ResultMode; n: number; best: number; record: RoundRecord | null }) {
-  const { initialMode, n, best, record } = props;
+function BonusStoreRound() {
+  const [bonus] = useState(() => appStore.getState().bonus);
+  const best = useApp((s) => s.goal?.bestStreak);
+  if (!bonus || best === undefined) return <Navigate to={ROUTES.home} replace />;
+  return (
+    <WeaponCreditGate target="bonus" fresh={!bonus.played} best={best} borrowed={bonus.borrowed}>
+      {(borrowed) => <Play initialMode="bonus" n={bonus.n} best={best} record={null} borrowed={borrowed} />}
+    </WeaponCreditGate>
+  );
+}
+
+/**
+ * Before a round not yet played: while a Weapon credit could lend it a weapon, ask, then start the
+ * round with what it borrowed. A borrow is saved on the round, so coming back to it doesn't ask
+ * again; Not this time holds until the player leaves.
+ */
+function WeaponCreditGate(props: {
+  target: CreditRound;
+  /** The round hasn't been played yet. */
+  fresh: boolean;
+  best: number;
+  borrowed: WeaponId[];
+  children: (borrowed: WeaponId[]) => ReactNode;
+}) {
+  const { target, fresh, best, children } = props;
+  const credits = useApp((s) => s.credits);
+  const [borrowed, setBorrowed] = useState(props.borrowed);
+  const [asked, setAsked] = useState(!fresh);
+  const offer = asked ? [] : weaponCreditOffer(credits, best, borrowed);
+  if (offer.length === 0) return children(borrowed);
+
+  const pick = (id: WeaponId) => {
+    if (appStore.getState().borrowWeapon(target, id)) setBorrowed([...borrowed, id]);
+    setAsked(true);
+  };
+  return (
+    <main className="round" aria-label={target === 'bonus' ? 'Bonus round' : 'Your round'}>
+      <WeaponCreditPrompt offer={offer} credits={credits.balance.weapon} onPick={pick} onSkip={() => setAsked(true)} />
+    </main>
+  );
+}
+
+function Play(props: {
+  initialMode: ResultMode;
+  n: number;
+  best: number;
+  /** The day's round; null for bonus and practice rounds. */
+  record: RoundRecord | null;
+  /** Weapons not yet unlocked that a Weapon credit lent this round. */
+  borrowed: WeaponId[];
+}) {
+  const { initialMode, n, best, record, borrowed } = props;
   const goHome = useGoHome();
   const [mode, setMode] = useState(initialMode);
   const reduceMotion = useReduceMotion();
   const sound = useApp((s) => s.prefs.sound);
   const bankedBombs = useApp((s) => s.goal?.bombs ?? 0);
   const storePick = useApp((s) => s.weapon);
-  const [practicePick, setPracticePick] = useState<WeaponId | null>(storePick);
-  const pick = mode === 'practice' ? practicePick : storePick;
-  const weapon = useMemo(() => equippedWeapon(pick, best), [pick, best]);
-  const unlocked = useMemo(() => unlockedWeapons(best), [best]);
+  // Practice, and a round with a borrowed weapon, keep their pick to themselves: the saved pick is
+  // always a weapon the player has unlocked. A borrowed weapon starts equipped.
+  const localPick = initialMode === 'practice' || borrowed.length > 0;
+  const [roundPick, setRoundPick] = useState<WeaponId | null>(() => borrowed.at(-1) ?? storePick);
+  const pick = localPick ? roundPick : storePick;
+  const weapon = useMemo(() => equippedWeapon(pick, best, borrowed), [pick, best, borrowed]);
+  const weapons = useMemo(() => roundWeapons(best, borrowed), [best, borrowed]);
 
   const groups = useMemo(() => composeRound(n).groups, [n]);
   const fill = useMemo(() => fillPlan(n), [n]);
@@ -64,8 +129,8 @@ function Play(props: { initialMode: ResultMode; n: number; best: number; record:
   const [landed, setLanded] = useState(false);
   const [cheered, setCheered] = useState(false);
   const overlay = roundOverlay(landed, mode, cheered);
-  // A real round spends banked bombs. Replays and practice get free ones: a replay as many as
-  // are banked, which it never touches.
+  // A real round spends banked bombs. Replays, bonus rounds and practice get free ones: a replay or
+  // a bonus round as many as are banked, which it never touches.
   const [freeBombs, setFreeBombs] = useState(() => (mode === 'practice' ? PRACTICE_BOMBS : bankedBombs));
   const bombs = mode === 'real' ? bankedBombs : freeBombs;
   const [stats, setStats] = useState<FrameStats | null>(null);
@@ -102,9 +167,11 @@ function Play(props: { initialMode: ResultMode; n: number; best: number; record:
     [cues, play],
   );
 
-  // The last zero went: a real round counts as played.
+  // The last zero went: a real round or a bonus round counts as played.
   useEffect(() => {
-    if (over && mode === 'real') appStore.getState().finishRound();
+    if (!over) return;
+    if (mode === 'real') appStore.getState().finishRound();
+    if (mode === 'bonus') appStore.getState().finishBonusRound();
   }, [over, mode]);
 
   // The encouragement arrives with a fanfare.
@@ -148,15 +215,17 @@ function Play(props: { initialMode: ResultMode; n: number; best: number; record:
   };
 
   const switchWeapon = () => {
-    const i = unlocked.findIndex((w) => w.id === weapon.id);
-    const next = unlocked[(i + 1) % unlocked.length];
+    const i = weapons.findIndex((w) => w.id === weapon.id);
+    const next = weapons[(i + 1) % weapons.length];
     if (!next || next.id === weapon.id) return;
-    if (mode === 'practice') setPracticePick(next.id);
+    if (localPick) setRoundPick(next.id);
     else appStore.getState().selectWeapon(next.id);
   };
 
+  const name = mode === 'practice' ? 'Practice round' : mode === 'bonus' ? 'Bonus round' : `Day ${n} round`;
+
   return (
-    <main className="round" aria-label={mode === 'practice' ? 'Practice round' : `Day ${n} round`}>
+    <main className="round" aria-label={name}>
       <GameCanvas
         ref={game}
         round={round}
@@ -175,7 +244,7 @@ function Play(props: { initialMode: ResultMode; n: number; best: number; record:
           total={n}
           label={hudLabel(mode, n)}
           weaponName={weapon.name}
-          canSwitch={unlocked.length > 1}
+          canSwitch={weapons.length > 1}
           onSwitchWeapon={switchWeapon}
           bombs={bombs}
           bombEnabled={!over && bombs > 0}

@@ -1,5 +1,5 @@
-// Home: the goal, the numbers, today's check-in (or when the next one comes), the arsenal, the
-// history calendar, and the demo controls, folded away.
+// Home: the goal, the numbers, today's check-in (or when the next one comes), credits and the
+// bonus round, the arsenal, the history calendar, and the demo controls, folded away.
 import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router';
 
@@ -11,9 +11,10 @@ import { startHomeRouting } from '@/ui/home/routing';
 import { DemoControls } from '../demo/DemoControls';
 import { Arsenal } from '../home/Arsenal';
 import { CheckInCard } from '../home/CheckInCard';
+import { CreditsCard } from '../home/CreditsCard';
 import { HistoryCalendar } from '../home/HistoryCalendar';
 import { Stats } from '../home/Stats';
-import { pathForAnswer, ROUTES } from '../nav';
+import { BONUS_ROUND, pathForAnswer, ROUTES } from '../nav';
 import { announce } from '../platform/announce';
 import { deviceCalendar } from '../platform/calendar';
 import { appStore, useApp } from '../store';
@@ -38,6 +39,8 @@ function HomeScreen({ goal }: { goal: GoalState }) {
   const round = useApp((s) => s.round);
   const pick = useApp((s) => s.weapon);
   const selectWeapon = useApp((s) => s.selectWeapon);
+  const credits = useApp((s) => s.credits);
+  const bonus = useApp((s) => s.bonus);
   const rejection = useApp((s) => s.rejection);
   const clockOffset = useApp((s) => s.devClockOffsetMs); // re-render when the debug clock moves
   const { h24, firstWeekday } = deviceCalendar();
@@ -69,6 +72,10 @@ function HomeScreen({ goal }: { goal: GoalState }) {
   useEffect(() => {
     if (banner) announce(banner);
   }, [banner]);
+
+  const startBonus = (n: number) => {
+    if (appStore.getState().startBonusRound(n)) navigate(BONUS_ROUND);
+  };
 
   const unplayed = round && !round.played ? round : null;
   // Set up after check-in time: until the first answer, say plainly that this question is about today.
@@ -129,6 +136,14 @@ function HomeScreen({ goal }: { goal: GoalState }) {
       )}
 
       {goal.paused ? <Fine>It&apos;s been a while. Check in whenever you&apos;re ready.</Fine> : null}
+
+      <CreditsCard
+        goal={goal}
+        credits={credits}
+        bonus={bonus}
+        onStartBonus={startBonus}
+        onPlayBonus={() => navigate(BONUS_ROUND)}
+      />
 
       <Arsenal goal={goal} pick={pick} onEquip={selectWeapon} />
 

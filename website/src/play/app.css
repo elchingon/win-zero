@@ -1376,6 +1376,35 @@ a {
   text-align: center;
 }
 
+/* The Weapon credit question before a round: the weapons on offer scroll, the buttons stay put. */
+.popup-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 22px;
+  line-height: 26px;
+  color: var(--fg);
+  text-align: center;
+}
+
+.popup-body {
+  margin: 0;
+  font-size: 15px;
+  line-height: 21px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.popup-list {
+  max-height: 45vh;
+  overflow-y: auto;
+  touch-action: pan-y;
+}
+
+.weapon-day.lend {
+  color: var(--teal);
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .popup-backdrop {
     animation: fade-in 320ms ease-out both;
