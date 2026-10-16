@@ -47,6 +47,8 @@ export const router = createBrowserRouter(
       path: ROUTES.home,
       element: <Layout />,
       errorElement: <ScreenError />,
+      // Opening /play/round directly waits for the round's code; the backdrop shows meanwhile.
+      hydrateFallbackElement: <div className="loading" aria-busy="true" />,
       children: [
         { index: true, element: <Home /> },
         { path: ROUTES.setup.slice(1), element: <Setup /> },

@@ -1124,3 +1124,288 @@ a {
     opacity: 1;
   }
 }
+
+/* The round: the canvas full screen, the HUD and the result sheet over it. */
+.round {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  background: var(--ink);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.game {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.game-canvas {
+  display: block;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.safe-area-probe {
+  position: fixed;
+  visibility: hidden;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.hud button {
+  pointer-events: auto;
+}
+
+.hud-top,
+.hud-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 16px;
+}
+
+.hud-top {
+  top: 0;
+  align-items: flex-start;
+  padding-top: calc(env(safe-area-inset-top) + 14px);
+}
+
+.hud-bottom {
+  bottom: calc(env(safe-area-inset-bottom) + 14px);
+  align-items: flex-end;
+}
+
+.hud-numbers {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+}
+
+.hud-left {
+  font-family: var(--font-display);
+  font-size: 34px;
+  line-height: 38px;
+  color: var(--amber);
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-total {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.hud-day {
+  margin-top: 4px;
+}
+
+.meter {
+  margin: 4px 0 0;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.09em;
+  color: var(--teal);
+}
+
+.hud-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.hud-btn {
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: rgb(27 33 80 / 0.85);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.hud-btn:active:not(:disabled) {
+  transform: translateY(1px);
+  opacity: 0.85;
+}
+
+.hud-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.hud-btn.quit {
+  padding: 9px 11px;
+  color: var(--muted);
+}
+
+.hud-btn.weapon {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  max-width: 38%;
+}
+
+.weapon-small {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.weapon-current {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  color: var(--teal);
+}
+
+/* Finish round: for keyboards and screen readers, shown when it has focus. */
+.hud-btn.finish:not(:focus-visible) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  border: 0;
+}
+
+.hud-btn.finish:focus-visible {
+  align-self: center;
+}
+
+.hud-btn.bomb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-color: var(--flare);
+}
+
+.bomb-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--flare);
+  box-shadow: 0 0 10px var(--flare);
+}
+
+.bomb-count {
+  font-family: var(--font-display);
+  font-size: 14px;
+  color: var(--flare);
+}
+
+.hud-hint {
+  position: absolute;
+  top: 44%;
+  left: 50%;
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgb(13 17 48 / 0.75);
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  color: var(--fg);
+  animation: hint-out 600ms ease-in 2600ms forwards;
+}
+
+@keyframes hint-out {
+  to {
+    opacity: 0;
+  }
+}
+
+.result {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 80px max(var(--gutter), calc((100% - 480px) / 2)) calc(env(safe-area-inset-bottom) + 28px);
+  background: linear-gradient(to bottom, rgb(13 17 48 / 0) 0, rgb(13 17 48 / 0.92) 38%);
+  touch-action: auto;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .result {
+    animation: rise 500ms ease-out both;
+  }
+}
+
+.result h2:focus {
+  outline: none;
+}
+
+.result-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.result-lines p {
+  margin: 0;
+  font-size: 16px;
+  line-height: 23px;
+  color: var(--muted);
+}
+
+.result-lines p.news {
+  font-weight: 700;
+  color: var(--teal);
+}
+
+.result-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.result-actions .primary {
+  flex: 1.4;
+}
+
+.result-actions > :not(.primary) {
+  flex: 1;
+}
+
+.share {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
