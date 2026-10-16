@@ -152,6 +152,8 @@ function persisted(s: AppState): PersistedState {
     prefs: s.prefs,
     seenThrough: s.seenThrough,
     round: s.round,
+    credits: s.credits,
+    bonus: s.bonus,
     reminderCardHiddenUntil: s.reminderCardHiddenUntil,
     devClockOffsetMs: s.devClockOffsetMs,
   };
@@ -253,7 +255,9 @@ export function createAppStore(deps: StoreDeps) {
                     shield: rewards.shield,
                     shieldCapped: rewards.shieldCapped,
                     weapons: rewards.weapons.map((w) => w.id),
+                    credits: [],
                   },
+                  borrowed: [],
                   played: false,
                 },
                 notice: null,

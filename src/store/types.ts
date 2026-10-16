@@ -1,7 +1,7 @@
-import type { DayKey, GoalState, HistoryEntry, IsoInstant, WeaponId } from '@/engine';
+import type { CreditGrant, CreditWallet, DayKey, GoalState, HistoryEntry, IsoInstant, WeaponId } from '@/engine';
 
 /** Bump when PersistedState changes shape, and teach migratePersisted the old one. */
-export const STORE_VERSION = 1;
+export const STORE_VERSION = 2;
 export const STORE_KEY = 'winzero';
 /** Where stored data goes when its goal can't be read, so a later fix can bring it back. */
 export const STORE_BACKUP_KEY = `${STORE_KEY}:unreadable`;
@@ -21,6 +21,8 @@ export interface RoundRewards {
   shield: boolean;
   shieldCapped: boolean;
   weapons: WeaponId[];
+  /** Credits the Yes earned, already in the wallet. */
+  credits: CreditGrant[];
 }
 
 /**
@@ -32,6 +34,19 @@ export interface RoundRecord {
   /** Zeros in the round: the streak after that Yes. */
   n: number;
   rewards: RoundRewards;
+  /** Weapons not yet unlocked that a Weapon credit lent this round. */
+  borrowed: WeaponId[];
+  played: boolean;
+}
+
+/**
+ * A bonus round, paid for with a Game credit: any number of zeros, and nothing about the streak
+ * or rewards changes. Kept until played, so a credit spent is never lost to a closed app.
+ */
+export interface BonusRound {
+  n: number;
+  /** Weapons not yet unlocked that a Weapon credit lent this round. */
+  borrowed: WeaponId[];
   played: boolean;
 }
 
@@ -43,6 +58,9 @@ export interface PersistedState {
   /** Missed days through this one have been shown (Slipping / Reset / Shielded on opening). */
   seenThrough: DayKey | null;
   round: RoundRecord | null;
+  /** Game and Weapon credits. They outlive a goal; Erase all data clears them with everything else. */
+  credits: CreditWallet;
+  bonus: BonusRound | null;
   /** "Not now" on Home's reminders-off card hides it until then. */
   reminderCardHiddenUntil: IsoInstant | null;
   /** Development builds only: simulated time travel. Production builds ignore it. */

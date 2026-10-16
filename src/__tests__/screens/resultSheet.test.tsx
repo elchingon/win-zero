@@ -21,7 +21,8 @@ jest.mock('@shopify/react-native-skia', () => ({
 const round = (n: number, rewards: Partial<RoundRecord['rewards']>, played = false): RoundRecord => ({
   day: '2026-10-17',
   n,
-  rewards: { bomb: false, shield: false, shieldCapped: false, weapons: [], ...rewards },
+  rewards: { bomb: false, shield: false, shieldCapped: false, weapons: [], credits: [], ...rewards },
+  borrowed: [],
   played,
 });
 

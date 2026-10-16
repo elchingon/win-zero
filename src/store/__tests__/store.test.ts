@@ -2,7 +2,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { beforeEach, describe, expect, it } from '@jest/globals';
 
-import { addDays, currentCheckInTime, latestScheduleEntry, MS_PER_DAY, pendingWindow } from '@/engine';
+import { addDays, currentCheckInTime, EMPTY_WALLET, latestScheduleEntry, MS_PER_DAY, pendingWindow } from '@/engine';
 import { answerDay, at, DAY0, DENVER, newGoal, TOKYO, yesDays } from '@/engine/__tests__/fixtures';
 
 import { createAppStore, REMINDER_CARD_HIDE_MS, UNDO_MS, UNDO_MS_SCREEN_READER, type AppStore } from '../createAppStore';
@@ -489,7 +489,8 @@ describe('weapons and rounds', () => {
     expect(h.store.getState().round).toEqual({
       day: '2026-10-17',
       n: 5,
-      rewards: { bomb: true, shield: false, shieldCapped: false, weapons: [] },
+      rewards: { bomb: true, shield: false, shieldCapped: false, weapons: [], credits: [] },
+      borrowed: [],
       played: false,
     });
     expect(h.store.getState().goal?.bombs).toBe(1);
@@ -535,6 +536,8 @@ describe('persistence', () => {
       prefs: s.prefs,
       seenThrough: s.seenThrough,
       round: s.round,
+      credits: s.credits,
+      bonus: s.bonus,
       reminderCardHiddenUntil: s.reminderCardHiddenUntil,
       devClockOffsetMs: s.devClockOffsetMs,
     });
@@ -547,7 +550,7 @@ describe('persistence', () => {
     const raw = JSON.parse((await AsyncStorage.getItem(STORE_KEY)) ?? '{}');
     expect(raw.version).toBe(STORE_VERSION);
     expect(Object.keys(raw.state).sort()).toEqual(
-      ['devClockOffsetMs', 'goal', 'prefs', 'reminderCardHiddenUntil', 'round', 'seenThrough', 'weapon'].sort(),
+      ['bonus', 'credits', 'devClockOffsetMs', 'goal', 'prefs', 'reminderCardHiddenUntil', 'round', 'seenThrough', 'weapon'].sort(),
     );
     expect(await AsyncStorage.getItem(STORE_BACKUP_KEY)).toBeNull(); // nothing unreadable
   });
@@ -598,11 +601,29 @@ describe('persistence', () => {
     expect(store.getState().prefs).toEqual({ sound: false, haptics: true, reengage: true, goalInReminders: false });
     expect(store.getState().weapon).toBeNull();
     expect(store.getState().round).toBeNull();
+    expect(store.getState().credits).toEqual({ balance: { game: 1, weapon: 0 }, claimed: ['goal-set'] });
 
     await flush();
     const raw = JSON.parse((await AsyncStorage.getItem(STORE_KEY)) ?? '{}');
     expect(raw.version).toBe(STORE_VERSION); // written back in the current shape
     expect(raw.state.goal.slide).toBe(0);
+  });
+
+  it('upgrades a save from before credits: the goal earns its Game credit, and the round reads as before', async () => {
+    const goal = yesDays(newGoal(), DAY0, 5); // through 10-17
+    const round = { day: '2026-10-17', n: 5, rewards: { bomb: true, shield: false, shieldCapped: false, weapons: [] }, played: false };
+    await AsyncStorage.setItem(STORE_KEY, JSON.stringify({ version: 1, state: { goal, round, weapon: 'twin' } }));
+    const { store } = harness();
+    await ready(store);
+    expect(store.getState().credits).toEqual({ balance: { game: 1, weapon: 0 }, claimed: ['goal-set'] });
+    expect(store.getState().bonus).toBeNull();
+    expect(store.getState().round).toEqual({ ...round, rewards: { ...round.rewards, credits: [] }, borrowed: [] });
+    expect(store.getState().weapon).toBe('twin');
+
+    await flush();
+    const raw = JSON.parse((await AsyncStorage.getItem(STORE_KEY)) ?? '{}');
+    expect(raw.version).toBe(2);
+    expect(raw.state.credits.claimed).toEqual(['goal-set']);
   });
 
   it('starts fresh from a corrupt blob instead of hanging', async () => {
@@ -616,9 +637,16 @@ describe('persistence', () => {
     const h = await withGoal(yesDays(newGoal(), DAY0, 3));
     await AsyncStorage.setItem(STORE_BACKUP_KEY, '{"state":{}}');
     h.store.getState().setPref('haptics', false);
+    h.store.setState({
+      credits: { balance: { game: 2, weapon: 1 }, claimed: ['goal-set', 'zeros-2'] },
+      bonus: { n: 250, borrowed: [], played: false },
+    });
     h.store.getState().erase();
     expect(h.store.getState().goal).toBeNull();
     expect(h.store.getState().prefs.haptics).toBe(true);
+    // Credits go with everything else, as an uninstall would take them.
+    expect(h.store.getState().credits).toEqual(EMPTY_WALLET);
+    expect(h.store.getState().bonus).toBeNull();
     await flush();
     expect(await AsyncStorage.getItem(STORE_KEY)).toBeNull();
     expect(await AsyncStorage.getItem(STORE_BACKUP_KEY)).toBeNull();

@@ -1,5 +1,5 @@
 // The words for sharing a milestone round. A milestone is a Yes that earned something: a new
-// weapon, a bomb or a shield. The goal's wording is never in the text: it may be private
+// weapon, a bomb or a shield (credits aren't shared). The goal's wording is never in the text: it may be private
 // (someone working on sobriety shares a streak, not a reason). Shared by the app and the website.
 import { weaponById } from '@/engine';
 import { formatCount } from '@/lib/format';
