@@ -16,6 +16,7 @@
     "lint": "expo lint .",
     "gen:sfx": "node scripts/gen-sfx.mjs",
     "gen:brand": "node scripts/gen-brand.mjs",
+    "gen:brand:plus": "node scripts/gen-brand.mjs --variant plus",
     "eas-build-pre-install": "node scripts/check-release.mjs"
   },
   "dependencies": {
