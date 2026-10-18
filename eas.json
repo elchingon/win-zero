@@ -30,7 +30,9 @@
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_PRIVACY_URL": "https://winzero.app/privacy",
-        "EXPO_PUBLIC_SUPPORT_URL": "https://winzero.app/support"
+        "EXPO_PUBLIC_SUPPORT_URL": "https://winzero.app/support",
+        "EXPO_PUBLIC_PLUS_STORE_URL_ANDROID": "https://play.google.com/store/apps/details?id=com.e7systems.winzeroplus",
+        "EXPO_PUBLIC_PLUS_STORE_URL_IOS": "https://winzero.app/"
       }
     },
     "preview-plus": {

@@ -16,6 +16,11 @@
       },
       "supportsTablet": false,
       "bundleIdentifier": "com.e7systems.winzero",
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.com.e7systems.winzero"
+        ]
+      },
       "config": {
         "usesNonExemptEncryption": false
       },

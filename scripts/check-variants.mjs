@@ -1,12 +1,14 @@
 // Ask the Expo CLI for both apps' configs, as EAS will see them (app.config.ts over app.json), and
 // check each one's identity and art: Win Zero and Win Zero Plus must never share a bundle id or a
-// URL scheme, and every icon and splash file either names must exist. Run: npm run check:variants
+// URL scheme, and every icon and splash file either names must exist. Both must be in the App
+// Group a move between them goes through on iPhone (SPEC 9). Run: npm run check:variants
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const APP_GROUP = 'group.com.e7systems.winzero';
 
 const EXPECTED = {
   free: { name: 'Win Zero', id: 'com.e7systems.winzero', scheme: 'winzero', brand: './assets/brand/' },
@@ -40,6 +42,8 @@ for (const [variant, want] of Object.entries(EXPECTED)) {
   check('scheme', c.scheme, want.scheme);
   check('ios.bundleIdentifier', c.ios?.bundleIdentifier, want.id);
   check('android.package', c.android?.package, want.id);
+  const groups = c.ios?.entitlements?.['com.apple.security.application-groups'] ?? [];
+  if (!groups.includes(APP_GROUP)) problems.push(`${variant}: ios.entitlements has no App Group ${APP_GROUP}`);
   const assets = assetPaths(c);
   if (assets.length === 0) problems.push(`${variant}: no art found in the config`);
   for (const p of assets) {

@@ -71,8 +71,11 @@ describe('Win Zero Plus', () => {
     expect(plus.plugins).toContainEqual(['expo-dev-client', { addGeneratedScheme: false }]);
   });
 
-  it('keeps the rest: the same EAS project, plugins and privacy answers', () => {
+  it('keeps the rest: the same EAS project, App Group, plugins and privacy answers', () => {
     expect(plus.slug).toBe(base.slug);
+    // The folder a move from Win Zero waits in (SPEC 9): both apps must be in the group.
+    expect(plus.ios?.entitlements).toEqual(base.ios?.entitlements);
+    expect(plus.ios?.entitlements?.['com.apple.security.application-groups']).toEqual(['group.com.e7systems.winzero']);
     expect(plus.extra).toEqual(base.extra);
     expect(plus.ios?.privacyManifests).toEqual(base.ios?.privacyManifests);
     expect(plus.android?.permissions).toEqual(base.android?.permissions);
