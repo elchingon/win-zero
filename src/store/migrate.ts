@@ -119,7 +119,10 @@ function normalizeGoal(raw: unknown): GoalState | null {
   if (typeof v.goalId !== 'string' || typeof v.goal !== 'string' || typeof v.firstDay !== 'string') return null;
   if (!Array.isArray(v.checkInSchedule) || v.checkInSchedule.length === 0 || !Array.isArray(v.history)) return null;
   // Added with the slide rule (SPEC v0.3).
-  return { ...(v as unknown as GoalState), slide: count(v.slide, 0), paused: bool(v.paused, false) };
+  const goal = { ...(v as unknown as GoalState), slide: count(v.slide, 0), paused: bool(v.paused, false) };
+  // A lock-screen name (SPEC 9) that isn't a name is dropped.
+  if (goal.alias !== undefined && (typeof goal.alias !== 'string' || !goal.alias.trim())) delete goal.alias;
+  return goal;
 }
 
 /** The goals stored data holds, active and archived, as saved: before version 3, the one goal. */

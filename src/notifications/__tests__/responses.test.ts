@@ -31,20 +31,32 @@ async function running(goal: GoalState, day: string, time: `${number}:${number}`
 describe('decideResponse', () => {
   it('answers only from the buttons on a check-in or morning reminder for this goal', () => {
     const day = '2026-10-15';
-    expect(decideResponse(response(ACTION_YES, { day }), 'g1')).toEqual({ kind: 'answer', answer: 'yes', day });
-    expect(decideResponse(response(ACTION_NOT_TODAY, { day, kind: 'morning' }), 'g1')).toEqual({
+    expect(decideResponse(response(ACTION_YES, { day }), ['g1'])).toEqual({ kind: 'answer', goalId: 'g1', answer: 'yes', day });
+    expect(decideResponse(response(ACTION_NOT_TODAY, { day, kind: 'morning' }), ['g1'])).toEqual({
       kind: 'answer',
+      goalId: 'g1',
       answer: 'not-today',
       day,
     });
-    expect(decideResponse(response(ACTION_YES, { day, test: true }), 'g1')).toMatchObject({ kind: 'answer' });
+    expect(decideResponse(response(ACTION_YES, { day, test: true }), ['g1'])).toMatchObject({ kind: 'answer' });
 
-    expect(decideResponse(response(DEFAULT_ACTION_IDENTIFIER, { day }), 'g1')).toEqual({ kind: 'open' });
-    expect(decideResponse(response(ACTION_YES, { day, kind: 'reengage' }), 'g1')).toEqual({ kind: 'open' });
-    expect(decideResponse(response(ACTION_YES, { day, goalId: 'g0' }), 'g1')).toEqual({ kind: 'open' });
-    expect(decideResponse(response('snooze', { day }), 'g1')).toEqual({ kind: 'open' });
+    expect(decideResponse(response(DEFAULT_ACTION_IDENTIFIER, { day }), ['g1'])).toEqual({ kind: 'open' });
+    expect(decideResponse(response(ACTION_YES, { day, kind: 'reengage' }), ['g1'])).toEqual({ kind: 'open' });
+    expect(decideResponse(response(ACTION_YES, { day, goalId: 'g0' }), ['g1'])).toEqual({ kind: 'open' });
+    expect(decideResponse(response('snooze', { day }), ['g1'])).toEqual({ kind: 'open' });
     const junk: ResponseLike = { actionIdentifier: ACTION_YES, notification: { date: 1, request: { identifier: 'x', content: {} } } };
-    expect(decideResponse(junk, 'g1')).toEqual({ kind: 'open' });
+    expect(decideResponse(junk, ['g1'])).toEqual({ kind: 'open' });
+  });
+
+  it('answers for whichever of the goals the notification is about (SPEC 9)', () => {
+    const day = '2026-10-15';
+    expect(decideResponse(response(ACTION_YES, { day, goalId: 'b' }), ['a', 'b'])).toEqual({
+      kind: 'answer',
+      goalId: 'b',
+      answer: 'yes',
+      day,
+    });
+    expect(decideResponse(response(ACTION_YES, { day, goalId: 'c' }), ['a', 'b'])).toEqual({ kind: 'open' }); // archived
   });
 });
 

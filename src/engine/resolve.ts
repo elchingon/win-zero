@@ -344,6 +344,17 @@ export function setGoalText(state: GoalState, goal: string): GoalState {
   return { ...state, goal: cleanGoal(goal) };
 }
 
+/** The longest lock-screen name a goal can have (SPEC 9). */
+export const GOAL_ALIAS_MAX_LENGTH = 20;
+
+/** Name the goal for the lock screen, or clear the name with an empty one. */
+export function setGoalAlias(state: GoalState, alias: string): GoalState {
+  const trimmed = alias.trim().slice(0, GOAL_ALIAS_MAX_LENGTH).trim();
+  if (trimmed) return { ...state, alias: trimmed };
+  const { alias: _gone, ...rest } = state;
+  return rest;
+}
+
 /** The check-in time that applies to upcoming days. */
 export function currentCheckInTime(state: GoalState): ClockTime {
   return latestScheduleEntry(state).time;

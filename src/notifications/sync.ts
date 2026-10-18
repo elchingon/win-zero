@@ -1,13 +1,12 @@
-// Keeping the phone's scheduled notifications in step with the goal (SPEC 2: "on every check-in
+// Keeping the phone's scheduled notifications in step with the goals (SPEC 2: "on every check-in
 // or app open, cancel and reschedule"). A sync cancels what's scheduled and schedules the
 // engine's plan again. Syncs run one at a time; requests made during one fold into one more.
 import type { NotificationRequestInput } from 'expo-notifications';
 import { AppState } from 'react-native';
 
-import { firstUnsettledDay, resolve, type GoalState } from '@/engine';
+import { firstUnsettledDay, resolve } from '@/engine';
 import type { AppStore, AppState as StoreState } from '@/store/createAppStore';
 import { whenHydrated, type AppStateLike } from '@/store/lifecycle';
-import { primaryGoal } from '@/store/select';
 
 import { reminderRequests, type ReminderInput } from './schedule';
 import { readReminderData } from './shared';
@@ -21,12 +20,12 @@ export interface ReminderApi {
   dismissNotificationAsync(identifier: string): Promise<void>;
 }
 
-/** What a sync plans from: the goal (none after erase) and the settings that shape reminders. */
-export type SyncInput = Omit<ReminderInput, 'goal'> & { goal: GoalState | null };
+/** What a sync plans from: the goals (none after erase) and the settings that shape reminders. */
+export type SyncInput = ReminderInput;
 
 export function syncInputFrom(s: StoreState): SyncInput {
   return {
-    goal: primaryGoal(s),
+    goals: s.goals.map((slot) => slot.goal),
     now: s.now(),
     tz: s.timeZone(),
     offsetMs: s.clockOffsetMs(),
@@ -61,19 +60,22 @@ export interface ReminderSync {
 }
 
 /**
- * Delivered notifications to clear: check-ins and morning reminders for days that have settled
- * (answered or closed), nudges once the app is open, and anything from an erased goal. Today's
- * check-in stays while yesterday is still open: both days are still to answer.
+ * Delivered notifications to clear: check-ins and morning reminders for days their goal has
+ * settled (answered or closed), nudges once the app is open, and anything from a goal that's gone
+ * (archived or erased). Today's check-in stays while yesterday is still open: both days are still
+ * to answer.
  */
 export function staleDelivered(presented: { identifier: string; data: unknown }[], input: SyncInput): string[] {
-  const goal = input.goal ? resolve(input.goal, input.now, input.tz).state : null;
-  const firstOpen = goal ? firstUnsettledDay(goal) : null;
+  const firstOpen = new Map(
+    input.goals.map((goal) => [goal.goalId, firstUnsettledDay(resolve(goal, input.now, input.tz).state)]),
+  );
   return presented
     .filter((p) => {
       const data = readReminderData(p.data);
       if (!data) return false;
-      if (!goal || !firstOpen || data.goalId !== goal.goalId) return true;
-      return data.kind === 'reengage' || data.day < firstOpen;
+      const open = firstOpen.get(data.goalId);
+      if (open === undefined) return true;
+      return data.kind === 'reengage' || data.day < open;
     })
     .map((p) => p.identifier);
 }
@@ -92,10 +94,10 @@ export function createReminderSync(deps: SyncDeps): ReminderSync {
       if (!prepared && deps.prepare) await deps.prepare();
       prepared = true;
       const input = deps.read();
-      const goal = input.goal;
-      const allowed = goal ? await deps.allowed() : false;
-      const requests = goal && allowed ? reminderRequests({ ...input, goal }) : [];
-      const signature = JSON.stringify([goal?.goalId ?? null, requests]);
+      const some = input.goals.length > 0;
+      const allowed = some ? await deps.allowed() : false;
+      const requests = some && allowed ? reminderRequests(input) : [];
+      const signature = JSON.stringify([input.goals.map((g) => g.goalId), requests]);
       if (!force && signature === lastSignature) return;
       lastSignature = null; // until this sync finishes
 
@@ -159,8 +161,9 @@ export function createReminderSync(deps: SyncDeps): ReminderSync {
 
 /**
  * Sync after storage is read and on every return to the foreground (both forced, so new nudges
- * get added and the OS's list is rebuilt), and whenever the goal or a reminder setting changes:
- * a check-in, a missed day settling, goal wording, times, a time zone change, erase.
+ * get added and the OS's list is rebuilt), and whenever a goal or a reminder setting changes:
+ * a check-in, a missed day settling, goal wording, times, days, a time zone change, a goal added
+ * or archived, erase.
  */
 export function startReminderSync(store: AppStore, reminders: ReminderSync, appState: AppStateLike = AppState): () => void {
   const stopWaiting = whenHydrated(store, () => void reminders.sync({ force: true }));

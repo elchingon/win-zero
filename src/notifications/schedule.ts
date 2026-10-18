@@ -12,12 +12,12 @@ import {
   diffDays,
   isWindowToday,
   nextWindow,
-  planReminders,
+  planAllReminders,
   resolve,
   windowFor,
   type DayKey,
+  type GoalReminder,
   type GoalState,
-  type PlannedReminder,
   type TimeZone,
 } from '@/engine';
 
@@ -36,6 +36,13 @@ const MORNING_TITLE = 'Still time to check in';
 /** Today's check-in while yesterday's is still open. Home asks about yesterday first. */
 export const BOTH_OPEN_BODY = "Yesterday's check-in is still open, and today's is ready. Tap to answer.";
 
+/** BOTH_OPEN_BODY for one of several goals, named as its reminders name it. */
+export function bothOpenBody(label: string): string {
+  return `Yesterday's check-in for ${label} is still open, and today's is ready. Tap to answer.`;
+}
+
+const ORDINALS = ['first', 'second', 'third', 'fourth', 'fifth'];
+
 /** The weekly nudge, one per week in turn. Never names the goal; never counts what was missed. */
 export const NUDGES: readonly { title: string; body: string }[] = [
   { title: "Whenever you're ready", body: 'One check-in is all it takes to pick things back up.' },
@@ -52,7 +59,8 @@ export type ReminderRequest = NotificationRequestInput & {
 };
 
 export interface ReminderInput {
-  goal: GoalState;
+  /** Every goal, in the order they're shown; none after erase. */
+  goals: GoalState[];
   /** The app's clock. */
   now: Date;
   /** The device time zone. */
@@ -68,9 +76,22 @@ export interface ReminderInput {
   showGoal: boolean;
 }
 
-/** "Did you stick to your goal today?", or with the goal's wording when the user turned that on. */
-export function checkInQuestion(goal: string, when: 'today' | 'yesterday', showGoal: boolean): string {
-  return showGoal ? `Did you stick to “${goal}” ${when}?` : `Did you stick to your goal ${when}?`;
+/**
+ * How a reminder names a goal: its wording when the user turned that on, and otherwise "your goal",
+ * which keeps it off the lock screen. With more than one goal (SPEC 9), its lock-screen name, or
+ * its place among them: "your second goal".
+ */
+export function goalLabel(goal: GoalState, place: number, count: number, showGoal: boolean): string {
+  if (showGoal) return `“${goal.goal}”`;
+  if (count <= 1) return 'your goal';
+  if (goal.alias) return `“${goal.alias}”`;
+  const ordinal = ORDINALS[place];
+  return ordinal ? `your ${ordinal} goal` : 'your goal';
+}
+
+/** "Did you stick to your goal today?", with the goal as `label` names it. */
+export function checkInQuestion(label: string, when: 'today' | 'yesterday'): string {
+  return `Did you stick to ${label} ${when}?`;
 }
 
 function nudgeFor(state: GoalState, day: DayKey): { title: string; body: string } {
@@ -78,16 +99,18 @@ function nudgeFor(state: GoalState, day: DayKey): { title: string; body: string 
   return NUDGES[((week % NUDGES.length) + NUDGES.length) % NUDGES.length] ?? NUDGES[0]!;
 }
 
-function contentFor(state: GoalState, r: PlannedReminder, showGoal: boolean): ReminderContent {
+function contentFor(state: GoalState, r: GoalReminder, label: string, several: boolean): ReminderContent {
   const data: ReminderData = { goalId: state.goalId, day: r.day, kind: r.kind };
   if (r.kind === 'reengage') return { ...nudgeFor(state, r.day), data };
   // No buttons: a Yes here couldn't say which day it means. A tap opens Home, which asks about
   // yesterday first. Answering yesterday reschedules this as a plain check-in.
-  if (r.earlier) return { title: CHECKIN_TITLE, body: BOTH_OPEN_BODY, data, sound: 'default' };
+  if (r.earlier) {
+    return { title: CHECKIN_TITLE, body: several ? bothOpenBody(label) : BOTH_OPEN_BODY, data, sound: 'default' };
+  }
   const when = isWindowToday(windowFor(state, r.day), r.at) ? 'today' : 'yesterday';
   return {
     title: r.kind === 'checkin' ? CHECKIN_TITLE : MORNING_TITLE,
-    body: checkInQuestion(state.goal, when, showGoal),
+    body: checkInQuestion(label, when),
     data,
     categoryIdentifier: CHECKIN_CATEGORY_ID,
     sound: 'default',
@@ -95,22 +118,23 @@ function contentFor(state: GoalState, r: PlannedReminder, showGoal: boolean): Re
 }
 
 /**
- * Every notification that should be pending at `now`, earliest first. Catches the goal up
- * first, so a state that hasn't been resolved lately still plans from the right day.
+ * Every notification that should be pending at `now`, earliest first: each goal's, within the
+ * iOS limit (planAllReminders). Catches the goals up first, so a state that hasn't been resolved
+ * lately still plans from the right day.
  */
 export function reminderRequests(input: ReminderInput): ReminderRequest[] {
-  const state = resolve(input.goal, input.now, input.tz).state;
-  return planReminders(state, input.now, { reengage: input.reengage })
-    .slice(0, MAX_SCHEDULED)
-    .map((r) => ({
-      identifier: `${r.kind}-${r.day}`,
-      content: contentFor(state, r, input.showGoal),
-      trigger: {
-        type: SchedulableTriggerInputTypes.DATE,
-        date: new Date(r.at.getTime() - input.offsetMs),
-        channelId: CHECKIN_CHANNEL_ID,
-      },
-    }));
+  const goals = input.goals.map((goal) => resolve(goal, input.now, input.tz).state);
+  const labels = new Map(goals.map((g, i) => [g.goalId, goalLabel(g, i, goals.length, input.showGoal)]));
+  const byId = new Map(goals.map((g) => [g.goalId, g]));
+  return planAllReminders(goals, input.now, { reengage: input.reengage, budget: MAX_SCHEDULED }).map((r) => ({
+    identifier: `${r.goalId}:${r.kind}-${r.day}`,
+    content: contentFor(byId.get(r.goalId)!, r, labels.get(r.goalId)!, goals.length > 1),
+    trigger: {
+      type: SchedulableTriggerInputTypes.DATE,
+      date: new Date(r.at.getTime() - input.offsetMs),
+      channelId: CHECKIN_CHANNEL_ID,
+    },
+  }));
 }
 
 /**
@@ -118,7 +142,7 @@ export function reminderRequests(input: ReminderInput): ReminderRequest[] {
  * TEST_DELAY_SECONDS of real time. Its buttons answer for real.
  */
 export function testCheckInRequest(
-  input: Pick<ReminderInput, 'goal' | 'now' | 'tz' | 'showGoal'>,
+  input: Pick<ReminderInput, 'now' | 'tz' | 'showGoal'> & { goal: GoalState },
   identifier: string,
 ): NotificationRequestInput & { content: ReminderContent; trigger: TimeIntervalTriggerInput } {
   const state = resolve(input.goal, input.now, input.tz).state;
@@ -130,7 +154,7 @@ export function testCheckInRequest(
     identifier,
     content: {
       title: CHECKIN_TITLE,
-      body: checkInQuestion(state.goal, when, input.showGoal),
+      body: checkInQuestion(goalLabel(state, 0, 1, input.showGoal), when),
       data,
       categoryIdentifier: CHECKIN_CATEGORY_ID,
       sound: 'default',

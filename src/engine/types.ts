@@ -56,6 +56,11 @@ export interface GoalState {
   version: 1;
   goalId: string;
   goal: string;
+  /**
+   * A short name for the lock screen (SPEC 9): with "Goal in reminders" off and more than one goal,
+   * reminders name the goal by it instead of its wording. Optional; absent when there's none.
+   */
+  alias?: string;
   createdAt: IsoInstant;
   /** The first goal day. Days before it don't exist. */
   firstDay: DayKey;

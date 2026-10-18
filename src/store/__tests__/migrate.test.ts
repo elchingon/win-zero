@@ -59,6 +59,12 @@ describe('reading a saved goal', () => {
     expect(hasUnreadableGoal({ goal: 'not a goal' })).toBe(true);
   });
 
+  it("keeps a goal's lock-screen name, and drops one that isn't a name", () => {
+    expect(firstGoal(slot({ ...goal, alias: 'Run' }))?.alias).toBe('Run');
+    expect(firstGoal(slot({ ...goal, alias: 3 }))).toEqual(goal);
+    expect(firstGoal(slot({ ...goal, alias: '  ' }))).toEqual(goal);
+  });
+
   it('flags nothing when there was no goal', () => {
     expect(hasUnreadableGoal({ goal: null })).toBe(false);
     expect(hasUnreadableGoal({ goals: [] })).toBe(false);
