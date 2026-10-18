@@ -101,6 +101,50 @@ variant disagree. `npm run check:variants` (also in CI) checks both apps' config
 - [ ] **Store versions:** Plus is never on an older `STORE_VERSION` (`src/store/types.ts`) than the
   free app, so a move from the free app can always be read. When a release raises it, release Plus
   first, then the free app.
+- [ ] **App Group (the move on iPhone, SPEC 9):** both apps carry the entitlement
+  `group.com.e7systems.winzero` (`ios.entitlements` in `app.json`; `npm run check:variants` checks
+  both). Register it once, by either route:
+  - Apple Developer → Identifiers → App Groups → **+**, id `group.com.e7systems.winzero`. Then on
+    both App IDs (`com.e7systems.winzero` and `com.e7systems.winzeroplus`) turn on **App Groups**,
+    assign the group, and regenerate their provisioning profiles.
+  - Or let EAS do it: the next `eas build` for each app syncs capabilities, enabling App Groups
+    and registering the group. That needs an Apple sign-in, so run the build from your machine
+    (`EXPO_NO_CAPABILITY_SYNC=1` skips the sync).
+
+  Every build made before this needs rebuilding, dev clients included. A release build without the
+  group can't move (it says so), and a dev build without it puts the move in the link instead.
+- [ ] **Plus's store pages:** `EXPO_PUBLIC_PLUS_STORE_URL_IOS` and `_ANDROID`. While they're unset, the
+  free app hides Settings → About → **Move to Win Zero Plus**. If Plus isn't installed, the move
+  opens the page. Plus opens its own page for "Update Win Zero Plus".
+  - The `preview` profile (and `preview-plus`) sets the Play page and a stand-in iOS page
+    (`https://winzero.app/`) for QA. Local runs take them from `.env` (see `.env.example`).
+  - For release, set both in the `production` profile's env (`production-plus` inherits them):
+    `https://apps.apple.com/app/id<Plus's Apple ID>` and
+    `https://play.google.com/store/apps/details?id=com.e7systems.winzeroplus`.
+- [ ] **Release order for the move:** release **Plus 1.0 first** and wait until it's live in both
+  stores. Then release **free 1.2**, with the Plus store URLs set. A free build with the URLs set
+  before Plus is live would offer a move to an app nobody can install.
+
+### Building and testing both apps
+
+- **Dev builds, both on one phone:**
+  1. `eas build --profile development --platform <ios|android>` and `eas build --profile
+     development-plus --platform <ios|android>`. A simulator needs the `development-simulator`
+     profiles.
+  2. Copy `.env.example` to `.env`; it sets the Plus store URLs, so the Move row shows.
+  3. Run one dev server per app on its own port: `npm start -- --port 8081` for Win Zero, and
+     `npm run start:plus -- --port 8082` for Plus. In each dev client, connect to its own server.
+     A dev client runs whatever JavaScript its server sends, so Plus's must be `start:plus`.
+- **Without Metro:** `preview` and `preview-plus` builds (both set the store URLs). On Android, local
+  release builds also work: `npm run build:android && npm run install:android`, then `npm run
+  build:android:plus && npm run install:android:plus`.
+- **Moving by hand:**
+  - Win Zero: Settings → About → **Move to Win Zero Plus** → **Move**.
+  - Or open the links yourself:
+    - `xcrun simctl openurl booted "winzeroplus://import?t=<id>"` with a dev build's move in the
+      link as `&d=wz1.…`
+    - `adb shell am start -a android.intent.action.VIEW -d "winzero://moved?t=<id>"
+      com.e7systems.winzero`
 
 ---
 
@@ -141,8 +185,18 @@ and its debug tools. The others use a TestFlight, internal or `preview` build.
 | 12 | **Fresh install and erase** | Install fresh, go through Setup and allow notifications. Then Settings → Erase all data. | The permission explanation shows before the OS prompt. After erasing, Setup shows and the pending count is 0. |
 | 13 | **Answering the next evening** _dev_ | Leave a check-in unanswered. Move the debug clock to 9:00 PM the next day, then answer. Leave the next one unanswered and move the clock past the following midnight. | At 9:00 PM, Home asks about yesterday and says "Open until the end of today". That evening's notification has no buttons, and tapping it opens Home. After answering yesterday, today's card shows. Past midnight, the unanswered day is recorded as missed, and the day after it is still open. |
 | 14 | **Changing the check-in time** | Leave yesterday's check-in unanswered. In Settings, set the check-in time a few minutes from now, then lock the phone. | Settings says "Next check-in: today at …" with the new time. The notification arrives then, without buttons while yesterday is open, and tapping it opens Home on yesterday's card. |
+| 15 | **Move: 1,000 days** _dev_ | Win Zero: **Jump to day 1000**. Settings → About → **Move to Win Zero Plus** → **Move**. In Plus, read the preview, tap **Bring it over**, and allow notifications. | Plus opens on the preview: the goal, streak 1000 and its Yes days, the credits, and the settings. Nothing changes until Bring it over. Then Win Zero opens with "Your goals now live in Win Zero Plus". Plus's Home shows the same streak, history, weapons and credits, and its reminders are scheduled. |
+| 16 | **Move: Win Zero goes quiet** _dev_ | After row 15, check Win Zero's debug pending count. Leave a Win Zero reminder showing before the move. Tap an old Win Zero notification afterwards. | Pending count 0, and the showing reminder is cleared. No Win Zero reminder arrives at check-in time. The tap opens Win Zero's Home, which shows only the moved card. |
+| 17 | **Move: Plus missing** | Uninstall Plus, then **Move** in Win Zero. | Plus's store page opens. The Move screen says Plus isn't on the phone and nothing changed. Home never asks "Did your move finish?". |
+| 18 | **Move: retry** _dev_ | **Move**, then **Not now** in Plus. Back in Win Zero, wait 10 minutes (or debug clock **+1 hour**). Tap **Try again**, and this time Bring it over. Then on Android, kill Plus and reopen it from Recents. | After 10 minutes Home asks "Did your move finish?". Try again opens Plus on the same move. Afterwards Win Zero shows the moved card, and Plus's credits arrived once. Plus reopened from Recents says the move is already there, and adds nothing. |
+| 19 | **Move: keep using here** | After a move, tap **Keep using Win Zero here**. Then check in, and **Move** again. | Win Zero's Home comes back with its progress from the move day, and its reminders are scheduled again (pending count above 0). Days since the move count as missed, and their news shows once. The second move asks which copy of the goal to keep, suggesting Win Zero's. |
+| 20 | **Move: Plus full** | Plus with 3 goals (Add goal comes with M9; until then the screen tests cover it). **Move** from Win Zero. | Plus says "Make room first". **Manage goals** opens Settings, and nothing was added. |
+| 21 | **Move: Android cold and warm** | Move with Plus killed, then again with Plus in the background. | Plus opens on the move both times, in its own task. Back from Plus returns to the launcher, not into Win Zero. |
 
 ### Known and accepted
+- **A move can't prove it came from Win Zero on Android.** Any app can open Plus's import link
+  with made-up data. Plus reads it as untrusted, shows exactly what would arrive, and asks first.
+  On iPhone the data has to come from the shared folder.
 - **Android reminders are inexact,** and can arrive a few minutes late. There's no exact-alarm
   permission; Play restricts it. The support page says so.
 - **The support line is US-only** (SAMHSA). Localize it later.

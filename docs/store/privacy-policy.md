@@ -1,6 +1,6 @@
 # Win Zero Privacy Policy
 
-_Effective October 15, 2026_
+_Effective October 18, 2026_
 
 Win Zero is a daily check-in app made by E7 Systems. This policy explains what the app, and the
 website at winzero.app, do with your information. The short version: everything stays on your
@@ -43,6 +43,14 @@ Check-in reminders are scheduled by your phone itself; no server sends them. By 
 reminder says "your goal", so your goal stays off the lock screen. If you turn on **Goal in
 reminders** in Settings, reminders include your goal's wording. You can turn reminders off at
 any time in your phone's settings.
+
+## Moving to Win Zero Plus
+
+Win Zero Plus is a separate app from us. If you install it, Win Zero can move your goals,
+history, rewards, credits and settings into it. The move happens on your phone; nothing is sent
+to us. On iPhone the data passes through a folder that only the two apps can open, and on Android
+it is handed straight to Win Zero Plus. Once Win Zero Plus has it, Win Zero stops its own
+reminders. Win Zero Plus keeps everything on your phone in the same way as Win Zero.
 
 ## Backups
 
