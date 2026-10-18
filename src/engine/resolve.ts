@@ -1,18 +1,10 @@
 // Catching up on closed windows, answering check-ins, and schedule edits. Every function
 // takes `now` and the device time zone `tz` as inputs and returns a new state.
-import { addDays, dayKeyAt, isValidClockTime, isValidTimeZone, wallTimeToInstant } from './dates';
+import { dayKeyAt, isValidClockTime, isValidTimeZone, wallTimeToInstant } from './dates';
+import { firstGoalDay, latestScheduleEntry, nextGoalDay, prevGoalDay, scheduleEntryFor } from './goalDays';
 import { applyMissed, applyNotToday, applyYes, type Final, type YesRewards } from './rules';
 import type { ClockTime, DayKey, GoalState, ScheduleEntry, TimeZone } from './types';
-import {
-  closesAt,
-  firstUnsettledDay,
-  firstUpcomingDay,
-  latestScheduleEntry,
-  MIN_WINDOW_MS,
-  opensAt,
-  pendingWindow,
-  scheduleEntryFor,
-} from './windows';
+import { closesAt, firstUnsettledDay, firstUpcomingDay, MIN_WINDOW_MS, opensAt, pendingWindow } from './windows';
 
 export const DEFAULT_CHECK_IN_TIME: ClockTime = '20:00';
 export const DEFAULT_MORNING_TIME: ClockTime = '09:00';
@@ -85,7 +77,7 @@ export function firstCheckInOpenAt(input: { checkInTime: ClockTime; now: Date; t
 
 /** True when the goal's first check-in was already open when it was set up. */
 export function openedAtSetup(goal: GoalState): boolean {
-  return opensAt(goal, goal.firstDay).getTime() <= Date.parse(goal.createdAt);
+  return opensAt(goal, firstGoalDay(goal)).getTime() <= Date.parse(goal.createdAt);
 }
 
 export interface MissedEvent {
@@ -122,7 +114,7 @@ export function resolve(state: GoalState, now: Date, tz: TimeZone): Resolved {
   assertTimeZone(tz);
   let next = state;
   const events: ResolveEvent[] = [];
-  for (let day = firstUnsettledDay(next); ; day = addDays(day, 1)) {
+  for (let day = firstUnsettledDay(next); ; day = nextGoalDay(next, day)) {
     const closes = closesAt(next, day);
     if (closes.getTime() > now.getTime()) break;
     const streakBefore = next.streak;
@@ -163,8 +155,8 @@ function appendScheduleEntry(
   const t = now.getTime();
   const fromDay = firstUpcomingDay(state, now);
 
-  const prev = addDays(fromDay, -1);
-  const hasPrev = fromDay > state.firstDay;
+  const prev = prevGoalDay(state, fromDay);
+  const hasPrev = prev !== null;
   let notBefore = hasPrev ? Math.max(t, opensAt(state, prev).getTime() + MIN_WINDOW_MS) : t;
   const withEntry = (floor: number): GoalState => {
     const entry: ScheduleEntry = { fromDay, ...change, notBefore: new Date(floor).toISOString() };

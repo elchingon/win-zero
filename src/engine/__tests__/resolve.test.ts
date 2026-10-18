@@ -2,8 +2,9 @@ import { describe, expect, it } from '@jest/globals';
 
 import { addDays, diffDays } from '../dates';
 import { answer, resolve, setCheckInTime } from '../resolve';
+import { latestScheduleEntry } from '../goalDays';
 import type { GoalState } from '../types';
-import { closesAt, latestScheduleEntry, opensAt, pendingWindow } from '../windows';
+import { closesAt, opensAt, pendingWindow } from '../windows';
 import {
   at,
   answerDay,

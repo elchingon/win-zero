@@ -1,6 +1,7 @@
 // Which local notifications to have scheduled (SPEC 2). Pure: the notifications layer cancels
 // everything and schedules this list on every check-in and app open.
 import { addDays } from './dates';
+import { goalDayOnOrAfter, nextGoalDay } from './goalDays';
 import { applyMissed, MISSED_GRACE_DAYS, SLIDE_FINAL } from './rules';
 import type { CheckInWindow, DayKey, GoalState } from './types';
 import { firstUnsettledDay, opensAt, windowFor } from './windows';
@@ -68,26 +69,26 @@ export function planReminders(state: GoalState, now: Date, options: ReminderOpti
   let lastDaily: DayKey | null = null;
   let prev: CheckInWindow | null = null;
   let projected = state;
-  for (let i = 0; i < REMINDER_MAX_WINDOWS && !projected.paused; i++) {
-    const w = windowFor(state, addDays(first, i));
+  for (let i = 0, day = first; i < REMINDER_MAX_WINDOWS && !projected.paused; i++, day = nextGoalDay(state, day)) {
+    const w = windowFor(state, day);
     pushCheckIn(w, prev);
     if (w.remindAt && w.remindAt.getTime() > t) out.push({ at: w.remindAt, kind: 'morning', day: w.day });
     projected = applyMissed(projected, { day: w.day, at: w.closesAt, tz: w.tz }).state;
     lastDaily = w.day;
     prev = w;
   }
-  // The day after the reset day opens before the reset lands: its check-in is the last one.
+  // The goal day after the reset day may open before the reset lands: then its check-in is the last one.
   if (projected.paused && !state.paused && prev) {
-    const w = windowFor(state, addDays(prev.day, 1));
+    const w = windowFor(state, nextGoalDay(state, prev.day));
     if (w.opensAt.getTime() < prev.closesAt.getTime()) pushCheckIn(w, prev);
   }
 
   if (options.reengage) {
     // The reset lands when its window closes, at midnight at the end of the following day.
-    // Nudges come at check-in time, a week at a time from that following day.
+    // Nudges come at check-in time, a week at a time from that following day, on a goal day.
     const lastDay = (state.paused ? pausedOnDay(state) : lastDaily) ?? addDays(first, -1);
     for (let k = 1, added = 0; added < REENGAGE_NUDGE_COUNT; k++) {
-      const day = addDays(lastDay, 1 + REENGAGE_EVERY_DAYS * k);
+      const day = goalDayOnOrAfter(state, addDays(lastDay, 1 + REENGAGE_EVERY_DAYS * k));
       const at = opensAt(state, day);
       if (at.getTime() > t) {
         out.push({ at, kind: 'reengage', day });
