@@ -1,8 +1,8 @@
 # Win Zero: Product & Game Spec
 
-Version 0.5 · October 16, 2026 · Owner: e7sal
+Version 0.6 · October 18, 2026 · Owner: e7sal
 
-Win Zero is a daily habit app for iOS and Android. The user sets one daily goal (for example "Stop drinking" or "Exercise more"). Every evening the app asks whether they did it. Each "yes" adds a zero to a shooting round. The streak is the number of zeros on screen.
+Win Zero is a daily habit app for iOS and Android. The user sets one daily goal (for example "Stop drinking" or "Exercise more"); Win Zero Plus allows up to three (section 9). Every evening the app asks whether they did it. Each "yes" adds a zero to a shooting round. The streak is the number of zeros on screen.
 
 The playable web prototype at `docs/prototype/win-zero.html` sets the **look, feel, and game juice**: palette, fonts, explosions, the final-zero celebration, and the screen filling with zeros. Open it in a browser. **Where the prototype's rules differ from this spec, this spec wins.** The prototype predates sections 3–6.
 
@@ -150,4 +150,54 @@ On the website, practice rounds (any size, every weapon) run only in demo mode, 
 - Respect the OS reduce-motion setting: less shake, fewer particles.
 
 ## 8. Out of scope for v1
-Accounts and cloud sync, multiple goals, leaderboards, IAP. Credit packs would grant into the credit wallet (section 5); the store answers (`docs/store/answers.md`) say rewards come only from check-ins and there are no digital purchases, so they'd change with it, as would the privacy policy for a payment provider. Keep the data model ready for a later FastAPI + Postgres sync backend (stable IDs, ISO dates, append-only history).
+Accounts and cloud sync, leaderboards, IAP. Multiple goals, weekday schedules, game modes and themes are Win Zero Plus (section 9). Credit packs would grant into the credit wallet (section 5); the store answers (`docs/store/answers.md`) say rewards come only from check-ins and there are no digital purchases, so they'd change with it, as would the privacy policy for a payment provider. Keep the data model ready for a later FastAPI + Postgres sync backend (stable IDs, ISO dates, append-only history).
+
+## 9. Win Zero Plus
+
+Win Zero Plus is a second app built from this codebase as a build variant: its own name, bundle id (`com.e7systems.winzeroplus`), URL scheme (`winzeroplus`) and icon. It is **paid upfront**. Neither app has in-app purchases, ads or accounts, and both collect no data. Free Win Zero stays complete and free forever: one goal, every rule, the full arsenal and the Shooter.
+
+Guardrails for both apps:
+- Plus changes no rule. Each Plus goal follows sections 2–5 exactly; themes and modes never touch `rules.ts`, `resolve.ts` or `rewards.ts`.
+- Nothing is for sale inside either app. The free app mentions Plus only in Settings › About, never on the Slipping, Reset, Shielded, Notice or support screens, and never with badges or nags.
+- Plus is never on an older store version (`STORE_VERSION`) than the free app, so a move from the free app can always be read.
+
+### Weekday schedules
+- A goal checks in on the weekdays chosen (at least one): every day, weekdays, or any mix. Every day is the default, and the free app's only choice.
+- A rest day has no window of its own, no history entry and no effect: nothing is gained or lost, and the streak counts Yes days as always.
+- A window before a rest day still closes at midnight at the end of the next calendar day (section 2). With Monday to Friday, Friday can be answered until Saturday midnight, and its reminder still comes on Saturday asking about "yesterday".
+- The 7 free missed days, and the slips after them, count check-in days. For a goal that isn't every day, the copy says "7 check-ins" rather than "a week".
+- Changing the days takes effect from the next check-in day that hasn't opened yet. It never rewrites a settled day or closes an open window early.
+- The history calendar shows rest days with a muted mark.
+
+### Multiple goals
+- Up to 3 goals. Each has its own wording, check-in and reminder times, days, streak, best run, bombs, shields, history, round and notices.
+- **Shared arsenal.** Weapons (and mode power-ups) unlock from the best streak any goal has reached (`arsenalBest`, which never decreases). Adding or archiving a goal never takes a weapon away, and a Yes announces a weapon only when it raises that shared best.
+- **One credit wallet**, as in section 5. Each reward still pays once per install, so "Setting your first goal" pays once however many goals are added.
+- A bonus round's free bombs are the total banked across goals.
+- **Archiving.** Removing a goal archives it: read-only history under Settings › Past goals, no reminders, and its slot is free. **Delete for good** is offered only from the archive.
+- **Home** shows ready rounds, then open check-ins (the one that opened first, first), with a goal picker for the stats and history calendar. With one goal it looks exactly like the free app.
+- **Reminders.** Each goal has its own notifications with its own Yes / Not today. With "Goal in reminders" off and more than one goal, a reminder names the goal by its optional lock-screen name, or by its place ("your second goal"). At most 60 notifications are pending across all goals, filled in this order: each goal's next 2 windows, the first weekly nudge, the other reminders earliest first, then the remaining nudges. Weekly nudges are one stream that never names a goal. Every app open reschedules, as now.
+
+### Game modes
+Every round (daily, replay or bonus) plays in the mode picked in Settings › Games. All modes are available from the start.
+
+| Mode | How it plays | Multi-hit / armored zeros | Power-ups (best streak 1 → 100) |
+|---|---|---|---|
+| **Shooter** | The free game (section 6). | As section 4 | The weapons (section 5) |
+| **Catch** | Zeros drift down; slide a cup to catch them. A miss floats back up. | Bounces up until caught enough times / heavy, slow, worth ×V | Cup → Twin Cups → Net → Magnet → Chain Catch → Vacuum Beam → Black Hole |
+| **Orbit** | The turret sits in the middle and aims all round. | As now / splits into smaller zeros that keep its value | The weapons |
+| **Slice** | Zeros are tossed up in waves; swipe to slice. Missed ones are tossed again. | Each cut juggles it higher until it pops / big, slow zeros | Blade → Twin Blade → Wide Arc → Explosive Cut → Arcing Cut → Lingering Blade → Nova |
+| **Breaker** | Zeros are bricks, with a paddle and ball. A dropped ball just respawns. | Brick hits / steel bricks worth ×V | 1 ball → 2 balls → Multi-ball → Fireball → Lightning Ball → Laser Paddle → Mega Ball |
+
+Every mode uses `composeRound(n)`, can't be lost (no lives or timers; missed zeros come back), ends with the same celebration, fill and result sheet, and supports **Finish round** and bombs. Late in a round, gentle assists (homing, magnet) make sure the last zero can always be cleared. A Weapon credit lends a locked power-up in any mode.
+
+### Themes and app icons
+- Themes recolor the round (zeros, shots and the fill) and Home's drifting zeros. The rest of the app keeps the section 7 palette.
+- Included: Classic (section 7), Neon Arcade, Mono CRT, Pastel. Earned by the shared best streak and never lost: Ember at 30, Aurora at 180, Gold Year at 365. An earned theme is announced on the result sheet like a weapon; nothing is ever offered for sale there.
+- Settings › App icon offers the Plus icon and one per theme; an earned theme's icon unlocks with it.
+
+### Moving from Win Zero to Plus
+- Settings › About › **Move to Win Zero Plus**, shown once Plus is on the store. It moves goals, history, rewards, credits and preferences straight from one app to the other on the phone; nothing passes through a server.
+- On iPhone the data goes through a folder only the two apps share (an App Group), and the link that opens Plus carries only an id. On Android it is handed to Plus by its package name, so no other app can receive it.
+- Plus shows what will arrive and asks before importing. If it already has that goal, the user picks which copy to keep (the one settled later by default). With 3 goals already, it asks the user to archive one first. A move delivered twice adds its credits once.
+- Once Plus confirms, Win Zero stops its reminders and Home says "Your goals now live in Win Zero Plus", with **Open Win Zero Plus** and **Keep using Win Zero here** (reminders come back; progress there hasn't changed since the move). If Plus never confirms, Win Zero asks after 10 minutes whether the move finished.
