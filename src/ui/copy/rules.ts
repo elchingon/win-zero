@@ -13,6 +13,7 @@ import {
 } from '@/engine';
 import { UNDO_MS } from '@/store/createAppStore';
 
+import { FREE_APP_NAME } from './app';
 import { CREDIT_USES, creditsEarnedBy } from './credits';
 
 export const GOAL_MAX_LENGTH = 60;
@@ -31,18 +32,23 @@ export interface Rule {
   text: string;
 }
 
-/** Setup's rules, beside their marks. */
-export const RULES: Rule[] = [
-  { mark: '?', text: 'Each evening at your check-in time, Win Zero asks one question: did you do it today?' },
-  { mark: '000', text: 'Yes adds a zero. Shoot every one of them. The last zero goes out with a huge explosion.' },
-  {
-    mark: '−1',
-    tone: 'flare',
-    text: 'Not today costs one zero. Seven in a row starts a fresh run, unless a shield saves it. You earn a shield every 7 days.',
-  },
-  { mark: '7D', text: "Missed a check-in? Nothing's lost for a week. After that, each missed day counts like a Not today." },
-  { mark: '+', text: 'Longer streaks unlock new weapons, and every 5 days earns a bomb.' },
-];
+/** Setup's rules, beside their marks, for the app named `appName`. */
+export function rules(appName: string = FREE_APP_NAME): Rule[] {
+  return [
+    { mark: '?', text: `Each evening at your check-in time, ${appName} asks one question: did you do it today?` },
+    { mark: '000', text: 'Yes adds a zero. Shoot every one of them. The last zero goes out with a huge explosion.' },
+    {
+      mark: '−1',
+      tone: 'flare',
+      text: 'Not today costs one zero. Seven in a row starts a fresh run, unless a shield saves it. You earn a shield every 7 days.',
+    },
+    { mark: '7D', text: "Missed a check-in? Nothing's lost for a week. After that, each missed day counts like a Not today." },
+    { mark: '+', text: 'Longer streaks unlock new weapons, and every 5 days earns a bomb.' },
+  ];
+}
+
+/** Win Zero's rules: the free app's and the website's. */
+export const RULES: Rule[] = rules();
 
 /** Home's banner when an answer was turned down. */
 export const REJECTED: Record<AnswerRejection, string> = {
@@ -59,17 +65,23 @@ export interface Section {
 /**
  * How it works, reached from Settings: where to look at the rules again, and where the words the
  * notices use ("the slide", "a fresh run", "banked") are explained. `notifications`: the app
- * sends reminders; the website doesn't.
+ * sends reminders; the website doesn't. `appName`: which app is speaking.
  */
-export function howItWorks({ notifications }: { notifications: boolean }): Section[] {
+export function howItWorks({
+  notifications,
+  appName = FREE_APP_NAME,
+}: {
+  notifications: boolean;
+  appName?: string;
+}): Section[] {
   const only = (on: boolean, ...lines: string[]) => (on ? lines : []);
   return [
     {
       title: 'The daily question',
       body: [
         notifications
-          ? 'Each day at your check-in time, Win Zero asks one question: did you stick to your goal today? Answer Yes or Not today, from the notification or from Home.'
-          : 'Each day at your check-in time, Win Zero asks one question: did you stick to your goal today? Answer Yes or Not today on Home.',
+          ? `Each day at your check-in time, ${appName} asks one question: did you stick to your goal today? Answer Yes or Not today, from the notification or from Home.`
+          : `Each day at your check-in time, ${appName} asks one question: did you stick to your goal today? Answer Yes or Not today on Home.`,
         notifications
           ? "There's no rush. You can answer until midnight the next day, and if you haven't by your reminder time, one more reminder comes."
           : "There's no rush. You can answer until midnight the next day.",

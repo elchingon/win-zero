@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colors, fonts } from '@/theme/tokens';
+import { APP_NAME, APP_WORDMARK } from '@/variant';
 
 /** The top bar's mark, scaled up from the prototype's .mark; the website's /play matches it. */
 const TOP_BAR_MARK_SIZE = 1.5;
@@ -22,9 +23,12 @@ export function Mark({ size = 1 }: { size?: number }) {
 export function TopBar({ right }: { right?: ReactNode }) {
   return (
     <View style={styles.bar}>
-      <View style={styles.brand} accessibilityRole="header" accessibilityLabel="Win Zero">
+      <View style={styles.brand} accessibilityRole="header" accessibilityLabel={APP_NAME}>
         <Mark size={TOP_BAR_MARK_SIZE} />
-        <Text style={styles.word}>WIN ZERO</Text>
+        {/* Win Zero Plus's longer name shrinks to fit beside the bar's action on a narrow phone. */}
+        <Text style={styles.word} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+          {APP_WORDMARK}
+        </Text>
       </View>
       {right}
     </View>
@@ -33,7 +37,7 @@ export function TopBar({ right }: { right?: ReactNode }) {
 
 const styles = StyleSheet.create({
   bar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  brand: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  brand: { flexDirection: 'row', alignItems: 'center', gap: 14, flexShrink: 1 },
   mark: { borderColor: colors.amber, borderRadius: '50%' },
-  word: { fontFamily: fonts.display, fontSize: 28, letterSpacing: 0.56, color: colors.fg },
+  word: { flexShrink: 1, fontFamily: fonts.display, fontSize: 28, letterSpacing: 0.56, color: colors.fg },
 });

@@ -21,6 +21,7 @@ import { APP_LINKS, callSupportLine, emailSupport, openPage, SUPPORT_LINE } from
 import { TimeField } from '@/ui/TimeField';
 import { useDeviceCalendar } from '@/ui/useDevice';
 import { useReminderPermission } from '@/ui/useReminderPermission';
+import { APP_NAME } from '@/variant';
 
 // Development builds only: Metro folds __DEV__ to false in production and drops the require.
 const DebugSection: ComponentType | null = __DEV__
@@ -28,9 +29,9 @@ const DebugSection: ComponentType | null = __DEV__
     require('@/dev/DebugSection').DebugSection
   : null;
 
-/** The app version from app.json, as built. */
+/** The app version from the app's config, as built. */
 const APP_VERSION = Constants.expoConfig?.version;
-const APP_NAME = APP_VERSION ? `Win Zero ${APP_VERSION}` : 'Win Zero';
+const APP_LABEL = APP_VERSION ? `${APP_NAME} ${APP_VERSION}` : APP_NAME;
 /** From the environment; a build without them leaves their rows out (see APP_LINKS). */
 const PRIVACY_URL = APP_LINKS.privacy;
 const SUPPORT_URL = APP_LINKS.support;
@@ -175,7 +176,7 @@ export default function Settings() {
           {SUPPORT_URL ? (
             <Row
               label="Help and support"
-              detail="How Win Zero works, and fixes for common questions."
+              detail={`How ${APP_NAME} works, and fixes for common questions.`}
               right={<Text style={styles.call}>Open</Text>}
               hint="Opens the support page in your browser"
               onPress={() => openPage(SUPPORT_URL)}
@@ -185,11 +186,11 @@ export default function Settings() {
             label="Email us"
             detail={APP_LINKS.email}
             right={<Text style={styles.call}>Email</Text>}
-            hint="Starts an email to Win Zero support"
-            onPress={() => emailSupport(APP_NAME)}
+            hint={`Starts an email to ${APP_NAME} support`}
+            onPress={() => emailSupport(APP_LABEL)}
           />
         </View>
-        <Fine>{APP_NAME} · © 2026 E7 Systems</Fine>
+        <Fine>{APP_LABEL} · © 2026 E7 Systems</Fine>
       </View>
 
       {eraseArmed ? (

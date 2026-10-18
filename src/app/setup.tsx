@@ -11,11 +11,14 @@ import { colors, fonts, space, type } from '@/theme/tokens';
 import { Chip, Em, Eyebrow, Field, Fine, Lede, TextField } from '@/ui/bits';
 import { TopBar } from '@/ui/Brand';
 import { Button, LinkButton } from '@/ui/Button';
-import { GOAL_MAX_LENGTH, reminderWhen, RULES, SUGGESTIONS } from '@/ui/copy/rules';
+import { GOAL_MAX_LENGTH, reminderWhen, rules, SUGGESTIONS } from '@/ui/copy/rules';
 import { feedback } from '@/ui/feedback';
 import { Screen } from '@/ui/Screen';
 import { TimeField } from '@/ui/TimeField';
 import { useDeviceCalendar } from '@/ui/useDevice';
+import { APP_NAME } from '@/variant';
+
+const RULES = rules(APP_NAME);
 
 export default function Setup() {
   const hasGoal = useApp((s) => s.goal !== null);
@@ -64,7 +67,7 @@ export default function Setup() {
           </Lede>
         ) : null}
         <Lede>
-          Win Zero asks at your check-in time. {reminderWhen(checkInTime, formatClockTime(morningTime, h24), morningTime)}{' '}
+          {APP_NAME} asks at your check-in time. {reminderWhen(checkInTime, formatClockTime(morningTime, h24), morningTime)}{' '}
           There&apos;s no rush: you can answer until midnight the next day, right from the notification or in the app.
         </Lede>
         <Lede>If you&apos;re away for a while, reminders ease off to one gentle nudge a week.</Lede>

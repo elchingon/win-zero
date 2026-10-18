@@ -12,6 +12,7 @@ import { useApp, type RoundRecord } from '@/store';
 import { colors, fonts, fontScale, space, type, withAlpha } from '@/theme/tokens';
 import { Em, Eyebrow } from '@/ui/bits';
 import { Button, LinkButton } from '@/ui/Button';
+import { APP_NAME } from '@/variant';
 
 import { resultLines, sheetEyebrow, type ResultMode } from './result';
 import { milestoneShareText, shareMilestone } from './share';
@@ -36,7 +37,7 @@ export function ResultSheet(props: {
 }) {
   const { n, mode, record, onBack, onReplay } = props;
   // A round that earned something can be shared; practice rounds earn nothing.
-  const shareText = mode !== 'practice' && record ? milestoneShareText(record.n, record.rewards) : null;
+  const shareText = mode !== 'practice' && record ? milestoneShareText(record.n, record.rewards, APP_NAME) : null;
   const goal = useApp((s) => s.goal);
   const credits = useApp((s) => s.credits);
   const { width, height: screenHeight, fontScale: textScale } = useWindowDimensions();

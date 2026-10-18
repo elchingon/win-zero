@@ -3,7 +3,7 @@ import { describe, expect, it } from '@jest/globals';
 import { BONUS_MAX_N, MISSED_GRACE_DAYS, SLIDE_FINAL, WEAPON_CREDIT_YES_RUNS } from '@/engine';
 import { formatCount } from '@/lib/format';
 
-import { howItWorks, reminderWhen } from '../rules';
+import { howItWorks, reminderWhen, rules, RULES } from '../rules';
 
 const words = (notifications: boolean) =>
   howItWorks({ notifications })
@@ -22,6 +22,16 @@ describe('howItWorks', () => {
     const web = words(false);
     expect(web).not.toMatch(/notification|reminder|nudge/i);
     expect(web).toContain('Answer Yes or Not today on Home.');
+  });
+
+  it('says which app asks', () => {
+    expect(words(true)).toContain('Win Zero asks one question');
+    const plus = howItWorks({ notifications: true, appName: 'Win Zero Plus' })
+      .flatMap((s) => s.body)
+      .join(' ');
+    expect(plus).toContain('Win Zero Plus asks one question');
+    expect(RULES[0]?.text).toContain('Win Zero asks');
+    expect(rules('Win Zero Plus')[0]?.text).toContain('Win Zero Plus asks');
   });
 
   it('takes its numbers from the engine on both', () => {

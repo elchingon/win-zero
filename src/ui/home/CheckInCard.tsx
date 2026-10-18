@@ -6,6 +6,7 @@ import { isWindowToday, type CheckInWindow, type GoalState, type TimeZone } from
 import { formatInstantTime, formatUntil } from '@/lib/format';
 import { colors, fonts, fontScale, radii, space } from '@/theme/tokens';
 import { Button } from '@/ui/Button';
+import { APP_WORDMARK } from '@/variant';
 
 import { checkInStakes, stakesHint, stakesLine } from './stakes';
 
@@ -31,7 +32,7 @@ export function CheckInCard(props: {
         <View style={styles.app}>
           <View style={styles.appRing} />
         </View>
-        <Text style={styles.headText}>WIN ZERO</Text>
+        <Text style={styles.headText}>{APP_WORDMARK}</Text>
         <Text style={[styles.headText, styles.when]}>{formatInstantTime(window.opensAt, tz, h24)}</Text>
       </View>
       <Text style={styles.question}>

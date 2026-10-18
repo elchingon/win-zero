@@ -4,9 +4,13 @@
 import { weaponById } from '@/engine';
 import { formatCount, joinAnd } from '@/lib/format';
 import type { RoundRewards } from '@/store/types';
+import { FREE_APP_NAME } from '@/ui/copy/app';
 
-/** What to share for a Day `n` round, or null when it earned nothing to share. */
-export function milestoneShareText(n: number, rewards: RoundRewards): string | null {
+/**
+ * What to share for a Day `n` round, or null when it earned nothing to share. `appName`: the app
+ * the player shared from (SPEC 9).
+ */
+export function milestoneShareText(n: number, rewards: RoundRewards, appName: string = FREE_APP_NAME): string | null {
   const weapons = rewards.weapons.map((id) => weaponById(id).name);
   const items = [...(rewards.bomb ? ['a bomb'] : []), ...(rewards.shield ? ['a shield'] : [])];
   const did = [
@@ -14,5 +18,5 @@ export function milestoneShareText(n: number, rewards: RoundRewards): string | n
     ...(items.length > 0 ? [`earned ${joinAnd(items)}`] : []),
   ];
   if (did.length === 0) return null;
-  return `Day ${formatCount(n)} on Win Zero: ${formatCount(n)} ${n === 1 ? 'zero' : 'zeros'} down. I ${did.join(' and ')}.`;
+  return `Day ${formatCount(n)} on ${appName}: ${formatCount(n)} ${n === 1 ? 'zero' : 'zeros'} down. I ${did.join(' and ')}.`;
 }

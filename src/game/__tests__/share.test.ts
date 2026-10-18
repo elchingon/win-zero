@@ -25,6 +25,12 @@ describe('milestoneShareText', () => {
     );
   });
 
+  it('names the app it was shared from', () => {
+    expect(milestoneShareText(5, { ...none, bomb: true }, 'Win Zero Plus')).toBe(
+      'Day 5 on Win Zero Plus: 5 zeros down. I earned a bomb.',
+    );
+  });
+
   it('has nothing to share for a round that earned nothing', () => {
     expect(milestoneShareText(4, none)).toBeNull();
     expect(milestoneShareText(21, { ...none, shieldCapped: true })).toBeNull(); // shields already full

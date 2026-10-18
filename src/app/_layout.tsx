@@ -15,6 +15,7 @@ import { CrashScreen } from '@/ui/CrashScreen';
 import { APP_LINKS } from '@/ui/support';
 import { ZeroField } from '@/ui/ZeroField';
 import { LaunchSplash } from '@/ui/LaunchSplash';
+import { APP_NAME } from '@/variant';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -33,7 +34,7 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   return (
     <CrashScreen
       eyebrow="Something went wrong"
-      title={['Win Zero hit ', 'a snag.']}
+      title={[`${APP_NAME} hit `, 'a snag.']}
       body={[
         'Your streak, history and rewards are saved on this phone.',
         `If it keeps happening, email us at ${APP_LINKS.email}.`,

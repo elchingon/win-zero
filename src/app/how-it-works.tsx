@@ -9,9 +9,10 @@ import { TopBar } from '@/ui/Brand';
 import { LinkButton } from '@/ui/Button';
 import { howItWorks } from '@/ui/copy/rules';
 import { Screen } from '@/ui/Screen';
+import { APP_NAME } from '@/variant';
 
 /** The app sends reminders, so its rules mention them. */
-const SECTIONS = howItWorks({ notifications: true });
+const SECTIONS = howItWorks({ notifications: true, appName: APP_NAME });
 
 export default function HowItWorks() {
   return (
