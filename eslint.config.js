@@ -9,6 +9,26 @@ module.exports = defineConfig([
     ignores: ['dist/*', 'docs/*', '.expo/*', 'website/*'],
   },
   {
+    // Win Zero Plus's own code (src/plus) is required only where it's gated on the variant, with
+    // the literal comparison release builds fold, so the free bundle leaves it out. A static import
+    // would pull it into both apps.
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/plus/**', 'src/**/__tests__/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@/plus', '@/plus/*'],
+              message: "Plus-only code: require it behind process.env.EXPO_PUBLIC_APP_VARIANT === 'plus'.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // Shared with the website (the same list as website/plugins/shared-guard.ts): pure TypeScript
     // that runs in a browser too. Skia is allowed for types only, which the website stands in for.
     files: [
@@ -48,8 +68,17 @@ module.exports = defineConfig([
               allowTypeImports: true,
               message: 'Shared with the website: Skia for types only (`import type`).',
             },
+            {
+              regex: '^@/(variant|plus)(/.*)?$',
+              message: 'Shared with the website: never ask which app this is; take names and limits as parameters.',
+            },
           ],
         },
+      ],
+      // The website's bundle has no process.env, and the variant must come in as a parameter.
+      'no-restricted-properties': [
+        'error',
+        { object: 'process', property: 'env', message: 'Shared with the website: take the value as a parameter.' },
       ],
     },
   },
