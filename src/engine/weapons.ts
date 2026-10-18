@@ -1,5 +1,7 @@
 // Weapons (SPEC 5). Unlocked by bestStreak, so a reset never takes one away. A Weapon credit
-// (credits.ts) lends one not yet unlocked for a single round: the round's `borrowed` list.
+// (credits.ts) lends one not yet unlocked for a single round: the round's `borrowed` list. With
+// more than one goal (SPEC 9) the arsenal is shared: it reaches as far as the best streak of any
+// goal (arsenalReach), and every bestStreak argument here takes that reach.
 
 export type WeaponId = 'pea' | 'twin' | 'scatter' | 'rocket' | 'chain' | 'laser' | 'nuke';
 
@@ -142,6 +144,15 @@ export function roundWeapons(bestStreak: number, borrowed: readonly WeaponId[] =
 export function defaultWeapon(bestStreak: number): WeaponDef {
   const unlocked = unlockedWeapons(bestStreak);
   return unlocked[unlocked.length - 1] ?? weaponById('pea');
+}
+
+/**
+ * How far the shared arsenal reaches: the best streak any goal has reached. `arsenalBest` keeps that
+ * record for goals since archived or removed, so it never goes down; with one goal and nothing
+ * removed, it's that goal's bestStreak.
+ */
+export function arsenalReach(arsenalBest: number, goals: readonly { bestStreak: number }[]): number {
+  return goals.reduce((reach, g) => Math.max(reach, g.bestStreak), arsenalBest);
 }
 
 /** Weapons that become available when bestStreak goes from `prevBest` to `nextBest`. */

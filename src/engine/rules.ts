@@ -81,7 +81,15 @@ export interface YesRewards extends MilestoneRewards {
   weapons: WeaponDef[];
 }
 
-export function applyYes(state: GoalState, ctx: SettleContext): { state: GoalState; rewards: YesRewards } {
+/**
+ * A Yes. `arsenalBest`: the shared arsenal's reach before it (weapons.ts arsenalReach), so a goal
+ * climbing below another goal's best announces no weapon (SPEC 9). One goal alone passes nothing.
+ */
+export function applyYes(
+  state: GoalState,
+  ctx: SettleContext,
+  arsenalBest = 0,
+): { state: GoalState; rewards: YesRewards } {
   const streak = state.streak + 1;
   const bestStreak = Math.max(state.bestStreak, streak);
   const milestones = milestoneRewards(state.runPeak, streak, state.shields);
@@ -95,7 +103,8 @@ export function applyYes(state: GoalState, ctx: SettleContext): { state: GoalSta
     bombs: state.bombs + (milestones.bomb ? 1 : 0),
     shields: state.shields + (milestones.shield ? 1 : 0),
   });
-  return { state: next, rewards: { ...milestones, weapons: newlyUnlocked(state.bestStreak, bestStreak) } };
+  const weapons = newlyUnlocked(Math.max(arsenalBest, state.bestStreak), Math.max(arsenalBest, bestStreak));
+  return { state: next, rewards: { ...milestones, weapons } };
 }
 
 export interface NotTodayResult {

@@ -243,6 +243,8 @@ export interface AnswerInput {
   answer: Answer;
   /** The day being answered, e.g. from a notification. Defaults to the pending window. */
   day?: DayKey;
+  /** The shared arsenal's reach across every goal (SPEC 9), so a Yes announces only new weapons. */
+  arsenalBest?: number;
 }
 
 /**
@@ -259,7 +261,7 @@ export function answer(state: GoalState, input: AnswerInput, now: Date, tz: Time
   if (pending && day === pending.day) {
     const ctx = { day, at: now, tz: pending.tz };
     if (input.answer === 'yes') {
-      const r = applyYes(current, ctx);
+      const r = applyYes(current, ctx, input.arsenalBest);
       return {
         ok: true,
         state: r.state,
