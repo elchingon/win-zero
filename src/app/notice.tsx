@@ -1,6 +1,6 @@
 // Reset / Shielded / Slipping: what a Not today, or a run of missed days, did to the streak.
 // Shown once. The copy is supportive and plain: some people here are working on sobriety.
-import { Redirect, router } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
 
@@ -17,7 +17,9 @@ import { callSupportLine, SUPPORT_LINE } from '@/ui/support';
 
 export default function NoticeScreen() {
   // Snapshot it, and mark it shown: it appears once, and the store may move on while it's up.
-  const [pending] = useState(() => appStore.getState().nextNotice());
+  // The link names the goal it's for; anything else waiting comes after.
+  const { goal: goalId } = useLocalSearchParams<{ goal?: string }>();
+  const [pending] = useState(() => appStore.getState().nextNotice(goalId));
   const goal = useApp((s) => (pending ? (slotById(s, pending.goalId)?.goal ?? null) : null));
   const route = useApp((s) => s.route);
   const undo = useApp((s) => s.undo);

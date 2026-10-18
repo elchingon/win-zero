@@ -53,7 +53,8 @@ export function roundOverlay(landed: boolean, mode: ResultMode, cheered: boolean
 
 /**
  * The sheet's lines for a round of `n` zeros. `record` is the day's round, absent for bonus and
- * practice rounds; `credits` is the wallet now, for "You have N".
+ * practice rounds; `credits` is the wallet now, for "You have N". `best` is how far the arsenal
+ * reaches: the goal's best streak, or with several goals the best of any (SPEC 9).
  */
 export function resultLines(
   n: number,
@@ -61,6 +62,7 @@ export function resultLines(
   record: RoundRecord | null,
   goal: GoalState | null,
   credits: CreditWallet,
+  best: number = goal?.bestStreak ?? 0,
 ): ResultLine[] {
   const lines: ResultLine[] = [];
   if (mode === 'practice') {
@@ -86,7 +88,7 @@ export function resultLines(
   }
   // A bonus round's size isn't the streak, so there's no next unlock to count down to.
   if ((mode === 'real' || mode === 'replay') && goal) {
-    const next = nextUnlock(goal.bestStreak, n);
+    const next = nextUnlock(best, n);
     lines.push({
       text: next
         ? `Hold the line ${plural(next.daysToGo, 'more day')} for the ${next.weapon.name}.`

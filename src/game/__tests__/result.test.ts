@@ -94,6 +94,14 @@ describe('resultLines', () => {
     expect(texts(250, 'bonus', null, goal, wallet(0, 0))).toEqual(["Bonus round: your streak and rewards don't change."]);
   });
 
+  it("counts down to what's next for the shared arsenal, from this goal's streak (SPEC 9)", () => {
+    // Another goal has reached 30: the Chain Zapper is in hand, and the Rail Laser comes at 60.
+    expect(texts(3, 'replay', record([]), goal, EMPTY_WALLET, 30)).toEqual([
+      "Replay: your streak and rewards don't change.",
+      'Hold the line 57 more days for the Rail Laser.',
+    ]);
+  });
+
   it("doesn't repeat what a replay already earned", () => {
     expect(texts(3, 'replay', record([grant('weapon', 'yes-run-3')]), goal, EMPTY_WALLET)).toEqual([
       "Replay: your streak and rewards don't change.",

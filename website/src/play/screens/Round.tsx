@@ -38,12 +38,17 @@ export function Round() {
   if (practice) {
     return <Play initialMode="practice" goalId={null} n={practice} best={PRACTICE_BEST} record={null} borrowed={NONE_BORROWED} />;
   }
-  return params.get('round') === 'bonus' ? <BonusStoreRound /> : <StoreRound />;
+  return params.get('round') === 'bonus' ? <BonusStoreRound /> : <StoreRound goalId={params.get('goal')} />;
 }
 
-function StoreRound() {
+/** `goalId`'s round; without one (an old link), the first round waiting, or the first goal's. */
+function StoreRound({ goalId: wanted }: { goalId: string | null }) {
   // Read once: if a day settles mid-round, the round on screen stays put.
-  const [slot] = useState(() => primarySlot(appStore.getState()));
+  const [slot] = useState(() => {
+    const s = appStore.getState();
+    if (wanted) return slotById(s, wanted);
+    return s.goals.find((g) => g.round && !g.round.played) ?? primarySlot(s);
+  });
   const best = useApp(arsenalBestOf);
   const record = slot?.round;
   if (!slot || !record) return <Navigate to={ROUTES.home} replace />;
@@ -254,7 +259,7 @@ function Play(props: {
         onFrameStats={mode === 'practice' ? setStats : undefined}
       />
       {overlay === 'sheet' ? (
-        <ResultSheet n={n} mode={mode} record={record} onBack={goHome} onReplay={replay} />
+        <ResultSheet n={n} mode={mode} goalId={goalId} record={record} onBack={goHome} onReplay={replay} />
       ) : overlay === 'cheer' ? (
         <CheerPopup onDismiss={dismissCheer} />
       ) : (

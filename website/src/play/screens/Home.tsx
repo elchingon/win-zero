@@ -15,7 +15,7 @@ import { CheckInCard } from '../home/CheckInCard';
 import { CreditsCard } from '../home/CreditsCard';
 import { HistoryCalendar } from '../home/HistoryCalendar';
 import { Stats } from '../home/Stats';
-import { BONUS_ROUND, pathForAnswer, ROUTES } from '../nav';
+import { BONUS_ROUND, pathForAnswer, roundFor, ROUTES } from '../nav';
 import { announce } from '../platform/announce';
 import { deviceCalendar } from '../platform/calendar';
 import { appStore, useApp } from '../store';
@@ -104,7 +104,7 @@ function HomeScreen({ goal }: { goal: GoalState }) {
         <Card>
           <p className="card-title">Your Day {unplayed.n} round is ready.</p>
           <Lede>Your rewards are already banked. Play it whenever you like.</Lede>
-          <ButtonLink label="Play now" to={ROUTES.round} />
+          <ButtonLink label="Play now" to={roundFor(goal.goalId)} />
         </Card>
       ) : null}
 

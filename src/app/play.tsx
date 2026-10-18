@@ -46,7 +46,7 @@ const newSeed = () => Math.floor(Math.random() * 2 ** 31);
 const NONE_BORROWED: WeaponId[] = [];
 
 export default function Play() {
-  const { practice, round } = useLocalSearchParams<{ practice?: string; round?: string }>();
+  const { practice, round, goal } = useLocalSearchParams<{ practice?: string; round?: string; goal?: string }>();
   const practiceN = PRACTICE_ENABLED && practice ? Number(practice) : NaN;
   const isPractice = Number.isInteger(practiceN) && practiceN >= 1 && practiceN <= PRACTICE_MAX_N;
   return (
@@ -65,15 +65,20 @@ export default function Play() {
       ) : round === 'bonus' ? (
         <BonusStoreRound />
       ) : (
-        <StoreRound />
+        <StoreRound goalId={goal} />
       )}
     </>
   );
 }
 
-function StoreRound() {
+/** `goalId`'s round; without one (an old link), the first round waiting, or the first goal's. */
+function StoreRound({ goalId: wanted }: { goalId?: string }) {
   // Read once: if a day settles mid-round, the round on screen stays put.
-  const [slot] = useState(() => primarySlot(appStore.getState()));
+  const [slot] = useState(() => {
+    const s = appStore.getState();
+    if (wanted) return slotById(s, wanted);
+    return s.goals.find((g) => g.round && !g.round.played) ?? primarySlot(s);
+  });
   const best = useApp(arsenalBestOf);
   const record = slot?.round;
   if (!slot || !record) return <Redirect href="/" />;
@@ -302,7 +307,7 @@ function Round(props: {
         onFrameStats={mode === 'practice' ? setStats : undefined}
       />
       {overlay === 'sheet' ? (
-        <ResultSheet n={n} mode={mode} record={record} onBack={toBase} onReplay={replay} />
+        <ResultSheet n={n} mode={mode} goalId={goalId} record={record} onBack={toBase} onReplay={replay} />
       ) : overlay === 'cheer' ? (
         <CheerPopup onDismiss={dismissCheer} />
       ) : (

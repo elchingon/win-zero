@@ -84,7 +84,12 @@ function HomeScreen({ goal }: { goal: GoalState }) {
   // round for Yes, the notice for Not today. Otherwise, on focus and whenever days settle while
   // Home is showing (the app comes back to the foreground, a window closes), catch up and show
   // any Slipping / Reset / Shielded news once. One screen per visit (see routing.ts).
-  useFocusEffect(useCallback(() => startHomeRouting(appStore, (path) => router.push(path)), []));
+  useFocusEffect(
+    useCallback(
+      () => startHomeRouting(appStore, (route) => router.push({ pathname: route.path, params: { goal: route.goalId } })),
+      [],
+    ),
+  );
 
   const onYes = () => {
     feedback.success();
@@ -133,7 +138,7 @@ function HomeScreen({ goal }: { goal: GoalState }) {
         <Card>
           <Text style={styles.cardTitle}>Your Day {unplayed.n} round is ready.</Text>
           <Text style={type.lede}>Your rewards are already banked. Play it whenever you like.</Text>
-          <Button label="Play now" onPress={() => router.push('/play')} />
+          <Button label="Play now" onPress={() => router.push({ pathname: '/play', params: { goal: goal.goalId } })} />
         </Card>
       ) : null}
 

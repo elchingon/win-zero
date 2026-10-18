@@ -118,3 +118,38 @@ describe('a bonus round', () => {
     expect(app.pathname()).toBe('/');
   });
 });
+
+describe('whose round (SPEC 9)', () => {
+  const other = { ...yesDays(newGoal(), DAY0, 7), goalId: 'g2' }; // best 7: the Scatter Gun too
+  const sevenRound: RoundRecord = { ...dayRound(), n: 7, rewards: { ...dayRound().rewards, weapons: [] } };
+
+  it("plays the goal the link names, with the shared arsenal's weapons", async () => {
+    appStore.setState({
+      goals: [
+        { goal, round: dayRound(), seenThrough: null },
+        { goal: other, round: sevenRound, seenThrough: null },
+      ],
+      credits: wallet(0),
+    });
+    await open('/play?goal=g2');
+    expect(screen.getByText('Canvas: Scatter Gun, 7 zeros')).toBeOnTheScreen();
+  });
+
+  it('without a goal in the link, plays the first round still waiting', async () => {
+    appStore.setState({
+      goals: [
+        { goal, round: dayRound([], true), seenThrough: null },
+        { goal: other, round: sevenRound, seenThrough: null },
+      ],
+      credits: wallet(0),
+    });
+    await open('/play');
+    expect(screen.getByText('Canvas: Scatter Gun, 7 zeros')).toBeOnTheScreen();
+  });
+
+  it('goes back to Home for a goal that has no round', async () => {
+    appStore.setState({ goals: [{ goal, round: null, seenThrough: null }], credits: wallet(0) });
+    const app = await open('/play?goal=g9');
+    expect(app.pathname()).toBe('/');
+  });
+});

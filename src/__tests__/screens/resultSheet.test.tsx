@@ -27,7 +27,7 @@ const round = (n: number, rewards: Partial<RoundRecord['rewards']>, played = fal
 });
 
 const show = (n: number, mode: ResultMode, record: RoundRecord | null) =>
-  render(<ResultSheet n={n} mode={mode} record={record} onBack={() => {}} onReplay={() => {}} />);
+  render(<ResultSheet n={n} mode={mode} goalId="g1" record={record} onBack={() => {}} onReplay={() => {}} />);
 
 beforeAll(async () => {
   for (let i = 0; i < 50 && !appStore.getState().hydrated; i++) await new Promise((r) => setTimeout(r, 0));

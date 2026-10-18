@@ -8,7 +8,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { formatCount } from '@/lib/format';
-import { primaryGoal, useApp, type RoundRecord } from '@/store';
+import { arsenalBestOf, slotById, useApp, type RoundRecord } from '@/store';
 import { colors, fonts, fontScale, space, type, withAlpha } from '@/theme/tokens';
 import { Em, Eyebrow } from '@/ui/bits';
 import { Button, LinkButton } from '@/ui/Button';
@@ -30,15 +30,18 @@ const RISE_MS = 500;
 export function ResultSheet(props: {
   n: number;
   mode: ResultMode;
+  /** Whose round this is; null for bonus and practice rounds. */
+  goalId: string | null;
   /** The day's round: what the Yes earned. Absent for bonus and practice rounds. */
   record: RoundRecord | null;
   onBack: () => void;
   onReplay: () => void;
 }) {
-  const { n, mode, record, onBack, onReplay } = props;
+  const { n, mode, goalId, record, onBack, onReplay } = props;
   // A round that earned something can be shared; practice rounds earn nothing.
   const shareText = mode !== 'practice' && record ? milestoneShareText(record.n, record.rewards, APP_NAME) : null;
-  const goal = useApp(primaryGoal);
+  const goal = useApp((s) => (goalId ? (slotById(s, goalId)?.goal ?? null) : null));
+  const best = useApp(arsenalBestOf);
   const credits = useApp((s) => s.credits);
   const { width, height: screenHeight, fontScale: textScale } = useWindowDimensions();
   // At large text sizes the buttons stack, so their labels needn't shrink to fit side by side.
@@ -55,7 +58,7 @@ export function ResultSheet(props: {
     return () => clearTimeout(id);
   }, []);
 
-  const lines = resultLines(n, mode, record, goal, credits);
+  const lines = resultLines(n, mode, record, goal, credits, best);
 
   return (
     <Animated.View

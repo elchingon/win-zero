@@ -28,7 +28,7 @@ function home(store: AppStore) {
   const pushed: string[] = [];
   let stop: (() => void) | null = null;
   const focus = () => {
-    stop = startHomeRouting(store, (path) => pushed.push(path));
+    stop = startHomeRouting(store, (route) => pushed.push(route.path));
   };
   const blur = () => {
     stop?.();
