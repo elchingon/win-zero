@@ -27,7 +27,7 @@ describe('parseLink', () => {
   });
 
   it('refuses an id that could name another file, or none', () => {
-    for (const t of ['../secrets', 'a/b/c/d/e', 'short', '', 'x'.repeat(65), 'id%2F..%2Fx']) {
+    for (const t of ['../secrets', 'a/b/c/d/e', 'with space', '', 'x'.repeat(65), 'id%2F..%2Fx']) {
       expect(parseLink(`winzeroplus://import?t=${t}`)).toBeNull();
     }
     expect(parseLink('winzeroplus://import')).toBeNull();

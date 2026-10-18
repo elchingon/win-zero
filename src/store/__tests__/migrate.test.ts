@@ -153,6 +153,33 @@ describe('reading saved credits and rounds', () => {
   });
 });
 
+describe('reading move records (SPEC 9)', () => {
+  const at = '2026-10-13T18:00:00.000Z';
+
+  it('keeps a move out with a good id and status, and drops anything else', () => {
+    expect(normalizePersisted({}).moveOut).toBeNull();
+    const sent = { id: 'a1b2-c3d4', status: 'sent', sentAt: at };
+    expect(normalizePersisted({ moveOut: sent }).moveOut).toEqual(sent);
+    expect(normalizePersisted({ moveOut: { ...sent, status: 'moved' } }).moveOut).toEqual({ ...sent, status: 'moved' });
+    for (const bad of [{ ...sent, id: '../x' }, { ...sent, status: 'gone' }, { ...sent, id: 7 }, 'sent']) {
+      expect(normalizePersisted({ moveOut: bad }).moveOut).toBeNull();
+    }
+    // A lost time doesn't lose the move: it keeps its id, and Win Zero asks whether it finished.
+    expect(normalizePersisted({ moveOut: { ...sent, sentAt: 'soon' } }).moveOut).toEqual({ ...sent, sentAt: '1970-01-01T00:00:00.000Z' });
+  });
+
+  it('keeps every move taken in under a good id, so its credits never pay twice', () => {
+    expect(normalizePersisted({}).imports).toEqual({});
+    const record = { at, createdAt: at, game: 2, weapon: 1 };
+    expect(normalizePersisted({ imports: { 'a1b2-c3d4': record } }).imports).toEqual({ 'a1b2-c3d4': record });
+    expect(normalizePersisted({ imports: { 'a1b2-c3d4': 'yes' } }).imports).toEqual({
+      'a1b2-c3d4': { at: '1970-01-01T00:00:00.000Z', createdAt: '1970-01-01T00:00:00.000Z', game: 0, weapon: 0 },
+    });
+    expect(normalizePersisted({ imports: { '../x': record, __proto__: record } }).imports).toEqual({});
+    expect(normalizePersisted({ imports: [record] }).imports).toEqual({});
+  });
+});
+
 describe('migratePersisted', () => {
   /** What the 2 → 3 step adds around a single goal. */
   const slots = (goal: unknown, round: unknown = null, seenThrough: unknown = null) => ({

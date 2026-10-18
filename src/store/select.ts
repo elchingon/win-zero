@@ -32,3 +32,6 @@ export const totalBombs = (s: Goals): number => s.goals.reduce((n, slot) => n + 
 
 /** Another goal fits under this app's limit. */
 export const canAddGoal = (s: Goals & { limits: Limits }): boolean => s.goals.length < s.limits.maxGoals;
+
+/** Win Zero has moved to Win Zero Plus: no reminders here, and Home says where the goals went. */
+export const isMovedOut = (s: Pick<PersistedState, 'moveOut'>): boolean => s.moveOut?.status === 'moved';

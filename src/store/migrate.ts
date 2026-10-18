@@ -17,10 +17,13 @@ import {
 } from '@/engine';
 
 import {
+  MOVE_ID_PATTERN,
   STORE_VERSION,
   type ArchivedGoal,
   type BonusRound,
   type GoalSlot,
+  type ImportRecord,
+  type MoveOut,
   type PersistedState,
   type Prefs,
   type RoundRecord,
@@ -39,6 +42,8 @@ export const DEFAULT_PERSISTED: PersistedState = {
   bonus: null,
   reminderCardHiddenUntil: null,
   devClockOffsetMs: 0,
+  moveOut: null,
+  imports: {},
 };
 
 type Rec = Record<string, unknown>;
@@ -190,6 +195,28 @@ function normalizeArchived(v: unknown): ArchivedGoal | null {
   return goal ? { goal, archivedAt: instantOrNull(v.archivedAt) ?? goal.createdAt } : null;
 }
 
+/** Stands in for a lost time on a move record, which is kept for its id. */
+const LONG_AGO = '1970-01-01T00:00:00.000Z';
+const isMoveId = (v: unknown): v is string => typeof v === 'string' && MOVE_ID_PATTERN.test(v);
+
+function normalizeMoveOut(v: unknown): MoveOut | null {
+  if (!isRecord(v) || !isMoveId(v.id) || (v.status !== 'sent' && v.status !== 'moved')) return null;
+  return { id: v.id, status: v.status, sentAt: instantOrNull(v.sentAt) ?? LONG_AGO };
+}
+
+/** Moves taken in, by id. A record whose details are lost still counts: its credits were added. */
+function normalizeImports(v: unknown): Record<string, ImportRecord> {
+  const imports: Record<string, ImportRecord> = {};
+  if (!isRecord(v)) return imports;
+  for (const [id, r] of Object.entries(v)) {
+    if (!isMoveId(id)) continue;
+    const rec = isRecord(r) ? r : {};
+    const at = instantOrNull(rec.at) ?? LONG_AGO;
+    imports[id] = { at, createdAt: instantOrNull(rec.createdAt) ?? at, game: count(rec.game, 0), weapon: count(rec.weapon, 0) };
+  }
+  return imports;
+}
+
 /** Each goal once, by id: a second copy of an id is dropped, active ones before archived. */
 function uniqueGoals<T extends { goal: GoalState }>(items: (T | null)[], seen: Set<string>): T[] {
   const out: T[] = [];
@@ -230,6 +257,8 @@ export function normalizePersisted(raw: unknown): PersistedState {
     bonus: normalizeBonus(r.bonus),
     reminderCardHiddenUntil: instantOrNull(r.reminderCardHiddenUntil),
     devClockOffsetMs: typeof offset === 'number' && Number.isFinite(offset) ? offset : 0,
+    moveOut: normalizeMoveOut(r.moveOut),
+    imports: normalizeImports(r.imports),
   };
 }
 

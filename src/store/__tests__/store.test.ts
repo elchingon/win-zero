@@ -26,7 +26,7 @@ import { startLifecycle } from '../lifecycle';
 import { STORE_BACKUP_KEY, STORE_KEY, STORE_VERSION } from '../types';
 import { fakeAppState, flush, gid, harness, noticeOf, oneGoal, putGoal, ready, withGoal } from './harness';
 import { PLUS_LIMITS } from '../limits';
-import { arsenalBestOf, canAddGoal, primaryGoal, primaryRound, primarySlot, slotById, totalBombs } from '../select';
+import { arsenalBestOf, canAddGoal, isMovedOut, primaryGoal, primaryRound, primarySlot, slotById, totalBombs } from '../select';
 
 beforeEach(async () => {
   await AsyncStorage.clear();
@@ -711,7 +711,11 @@ describe('persistence', () => {
     a.store.getState().setPref('goalInReminders', true);
     a.store.getState().selectWeapon('pea');
     a.store.getState().hideReminderCard();
-    a.store.setState({ notices: { [gid(a.store)]: { kind: 'noted' } } });
+    a.store.getState().startMoveOut();
+    a.store.setState({
+      notices: { [gid(a.store)]: { kind: 'noted' } },
+      imports: { 'move-1': { at: '2026-10-12T18:00:00.000Z', createdAt: '2026-10-12T17:59:00.000Z', game: 1, weapon: 0 } },
+    });
     await flush();
 
     const b = harness();
@@ -726,8 +730,11 @@ describe('persistence', () => {
       bonus: s.bonus,
       reminderCardHiddenUntil: s.reminderCardHiddenUntil,
       devClockOffsetMs: s.devClockOffsetMs,
+      moveOut: s.moveOut,
+      imports: s.imports,
     });
     expect(pick(b.store.getState())).toEqual(pick(a.store.getState()));
+    expect(b.store.getState().moveOut).toMatchObject({ status: 'sent' });
     expect(b.store.getState().reminderCardHiddenUntil).not.toBeNull();
     expect(b.store.getState().prefs).toEqual({ sound: false, haptics: true, reengage: false, goalInReminders: true });
     expect(primaryRound(b.store.getState())).toMatchObject({ n: 1, played: false });
@@ -743,6 +750,8 @@ describe('persistence', () => {
         'credits',
         'devClockOffsetMs',
         'goals',
+        'imports',
+        'moveOut',
         'prefs',
         'reminderCardHiddenUntil',
         'weapon',
@@ -852,6 +861,126 @@ describe('persistence', () => {
     await flush();
     expect(await AsyncStorage.getItem(STORE_KEY)).toBeNull();
     expect(await AsyncStorage.getItem(STORE_BACKUP_KEY)).toBeNull();
+  });
+});
+
+describe('moving to Win Zero Plus (SPEC 9)', () => {
+  const credits = { balance: { game: 2, weapon: 1 }, claimed: ['goal-set', 'zeros-2'] };
+
+  it('gives every try one id, until the move is cancelled', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 3));
+    const s = () => h.store.getState();
+    const id = s().startMoveOut();
+    expect(id).toBe('goal-1');
+    expect(s().moveOut).toEqual({ id, status: 'sent', sentAt: at(DAY0, '12:00').toISOString() });
+    expect(isMovedOut(s())).toBe(false);
+
+    h.setTime('2026-10-14', '09:00');
+    expect(s().startMoveOut()).toBe(id);
+    expect(s().moveOut?.sentAt).toBe(at('2026-10-14', '09:00').toISOString());
+
+    s().cancelMoveOut();
+    expect(s().moveOut).toBeNull();
+    expect(s().startMoveOut()).not.toBe(id);
+  });
+
+  it('needs storage read, and a goal to move', async () => {
+    const early = harness();
+    expect(early.store.getState().startMoveOut()).toBeNull();
+    await ready(early.store);
+    expect(early.store.getState().startMoveOut()).toBeNull();
+    expect(early.store.getState().moveOut).toBeNull();
+  });
+
+  it('acts only on the confirmation of the move it sent', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 3));
+    const s = () => h.store.getState();
+    h.store.setState({ credits, bonus: { n: 40, borrowed: [], played: false } });
+    const id = s().startMoveOut()!;
+
+    expect(s().confirmMovedOut('someone-else')).toBe(false);
+    expect(s().moveOut?.status).toBe('sent');
+    expect(s().credits).toEqual(credits);
+
+    expect(s().confirmMovedOut(id)).toBe(true);
+    expect(isMovedOut(s())).toBe(true);
+    expect(s().moveOut).toMatchObject({ id, status: 'moved' });
+    // The credits went with the move; what they were earned for stays claimed here.
+    expect(s().credits).toEqual({ balance: { game: 0, weapon: 0 }, claimed: credits.claimed });
+    expect(s().bonus).toBeNull();
+    expect(primaryGoal(s())?.streak).toBe(3);
+
+    // Done: the same confirmation again, a new try or a cancel change nothing.
+    expect(s().confirmMovedOut(id)).toBe(false);
+    expect(s().startMoveOut()).toBeNull();
+    s().cancelMoveOut();
+    expect(isMovedOut(s())).toBe(true);
+  });
+
+  it('keeps a played bonus round for its replays', async () => {
+    const h = await withGoal(newGoal());
+    const played = { n: 40, borrowed: [], played: true };
+    h.store.setState({ bonus: played });
+    h.store.getState().confirmMovedOut(h.store.getState().startMoveOut()!);
+    expect(h.store.getState().bonus).toEqual(played);
+  });
+
+  it('keeps using this app after a move, settling the days since as any break', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 3)); // through 10-15
+    const s = () => h.store.getState();
+    s().confirmMovedOut(s().startMoveOut()!);
+    h.setTime('2026-10-20', '12:00');
+    s().keepUsingHere();
+    expect(s().moveOut).toBeNull();
+    expect(primaryGoal(s())?.lastSettledDay).toBe('2026-10-18'); // 10-19 is open until tonight
+    expect(primaryGoal(s())?.streak).toBe(3); // the free days
+    expect(s().startMoveOut()).toBe('goal-2'); // a later move is a new one
+  });
+
+  it('takes in a merged move, and drops news about the goals it replaced', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 3), { limits: PLUS_LIMITS });
+    const s = () => h.store.getState();
+    h.store.setState({
+      notices: { g1: { kind: 'noted' }, g2: { kind: 'noted' } },
+      route: { path: '/notice', goalId: 'g1' },
+      rejection: { reason: 'expired', goalId: 'g1' },
+    });
+    const incoming = { ...yesDays(newGoal(), DAY0, 5) };
+    const imports = { 'move-1': { at: at(DAY0, '12:00').toISOString(), createdAt: at(DAY0, '11:59').toISOString(), game: 2, weapon: 0 } };
+    let seen: { goals: number; now: Date } | null = null;
+    const r = s().importMove((current, now) => {
+      seen = { goals: current.goals.length, now };
+      return {
+        ok: true,
+        state: { ...current, goals: [{ goal: incoming, round: null, seenThrough: null }], imports },
+        replaced: ['g1'],
+      };
+    });
+    expect(r.ok).toBe(true);
+    expect(seen).toEqual({ goals: 1, now: at(DAY0, '12:00') });
+    expect(primaryGoal(s())?.streak).toBe(5);
+    expect(s().imports).toEqual(imports);
+    expect(s().notices).toEqual({ g2: { kind: 'noted' } });
+    expect(s().route).toBeNull();
+    expect(s().rejection).toBeNull();
+  });
+
+  it('leaves everything as it was when the merge refuses, or before storage is read', async () => {
+    const early = harness({ limits: PLUS_LIMITS });
+    expect(early.store.getState().importMove(() => ({ ok: false, reason: 'full' }))).toEqual({ ok: false, reason: 'not-ready' });
+    const h = await withGoal(newGoal(), { limits: PLUS_LIMITS });
+    const before = h.store.getState().goals;
+    expect(h.store.getState().importMove(() => ({ ok: false, reason: 'full' }))).toEqual({ ok: false, reason: 'full' });
+    expect(h.store.getState().goals).toBe(before);
+  });
+
+  it('forgets moves both ways on erase', async () => {
+    const h = await withGoal(newGoal());
+    h.store.getState().startMoveOut();
+    h.store.setState({ imports: { 'move-1': { at: DAY0, createdAt: DAY0, game: 0, weapon: 0 } } });
+    h.store.getState().erase();
+    expect(h.store.getState().moveOut).toBeNull();
+    expect(h.store.getState().imports).toEqual({});
   });
 });
 

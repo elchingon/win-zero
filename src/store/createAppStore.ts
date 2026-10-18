@@ -46,6 +46,7 @@ import {
   type AnswerSource,
   type CreditRound,
   type GoalSlot,
+  type ImportOutcome,
   type LegacyCopy,
   type Notice,
   type PendingNotice,
@@ -79,6 +80,7 @@ export type AddGoalResult =
   | { ok: true; goalId: string }
   | { ok: false; reason: 'not-ready' | 'empty-goal' | 'full' | 'days-not-allowed' };
 export type EditResult = { ok: true } | { ok: false; reason: 'no-goal' | 'empty-goal' | 'days-not-allowed' | 'no-days' };
+export type ImportResult = ImportOutcome | { ok: false; reason: 'not-ready' };
 
 export interface AppState extends PersistedState {
   /** Storage has been read (or failed to read). Actions wait for it. */
@@ -164,6 +166,27 @@ export interface AppState extends PersistedState {
   noticeShown: (p: PendingNotice) => void;
   /** Count missed days that cost nothing (the grace week, or paused) as seen, as they have no news. */
   markQuietMisses: () => void;
+  /**
+   * Win Zero: start, or try again, the move to Win Zero Plus (SPEC 9), and get its id. Every try
+   * has the same id until the move is confirmed or cancelled, so Plus adds its credits once.
+   * Null without a goal, or once moved.
+   */
+  startMoveOut: () => string | null;
+  /**
+   * Win Zero: Plus took in move `id`. Only the move this app sent counts. Reminders stop, and the
+   * credits that went with it leave here (a waiting bonus round went as its credit); the rewards
+   * already claimed stay claimed, so none pays twice.
+   */
+  confirmMovedOut: (id: string) => boolean;
+  /** Win Zero: stop waiting on a move Plus hasn't confirmed. */
+  cancelMoveOut: () => void;
+  /** Win Zero: after a move, go on using this app. Its reminders come back. */
+  keepUsingHere: () => void;
+  /**
+   * Win Zero Plus: take in a move. `merge` (src/transfer/merge.ts, passed in so shared code never
+   * loads it) works out the new state from this one; news about a goal it replaced is dropped.
+   */
+  importMove: (merge: (current: PersistedState, now: Date) => ImportOutcome) => ImportResult;
   erase: () => void;
   advanceDevClock: (ms: number) => void;
   resetDevClock: () => void;
@@ -213,6 +236,8 @@ function persisted(s: AppState): PersistedState & LegacyCopy {
     bonus: s.bonus,
     reminderCardHiddenUntil: s.reminderCardHiddenUntil,
     devClockOffsetMs: s.devClockOffsetMs,
+    moveOut: s.moveOut,
+    imports: s.imports,
     goal: first?.goal ?? null,
     round: first?.round ?? null,
     seenThrough: first?.seenThrough ?? null,
@@ -555,6 +580,49 @@ export function createAppStore(deps: StoreDeps) {
               const last = slot.goal.lastSettledDay;
               if (last && !missedNews(slot)) seeThrough(slot.goal.goalId, last);
             }
+          },
+
+          startMoveOut: () => {
+            const { hydrated, goals, moveOut } = get();
+            if (!hydrated || goals.length === 0 || moveOut?.status === 'moved') return null;
+            const id = moveOut?.id ?? deps.makeId();
+            set({ moveOut: { id, status: 'sent', sentAt: now().toISOString() } });
+            return id;
+          },
+
+          confirmMovedOut: (id) => {
+            const { hydrated, moveOut, credits, bonus } = get();
+            if (!hydrated || moveOut?.id !== id || moveOut.status !== 'sent') return false;
+            set({
+              moveOut: { ...moveOut, status: 'moved' },
+              credits: { ...credits, balance: EMPTY_WALLET.balance },
+              bonus: bonus && !bonus.played ? null : bonus,
+            });
+            return true;
+          },
+
+          cancelMoveOut: () => {
+            if (get().hydrated && get().moveOut?.status === 'sent') set({ moveOut: null });
+          },
+
+          keepUsingHere: () => {
+            if (!get().hydrated || get().moveOut?.status !== 'moved') return;
+            set({ moveOut: null });
+            get().refresh();
+          },
+
+          importMove: (merge) => {
+            const s = get();
+            if (!s.hydrated) return { ok: false, reason: 'not-ready' };
+            const outcome = merge(s, now());
+            if (!outcome.ok) return outcome;
+            const replaced = new Set(outcome.replaced);
+            const mine = <T extends { goalId: string }>(x: T | null): T | null => (x && replaced.has(x.goalId) ? null : x);
+            let { notices } = s;
+            for (const id of replaced) notices = without(notices, id);
+            set({ ...outcome.state, notices, route: mine(s.route), rejection: mine(s.rejection), undo: mine(s.undo) });
+            get().refresh();
+            return outcome;
           },
 
           erase: () => {

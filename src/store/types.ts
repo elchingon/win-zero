@@ -18,7 +18,7 @@ export const STORE_BACKUP_KEY = `${STORE_KEY}:unreadable`;
  * A move's id (SPEC 9: Win Zero to Win Zero Plus). It travels in a link and names the file the move
  * is left in, so it's letters, digits and dashes only.
  */
-export const MOVE_ID_PATTERN = /^[A-Za-z0-9-]{8,64}$/;
+export const MOVE_ID_PATTERN = /^[A-Za-z0-9-]{1,64}$/;
 
 export interface Prefs {
   sound: boolean;
@@ -81,6 +81,29 @@ export interface ArchivedGoal {
   archivedAt: IsoInstant;
 }
 
+/**
+ * Win Zero's move to Win Zero Plus (SPEC 9). `sent` from the first try, with one id for every
+ * try so Plus adds the credits once; `moved` once Plus confirms the move arrived. While moved,
+ * Win Zero schedules no reminders, until the user chooses to keep using it.
+ */
+export interface MoveOut {
+  id: string;
+  status: 'sent' | 'moved';
+  /** The latest try, so Win Zero can ask whether a move it never heard back about finished. */
+  sentAt: IsoInstant;
+}
+
+/** A move Win Zero Plus took in. Its credits are added once, however often it arrives. */
+export interface ImportRecord {
+  /** When Plus took it in. */
+  at: IsoInstant;
+  /** When Win Zero made it. */
+  createdAt: IsoInstant;
+  /** The credits it added. */
+  game: number;
+  weapon: number;
+}
+
 export interface PersistedState {
   /** The goals, in the order they're shown. The free app keeps at most one (Limits). */
   goals: GoalSlot[];
@@ -100,7 +123,22 @@ export interface PersistedState {
   reminderCardHiddenUntil: IsoInstant | null;
   /** Development builds only: simulated time travel. Production builds ignore it. */
   devClockOffsetMs: number;
+  /** Win Zero: its move to Win Zero Plus, from the first try until it's cancelled or the user stays. */
+  moveOut: MoveOut | null;
+  /** Win Zero Plus: the moves it took in, by id. */
+  imports: Readonly<Record<string, ImportRecord>>;
 }
+
+/** What a move's merge (src/transfer/merge.ts) gives Win Zero Plus to save. */
+export type ImportedState = Pick<
+  PersistedState,
+  'goals' | 'archived' | 'arsenalBest' | 'weapon' | 'prefs' | 'credits' | 'imports'
+>;
+
+/** A merged move, and the goals whose copy here it replaced; or why it can't be taken in. */
+export type ImportOutcome =
+  | { ok: true; state: ImportedState; replaced: readonly string[] }
+  | { ok: false; reason: 'full' };
 
 /**
  * Version 2's single-goal fields, copied from the first goal on every save for one release: a
