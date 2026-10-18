@@ -313,6 +313,8 @@ describe('startReminderSync', () => {
       ['check-in', () => (h.setTime(DAY0, '21:30'), s().answer(gid(h.store), 'yes'))],
       ['not today', () => (h.setTime('2026-10-14', '21:30'), s().answer(gid(h.store), 'not-today'))],
       ['undo', () => s().undoNotToday()],
+      ['moved to Plus', () => s().confirmMovedOut(s().startMoveOut()!)],
+      ['kept using here', () => s().keepUsingHere()],
       ['erase', () => s().erase()],
     ];
     for (const [name, change] of changes) {
@@ -326,6 +328,12 @@ describe('startReminderSync', () => {
     s().setPref('sound', false);
     s().setPref('haptics', false);
     expect(rec.calls).toHaveLength(before);
+    s().addGoal({ goal: 'Stop drinking', checkInTime: '20:00', morningTime: '09:00' });
+    const sent = rec.calls.length;
+    s().startMoveOut(); // a move on its way changes nothing until Plus confirms it
+    expect(rec.calls).toHaveLength(sent);
+    s().erase();
+    rec.calls.splice(before);
 
     app.emit('background');
     expect(rec.calls).toHaveLength(before);
@@ -352,5 +360,29 @@ describe('startReminderSync', () => {
       reengage: false,
       showGoal: true,
     });
+  });
+});
+
+describe('once moved to Win Zero Plus (SPEC 9)', () => {
+  it('schedules nothing and clears what was delivered, until the user keeps using Win Zero', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 3));
+    h.setTime('2026-10-16', '21:00');
+    const fake = fakeNotifications();
+    const sync = createReminderSync({ api: fake.api, read: () => syncInputFrom(h.store.getState()), allowed: async () => true });
+    await sync.sync({ force: true });
+    expect(fake.ids().length).toBeGreaterThan(0);
+    fake.present('g1:checkin-2026-10-16', { goalId: 'g1', day: '2026-10-16', kind: 'checkin' });
+
+    const s = () => h.store.getState();
+    s().confirmMovedOut(s().startMoveOut()!);
+    expect(syncInputFrom(s()).goals).toEqual([]);
+    await sync.sync();
+    expect(fake.ids()).toEqual([]);
+    expect(fake.presentedIds()).toEqual([]);
+
+    s().keepUsingHere();
+    expect(syncInputFrom(s()).goals).toEqual([primaryGoal(s())]);
+    await sync.sync();
+    expect(fake.ids().length).toBeGreaterThan(0);
   });
 });

@@ -5,6 +5,7 @@
 import type { Answer, DayKey } from '@/engine';
 import type { AppStore } from '@/store/createAppStore';
 import { whenHydrated } from '@/store/lifecycle';
+import { isMovedOut } from '@/store/select';
 
 import { ACTION_NOT_TODAY, ACTION_YES, readReminderData } from './shared';
 
@@ -69,6 +70,11 @@ export function startResponses(store: AppStore, api: ResponseApi, nav: ResponseN
 
     const { goals } = store.getState();
     if (goals.length === 0) return; // erased: Setup is showing, and stays
+    // Moved to Win Zero Plus: an answer here would go nowhere. Home says where the goals went.
+    if (isMovedOut(store.getState())) {
+      nav.toHome();
+      return;
+    }
     const decision = decideResponse(
       response,
       goals.map((s) => s.goal.goalId),

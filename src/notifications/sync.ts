@@ -7,6 +7,7 @@ import { AppState } from 'react-native';
 import { firstUnsettledDay, resolve } from '@/engine';
 import type { AppStore, AppState as StoreState } from '@/store/createAppStore';
 import { whenHydrated, type AppStateLike } from '@/store/lifecycle';
+import { isMovedOut } from '@/store/select';
 
 import { reminderRequests, type ReminderInput } from './schedule';
 import { readReminderData } from './shared';
@@ -20,12 +21,15 @@ export interface ReminderApi {
   dismissNotificationAsync(identifier: string): Promise<void>;
 }
 
-/** What a sync plans from: the goals (none after erase) and the settings that shape reminders. */
+/**
+ * What a sync plans from: the goals (none after erase, or once moved to Win Zero Plus, which
+ * reminds about them from then on) and the settings that shape reminders.
+ */
 export type SyncInput = ReminderInput;
 
 export function syncInputFrom(s: StoreState): SyncInput {
   return {
-    goals: s.goals.map((slot) => slot.goal),
+    goals: isMovedOut(s) ? [] : s.goals.map((slot) => slot.goal),
     now: s.now(),
     tz: s.timeZone(),
     offsetMs: s.clockOffsetMs(),
@@ -163,7 +167,7 @@ export function createReminderSync(deps: SyncDeps): ReminderSync {
  * Sync after storage is read and on every return to the foreground (both forced, so new nudges
  * get added and the OS's list is rebuilt), and whenever a goal or a reminder setting changes:
  * a check-in, a missed day settling, goal wording, times, days, a time zone change, a goal added
- * or archived, erase.
+ * or archived, erase, a move to Win Zero Plus confirmed or undone.
  */
 export function startReminderSync(store: AppStore, reminders: ReminderSync, appState: AppStateLike = AppState): () => void {
   const stopWaiting = whenHydrated(store, () => void reminders.sync({ force: true }));
@@ -173,7 +177,8 @@ export function startReminderSync(store: AppStore, reminders: ReminderSync, appS
       s.goals !== prev.goals ||
       s.prefs.reengage !== prev.prefs.reengage ||
       s.prefs.goalInReminders !== prev.prefs.goalInReminders ||
-      s.devClockOffsetMs !== prev.devClockOffsetMs;
+      s.devClockOffsetMs !== prev.devClockOffsetMs ||
+      isMovedOut(s) !== isMovedOut(prev);
     if (changed) void reminders.sync();
   });
   const sub = appState.addEventListener('change', (state) => {

@@ -165,6 +165,18 @@ describe('startResponses', () => {
     expect(r.fake.dismissed).toEqual(['checkin-2026-10-15']);
   });
 
+  it('once moved to Win Zero Plus, only opens Home, and answers nothing (SPEC 9)', async () => {
+    const goal = yesDays(newGoal(), DAY0, 2);
+    const r = await running(goal, '2026-10-15', '21:00');
+    r.s().confirmMovedOut(r.s().startMoveOut()!);
+    r.fake.tap(response(ACTION_YES, { day: '2026-10-15' }));
+    r.fake.tap(response(ACTION_NOT_TODAY, { day: '2026-10-15' }, 'other'));
+    expect(primaryGoal(r.s())).toBe(goal);
+    expect(r.s()).toMatchObject({ route: null, rejection: null, notices: {} });
+    expect(r.nav.toHome).toHaveBeenCalledTimes(2);
+    expect(r.fake.dismissed).toEqual(['checkin-2026-10-15', 'other']);
+  });
+
   it('stops listening on cleanup', async () => {
     const r = await running(yesDays(newGoal(), DAY0, 2), '2026-10-15', '21:00');
     expect(r.fake.listeners()).toBe(1);
