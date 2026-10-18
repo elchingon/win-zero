@@ -45,6 +45,8 @@ module.exports = defineConfig([
       'src/store/types.ts',
       'src/store/id.ts',
       'src/store/lifecycle.ts',
+      'src/store/limits.ts',
+      'src/store/select.ts',
       'src/lib/format.ts',
       'src/lib/calendar.ts',
       'src/theme/tokens.ts',

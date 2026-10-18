@@ -13,7 +13,7 @@ import {
   type GoalState,
 } from '@/engine';
 import { formatClockTime, formatWhen } from '@/lib/format';
-import { appStore, useApp } from '@/store';
+import { appStore, primaryGoal, primaryRound, useApp } from '@/store';
 import { colors, fonts, space, type } from '@/theme/tokens';
 import { Card, Eyebrow, Fine } from '@/ui/bits';
 import { TopBar } from '@/ui/Brand';
@@ -44,13 +44,13 @@ const MAX_TIMER_MS = 60 * 60 * 1000;
 const BOUNDARY_SLACK_MS = 500;
 
 export default function Home() {
-  const goal = useApp((s) => s.goal);
+  const goal = useApp(primaryGoal);
   if (!goal) return <Redirect href="/setup" />;
   return <HomeScreen goal={goal} />;
 }
 
 function HomeScreen({ goal }: { goal: GoalState }) {
-  const round = useApp((s) => s.round);
+  const round = useApp(primaryRound);
   const pick = useApp((s) => s.weapon);
   const selectWeapon = useApp((s) => s.selectWeapon);
   const credits = useApp((s) => s.credits);
@@ -88,12 +88,12 @@ function HomeScreen({ goal }: { goal: GoalState }) {
 
   const onYes = () => {
     feedback.success();
-    appStore.getState().answer('yes');
+    appStore.getState().answer(goal.goalId, 'yes');
   };
 
   const onNotToday = () => {
     feedback.soft();
-    appStore.getState().answer('not-today');
+    appStore.getState().answer(goal.goalId, 'not-today');
   };
 
   const playBonus = () => router.push({ pathname: '/play', params: { round: 'bonus' } });
@@ -101,7 +101,7 @@ function HomeScreen({ goal }: { goal: GoalState }) {
     if (appStore.getState().startBonusRound(n)) playBonus();
   };
 
-  const banner = rejection ? REJECTED[rejection] : null;
+  const banner = rejection ? REJECTED[rejection.reason] : null;
   // It appears after a notification's answer was turned down; say so to a screen reader too.
   useEffect(() => {
     if (banner) AccessibilityInfo.announceForAccessibility(banner);

@@ -21,8 +21,8 @@ import { APP_NAME } from '@/variant';
 const RULES = rules(APP_NAME);
 
 export default function Setup() {
-  const hasGoal = useApp((s) => s.goal !== null);
-  const setupGoal = useApp((s) => s.setupGoal);
+  const hasGoal = useApp((s) => s.goals.length > 0);
+  const addGoal = useApp((s) => s.addGoal);
   const { h24 } = useDeviceCalendar();
   const [step, setStep] = useState<'goal' | 'reminders'>('goal');
   const [goal, setGoal] = useState('');
@@ -37,7 +37,7 @@ export default function Setup() {
   const finish = async (askPermission: boolean) => {
     setBusy(true);
     if (askPermission) await requestReminderPermission();
-    const r = setupGoal({ goal, checkInTime, morningTime });
+    const r = addGoal({ goal, checkInTime, morningTime });
     if (r.ok) {
       feedback.success();
       router.replace('/');

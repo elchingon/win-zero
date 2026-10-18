@@ -18,7 +18,7 @@ import { TopBar } from '../ui/TopBar';
 
 export function Setup() {
   const navigate = useNavigate();
-  const hasGoal = useApp((s) => s.goal !== null);
+  const hasGoal = useApp((s) => s.goals.length > 0);
   const { h24 } = deviceCalendar();
   const [goal, setGoal] = useState('');
   const [checkInTime, setCheckInTime] = useState(DEFAULT_CHECK_IN_TIME);
@@ -33,7 +33,7 @@ export function Setup() {
 
   const start = () => {
     setBusy(true);
-    const r = appStore.getState().setupGoal({ goal, checkInTime, morningTime: DEFAULT_MORNING_TIME });
+    const r = appStore.getState().addGoal({ goal, checkInTime, morningTime: DEFAULT_MORNING_TIME });
     if (r.ok) {
       askToKeepStorage();
       navigate(ROUTES.home, { replace: true });

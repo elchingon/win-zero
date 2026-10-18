@@ -10,7 +10,7 @@ import { MS_PER_DAY, MS_PER_HOUR, pendingWindow } from '@/engine';
 import { onSynced } from '@/notifications';
 import { getReminderPermission } from '@/notifications/permissions';
 import { TEST_DELAY_SECONDS, testCheckInRequest } from '@/notifications/schedule';
-import { appStore, useApp } from '@/store';
+import { appStore, primaryGoal, useApp } from '@/store';
 import { colors, fonts, radii, space } from '@/theme/tokens';
 import { Eyebrow, Fine, TextField } from '@/ui/bits';
 import { Button, LinkButton } from '@/ui/Button';
@@ -20,7 +20,7 @@ import { summarizePending, type PendingSummary } from './pending';
 import { SEED_MAX_N } from './seedRun';
 
 export function DebugSection() {
-  const goal = useApp((s) => s.goal);
+  const goal = useApp(primaryGoal);
   const offset = useApp((s) => s.devClockOffsetMs);
   const pathname = usePathname();
   const [customDay, setCustomDay] = useState('');
@@ -47,13 +47,14 @@ export function DebugSection() {
 
   const sendTest = async () => {
     const s = appStore.getState();
-    if (!s.goal) return;
+    const first = primaryGoal(s);
+    if (!first) return;
     if ((await getReminderPermission()) !== 'granted') {
       setTestNote('Reminders are off. Turn them on in Settings first.');
       return;
     }
     const request = testCheckInRequest(
-      { goal: s.goal, now: s.now(), tz: s.timeZone(), showGoal: s.prefs.goalInReminders },
+      { goal: first, now: s.now(), tz: s.timeZone(), showGoal: s.prefs.goalInReminders },
       `test-${Date.now()}`,
     );
     try {
@@ -69,7 +70,7 @@ export function DebugSection() {
 
   // The answer leaves Home the round to open, so from Settings, go back to Home.
   const jump = (n: number) => {
-    if (store.devJumpToDay(n)?.ok && pathname !== '/') router.dismissTo('/');
+    if (goal && store.devJumpToDay(goal.goalId, n)?.ok && pathname !== '/') router.dismissTo('/');
   };
 
   return (

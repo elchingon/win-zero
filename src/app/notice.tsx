@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
 
 import { pendingWindow } from '@/engine';
-import { appStore, UNDO_MS, UNDO_MS_SCREEN_READER, useApp } from '@/store';
+import { appStore, slotById, UNDO_MS, UNDO_MS_SCREEN_READER, useApp } from '@/store';
 import { colors, space, type } from '@/theme/tokens';
 import { useScreenReader } from '@/ui/a11y';
 import { Em, Eyebrow, Lede } from '@/ui/bits';
@@ -18,7 +18,7 @@ import { callSupportLine, SUPPORT_LINE } from '@/ui/support';
 export default function NoticeScreen() {
   // Snapshot it, and mark it shown: it appears once, and the store may move on while it's up.
   const [pending] = useState(() => appStore.getState().nextNotice());
-  const goal = useApp((s) => s.goal);
+  const goal = useApp((s) => (pending ? (slotById(s, pending.goalId)?.goal ?? null) : null));
   const route = useApp((s) => s.route);
   const undo = useApp((s) => s.undo);
   const screenReader = useScreenReader();
@@ -45,7 +45,7 @@ export default function NoticeScreen() {
   const color = noticeColors[notice.kind];
   // An answer can land while this is up (a notification's buttons), so the way on is read live.
   const canAnswer = pendingWindow(goal, appStore.getState().now()) !== null;
-  const next = route === '/play' ? 'Play your round' : canAnswer && notice.kind !== 'noted' ? 'Check in now' : 'Got it';
+  const next = route?.path === '/play' ? 'Play your round' : canAnswer && notice.kind !== 'noted' ? 'Check in now' : 'Got it';
   const close = () => router.dismissTo('/');
   const takeBack = () => {
     // Turned down (the check-in just closed, say): the button goes, as the store drops the undo.

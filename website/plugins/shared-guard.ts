@@ -20,6 +20,8 @@ export const SHARED_ALLOWLIST = [
   'store/types.ts',
   'store/id.ts',
   'store/lifecycle.ts',
+  'store/limits.ts',
+  'store/select.ts',
   'lib/format.ts',
   'lib/calendar.ts',
   'theme/tokens.ts',

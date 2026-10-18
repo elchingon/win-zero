@@ -7,7 +7,8 @@ import type { NotificationRequestInput } from 'expo-notifications';
 
 import { type GoalState } from '@/engine';
 import { at, DAY0, DENVER, newGoal, yesDays } from '@/engine/__tests__/fixtures';
-import { fakeAppState, flush, harness, ready, withGoal } from '@/store/__tests__/harness';
+import { fakeAppState, flush, gid, harness, ready, withGoal } from '@/store/__tests__/harness';
+import { primaryGoal } from '@/store/select';
 
 import { reminderRequests } from '../schedule';
 import type { ReminderData } from '../shared';
@@ -285,15 +286,15 @@ describe('startReminderSync', () => {
 
     const s = () => h.store.getState();
     const changes: [string, () => void][] = [
-      ['setup', () => s().setupGoal({ goal: 'Stop drinking', checkInTime: '20:00', morningTime: '09:00' })],
-      ['wording', () => s().setGoalText('Stay sober')],
-      ['check-in time', () => s().setCheckInTime('21:00')],
-      ['morning time', () => s().setMorningTime('08:00')],
+      ['setup', () => s().addGoal({ goal: 'Stop drinking', checkInTime: '20:00', morningTime: '09:00' })],
+      ['wording', () => s().setGoalText(gid(h.store), 'Stay sober')],
+      ['check-in time', () => s().setCheckInTime(gid(h.store), '21:00')],
+      ['morning time', () => s().setMorningTime(gid(h.store), '08:00')],
       ['weekly nudge', () => s().setPref('reengage', false)],
       ['goal in reminders', () => s().setPref('goalInReminders', true)],
       ['dev clock', () => s().advanceDevClock(60_000)],
-      ['check-in', () => (h.setTime(DAY0, '21:30'), s().answer('yes'))],
-      ['not today', () => (h.setTime('2026-10-14', '21:30'), s().answer('not-today'))],
+      ['check-in', () => (h.setTime(DAY0, '21:30'), s().answer(gid(h.store), 'yes'))],
+      ['not today', () => (h.setTime('2026-10-14', '21:30'), s().answer(gid(h.store), 'not-today'))],
       ['undo', () => s().undoNotToday()],
       ['erase', () => s().erase()],
     ];
@@ -327,7 +328,7 @@ describe('startReminderSync', () => {
     expect(syncInputFrom(h.store.getState()).showGoal).toBe(false); // private by default
     h.store.getState().setPref('goalInReminders', true);
     expect(syncInputFrom(h.store.getState())).toEqual({
-      goal: h.store.getState().goal,
+      goal: primaryGoal(h.store.getState()),
       now: new Date(h.clock.t + 60_000),
       tz: DENVER,
       offsetMs: 60_000,

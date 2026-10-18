@@ -5,6 +5,7 @@
 import type { Answer, DayKey } from '@/engine';
 import type { AppStore } from '@/store/createAppStore';
 import { whenHydrated } from '@/store/lifecycle';
+import { primaryGoal } from '@/store/select';
 
 import { ACTION_NOT_TODAY, ACTION_YES, readReminderData } from './shared';
 
@@ -65,10 +66,10 @@ export function startResponses(store: AppStore, api: ResponseApi, nav: ResponseN
     // Android leaves a notification up after one of its buttons is pressed.
     api.dismissNotificationAsync(response.notification.request.identifier).catch(() => {});
 
-    const goal = store.getState().goal;
+    const goal = primaryGoal(store.getState());
     if (!goal) return; // erased: Setup is showing, and stays
     const decision = decideResponse(response, goal.goalId);
-    if (decision.kind === 'answer') store.getState().answer(decision.answer, decision.day, 'notification');
+    if (decision.kind === 'answer') store.getState().answer(goal.goalId, decision.answer, decision.day, 'notification');
     nav.toHome();
   };
 

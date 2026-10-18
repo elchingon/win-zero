@@ -23,7 +23,16 @@ import { ResultSheet, type ResultMode } from '@/game/ResultSheet';
 import { useSfx } from '@/game/sfx';
 import type { Report } from '@/game/sim/types';
 import { WeaponCreditPrompt } from '@/game/WeaponCreditPrompt';
-import { appStore, useApp, type CreditRound, type RoundRecord } from '@/store';
+import {
+  appStore,
+  arsenalBestOf,
+  primarySlot,
+  slotById,
+  totalBombs,
+  useApp,
+  type CreditRound,
+  type RoundRecord,
+} from '@/store';
 import { colors, fonts } from '@/theme/tokens';
 import { feedback } from '@/ui/feedback';
 import { useReduceMotion, useScreenReader } from '@/ui/a11y';
@@ -45,7 +54,14 @@ export default function Play() {
       {/* An iOS edge swipe would fight the aim. The HUD's ✕ leaves instead. */}
       <Stack.Screen options={{ gestureEnabled: false }} />
       {isPractice ? (
-        <Round initialMode="practice" n={practiceN} best={PRACTICE_BEST} record={null} borrowed={NONE_BORROWED} />
+        <Round
+          initialMode="practice"
+          goalId={null}
+          n={practiceN}
+          best={PRACTICE_BEST}
+          record={null}
+          borrowed={NONE_BORROWED}
+        />
       ) : round === 'bonus' ? (
         <BonusStoreRound />
       ) : (
@@ -57,26 +73,38 @@ export default function Play() {
 
 function StoreRound() {
   // Read once: if a day settles mid-round, the round on screen stays put.
-  const [record] = useState(() => appStore.getState().round);
-  const best = useApp((s) => s.goal?.bestStreak);
-  if (!record || best === undefined) return <Redirect href="/" />;
+  const [slot] = useState(() => primarySlot(appStore.getState()));
+  const best = useApp(arsenalBestOf);
+  const record = slot?.round;
+  if (!slot || !record) return <Redirect href="/" />;
+  const goalId = slot.goal.goalId;
   // Home only offers rounds not yet played; one that was is a replay.
   return (
-    <WeaponCreditGate target="daily" fresh={!record.played} best={best} borrowed={record.borrowed}>
+    <WeaponCreditGate target={{ round: 'daily', goalId }} fresh={!record.played} best={best} borrowed={record.borrowed}>
       {(borrowed) => (
-        <Round initialMode={record.played ? 'replay' : 'real'} n={record.n} best={best} record={record} borrowed={borrowed} />
+        <Round
+          initialMode={record.played ? 'replay' : 'real'}
+          goalId={goalId}
+          n={record.n}
+          best={best}
+          record={record}
+          borrowed={borrowed}
+        />
       )}
     </WeaponCreditGate>
   );
 }
 
+const BONUS: CreditRound = { round: 'bonus' };
+
 function BonusStoreRound() {
   const [bonus] = useState(() => appStore.getState().bonus);
-  const best = useApp((s) => s.goal?.bestStreak);
-  if (!bonus || best === undefined) return <Redirect href="/" />;
+  const best = useApp(arsenalBestOf);
+  const hasGoal = useApp((s) => s.goals.length > 0);
+  if (!bonus || !hasGoal) return <Redirect href="/" />;
   return (
-    <WeaponCreditGate target="bonus" fresh={!bonus.played} best={best} borrowed={bonus.borrowed}>
-      {(borrowed) => <Round initialMode="bonus" n={bonus.n} best={best} record={null} borrowed={borrowed} />}
+    <WeaponCreditGate target={BONUS} fresh={!bonus.played} best={best} borrowed={bonus.borrowed}>
+      {(borrowed) => <Round initialMode="bonus" goalId={null} n={bonus.n} best={best} record={null} borrowed={borrowed} />}
     </WeaponCreditGate>
   );
 }
@@ -136,6 +164,8 @@ export function ErrorBoundary({ error }: ErrorBoundaryProps) {
 
 function Round(props: {
   initialMode: ResultMode;
+  /** The goal whose round this is; null for bonus and practice rounds. */
+  goalId: string | null;
   n: number;
   best: number;
   /** The day's round; null for bonus and practice rounds. */
@@ -143,7 +173,7 @@ function Round(props: {
   /** Weapons not yet unlocked that a Weapon credit lent this round. */
   borrowed: WeaponId[];
 }) {
-  const { initialMode, n, best, record, borrowed } = props;
+  const { initialMode, goalId, n, best, record, borrowed } = props;
   // Replay turns a real round into a replay.
   const [mode, setMode] = useState(initialMode);
   const { width, height } = useWindowDimensions();
@@ -151,7 +181,8 @@ function Round(props: {
   const reduceMotion = useReduceMotion();
   const screenReader = useScreenReader();
   const sound = useApp((s) => s.prefs.sound);
-  const bankedBombs = useApp((s) => s.goal?.bombs ?? 0);
+  // A goal's round has that goal's bombs; a bonus round gets as many as every goal has banked.
+  const bankedBombs = useApp((s) => (goalId ? (slotById(s, goalId)?.goal.bombs ?? 0) : totalBombs(s)));
   const storePick = useApp((s) => s.weapon);
   // Practice, and a round with a borrowed weapon, keep their pick to themselves: the saved pick is
   // always a weapon the player has unlocked. A borrowed weapon starts equipped.
@@ -205,9 +236,9 @@ function Round(props: {
   // The last zero went: a real round or a bonus round counts as played.
   useEffect(() => {
     if (!over) return;
-    if (mode === 'real') appStore.getState().finishRound();
+    if (mode === 'real' && goalId) appStore.getState().finishRound(goalId);
     if (mode === 'bonus') appStore.getState().finishBonusRound();
-  }, [over, mode]);
+  }, [over, mode, goalId]);
 
   // The encouragement arrives with a fanfare and a light tap.
   useEffect(() => {
@@ -244,7 +275,7 @@ function Round(props: {
   const onBomb = () => {
     if (over || bombs < 1) return;
     if (mode === 'real') {
-      if (!appStore.getState().spendBomb()) return;
+      if (!goalId || !appStore.getState().spendBomb(goalId)) return;
     } else {
       setFreeBombs((b) => b - 1);
     }

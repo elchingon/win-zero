@@ -8,7 +8,7 @@ import { renderRouter, fireEvent, screen } from 'expo-router/testing-library';
 import PlayScreen from '@/app/play';
 import { weaponById, type CreditWallet, type WeaponId } from '@/engine';
 import { DAY0, newGoal, yesDays } from '@/engine/__tests__/fixtures';
-import { appStore, type RoundRecord } from '@/store';
+import { appStore, primaryRound, type RoundRecord } from '@/store';
 import { DEFAULT_PERSISTED } from '@/store/migrate';
 import { WEAPON_PROMPT } from '@/ui/copy/credits';
 
@@ -54,7 +54,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await AsyncStorage.clear();
-  appStore.setState({ ...DEFAULT_PERSISTED, goal });
+  appStore.setState({ ...DEFAULT_PERSISTED, goals: [{ goal, round: null, seenThrough: null }] });
 });
 
 afterEach(() => {
@@ -63,7 +63,7 @@ afterEach(() => {
 
 describe('the round, with a Weapon credit', () => {
   it("asks first, and plays the day's round with the weapon borrowed", async () => {
-    appStore.setState({ round: dayRound(), credits: wallet(1) });
+    appStore.setState({ goals: [{ goal, round: dayRound(), seenThrough: null }], credits: wallet(1) });
     await open('/play');
     expect(screen.queryByText(/^Canvas/)).not.toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('button', option('rocket')));
@@ -71,12 +71,12 @@ describe('the round, with a Weapon credit', () => {
     expect(screen.getByText('Canvas: Rocket, 3 zeros')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Weapon: Rocket' })).toBeOnTheScreen();
     expect(appStore.getState().credits.balance.weapon).toBe(0);
-    expect(appStore.getState().round?.borrowed).toEqual(['rocket']);
+    expect(primaryRound(appStore.getState())?.borrowed).toEqual(['rocket']);
     expect(appStore.getState().weapon).toBeNull(); // the saved pick isn't the borrowed weapon
   });
 
   it('plays with the usual weapon on Not this time, keeping the credit', async () => {
-    appStore.setState({ round: dayRound(), credits: wallet(1) });
+    appStore.setState({ goals: [{ goal, round: dayRound(), seenThrough: null }], credits: wallet(1) });
     await open('/play');
     await fireEvent.press(screen.getByRole('button', { name: 'Not this time' }));
     expect(screen.getByText('Canvas: Twin Barrel, 3 zeros')).toBeOnTheScreen();
@@ -84,19 +84,19 @@ describe('the round, with a Weapon credit', () => {
   });
 
   it("doesn't ask without a credit", async () => {
-    appStore.setState({ round: dayRound(), credits: wallet(0) });
+    appStore.setState({ goals: [{ goal, round: dayRound(), seenThrough: null }], credits: wallet(0) });
     await open('/play');
     expect(screen.getByText('Canvas: Twin Barrel, 3 zeros')).toBeOnTheScreen();
   });
 
   it('comes back to a round that borrowed one with it equipped, without asking again', async () => {
-    appStore.setState({ round: dayRound(['rocket']), credits: wallet(1) });
+    appStore.setState({ goals: [{ goal, round: dayRound(['rocket']), seenThrough: null }], credits: wallet(1) });
     await open('/play');
     expect(screen.getByText('Canvas: Rocket, 3 zeros')).toBeOnTheScreen();
   });
 
   it("doesn't ask before a replay", async () => {
-    appStore.setState({ round: dayRound([], true), credits: wallet(1) });
+    appStore.setState({ goals: [{ goal, round: dayRound([], true), seenThrough: null }], credits: wallet(1) });
     await open('/play');
     expect(screen.getByText('Canvas: Twin Barrel, 3 zeros')).toBeOnTheScreen();
   });
@@ -110,7 +110,7 @@ describe('a bonus round', () => {
     expect(screen.getByText('Canvas: Zero Nuke, 250 zeros')).toBeOnTheScreen();
     expect(screen.getByText('BONUS')).toBeOnTheScreen();
     expect(appStore.getState().bonus?.borrowed).toEqual(['nuke']);
-    expect(appStore.getState().round).toBeNull();
+    expect(primaryRound(appStore.getState())).toBeNull();
   });
 
   it('goes back to base when there is none', async () => {

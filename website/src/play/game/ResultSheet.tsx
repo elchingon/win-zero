@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { resultLines, sheetEyebrow, type ResultMode } from '@/game/result';
 import { milestoneShareText } from '@/game/shareText';
 import { formatCount } from '@/lib/format';
+import { primaryGoal } from '@/store/select';
 import type { RoundRecord } from '@/store/types';
 
 import { shareText } from '../platform/share';
@@ -17,7 +18,7 @@ const RISE_MS = 500;
 
 export function ResultSheet(props: { n: number; mode: ResultMode; record: RoundRecord | null; onBack: () => void; onReplay: () => void }) {
   const { n, mode, record, onBack, onReplay } = props;
-  const goal = useApp((s) => s.goal);
+  const goal = useApp(primaryGoal);
   const credits = useApp((s) => s.credits);
   const heading = useRef<HTMLHeadingElement>(null);
   const [shareNote, setShareNote] = useState<string | null>(null);

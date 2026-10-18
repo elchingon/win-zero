@@ -31,7 +31,7 @@ const show = (n: number, mode: ResultMode, record: RoundRecord | null) =>
 
 beforeAll(async () => {
   for (let i = 0; i < 50 && !appStore.getState().hydrated; i++) await new Promise((r) => setTimeout(r, 0));
-  appStore.setState({ goal: yesDays(newGoal(), DAY0, 5), credits: { balance: { game: 1, weapon: 2 }, claimed: [] } });
+  appStore.setState({ goals: [{ goal: yesDays(newGoal(), DAY0, 5), round: null, seenThrough: null }], credits: { balance: { game: 1, weapon: 2 }, claimed: [] } });
 });
 
 afterEach(() => {

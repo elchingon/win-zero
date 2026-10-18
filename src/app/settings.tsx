@@ -9,7 +9,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { currentCheckInTime, firstUpcomingDay, opensAt, pendingWindow, type ClockTime } from '@/engine';
 import { formatUntil, formatWhen } from '@/lib/format';
 import type { ReminderPermission } from '@/notifications/permissions';
-import { appStore, useApp } from '@/store';
+import { appStore, primaryGoal, useApp } from '@/store';
 import { colors, space, type } from '@/theme/tokens';
 import { Card, Eyebrow, Field, Fine, Row, shared, TextField, ToggleRow } from '@/ui/bits';
 import { TopBar } from '@/ui/Brand';
@@ -43,7 +43,7 @@ const PERMISSION_WORDS: Record<ReminderPermission, string> = {
 };
 
 export default function Settings() {
-  const goal = useApp((s) => s.goal);
+  const goal = useApp(primaryGoal);
   const prefs = useApp((s) => s.prefs);
   useApp((s) => s.devClockOffsetMs); // the "next check-in" line follows the debug clock
   const { h24 } = useDeviceCalendar();
@@ -63,14 +63,14 @@ export default function Settings() {
   const goalChanged = draft.trim() !== goal.goal && draft.trim().length > 0;
 
   const saveGoal = () => {
-    if (store.setGoalText(draft).ok) {
+    if (store.setGoalText(goal.goalId, draft).ok) {
       setDraft(draft.trim());
       setSaved(true);
     }
   };
 
-  const changeCheckIn = (time: ClockTime) => store.setCheckInTime(time);
-  const changeMorning = (time: ClockTime) => store.setMorningTime(time);
+  const changeCheckIn = (time: ClockTime) => store.setCheckInTime(goal.goalId, time);
+  const changeMorning = (time: ClockTime) => store.setMorningTime(goal.goalId, time);
 
   const erase = () => {
     feedback.press();

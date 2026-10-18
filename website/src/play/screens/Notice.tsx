@@ -6,6 +6,7 @@ import { Navigate } from 'react-router';
 
 import { pendingWindow } from '@/engine';
 import { UNDO_MS_SCREEN_READER } from '@/store/createAppStore';
+import { slotById } from '@/store/select';
 import { colors } from '@/theme/tokens';
 import { copyFor, noticeColors, UNDONE } from '@/ui/copy/notice';
 import { SUPPORT_LINE } from '@/ui/copy/support';
@@ -23,7 +24,7 @@ const toneOf = (hex: string) => (hex === colors.flare ? 'flare' : hex === colors
 export function Notice() {
   // Snapshot it, and mark it shown: it appears once, and the store may move on while it's up.
   const [pending] = useState(() => appStore.getState().nextNotice());
-  const goal = useApp((s) => s.goal);
+  const goal = useApp((s) => (pending ? (slotById(s, pending.goalId)?.goal ?? null) : null));
   const route = useApp((s) => s.route);
   const undo = useApp((s) => s.undo);
   const goHome = useGoHome();
@@ -49,7 +50,7 @@ export function Notice() {
   const copy = copyFor(notice);
   // An answer can land while this is up (another tab), so the way on is read live.
   const canAnswer = pendingWindow(goal, appStore.getState().now()) !== null;
-  const next = route === '/play' ? 'Play your round' : canAnswer && notice.kind !== 'noted' ? 'Check in now' : 'Got it';
+  const next = route?.path === '/play' ? 'Play your round' : canAnswer && notice.kind !== 'noted' ? 'Check in now' : 'Got it';
   const takeBack = () => {
     // Turned down (the check-in just closed, say): the button goes, as the store drops the undo.
     if (!appStore.getState().undoNotToday(UNDO_MS_SCREEN_READER)) return;

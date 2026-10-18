@@ -15,7 +15,7 @@ import SettingsScreen from '@/app/settings';
 import SetupScreen from '@/app/setup';
 import type { GoalState } from '@/engine';
 import { at, DAY0, newGoal, yesDays } from '@/engine/__tests__/fixtures';
-import { appStore } from '@/store';
+import { appStore, primaryGoal } from '@/store';
 import { DEFAULT_PERSISTED } from '@/store/migrate';
 import { APP_LINKS, SUPPORT_LINE } from '@/ui/support';
 
@@ -49,7 +49,7 @@ const tz = () => appStore.getState().timeZone();
 async function open(path: string, opts: { goal?: GoalState; day?: string; time?: string } = {}) {
   jest.useFakeTimers();
   jest.setSystemTime(at(opts.day ?? '2026-10-15', opts.time ?? '21:00', tz()));
-  if (opts.goal) appStore.setState({ goal: opts.goal });
+  if (opts.goal) appStore.setState({ goals: [{ goal: opts.goal, round: null, seenThrough: null }] });
   const app = renderRouter(ROUTES, { initialUrl: path });
   await app;
   // Not `app` itself: render's result is awaitable, and returning it would unwrap it.
@@ -66,7 +66,7 @@ beforeAll(async () => {
 beforeEach(async () => {
   mockPermission.value = 'granted';
   await AsyncStorage.clear();
-  appStore.setState({ ...DEFAULT_PERSISTED, notice: null, route: null, rejection: null, undo: null });
+  appStore.setState({ ...DEFAULT_PERSISTED, notices: {}, route: null, rejection: null, undo: null });
 });
 
 afterEach(() => {
@@ -90,7 +90,7 @@ describe('Setup', () => {
 
     await fireEvent.press(screen.getByText('Not now'));
     expect(app.pathname()).toBe('/');
-    expect(appStore.getState().goal?.goal).toBe('Read 20 minutes');
+    expect(primaryGoal(appStore.getState())?.goal).toBe('Read 20 minutes');
     expect(await screen.findByText('Read 20 minutes')).toBeOnTheScreen();
     expect(screen.getByText('Today counts: your first check-in is open now.')).toBeOnTheScreen();
     expect(screen.getByText('Did you stick to “Read 20 minutes” today?')).toBeOnTheScreen();
@@ -193,11 +193,11 @@ describe('Home', () => {
     await fireEvent.press(screen.getByRole('button', { name: 'Not today' }));
     expect(await screen.findByRole('button', { name: 'Undo Not today' })).toBeOnTheScreen();
     expect(app.pathname()).toBe('/notice');
-    expect(appStore.getState().goal?.streak).toBe(1);
+    expect(primaryGoal(appStore.getState())?.streak).toBe(1);
 
     await fireEvent.press(screen.getByRole('button', { name: 'Undo Not today' }));
     expect(app.pathname()).toBe('/');
-    expect(appStore.getState().goal?.streak).toBe(2);
+    expect(primaryGoal(appStore.getState())?.streak).toBe(2);
     expect(await screen.findByRole('button', { name: 'Not today' })).toBeOnTheScreen();
   });
 
@@ -226,14 +226,14 @@ describe('Home', () => {
 
 describe('Notice', () => {
   it('offers the helpline when zeros slip, after a Not today or missed days', async () => {
-    appStore.setState({ notice: { kind: 'slipping', cause: 'answer', lost: 1, streak: 1, days: 1, stopped: false } });
+    appStore.setState({ notices: { g1: { kind: 'slipping', cause: 'answer', lost: 1, streak: 1, days: 1, stopped: false } } });
     await open('/notice', { goal: twoDays() });
     expect(screen.getByText(/You've lost/)).toBeOnTheScreen();
     expect(screen.getByText(`Need support? ${SUPPORT_LINE.name}, ${SUPPORT_LINE.display}`)).toBeOnTheScreen();
   });
 
   it('leaves the helpline off a Not today that cost nothing', async () => {
-    appStore.setState({ notice: { kind: 'noted' } });
+    appStore.setState({ notices: { g1: { kind: 'noted' } } });
     await open('/notice', { goal: twoDays() });
     expect(screen.getByText(/Thanks for/)).toBeOnTheScreen();
     expect(screen.queryByText(/Need support\?/)).not.toBeOnTheScreen();
@@ -242,7 +242,7 @@ describe('Notice', () => {
   it('offers the helpline after a reset, and calls it', async () => {
     const call = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
     appStore.setState({
-      notice: { kind: 'reset', cause: 'answer', lostStreak: 9, bestStreak: 10, days: 1, stopped: false },
+      notices: { g1: { kind: 'reset', cause: 'answer', lostStreak: 9, bestStreak: 10, days: 1, stopped: false } },
     });
     await open('/notice', { goal: twoDays() });
     expect(screen.getByText(/A fresh start/i)).toBeOnTheScreen();

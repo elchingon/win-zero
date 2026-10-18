@@ -7,7 +7,8 @@ import { DAY0, newGoal, yesDays } from '@/engine/__tests__/fixtures';
 import { fakeResponses, response } from '@/notifications/__tests__/fakes';
 import { startResponses } from '@/notifications/responses';
 import { ACTION_NOT_TODAY, ACTION_YES } from '@/notifications/shared';
-import { fakeAppState, flush, harness, ready, withGoal } from '@/store/__tests__/harness';
+import { fakeAppState, flush, harness, oneGoal, ready, withGoal } from '@/store/__tests__/harness';
+import { primaryGoal, primaryRound, primarySlot } from '@/store/select';
 import { startLifecycle } from '@/store/lifecycle';
 import type { AppStore } from '@/store/createAppStore';
 
@@ -90,14 +91,14 @@ describe('Home after a long time in the background', () => {
     t.yes(); // lands while the notice is on its way
     expect(t.pushed).toEqual(['/notice']);
     expect(t.s().route).toBeNull();
-    expect(t.s().round).toMatchObject({ day: BACK, played: false });
-    expect(t.s().seenThrough).toBe('2026-10-22'); // nothing shown yet
+    expect(primaryRound(t.s())).toMatchObject({ day: BACK, played: false });
+    expect(primarySlot(t.s())?.seenThrough).toBe('2026-10-22'); // nothing shown yet
 
     expect(t.showNotice()).toMatchObject(stoppedSlip);
-    expect(t.s().seenThrough).toBe('2026-11-01');
+    expect(primarySlot(t.s())?.seenThrough).toBe('2026-11-01');
     t.refocus();
     expect(t.pushed).toEqual(['/notice']);
-    expect(t.s().round).toMatchObject({ day: BACK, played: false }); // still there to play
+    expect(primaryRound(t.s())).toMatchObject({ day: BACK, played: false }); // still there to play
   });
 
   it('foreground first, the notice showing before the Yes lands', async () => {
@@ -106,11 +107,11 @@ describe('Home after a long time in the background', () => {
     t.away();
     t.app.emit('active');
     expect(t.showNotice()).toMatchObject({ notice: { ...missedSlip.notice, stopped: false } });
-    expect(t.s().seenThrough).toBe('2026-10-31');
+    expect(primarySlot(t.s())?.seenThrough).toBe('2026-10-31');
     t.yes();
     t.refocus();
     expect(t.pushed).toEqual(['/notice']);
-    expect(t.s().round).toMatchObject({ day: BACK, played: false });
+    expect(primaryRound(t.s())).toMatchObject({ day: BACK, played: false });
   });
 
   it('Yes first, then foreground: the news, with the round waiting on Home', async () => {
@@ -125,7 +126,7 @@ describe('Home after a long time in the background', () => {
 
     t.refocus();
     expect(t.pushed).toHaveLength(1);
-    expect(t.s().round).toMatchObject({ day: BACK, played: false });
+    expect(primaryRound(t.s())).toMatchObject({ day: BACK, played: false });
   });
 
   it('Not today after the news has shown: each notice once, the news first', async () => {
@@ -178,7 +179,7 @@ describe('Home after a long time in the background', () => {
     t.setTime('2026-10-29', '00:30');
     t.app.emit('active');
     expect(t.pushed).toEqual([]);
-    expect(t.s().seenThrough).toBe('2026-10-27');
+    expect(primarySlot(t.s())?.seenThrough).toBe('2026-10-27');
   });
 
   it('from another screen: back to Home, then the news; the round waits', async () => {
@@ -192,13 +193,13 @@ describe('Home after a long time in the background', () => {
     expect(t.showNotice()).toMatchObject(stoppedSlip);
     t.refocus();
     expect(t.pushed).toEqual(['/notice']);
-    expect(t.s().round).toMatchObject({ day: BACK, played: false });
+    expect(primaryRound(t.s())).toMatchObject({ day: BACK, played: false });
   });
 
   it('cold start with missed days and a Yes: the news, with the round waiting on Home', async () => {
     const first = harness();
     await ready(first.store);
-    first.store.setState({ goal: yesDays(newGoal(), DAY0, 10) }); // through 10-22, saved
+    first.store.setState(oneGoal(yesDays(newGoal(), DAY0, 10))); // through 10-22, saved
     await flush();
 
     const h = harness();
@@ -216,7 +217,7 @@ describe('Home after a long time in the background', () => {
     expect(screen.showNotice()).toMatchObject(stoppedSlip);
     screen.refocus();
     expect(screen.pushed).toEqual(['/notice']);
-    expect(h.store.getState().round).toMatchObject({ day: BACK, played: false });
+    expect(primaryRound(h.store.getState())).toMatchObject({ day: BACK, played: false });
   });
 });
 
@@ -225,22 +226,22 @@ describe('Home routing', () => {
     const t = await scene();
     t.setTime('2026-10-23', '21:00');
     t.focus();
-    t.s().answer('yes'); // Home's card
+    t.s().answer('g1', 'yes'); // Home's card
     expect(t.pushed).toEqual(['/play']);
     t.blur();
 
     t.setTime('2026-10-24', '21:00');
     t.focus();
-    t.s().answer('yes', '2026-10-24', 'notification');
+    t.s().answer('g1', 'yes', '2026-10-24', 'notification');
     t.refocus();
     expect(t.pushed).toEqual(['/play']);
-    expect(t.s().round).toMatchObject({ day: '2026-10-24', n: 12, played: false });
+    expect(primaryRound(t.s())).toMatchObject({ day: '2026-10-24', n: 12, played: false });
   });
 
   it("drops a Not today's route when its notice has already been shown", async () => {
     const t = await scene();
     t.setTime('2026-10-23', '20:30');
-    t.s().answer('not-today'); // e.g. from a notification, while another screen was up
+    t.s().answer('g1', 'not-today'); // e.g. from a notification, while another screen was up
     t.showNotice(); // and a Notice screen showed it
     t.focus();
     expect(t.pushed).toEqual([]);
@@ -251,21 +252,21 @@ describe('Home routing', () => {
     const t = await scene();
     t.setTime('2026-10-23', '21:00');
     t.focus();
-    t.s().answer('not-today'); // Home's card
+    t.s().answer('g1', 'not-today'); // Home's card
     expect(t.pushed).toEqual(['/notice']);
     t.blur();
     t.showNotice();
     expect(t.s().undoNotToday()).toBe(true); // the Notice screen's Undo
     t.focus();
     expect(t.pushed).toEqual(['/notice']);
-    expect(t.s().goal?.lastSettledDay).toBe('2026-10-22');
+    expect(primaryGoal(t.s())?.lastSettledDay).toBe('2026-10-22');
   });
 
   it('clears a turned-down answer when Home loses focus', async () => {
     const t = await scene();
     t.focus();
-    t.s().answer('yes', '2026-10-25'); // not open yet
-    expect(t.s().rejection).toBe('not-open');
+    t.s().answer('g1', 'yes', '2026-10-25'); // not open yet
+    expect(t.s().rejection?.reason).toBe('not-open');
     t.blur();
     expect(t.s().rejection).toBeNull();
   });

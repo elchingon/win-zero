@@ -7,6 +7,7 @@ import { AppState } from 'react-native';
 import { firstUnsettledDay, resolve, type GoalState } from '@/engine';
 import type { AppStore, AppState as StoreState } from '@/store/createAppStore';
 import { whenHydrated, type AppStateLike } from '@/store/lifecycle';
+import { primaryGoal } from '@/store/select';
 
 import { reminderRequests, type ReminderInput } from './schedule';
 import { readReminderData } from './shared';
@@ -25,7 +26,7 @@ export type SyncInput = Omit<ReminderInput, 'goal'> & { goal: GoalState | null }
 
 export function syncInputFrom(s: StoreState): SyncInput {
   return {
-    goal: s.goal,
+    goal: primaryGoal(s),
     now: s.now(),
     tz: s.timeZone(),
     offsetMs: s.clockOffsetMs(),
@@ -166,7 +167,7 @@ export function startReminderSync(store: AppStore, reminders: ReminderSync, appS
   const unsubscribe = store.subscribe((s, prev) => {
     if (!s.hydrated) return;
     const changed =
-      s.goal !== prev.goal ||
+      s.goals !== prev.goals ||
       s.prefs.reengage !== prev.prefs.reengage ||
       s.prefs.goalInReminders !== prev.prefs.goalInReminders ||
       s.devClockOffsetMs !== prev.devClockOffsetMs;

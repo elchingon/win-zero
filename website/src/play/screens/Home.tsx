@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router';
 
 import { dayKeyAt, nextWindow, openedAtSetup, pendingWindow, type GoalState } from '@/engine';
+import { primaryGoal, primaryRound } from '@/store/select';
 import { formatWhen } from '@/lib/format';
 import { REJECTED } from '@/ui/copy/rules';
 import { startHomeRouting } from '@/ui/home/routing';
@@ -29,14 +30,14 @@ const MAX_TIMER_MS = 60 * 60 * 1000;
 const BOUNDARY_SLACK_MS = 500;
 
 export function Home() {
-  const goal = useApp((s) => s.goal);
+  const goal = useApp(primaryGoal);
   if (!goal) return <Navigate to={ROUTES.setup} replace />;
   return <HomeScreen goal={goal} />;
 }
 
 function HomeScreen({ goal }: { goal: GoalState }) {
   const navigate = useNavigate();
-  const round = useApp((s) => s.round);
+  const round = useApp(primaryRound);
   const pick = useApp((s) => s.weapon);
   const selectWeapon = useApp((s) => s.selectWeapon);
   const credits = useApp((s) => s.credits);
@@ -68,7 +69,7 @@ function HomeScreen({ goal }: { goal: GoalState }) {
   // whenever days settle while Home is showing, show any Slipping / Reset / Shielded news once.
   useEffect(() => startHomeRouting(appStore, (route) => navigate(pathForAnswer(route))), [navigate]);
 
-  const banner = rejection ? REJECTED[rejection] : null;
+  const banner = rejection ? REJECTED[rejection.reason] : null;
   useEffect(() => {
     if (banner) announce(banner);
   }, [banner]);
@@ -117,8 +118,8 @@ function HomeScreen({ goal }: { goal: GoalState }) {
             now={now}
             tz={tz}
             h24={h24}
-            onYes={() => appStore.getState().answer('yes')}
-            onNotToday={() => appStore.getState().answer('not-today')}
+            onYes={() => appStore.getState().answer(goal.goalId, 'yes')}
+            onNotToday={() => appStore.getState().answer(goal.goalId, 'not-today')}
           />
         </>
       ) : goal.history.length === 0 ? (

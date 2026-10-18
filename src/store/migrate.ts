@@ -18,7 +18,9 @@ import {
 
 import {
   STORE_VERSION,
+  type ArchivedGoal,
   type BonusRound,
+  type GoalSlot,
   type PersistedState,
   type Prefs,
   type RoundRecord,
@@ -28,11 +30,11 @@ import {
 export const DEFAULT_PREFS: Prefs = { sound: true, haptics: true, reengage: true, goalInReminders: false };
 
 export const DEFAULT_PERSISTED: PersistedState = {
-  goal: null,
+  goals: [],
+  archived: [],
+  arsenalBest: 0,
   weapon: null,
   prefs: DEFAULT_PREFS,
-  seenThrough: null,
-  round: null,
   credits: EMPTY_WALLET,
   bonus: null,
   reminderCardHiddenUntil: null,
@@ -88,6 +90,14 @@ const STORE_UPGRADES: Readonly<Record<number, Upgrade>> = {
     const goal = normalizeGoal(v.goal);
     return { ...v, credits: goal ? claimCredits(EMPTY_WALLET, { type: 'goal', goal }).wallet : EMPTY_WALLET, bonus: null };
   },
+  // 2 → 3, more than one goal (SPEC 9): the goal, its round and its seen mark become the first slot.
+  // The old fields stay as they were saved; the field-by-field read ignores them from here on.
+  2: (v) => ({
+    ...v,
+    goals: v.goal != null ? [{ goal: v.goal, round: v.round ?? null, seenThrough: v.seenThrough ?? null }] : [],
+    archived: [],
+    arsenalBest: 0,
+  }),
 };
 
 /**
@@ -112,12 +122,19 @@ function normalizeGoal(raw: unknown): GoalState | null {
   return { ...(v as unknown as GoalState), slide: count(v.slide, 0), paused: bool(v.paused, false) };
 }
 
+/** The goals stored data holds, active and archived, as saved: before version 3, the one goal. */
+function storedGoals(r: Rec): unknown[] {
+  if (!Array.isArray(r.goals)) return r.goal != null ? [r.goal] : [];
+  const archived = Array.isArray(r.archived) ? r.archived : [];
+  return [...r.goals, ...archived].map((s) => (isRecord(s) ? s.goal : s));
+}
+
 /**
- * Stored data held a goal that can't be read. Saving the default state would lose it for good,
- * so the store backs the raw data up first (see STORE_BACKUP_KEY).
+ * Stored data held a goal that can't be read. Saving now would lose it for good, so the store
+ * backs the raw data up first (see STORE_BACKUP_KEY). The goals that can be read are kept.
  */
 export function hasUnreadableGoal(raw: unknown): boolean {
-  return isRecord(raw) && raw.goal != null && normalizeGoal(raw.goal) === null;
+  return isRecord(raw) && storedGoals(raw).some((g) => normalizeGoal(g) === null);
 }
 
 function normalizeGrant(v: unknown): CreditGrant | null {
@@ -158,12 +175,47 @@ function normalizeWallet(v: unknown): CreditWallet {
   };
 }
 
+function normalizeSlot(v: unknown): GoalSlot | null {
+  if (!isRecord(v)) return null;
+  const goal = normalizeGoal(v.goal);
+  return goal ? { goal, round: normalizeRound(v.round), seenThrough: dayOrNull(v.seenThrough) } : null;
+}
+
+function normalizeArchived(v: unknown): ArchivedGoal | null {
+  if (!isRecord(v)) return null;
+  const goal = normalizeGoal(v.goal);
+  return goal ? { goal, archivedAt: instantOrNull(v.archivedAt) ?? goal.createdAt } : null;
+}
+
+/** Each goal once, by id: a second copy of an id is dropped, active ones before archived. */
+function uniqueGoals<T extends { goal: GoalState }>(items: (T | null)[], seen: Set<string>): T[] {
+  const out: T[] = [];
+  for (const item of items) {
+    if (!item || seen.has(item.goal.goalId)) continue;
+    seen.add(item.goal.goalId);
+    out.push(item);
+  }
+  return out;
+}
+
 export function normalizePersisted(raw: unknown): PersistedState {
   const r = isRecord(raw) ? raw : {};
   const prefs = isRecord(r.prefs) ? r.prefs : {};
   const offset = r.devClockOffsetMs;
+  // Without `goals` (data shaped by version 2, saved under another version number), the one goal.
+  const slots = Array.isArray(r.goals)
+    ? r.goals
+    : r.goal != null
+      ? [{ goal: r.goal, round: r.round, seenThrough: r.seenThrough }]
+      : [];
+  const seen = new Set<string>();
+  const goals = uniqueGoals(slots.map(normalizeSlot), seen);
+  const archived = uniqueGoals(Array.isArray(r.archived) ? r.archived.map(normalizeArchived) : [], seen);
   return {
-    goal: normalizeGoal(r.goal),
+    goals,
+    archived,
+    // Never below what the archived goals reached.
+    arsenalBest: archived.reduce((best, a) => Math.max(best, a.goal.bestStreak), count(r.arsenalBest, 0)),
     weapon: isWeaponId(r.weapon) ? r.weapon : null,
     prefs: {
       sound: bool(prefs.sound, DEFAULT_PREFS.sound),
@@ -171,8 +223,6 @@ export function normalizePersisted(raw: unknown): PersistedState {
       reengage: bool(prefs.reengage, DEFAULT_PREFS.reengage),
       goalInReminders: bool(prefs.goalInReminders, DEFAULT_PREFS.goalInReminders),
     },
-    seenThrough: dayOrNull(r.seenThrough),
-    round: normalizeRound(r.round),
     credits: normalizeWallet(r.credits),
     bonus: normalizeBonus(r.bonus),
     reminderCardHiddenUntil: instantOrNull(r.reminderCardHiddenUntil),

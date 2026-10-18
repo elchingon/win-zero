@@ -7,6 +7,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { weaponById } from '@/engine';
+import { primaryGoal, primaryRound } from '@/store/select';
 import { WEAPON_PROMPT } from '@/ui/copy/credits';
 
 import { routes } from './router';
@@ -47,8 +48,8 @@ describe('the app on the web', () => {
     const router = await setUp('Read 20 minutes');
     fireEvent.click(screen.getByRole('button', { name: 'Yes, I did' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/round'));
-    expect(appStore.getState().round).toMatchObject({ n: 1, played: false });
-    expect(appStore.getState().goal?.streak).toBe(1);
+    expect(primaryRound(appStore.getState())).toMatchObject({ n: 1, played: false });
+    expect(primaryGoal(appStore.getState())?.streak).toBe(1);
     expect(await screen.findByRole('button', { name: 'Leave the round' })).toBeTruthy();
 
     // Back on Home, the unplayed round waits there.
@@ -63,7 +64,7 @@ describe('the app on the web', () => {
     expect(await screen.findByRole('heading', { name: 'Thanks for checking in.' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Undo Not today' }));
     await screen.findByRole('heading', { name: 'Did you stick to “Quit vaping” today?' });
-    expect(appStore.getState().goal?.history).toHaveLength(0);
+    expect(primaryGoal(appStore.getState())?.history).toHaveLength(0);
   });
 
   it('earns a Game credit at setup, and spends it on a bonus round of the size chosen', async () => {
@@ -78,7 +79,7 @@ describe('the app on the web', () => {
     expect(appStore.getState().credits.balance.game).toBe(0);
     expect(await screen.findByRole('main', { name: 'Bonus round' })).toBeTruthy();
     expect(screen.getByText('BONUS')).toBeTruthy();
-    expect(appStore.getState().goal?.history).toHaveLength(0); // the streak is untouched
+    expect(primaryGoal(appStore.getState())?.history).toHaveLength(0); // the streak is untouched
   });
 
   it("won't start a bonus round of a size out of range", async () => {
@@ -101,7 +102,7 @@ describe('the app on the web', () => {
     expect(await screen.findByRole('dialog', { name: 'Use a Weapon credit?' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: WEAPON_PROMPT.option(weaponById('rocket')) }));
     expect(await screen.findByRole('button', { name: /^Weapon: Rocket/ })).toBeTruthy();
-    expect(appStore.getState().round?.borrowed).toEqual(['rocket']);
+    expect(primaryRound(appStore.getState())?.borrowed).toEqual(['rocket']);
     expect(appStore.getState().credits.balance.weapon).toBe(0);
   });
 

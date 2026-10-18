@@ -1,10 +1,13 @@
-// The app's state: the engine's GoalState plus UI preferences, persisted to device storage.
-// Every action hands the clock and time zone to the engine; none re-implements a rule.
+// The app's state: the engine's goals plus UI preferences, persisted to device storage. Every
+// action hands the clock and time zone to the engine; none re-implements a rule. Each goal lives in
+// a slot with its own round and seen mark (SPEC 9); the arsenal, the credits and the bonus round
+// are shared. The free app and the website keep one goal (Limits).
 import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware';
 import { createStore } from 'zustand/vanilla';
 
 import {
   answer as answerCheckIn,
+  arsenalReach,
   claimCredits,
   createGoal,
   EMPTY_WALLET,
@@ -15,6 +18,7 @@ import {
   nextWindow,
   pendingWindow,
   resolve,
+  setCheckInDays as setGoalCheckInDays,
   setCheckInTime as setGoalCheckInTime,
   setGoalText as setGoalWording,
   setMorningTime as setGoalMorningTime,
@@ -22,7 +26,6 @@ import {
   spendCredit,
   weaponCreditOffer,
   type Answer,
-  type AnswerRejection,
   type AnswerResult,
   type ClockTime,
   type DayKey,
@@ -33,19 +36,23 @@ import {
 } from '@/engine';
 import type * as SeedRun from '@/dev/seedRun';
 
+import { FREE_LIMITS, type Limits } from './limits';
 import { DEFAULT_PERSISTED, hasUnreadableGoal, migratePersisted, normalizePersisted } from './migrate';
 import { noticeForAnswer, noticeForMisses } from './notice';
 import {
   STORE_BACKUP_KEY,
   STORE_KEY,
   STORE_VERSION,
-  type AnswerRoute,
   type AnswerSource,
   type CreditRound,
+  type GoalSlot,
+  type LegacyCopy,
   type Notice,
   type PendingNotice,
+  type PendingRoute,
   type PersistedState,
   type Prefs,
+  type Rejection,
   type RoundRecord,
   type UndoNotToday,
 } from './types';
@@ -59,6 +66,8 @@ export interface StoreDeps {
   makeId: () => string;
   /** Development build: honour the debug clock offset. */
   dev: boolean;
+  /** What this app allows: one goal, every day, unless the app says otherwise (Win Zero Plus). */
+  limits?: Limits;
   /**
    * Development build: the run builder behind "Jump to day". Passed in, not imported, so a
    * production bundle leaves it out.
@@ -66,23 +75,26 @@ export interface StoreDeps {
   devTools?: Pick<typeof SeedRun, 'seedYesRun' | 'SEED_MAX_N'>;
 }
 
-export type SetupResult = { ok: true } | { ok: false; reason: 'not-ready' | 'empty-goal' };
-export type EditResult = { ok: true } | { ok: false; reason: 'no-goal' | 'empty-goal' };
+export type AddGoalResult =
+  | { ok: true; goalId: string }
+  | { ok: false; reason: 'not-ready' | 'empty-goal' | 'full' | 'days-not-allowed' };
+export type EditResult = { ok: true } | { ok: false; reason: 'no-goal' | 'empty-goal' | 'days-not-allowed' | 'no-days' };
 
 export interface AppState extends PersistedState {
   /** Storage has been read (or failed to read). Actions wait for it. */
   hydrated: boolean;
-  /** A one-time screen waiting to be shown. Not persisted. */
-  notice: Notice | null;
+  limits: Limits;
+  /** One-time screens waiting to be shown after an answer, by goal. Not persisted. */
+  notices: Readonly<Record<string, Notice>>;
   /**
    * Where the latest answer leads (its round, or its notice), waiting for Home to open it.
    * Set in the same update as the answer. A Yes from a notification leaves none: its round
    * waits on Home.
    * Not persisted.
    */
-  route: AnswerRoute | null;
+  route: PendingRoute | null;
   /** Why the latest answer was turned down, for Home's banner. Not persisted. */
-  rejection: AnswerRejection | null;
+  rejection: Rejection | null;
   /** The latest Not today, while it can still be taken back. Not persisted. */
   undo: UndoNotToday | null;
 
@@ -92,20 +104,34 @@ export interface AppState extends PersistedState {
   clockOffsetMs: () => number;
   timeZone: () => TimeZone;
 
-  /** Settle closed windows and follow a time zone change. Run on launch and on foreground. */
+  /** Settle every goal's closed windows and follow a time zone change. Run on launch and on foreground. */
   refresh: () => ResolveEvent[];
-  setupGoal: (input: { goal: string; checkInTime: ClockTime; morningTime: ClockTime }) => SetupResult;
-  /** Answer a check-in: `day` when it comes from a notification, otherwise the open window. */
-  answer: (answer: Answer, day?: DayKey, source?: AnswerSource) => AnswerResult | null;
+  /**
+   * Set up a goal, after the others. Turned down when the app's goals are full (Limits), or for
+   * check-in days the app doesn't offer.
+   */
+  addGoal: (input: {
+    goal: string;
+    checkInTime: ClockTime;
+    morningTime: ClockTime;
+    days?: readonly number[];
+  }) => AddGoalResult;
+  /** Set a goal aside: its history is kept to read, its reminders stop, and its slot is free. */
+  archiveGoal: (goalId: string) => boolean;
+  /** Remove an archived goal for good. Weapons it unlocked stay (arsenalBest). */
+  deleteArchivedGoal: (goalId: string) => boolean;
+  /** Answer a goal's check-in: `day` when it comes from a notification, otherwise the open window. */
+  answer: (goalId: string, answer: Answer, day?: DayKey, source?: AnswerSource) => AnswerResult | null;
   /**
    * Take back the latest Not today, within `windowMs` of answering, while its check-in is still
-   * open and no other day has settled. Restores the goal and round from just before it.
+   * open and no other day of that goal has settled. Restores the goal and round from just before it.
    */
   undoNotToday: (windowMs?: number) => boolean;
   /** The route the latest answer left, once. */
-  takeRoute: () => AnswerRoute | null;
+  takeRoute: () => PendingRoute | null;
   clearRejection: () => void;
-  finishRound: () => void;
+  /** A goal's round: its last zero went. */
+  finishRound: (goalId: string) => void;
   /**
    * Spend a Game credit on a bonus round of `n` zeros. Turned down without a goal or a credit,
    * for a size out of range, or while a bonus round waits to be played.
@@ -119,18 +145,21 @@ export interface AppState extends PersistedState {
    */
   borrowWeapon: (target: CreditRound, id: WeaponId) => boolean;
   selectWeapon: (id: WeaponId) => void;
-  spendBomb: () => boolean;
-  setGoalText: (text: string) => EditResult;
-  setCheckInTime: (time: ClockTime) => EditResult;
-  setMorningTime: (time: ClockTime) => EditResult;
+  /** Drop one of a goal's banked bombs, in that goal's round. */
+  spendBomb: (goalId: string) => boolean;
+  setGoalText: (goalId: string, text: string) => EditResult;
+  setCheckInTime: (goalId: string, time: ClockTime) => EditResult;
+  setMorningTime: (goalId: string, time: ClockTime) => EditResult;
+  /** The weekdays a goal checks in on, where the app offers that (Limits). */
+  setCheckInDays: (goalId: string, days: readonly number[]) => EditResult;
   setPref: <K extends keyof Prefs>(key: K, value: Prefs[K]) => void;
   /** "Not now" on Home's reminders-off card: hide it for REMINDER_CARD_HIDE_MS. */
   hideReminderCard: () => void;
   /**
-   * The next one-time screen, without marking it shown: an answer's notice first, then the
-   * Slipping / Reset / Shielded news for missed days not yet shown.
+   * The next one-time screen, without marking it shown: an answer's notice first (`preferGoalId`'s,
+   * then any), then the Slipping / Reset / Shielded news for missed days not yet shown, goal by goal.
    */
-  nextNotice: () => PendingNotice | null;
+  nextNotice: (preferGoalId?: string) => PendingNotice | null;
   /** The Notice screen showed `p`: clear that answer's notice, or count those missed days as seen. */
   noticeShown: (p: PendingNotice) => void;
   /** Count missed days that cost nothing (the grace week, or paused) as seen, as they have no news. */
@@ -139,11 +168,11 @@ export interface AppState extends PersistedState {
   advanceDevClock: (ms: number) => void;
   resetDevClock: () => void;
   /**
-   * Development only: rebuild the goal as `n - 1` days of Yes, then answer Yes to the open
-   * window, so a Day `n` round is ready. Overwrites the streak, history and rewards.
+   * Development only: rebuild a goal as `n - 1` days of Yes, then answer Yes to the open window,
+   * so a Day `n` round is ready. Overwrites its streak, history and rewards.
    */
-  devJumpToDay: (n: number) => AnswerResult | null;
-  /** Development only: move the clock to the moment the next check-in opens. */
+  devJumpToDay: (goalId: string, n: number) => AnswerResult | null;
+  /** Development only: move the clock to the moment the next check-in opens, if none is open. */
   devSkipToNextCheckIn: () => void;
   /** Development only: an empty wallet with nothing claimed, so every credit can be earned again. */
   devResetCredits: () => void;
@@ -160,26 +189,39 @@ export const REMINDER_CARD_HIDE_MS = 7 * MS_PER_DAY;
 
 export type AppStore = ReturnType<typeof createAppStore>;
 
-/** A round stays until the next day settles. */
+/** A round stays until its goal's next day settles. */
 function keepRound(round: RoundRecord | null, goal: GoalState): RoundRecord | null {
   return round && round.day === goal.lastSettledDay ? round : null;
 }
 
-function persisted(s: AppState): PersistedState {
+/** `record` without `key`. */
+function without<T>(record: Readonly<Record<string, T>>, key: string): Readonly<Record<string, T>> {
+  if (!(key in record)) return record;
+  const { [key]: _gone, ...rest } = record;
+  return rest;
+}
+
+function persisted(s: AppState): PersistedState & LegacyCopy {
+  const first = s.goals[0] ?? null;
   return {
-    goal: s.goal,
+    goals: s.goals,
+    archived: s.archived,
+    arsenalBest: s.arsenalBest,
     weapon: s.weapon,
     prefs: s.prefs,
-    seenThrough: s.seenThrough,
-    round: s.round,
     credits: s.credits,
     bonus: s.bonus,
     reminderCardHiddenUntil: s.reminderCardHiddenUntil,
     devClockOffsetMs: s.devClockOffsetMs,
+    goal: first?.goal ?? null,
+    round: first?.round ?? null,
+    seenThrough: first?.seenThrough ?? null,
   };
 }
 
 export function createAppStore(deps: StoreDeps) {
+  const limits = deps.limits ?? FREE_LIMITS;
+
   /** Write to storage without waiting. A failure leaves the app running as it is. */
   const writeAside = (write: () => unknown) => {
     try {
@@ -195,33 +237,51 @@ export function createAppStore(deps: StoreDeps) {
         const clockOffsetMs = () => (deps.dev ? get().devClockOffsetMs : 0);
         const now = () => new Date(deps.now().getTime() + clockOffsetMs());
         const timeZone = () => deps.timeZone();
-        /** The goal, once storage has been read. Acting earlier would overwrite saved data. */
-        const ready = () => (get().hydrated ? get().goal : null);
+        /** A goal's slot, once storage has been read. Acting earlier would overwrite saved data. */
+        const slotOf = (goalId: string): GoalSlot | null =>
+          get().hydrated ? (get().goals.find((s) => s.goal.goalId === goalId) ?? null) : null;
+        /** How far the shared arsenal reaches now. */
+        const reach = () => arsenalReach(get().arsenalBest, get().goals.map((s) => s.goal));
 
-        /** News of missed days after `seenThrough`, through the latest settled day. */
-        const missedNews = (seenThrough: DayKey | null): PendingNotice | null => {
-          const goal = ready();
-          if (!goal?.lastSettledDay) return null;
-          const notice = noticeForMisses(missDigest(goal, seenThrough), goal);
-          return notice ? { source: 'missed', notice, through: goal.lastSettledDay } : null;
+        /** News of a goal's missed days after its seen mark, through its latest settled day. */
+        const missedNews = (slot: GoalSlot): PendingNotice | null => {
+          const { goal } = slot;
+          if (!goal.lastSettledDay) return null;
+          const notice = noticeForMisses(missDigest(goal, slot.seenThrough), goal);
+          return notice ? { source: 'missed', goalId: goal.goalId, notice, through: goal.lastSettledDay } : null;
         };
 
-        /** Missed days through `day` have been shown. Never moves back. */
-        const seeThrough = (day: DayKey) => {
-          const { seenThrough } = get();
-          if (seenThrough === null || day > seenThrough) set({ seenThrough: day });
+        /** Store a goal's new state and patch its slot, dropping a round gone stale. */
+        const setSlot = (goalId: string, goal: GoalState, slotPatch: Partial<GoalSlot> = {}, patch: Partial<AppState> = {}) => {
+          set({
+            ...patch,
+            goals: get().goals.map((slot) => {
+              if (slot.goal.goalId !== goalId) return slot;
+              const round = 'round' in slotPatch ? (slotPatch.round ?? null) : slot.round;
+              return { ...slot, ...slotPatch, goal, round: keepRound(round, goal) };
+            }),
+          });
         };
 
-        /** Store a new goal state, dropping a round that's gone stale. */
-        const setGoal = (goal: GoalState, patch: Partial<AppState> = {}) => {
-          const round = 'round' in patch ? (patch.round ?? null) : get().round;
-          set({ ...patch, goal, round: keepRound(round, goal) });
+        /** A goal's missed days through `day` have been shown. Never moves back. */
+        const seeThrough = (goalId: string, day: DayKey) => {
+          const slot = slotOf(goalId);
+          if (slot && (slot.seenThrough === null || day > slot.seenThrough)) setSlot(goalId, slot.goal, { seenThrough: day });
+        };
+
+        /** Run a goal edit through the engine, or say why not. */
+        const edit = (goalId: string, change: (goal: GoalState) => GoalState): EditResult => {
+          const slot = slotOf(goalId);
+          if (!slot) return { ok: false, reason: 'no-goal' };
+          setSlot(goalId, change(slot.goal));
+          return { ok: true };
         };
 
         return {
           ...DEFAULT_PERSISTED,
           hydrated: false,
-          notice: null,
+          limits,
+          notices: {},
           route: null,
           rejection: null,
           undo: null,
@@ -230,95 +290,157 @@ export function createAppStore(deps: StoreDeps) {
           timeZone,
 
           refresh: () => {
-            const goal = ready();
-            if (!goal) return [];
-            const r = resolve(goal, now(), timeZone());
-            if (r.state !== goal) setGoal(r.state);
-            return r.events;
-          },
-
-          setupGoal: ({ goal, checkInTime, morningTime }) => {
-            if (!get().hydrated) return { ok: false, reason: 'not-ready' };
-            if (!goal.trim()) return { ok: false, reason: 'empty-goal' };
-            const state = createGoal({ goalId: deps.makeId(), goal, checkInTime, morningTime, now: now(), tz: timeZone() });
-            set({
-              goal: state,
-              credits: claimCredits(get().credits, { type: 'goal', goal: state }).wallet,
-              weapon: null,
-              seenThrough: null,
-              round: null,
-              notice: null,
-              route: null,
-              rejection: null,
-              undo: null,
+            if (!get().hydrated) return [];
+            const t = now();
+            const tz = timeZone();
+            const events: ResolveEvent[] = [];
+            let changed = false;
+            const goals = get().goals.map((slot) => {
+              const r = resolve(slot.goal, t, tz);
+              events.push(...r.events);
+              if (r.state === slot.goal) return slot;
+              changed = true;
+              return { ...slot, goal: r.state, round: keepRound(slot.round, r.state) };
             });
-            return { ok: true };
+            if (changed) set({ goals });
+            return events;
           },
 
-          answer: (ans, day, source = 'app') => {
-            const goal = ready();
-            if (!goal) return null;
+          addGoal: ({ goal, checkInTime, morningTime, days }) => {
+            const s = get();
+            if (!s.hydrated) return { ok: false, reason: 'not-ready' };
+            if (!goal.trim()) return { ok: false, reason: 'empty-goal' };
+            if (s.goals.length >= limits.maxGoals) return { ok: false, reason: 'full' };
+            if (days !== undefined && !limits.weekdaySchedules && days.length !== 7) {
+              return { ok: false, reason: 'days-not-allowed' };
+            }
+            const state = createGoal({
+              goalId: deps.makeId(),
+              goal,
+              checkInTime,
+              morningTime,
+              days,
+              now: now(),
+              tz: timeZone(),
+            });
+            set({
+              goals: [...s.goals, { goal: state, round: null, seenThrough: null }],
+              credits: claimCredits(s.credits, { type: 'goal', goal: state }).wallet,
+            });
+            return { ok: true, goalId: state.goalId };
+          },
+
+          archiveGoal: (goalId) => {
+            const slot = slotOf(goalId);
+            if (!slot) return false;
             const at = now();
-            const r = answerCheckIn(goal, { answer: ans, day }, at, timeZone());
+            const goal = resolve(slot.goal, at, timeZone()).state;
+            const s = get();
+            set({
+              goals: s.goals.filter((g) => g.goal.goalId !== goalId),
+              archived: [...s.archived, { goal, archivedAt: at.toISOString() }],
+              arsenalBest: Math.max(s.arsenalBest, goal.bestStreak),
+              notices: without(s.notices, goalId),
+              route: s.route?.goalId === goalId ? null : s.route,
+              rejection: s.rejection?.goalId === goalId ? null : s.rejection,
+              undo: s.undo?.goalId === goalId ? null : s.undo,
+            });
+            return true;
+          },
+
+          deleteArchivedGoal: (goalId) => {
+            const s = get();
+            const gone = s.archived.find((a) => a.goal.goalId === goalId);
+            if (!s.hydrated || !gone) return false;
+            set({
+              archived: s.archived.filter((a) => a !== gone),
+              arsenalBest: Math.max(s.arsenalBest, gone.goal.bestStreak),
+            });
+            return true;
+          },
+
+          answer: (goalId, ans, day, source = 'app') => {
+            const slot = slotOf(goalId);
+            if (!slot) return null;
+            const at = now();
+            const r = answerCheckIn(slot.goal, { answer: ans, day, arsenalBest: reach() }, at, timeZone());
+            const { notices } = get();
             if (!r.ok) {
-              setGoal(r.state, { rejection: r.reason, undo: null });
+              setSlot(goalId, r.state, {}, { rejection: { reason: r.reason, goalId }, undo: null });
             } else if (r.outcome.kind === 'yes') {
               const { day, streak, rewards } = r.outcome;
               const newest = rewards.weapons.at(-1);
               const earned = claimCredits(get().credits, { type: 'yes', goal: r.state });
-              setGoal(r.state, {
-                // A newly unlocked weapon equips itself; otherwise the player's pick stands.
-                weapon: newest ? newest.id : get().weapon,
-                credits: earned.wallet,
-                round: {
-                  day,
-                  n: streak,
-                  rewards: {
-                    bomb: rewards.bomb,
-                    shield: rewards.shield,
-                    shieldCapped: rewards.shieldCapped,
-                    weapons: rewards.weapons.map((w) => w.id),
-                    credits: earned.granted,
+              setSlot(
+                goalId,
+                r.state,
+                {
+                  round: {
+                    day,
+                    n: streak,
+                    rewards: {
+                      bomb: rewards.bomb,
+                      shield: rewards.shield,
+                      shieldCapped: rewards.shieldCapped,
+                      weapons: rewards.weapons.map((w) => w.id),
+                      credits: earned.granted,
+                    },
+                    borrowed: [],
+                    played: false,
                   },
-                  borrowed: [],
-                  played: false,
                 },
-                notice: null,
-                route: source === 'notification' ? null : '/play',
-                rejection: null,
-                undo: null,
-              });
+                {
+                  // A newly unlocked weapon equips itself; otherwise the player's pick stands.
+                  weapon: newest ? newest.id : get().weapon,
+                  credits: earned.wallet,
+                  notices: without(notices, goalId),
+                  route: source === 'notification' ? null : { path: '/play', goalId },
+                  rejection: null,
+                  undo: null,
+                },
+              );
             } else {
               const notice = noticeForAnswer(r.outcome, r.state);
               const undo: UndoNotToday = {
+                goalId,
                 day: r.outcome.day,
                 at: at.getTime(),
                 notice,
                 entry: r.state.history.at(-1),
-                before: { goal, round: get().round },
+                before: { goal: slot.goal, round: slot.round },
               };
-              setGoal(r.state, { notice, route: '/notice', rejection: null, undo });
+              setSlot(goalId, r.state, {}, {
+                notices: notice ? { ...notices, [goalId]: notice } : without(notices, goalId),
+                route: { path: '/notice', goalId },
+                rejection: null,
+                undo,
+              });
             }
             return r;
           },
 
           undoNotToday: (windowMs = UNDO_MS) => {
-            const goal = ready();
             const { undo } = get();
-            if (!goal || !undo) return false;
+            const slot = undo ? slotOf(undo.goalId) : null;
+            if (!undo || !slot) return false;
             const t = now();
             // Restoring the old goal un-settles the answered day. Catch it up to now, then check
             // that day's check-in is the one still open, so it can be answered again.
             const restored = resolve(undo.before.goal, t, timeZone()).state;
             const ok =
               t.getTime() - undo.at < windowMs &&
-              goal.history.at(-1) === undo.entry &&
+              slot.goal.history.at(-1) === undo.entry &&
               pendingWindow(restored, t)?.day === undo.day;
             if (!ok) {
               set({ undo: null });
               return false;
             }
-            setGoal(restored, { round: undo.before.round, notice: null, route: null, rejection: null, undo: null });
+            setSlot(
+              undo.goalId,
+              restored,
+              { round: undo.before.round },
+              { notices: without(get().notices, undo.goalId), route: null, rejection: null, undo: null },
+            );
             return true;
           },
 
@@ -332,14 +454,16 @@ export function createAppStore(deps: StoreDeps) {
             if (get().rejection) set({ rejection: null });
           },
 
-          finishRound: () => {
-            const { round } = get();
-            if (round && !round.played) set({ round: { ...round, played: true } });
+          finishRound: (goalId) => {
+            const slot = slotOf(goalId);
+            if (slot?.round && !slot.round.played) setSlot(goalId, slot.goal, { round: { ...slot.round, played: true } });
           },
 
           startBonusRound: (n) => {
-            const { credits, bonus } = get();
-            if (!ready() || !isBonusSize(n) || credits.balance.game < 1 || (bonus && !bonus.played)) return false;
+            const { hydrated, goals, credits, bonus } = get();
+            if (!hydrated || goals.length === 0 || !isBonusSize(n) || credits.balance.game < 1 || (bonus && !bonus.played)) {
+              return false;
+            }
             set({ credits: spendCredit(credits, 'game'), bonus: { n, borrowed: [], played: false } });
             return true;
           },
@@ -350,50 +474,46 @@ export function createAppStore(deps: StoreDeps) {
           },
 
           borrowWeapon: (target, id) => {
-            const goal = ready();
-            const { credits, round, bonus } = get();
-            const record = target === 'daily' ? round : bonus;
-            if (!goal || !record || record.played) return false;
-            if (!weaponCreditOffer(credits, goal.bestStreak, record.borrowed).some((w) => w.id === id)) return false;
+            const { hydrated, goals, credits, bonus } = get();
+            if (!hydrated || goals.length === 0) return false;
+            const slot = target.round === 'daily' ? slotOf(target.goalId) : null;
+            const record = target.round === 'daily' ? (slot?.round ?? null) : bonus;
+            if (!record || record.played) return false;
+            if (!weaponCreditOffer(credits, reach(), record.borrowed).some((w) => w.id === id)) return false;
             const borrowed = [...record.borrowed, id];
             const spent = spendCredit(credits, 'weapon');
-            if (target === 'daily' && round) set({ credits: spent, round: { ...round, borrowed } });
-            else if (target === 'bonus' && bonus) set({ credits: spent, bonus: { ...bonus, borrowed } });
+            if (slot?.round) setSlot(slot.goal.goalId, slot.goal, { round: { ...slot.round, borrowed } }, { credits: spent });
+            else if (bonus) set({ credits: spent, bonus: { ...bonus, borrowed } });
             return true;
           },
 
           selectWeapon: (id) => {
-            const goal = ready();
-            if (goal && isUnlocked(id, goal.bestStreak)) set({ weapon: id });
+            const { hydrated, goals } = get();
+            if (hydrated && goals.length > 0 && isUnlocked(id, reach())) set({ weapon: id });
           },
 
-          spendBomb: () => {
-            const goal = ready();
-            if (!goal || goal.bombs < 1) return false;
-            set({ goal: spendGoalBomb(goal) });
+          spendBomb: (goalId) => {
+            const slot = slotOf(goalId);
+            if (!slot || slot.goal.bombs < 1) return false;
+            setSlot(goalId, spendGoalBomb(slot.goal));
             return true;
           },
 
-          setGoalText: (text) => {
-            const goal = ready();
-            if (!goal) return { ok: false, reason: 'no-goal' };
-            if (!text.trim()) return { ok: false, reason: 'empty-goal' };
-            set({ goal: setGoalWording(goal, text) });
-            return { ok: true };
+          setGoalText: (goalId, text) => {
+            if (slotOf(goalId) && !text.trim()) return { ok: false, reason: 'empty-goal' };
+            return edit(goalId, (goal) => setGoalWording(goal, text));
           },
 
-          setCheckInTime: (time) => {
-            const goal = ready();
-            if (!goal) return { ok: false, reason: 'no-goal' };
-            setGoal(setGoalCheckInTime(goal, time, now(), timeZone()).state);
-            return { ok: true };
-          },
+          setCheckInTime: (goalId, time) =>
+            edit(goalId, (goal) => setGoalCheckInTime(goal, time, now(), timeZone()).state),
 
-          setMorningTime: (time) => {
-            const goal = ready();
-            if (!goal) return { ok: false, reason: 'no-goal' };
-            set({ goal: setGoalMorningTime(goal, time) });
-            return { ok: true };
+          setMorningTime: (goalId, time) => edit(goalId, (goal) => setGoalMorningTime(goal, time)),
+
+          setCheckInDays: (goalId, days) => {
+            if (!slotOf(goalId)) return { ok: false, reason: 'no-goal' };
+            if (!limits.weekdaySchedules) return { ok: false, reason: 'days-not-allowed' };
+            if (days.length === 0) return { ok: false, reason: 'no-days' };
+            return edit(goalId, (goal) => setGoalCheckInDays(goal, days, now(), timeZone()).state);
           },
 
           setPref: (key, value) => set({ prefs: { ...get().prefs, [key]: value } }),
@@ -402,28 +522,43 @@ export function createAppStore(deps: StoreDeps) {
             set({ reminderCardHiddenUntil: new Date(now().getTime() + REMINDER_CARD_HIDE_MS).toISOString() });
           },
 
-          nextNotice: () => {
-            const { notice, seenThrough } = get();
-            if (notice) return { source: 'answer', notice };
-            return missedNews(seenThrough);
+          nextNotice: (preferGoalId) => {
+            const { notices, goals } = get();
+            const ordered = preferGoalId
+              ? [...goals.filter((s) => s.goal.goalId === preferGoalId), ...goals.filter((s) => s.goal.goalId !== preferGoalId)]
+              : goals;
+            for (const { goal } of ordered) {
+              const notice = notices[goal.goalId];
+              if (notice) return { source: 'answer', goalId: goal.goalId, notice };
+            }
+            if (!get().hydrated) return null;
+            for (const slot of ordered) {
+              const news = missedNews(slot);
+              if (news) return news;
+            }
+            return null;
           },
 
           noticeShown: (p) => {
             if (p.source === 'answer') {
               // Only the one shown: a newer answer's notice waits its turn.
-              if (get().notice === p.notice) set({ notice: null });
+              const { notices } = get();
+              if (notices[p.goalId] === p.notice) set({ notices: without(notices, p.goalId) });
             } else {
-              seeThrough(p.through);
+              seeThrough(p.goalId, p.through);
             }
           },
 
           markQuietMisses: () => {
-            const goal = ready();
-            if (goal?.lastSettledDay && !missedNews(get().seenThrough)) seeThrough(goal.lastSettledDay);
+            if (!get().hydrated) return;
+            for (const slot of get().goals) {
+              const last = slot.goal.lastSettledDay;
+              if (last && !missedNews(slot)) seeThrough(slot.goal.goalId, last);
+            }
           },
 
           erase: () => {
-            set({ ...DEFAULT_PERSISTED, notice: null, route: null, rejection: null, undo: null });
+            set({ ...DEFAULT_PERSISTED, notices: {}, route: null, rejection: null, undo: null });
             api.persist.clearStorage();
             writeAside(() => deps.storage.removeItem(STORE_BACKUP_KEY));
           },
@@ -440,22 +575,36 @@ export function createAppStore(deps: StoreDeps) {
             get().refresh();
           },
 
-          devJumpToDay: (n) => {
-            const goal = ready();
+          devJumpToDay: (goalId, n) => {
+            const slot = slotOf(goalId);
             const tools = deps.dev ? deps.devTools : undefined;
-            if (!tools || !goal || !Number.isInteger(n) || n < 1 || n > tools.SEED_MAX_N) return null;
-            const seeded = tools.seedYesRun(goal, n, now(), timeZone());
-            // The old history is gone, so there's no missed-day news left to show.
-            set({ goal: seeded, round: null, weapon: null, notice: null, undo: null, seenThrough: seeded.lastSettledDay });
-            return get().answer('yes');
+            if (!tools || !slot || !Number.isInteger(n) || n < 1 || n > tools.SEED_MAX_N) return null;
+            const seeded = tools.seedYesRun(slot.goal, n, now(), timeZone());
+            const s = get();
+            // The old history is gone, so there's no missed-day news left to show. The arsenal
+            // follows the rebuilt run: only archived goals keep their share of it.
+            setSlot(
+              goalId,
+              seeded,
+              { round: null, seenThrough: seeded.lastSettledDay },
+              {
+                weapon: null,
+                notices: without(s.notices, goalId),
+                undo: null,
+                arsenalBest: s.archived.reduce((best, a) => Math.max(best, a.goal.bestStreak), 0),
+              },
+            );
+            return get().answer(goalId, 'yes');
           },
 
           devSkipToNextCheckIn: () => {
-            if (!deps.dev || !ready()) return;
+            if (!deps.dev || !get().hydrated || get().goals.length === 0) return;
             get().refresh();
-            const goal = get().goal;
-            if (!goal || pendingWindow(goal, now())) return;
-            get().advanceDevClock(nextWindow(goal).opensAt.getTime() - now().getTime() + DEV_SKIP_SLACK_MS);
+            const t = now();
+            const { goals } = get();
+            if (goals.some((s) => pendingWindow(s.goal, t))) return;
+            const next = Math.min(...goals.map((s) => nextWindow(s.goal).opensAt.getTime()));
+            get().advanceDevClock(next - t.getTime() + DEV_SKIP_SLACK_MS);
           },
 
           devResetCredits: () => {
@@ -469,7 +618,7 @@ export function createAppStore(deps: StoreDeps) {
         storage: createJSONStorage(() => deps.storage),
         partialize: persisted,
         // Upgraded, not yet read: `merge` reads it.
-        migrate: (stored, version) => migratePersisted(stored, version) as PersistedState,
+        migrate: (stored, version) => migratePersisted(stored, version) as PersistedState & LegacyCopy,
         merge: (stored, current) => {
           // A goal that can't be read would be lost the next time state is saved. Keep a copy
           // where nothing writes over it, so a fix can bring it back.

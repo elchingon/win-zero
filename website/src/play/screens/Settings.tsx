@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router';
 
 import { currentCheckInTime, firstUpcomingDay, opensAt, pendingWindow } from '@/engine';
+import { primaryGoal } from '@/store/select';
 import { formatUntil, formatWhen } from '@/lib/format';
 import { GOAL_MAX_LENGTH } from '@/ui/copy/rules';
 import { SUPPORT_EMAIL, SUPPORT_LINE } from '@/ui/copy/support';
@@ -20,7 +21,7 @@ import { TopBar } from '../ui/TopBar';
 
 export function Settings() {
   const navigate = useNavigate();
-  const goal = useApp((s) => s.goal);
+  const goal = useApp(primaryGoal);
   const prefs = useApp((s) => s.prefs);
   useApp((s) => s.devClockOffsetMs); // the "next check-in" line follows the debug clock
   const { h24 } = deviceCalendar();
@@ -38,7 +39,7 @@ export function Settings() {
   const goalChanged = draft.trim() !== goal.goal && draft.trim().length > 0;
 
   const saveGoal = () => {
-    if (store.setGoalText(draft).ok) {
+    if (store.setGoalText(goal.goalId, draft).ok) {
       setDraft(draft.trim());
       setSaved(true);
     }
@@ -89,7 +90,7 @@ export function Settings() {
         <TimeField
           label="Check-in time"
           value={currentCheckInTime(goal)}
-          onChange={(t) => store.setCheckInTime(t)}
+          onChange={(t) => store.setCheckInTime(goal.goalId, t)}
           hint={`${pending ? `A check-in is open until ${formatUntil(pending.closesAt, now, tz, h24)}. ` : ''}Next check-in: ${formatWhen(upcoming, now, tz, h24)}.`}
         />
       </div>
