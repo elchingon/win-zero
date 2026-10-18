@@ -73,6 +73,37 @@ answers are in `docs/store/`.
 
 ---
 
+## Win Zero Plus
+
+Win Zero Plus (SPEC 9) is built from this repo. `EXPO_PUBLIC_APP_VARIANT=plus` makes
+`app.config.ts` give it its own name, bundle id (`com.e7systems.winzeroplus`), scheme
+(`winzeroplus`) and art (`assets/brand-plus/`, from `npm run gen:brand:plus`). Every EAS profile
+has a `-plus` twin that sets it, and `scripts/check-release.mjs` stops a build whose profile and
+variant disagree. `npm run check:variants` (also in CI) checks both apps' configs.
+
+- [ ] **Dev client:** `eas build --profile development-plus --platform ios|android`, then
+  `npm run start:plus`. A dev client runs whichever app the dev server was started for, so start
+  it with `start:plus` for the Plus dev client.
+- [ ] **Store records:**
+  - App Store Connect → New App: **Win Zero Plus**, bundle ID `com.e7systems.winzeroplus`. Copy its
+    Apple ID into `eas.json` under `submit.production-plus.ios.ascAppId`.
+  - Play Console → Create app: **Win Zero Plus**, App, **Paid**.
+- [ ] **Builds:** `eas build --profile production-plus --platform all --auto-submit-with-profile
+  production-plus`, or `eas submit --profile production-plus --id <build id>`. Never `--latest`:
+  it can pick the other app's build.
+- [ ] **Local builds:**
+  - Android: `npm run build:android:plus`, or `build:android:plus:upload` with Plus's own upload
+    key in `.env.signing.plus`. Install with `npm run install:android:plus`.
+  - iOS: `npm run open:ios:plus`.
+  - These regenerate `android/` or `ios/` from clean when it was last generated for the other app
+    (`scripts/prebuild.mjs`). `npm run android|ios` (`expo run`) doesn't check: after building the
+    other app, run `npx expo prebuild --clean` first.
+- [ ] **Store versions:** Plus is never on an older `STORE_VERSION` (`src/store/types.ts`) than the
+  free app, so a move from the free app can always be read. When a release raises it, release Plus
+  first, then the free app.
+
+---
+
 ## Website (winzero.app)
 
 The website deploys on its own: Cloudflare Pages builds `website/` on every push to `main`, and
