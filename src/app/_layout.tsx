@@ -1,8 +1,8 @@
 import { useFonts } from 'expo-font';
-import { DarkTheme, Stack, ThemeProvider, usePathname, type ErrorBoundaryProps } from 'expo-router';
+import { DarkTheme, router, Stack, ThemeProvider, usePathname, type ErrorBoundaryProps } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { AppState, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -11,11 +11,13 @@ import { reportPath } from '@/notifications/route';
 import { appStore, startLifecycle, useApp } from '@/store';
 import { fontAssets } from '@/theme/fonts';
 import { colors } from '@/theme/tokens';
+import { importDelivery, startMoveAcks, subscribe } from '@/transfer/inbox';
+import { transport } from '@/transfer/transport';
 import { CrashScreen } from '@/ui/CrashScreen';
 import { APP_LINKS } from '@/ui/support';
 import { ZeroField } from '@/ui/ZeroField';
 import { LaunchSplash } from '@/ui/LaunchSplash';
-import { APP_NAME } from '@/variant';
+import { APP_NAME, FEATURES } from '@/variant';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -61,6 +63,17 @@ export default function RootLayout() {
   useEffect(() => startNotifications(), []);
   // Notification handling needs to know which screen is up, once there is one.
   useEffect(() => reportPath(ready && launched ? pathname : null), [ready, launched, pathname]);
+  // Win Zero: Plus's word that a move arrived (SPEC 9), which +native-intent left in the inbox.
+  useEffect(() => (FEATURES.moveOut ? startMoveAcks(appStore, transport) : undefined), []);
+  // Win Zero Plus: a move that arrived while the splash was up opens once the screens can. Each
+  // delivery once: backing out of /import doesn't bring it back.
+  const delivery = useSyncExternalStore(subscribe, importDelivery);
+  const routed = useRef(0);
+  useEffect(() => {
+    if (!FEATURES.importIn || !ready || !launched || !delivery || delivery.seq === routed.current) return;
+    routed.current = delivery.seq;
+    if (pathname !== '/import') router.push('/import');
+  }, [ready, launched, delivery, pathname]);
 
   if (!ready || !launched) {
     return (

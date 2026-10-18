@@ -1,5 +1,6 @@
 // Home: the goal, the numbers, today's check-in (or when the next one comes), credits and the
-// bonus round, the arsenal, and the history calendar.
+// bonus round, the arsenal, and the history calendar. Once Win Zero has moved to Win Zero Plus
+// (SPEC 9), only where the goals went.
 import { Redirect, router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState, type ComponentType } from 'react';
 import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
@@ -13,7 +14,8 @@ import {
   type GoalState,
 } from '@/engine';
 import { formatClockTime, formatWhen } from '@/lib/format';
-import { appStore, primaryGoal, primaryRound, useApp } from '@/store';
+import { appStore, isMovedOut, primaryGoal, primaryRound, useApp } from '@/store';
+import { cancelMove, confirmMoveByHand, openPlus, sendMoveOut } from '@/transfer/send';
 import { colors, fonts, space, type } from '@/theme/tokens';
 import { Card, Eyebrow, Fine } from '@/ui/bits';
 import { TopBar } from '@/ui/Brand';
@@ -24,6 +26,8 @@ import { Arsenal } from '@/ui/home/Arsenal';
 import { CheckInCard } from '@/ui/home/CheckInCard';
 import { CreditsCard } from '@/ui/home/CreditsCard';
 import { HistoryCalendar } from '@/ui/home/HistoryCalendar';
+import { moveCardFor, moveCheckAt } from '@/ui/home/moved';
+import { MoveCheckCard, MovedCard } from '@/ui/home/MovedCard';
 import { RemindersCard } from '@/ui/home/RemindersCard';
 import { remindersCardVisible } from '@/ui/home/remindersOff';
 import { startHomeRouting } from '@/ui/home/routing';
@@ -45,8 +49,20 @@ const BOUNDARY_SLACK_MS = 500;
 
 export default function Home() {
   const goal = useApp(primaryGoal);
+  const moved = useApp(isMovedOut);
   if (!goal) return <Redirect href="/setup" />;
+  if (moved) return <MovedHome />;
   return <HomeScreen goal={goal} />;
+}
+
+/** The goals live in Win Zero Plus now: no check-ins here, and no news to show. */
+function MovedHome() {
+  return (
+    <Screen>
+      <TopBar right={<LinkButton label="Settings" onPress={() => router.push('/settings')} />} />
+      <MovedCard onOpen={openPlus} onStay={() => appStore.getState().keepUsingHere()} />
+    </Screen>
+  );
 }
 
 function HomeScreen({ goal }: { goal: GoalState }) {
@@ -58,6 +74,8 @@ function HomeScreen({ goal }: { goal: GoalState }) {
   const rejection = useApp((s) => s.rejection);
   const clockOffset = useApp((s) => s.devClockOffsetMs); // re-render when the debug clock moves
   const reminderCardHiddenUntil = useApp((s) => s.reminderCardHiddenUntil);
+  const moveOut = useApp((s) => s.moveOut);
+  const [retrying, setRetrying] = useState(false);
   const reminders = useReminderPermission();
   const { h24, firstWeekday } = useDeviceCalendar();
   const [tick, setTick] = useState(0);
@@ -79,6 +97,22 @@ function HomeScreen({ goal }: { goal: GoalState }) {
     }, Math.min(MAX_TIMER_MS, wait));
     return () => clearTimeout(id);
   }, [boundary, tick, clockOffset]);
+
+  // A move Plus hasn't confirmed: ask about it once it's had time to finish.
+  const checkAt = moveCheckAt(moveOut);
+  useEffect(() => {
+    if (checkAt === null) return;
+    const wait = checkAt - appStore.getState().now().getTime();
+    if (wait < 0) return;
+    const id = setTimeout(() => setTick((t) => t + 1), Math.min(MAX_TIMER_MS, wait + BOUNDARY_SLACK_MS));
+    return () => clearTimeout(id);
+  }, [checkAt, tick, clockOffset]);
+
+  const retryMove = async () => {
+    setRetrying(true);
+    await sendMoveOut();
+    setRetrying(false);
+  };
 
   // An answer, from the card here or a notification's buttons, leaves a screen to open: the
   // round for Yes, the notice for Not today. Otherwise, on focus and whenever days settle while
@@ -127,6 +161,10 @@ function HomeScreen({ goal }: { goal: GoalState }) {
       </View>
 
       <Stats goal={goal} today={today} />
+
+      {moveCardFor(moveOut, now) === 'check' ? (
+        <MoveCheckCard busy={retrying} onYes={() => confirmMoveByHand()} onRetry={retryMove} onCancel={() => cancelMove()} />
+      ) : null}
 
       {banner ? (
         <Card style={styles.banner}>

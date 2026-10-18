@@ -38,6 +38,8 @@ export type {
   BonusRound,
   CreditRound,
   GoalSlot,
+  ImportRecord,
+  MoveOut,
   Notice,
   PendingNotice,
   PendingRoute,

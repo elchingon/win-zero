@@ -1,6 +1,6 @@
 // Settings: goal wording, times (through the engine, so an open window is respected),
 // sound / haptics / weekly nudge, reminder permission, how it works, support, about (privacy
-// policy, help, email, version), and erase.
+// policy, help, email, the move to Win Zero Plus once it's on the store, version), and erase.
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { useState, type ComponentType } from 'react';
@@ -9,7 +9,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { currentCheckInTime, firstUpcomingDay, opensAt, pendingWindow, type ClockTime } from '@/engine';
 import { formatUntil, formatWhen } from '@/lib/format';
 import type { ReminderPermission } from '@/notifications/permissions';
-import { appStore, primaryGoal, useApp } from '@/store';
+import { appStore, isMovedOut, primaryGoal, useApp } from '@/store';
 import { colors, space, type } from '@/theme/tokens';
 import { Card, Eyebrow, Field, Fine, Row, shared, TextField, ToggleRow } from '@/ui/bits';
 import { TopBar } from '@/ui/Brand';
@@ -21,7 +21,7 @@ import { APP_LINKS, callSupportLine, emailSupport, openPage, SUPPORT_LINE } from
 import { TimeField } from '@/ui/TimeField';
 import { useDeviceCalendar } from '@/ui/useDevice';
 import { useReminderPermission } from '@/ui/useReminderPermission';
-import { APP_NAME } from '@/variant';
+import { APP_NAME, FEATURES, PLUS_STORE_URL } from '@/variant';
 
 // Development builds only: Metro folds __DEV__ to false in production and drops the require.
 const DebugSection: ComponentType | null = __DEV__
@@ -35,6 +35,8 @@ const APP_LABEL = APP_VERSION ? `${APP_NAME} ${APP_VERSION}` : APP_NAME;
 /** From the environment; a build without them leaves their rows out (see APP_LINKS). */
 const PRIVACY_URL = APP_LINKS.privacy;
 const SUPPORT_URL = APP_LINKS.support;
+/** Win Zero offers the move once Win Zero Plus is on the store for this platform (SPEC 9). */
+const MOVE_OFFERED = FEATURES.moveOut && PLUS_STORE_URL !== null;
 
 const PERMISSION_WORDS: Record<ReminderPermission, string> = {
   granted: 'On',
@@ -45,6 +47,7 @@ const PERMISSION_WORDS: Record<ReminderPermission, string> = {
 export default function Settings() {
   const goal = useApp(primaryGoal);
   const prefs = useApp((s) => s.prefs);
+  const moved = useApp(isMovedOut);
   useApp((s) => s.devClockOffsetMs); // the "next check-in" line follows the debug clock
   const { h24 } = useDeviceCalendar();
   const [draft, setDraft] = useState(goal?.goal ?? '');
@@ -189,6 +192,15 @@ export default function Settings() {
             hint={`Starts an email to ${APP_NAME} support`}
             onPress={() => emailSupport(APP_LABEL)}
           />
+          {MOVE_OFFERED && !moved ? (
+            <Row
+              label="Move to Win Zero Plus"
+              detail="Bring your goal, history and rewards to the Plus app on this phone."
+              right={<Text style={styles.call}>Read</Text>}
+              hint="Explains what moves, before anything happens"
+              onPress={() => router.push('/move')}
+            />
+          ) : null}
         </View>
         <Fine>{APP_LABEL} · © 2026 E7 Systems</Fine>
       </View>
