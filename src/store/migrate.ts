@@ -69,7 +69,7 @@ export function applyUpgrades(value: Rec, from: number, to: number, steps: Reado
 }
 
 /** The GoalState shape this build writes (the engine's `version`). */
-const GOAL_VERSION: GoalState['version'] = 1;
+export const GOAL_VERSION: GoalState['version'] = 1;
 
 /**
  * Steps that bring a saved goal up to GOAL_VERSION, keyed by the version they upgrade from.

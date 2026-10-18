@@ -14,6 +14,11 @@ export const STORE_VERSION = 3;
 export const STORE_KEY = 'winzero';
 /** Where stored data goes when its goal can't be read, so a later fix can bring it back. */
 export const STORE_BACKUP_KEY = `${STORE_KEY}:unreadable`;
+/**
+ * A move's id (SPEC 9: Win Zero to Win Zero Plus). It travels in a link and names the file the move
+ * is left in, so it's letters, digits and dashes only.
+ */
+export const MOVE_ID_PATTERN = /^[A-Za-z0-9-]{8,64}$/;
 
 export interface Prefs {
   sound: boolean;
