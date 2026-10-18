@@ -1,7 +1,27 @@
-// Which calendar days are goal days: the days a goal checks in on. Everything that steps from one
-// goal day to the next (windows, catching up, reminders) goes through here, never addDays(day, 1).
-import { addDays, diffDays } from './dates';
-import type { DayKey, GoalState, ScheduleEntry } from './types';
+// Which calendar days are goal days: the days a goal checks in on (SPEC 9). Every day by default;
+// a weekday schedule leaves the other days as rest days, with no window and no effect. Everything
+// that steps from one goal day to the next (windows, catching up, reminders) goes through here,
+// never addDays(day, 1).
+import { addDays, diffDays, weekdayOf } from './dates';
+import type { DayKey, GoalState, ScheduleEntry, Weekday } from './types';
+
+export const EVERY_DAY: readonly Weekday[] = [0, 1, 2, 3, 4, 5, 6];
+
+/**
+ * Check-in days as a schedule entry stores them: sorted and without repeats, and absent (undefined)
+ * for every day, so a goal that checks in daily is stored exactly as before there was a choice.
+ * Throws for an empty set or a day that isn't a weekday.
+ */
+export function normalizeDays(days: readonly number[] | undefined): Weekday[] | undefined {
+  if (days === undefined) return undefined;
+  const set = new Set(days);
+  for (const d of set) {
+    if (!Number.isInteger(d) || d < 0 || d > 6) throw new RangeError(`Not a weekday: ${d}`);
+  }
+  if (set.size === 0) throw new RangeError('A goal needs at least one check-in day');
+  if (set.size === EVERY_DAY.length) return undefined;
+  return [...set].sort((a, b) => a - b) as Weekday[];
+}
 
 /** The schedule entry in force on `day`: the last one starting on or before it. */
 export function scheduleEntryFor(state: GoalState, day: DayKey): ScheduleEntry {
@@ -22,9 +42,21 @@ export function latestScheduleEntry(state: GoalState): ScheduleEntry {
   return entry;
 }
 
-/** True when `day` has a check-in: it's on or after the goal's first day. */
+/** True when `day` has a check-in: it's on or after the goal's first day, and one of its days. */
 export function isGoalDay(state: GoalState, day: DayKey): boolean {
-  return day >= state.firstDay;
+  if (day < state.firstDay) return false;
+  const days = scheduleEntryFor(state, day).days;
+  return !days || days.includes(weekdayOf(day) as Weekday);
+}
+
+/** The days upcoming check-ins fall on: every day, or the chosen weekdays. */
+export function checkInDays(state: GoalState): readonly Weekday[] {
+  return latestScheduleEntry(state).days ?? EVERY_DAY;
+}
+
+/** True when the goal checks in every day from now on. */
+export function isEveryDay(state: GoalState): boolean {
+  return !latestScheduleEntry(state).days;
 }
 
 /** The first goal day after `day`. */

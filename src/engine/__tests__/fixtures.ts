@@ -29,6 +29,8 @@ export function newGoal(
     tz?: TimeZone;
     checkInTime?: ClockTime;
     morningTime?: ClockTime;
+    /** Check-in weekdays, 0 = Sunday. Every day when absent. */
+    days?: number[];
   } = {},
 ): GoalState {
   const tz = opts.tz ?? DENVER;
@@ -37,6 +39,7 @@ export function newGoal(
     goal: 'Stop drinking',
     checkInTime: opts.checkInTime,
     morningTime: opts.morningTime,
+    days: opts.days,
     now: at(opts.day ?? DAY0, opts.time ?? '12:00', tz),
     tz,
   });

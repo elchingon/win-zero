@@ -1,9 +1,16 @@
 // Catching up on closed windows, answering check-ins, and schedule edits. Every function
 // takes `now` and the device time zone `tz` as inputs and returns a new state.
-import { dayKeyAt, isValidClockTime, isValidTimeZone, wallTimeToInstant } from './dates';
-import { firstGoalDay, latestScheduleEntry, nextGoalDay, prevGoalDay, scheduleEntryFor } from './goalDays';
+import { addDays, dayKeyAt, isValidClockTime, isValidTimeZone, wallTimeToInstant, weekdayOf } from './dates';
+import {
+  firstGoalDay,
+  latestScheduleEntry,
+  nextGoalDay,
+  normalizeDays,
+  prevGoalDay,
+  scheduleEntryFor,
+} from './goalDays';
 import { applyMissed, applyNotToday, applyYes, type Final, type YesRewards } from './rules';
-import type { ClockTime, DayKey, GoalState, ScheduleEntry, TimeZone } from './types';
+import type { ClockTime, DayKey, GoalState, ScheduleEntry, TimeZone, Weekday } from './types';
 import { closesAt, firstUnsettledDay, firstUpcomingDay, MIN_WINDOW_MS, opensAt, pendingWindow } from './windows';
 
 export const DEFAULT_CHECK_IN_TIME: ClockTime = '20:00';
@@ -23,18 +30,29 @@ function cleanGoal(goal: string): string {
   return trimmed;
 }
 
+/** The check-in days as a schedule entry keeps them: absent for every day. */
+function withDays(days: Weekday[] | undefined): Pick<ScheduleEntry, 'days'> {
+  return days ? { days } : {};
+}
+
+function sameDays(a: readonly Weekday[] | undefined, b: readonly Weekday[] | undefined): boolean {
+  return (a ?? []).join() === (b ?? []).join();
+}
+
 export interface CreateGoalInput {
   goalId: string;
   goal: string;
   checkInTime?: ClockTime;
   morningTime?: ClockTime;
+  /** Weekdays to check in on (SPEC 9). Every day when absent. */
+  days?: readonly number[];
   now: Date;
   tz: TimeZone;
 }
 
 /**
- * A new goal starts on today's local date. If check-in time has already passed today,
- * today's window is open straight away.
+ * A new goal starts on today's local date. If check-in time has already passed today, and
+ * today is a check-in day, today's window is open straight away.
  */
 export function createGoal(input: CreateGoalInput): GoalState {
   const checkInTime = input.checkInTime ?? DEFAULT_CHECK_IN_TIME;
@@ -42,6 +60,7 @@ export function createGoal(input: CreateGoalInput): GoalState {
   assertClockTime(checkInTime);
   assertClockTime(morningTime);
   assertTimeZone(input.tz);
+  const days = normalizeDays(input.days);
   const firstDay = dayKeyAt(input.now, input.tz);
   return {
     version: 1,
@@ -49,7 +68,7 @@ export function createGoal(input: CreateGoalInput): GoalState {
     goal: cleanGoal(input.goal),
     createdAt: input.now.toISOString(),
     firstDay,
-    checkInSchedule: [{ fromDay: firstDay, time: checkInTime, tz: input.tz }],
+    checkInSchedule: [{ fromDay: firstDay, time: checkInTime, tz: input.tz, ...withDays(days) }],
     morningTime,
     streak: 0,
     bestStreak: 0,
@@ -65,13 +84,20 @@ export function createGoal(input: CreateGoalInput): GoalState {
 }
 
 /**
- * True when a goal set up at `now` starts with today's check-in already open: its check-in time
- * has passed today. Setup says so, since that first question is about today.
+ * True when a goal set up at `now` starts with today's check-in already open: today is a check-in
+ * day and its check-in time has passed. Setup says so, since that first question is about today.
  */
-export function firstCheckInOpenAt(input: { checkInTime: ClockTime; now: Date; tz: TimeZone }): boolean {
+export function firstCheckInOpenAt(input: {
+  checkInTime: ClockTime;
+  days?: readonly number[];
+  now: Date;
+  tz: TimeZone;
+}): boolean {
   assertClockTime(input.checkInTime);
   assertTimeZone(input.tz);
   const today = dayKeyAt(input.now, input.tz);
+  const days = normalizeDays(input.days);
+  if (days && !days.includes(weekdayOf(today) as Weekday)) return false;
   return wallTimeToInstant(today, input.checkInTime, input.tz).getTime() <= input.now.getTime();
 }
 
@@ -133,13 +159,13 @@ export function resolve(state: GoalState, now: Date, tz: TimeZone): Resolved {
     });
   }
   const latest = latestScheduleEntry(next);
-  if (latest.tz !== tz) next = appendScheduleEntry(next, { time: latest.time, tz }, now);
+  if (latest.tz !== tz) next = appendScheduleEntry(next, { time: latest.time, tz, days: latest.days }, now);
   return { state: pruneSchedule(next), events };
 }
 
 /**
- * Start a new check-in time or time zone from the first check-in that hasn't arrived yet:
- * today's, even while yesterday's is still open.
+ * Start a new check-in time, time zone or set of days from `fromDay`: by default the first
+ * check-in that hasn't arrived yet, today's even while yesterday's is still open.
  * - That check-in may arrive right away under the new schedule, never earlier.
  * - An open window keeps at least the close time it already had, so an edit or a flight
  *   never closes it early: its own entry is left alone, and if moving the next opening would
@@ -149,17 +175,23 @@ export function resolve(state: GoalState, now: Date, tz: TimeZone): Resolved {
  */
 function appendScheduleEntry(
   state: GoalState,
-  change: Pick<ScheduleEntry, 'time' | 'tz'>,
+  change: Pick<ScheduleEntry, 'time' | 'tz' | 'days'>,
   now: Date,
+  fromDay: DayKey = firstUpcomingDay(state, now),
 ): GoalState {
   const t = now.getTime();
-  const fromDay = firstUpcomingDay(state, now);
 
   const prev = prevGoalDay(state, fromDay);
   const hasPrev = prev !== null;
   let notBefore = hasPrev ? Math.max(t, opensAt(state, prev).getTime() + MIN_WINDOW_MS) : t;
   const withEntry = (floor: number): GoalState => {
-    const entry: ScheduleEntry = { fromDay, ...change, notBefore: new Date(floor).toISOString() };
+    const entry: ScheduleEntry = {
+      fromDay,
+      time: change.time,
+      tz: change.tz,
+      ...withDays(change.days),
+      notBefore: new Date(floor).toISOString(),
+    };
     return { ...state, checkInSchedule: [...state.checkInSchedule.filter((e) => e.fromDay < fromDay), entry] };
   };
 
@@ -259,9 +291,44 @@ export function setCheckInTime(state: GoalState, time: ClockTime, now: Date, tz:
   const latest = latestScheduleEntry(resolved.state);
   if (latest.time === time) return resolved;
   return {
-    state: pruneSchedule(appendScheduleEntry(resolved.state, { time, tz: latest.tz }, now)),
+    state: pruneSchedule(appendScheduleEntry(resolved.state, { time, tz: latest.tz, days: latest.days }, now)),
     events: resolved.events,
   };
+}
+
+/**
+ * Change the weekdays the goal checks in on (SPEC 9). They take effect from the day after the last
+ * check-in that has arrived, or from today if that's later: a settled day never changes, and an
+ * open window keeps its close time. A day added for today opens at its check-in time, or straight
+ * away if that has passed.
+ */
+export function setCheckInDays(state: GoalState, days: readonly number[], now: Date, tz: TimeZone): Resolved {
+  const next = normalizeDays(days);
+  const resolved = resolve(state, now, tz);
+  const s = resolved.state;
+  const latest = latestScheduleEntry(s);
+  if (sameDays(latest.days, next)) return resolved;
+
+  const arrived = prevGoalDay(s, firstUpcomingDay(s, now));
+  const afterArrived = arrived === null ? s.firstDay : addDays(arrived, 1);
+  const today = dayKeyAt(now, latest.tz);
+  let fromDay = afterArrived > today ? afterArrived : today;
+  // Whether the day after an open window is a check-in day can matter to when it closes (it never
+  // closes before that check-in opens): if the change would close one early, start a day later.
+  for (;;) {
+    const changed = appendScheduleEntry(s, { time: latest.time, tz: latest.tz, days: next }, now, fromDay);
+    if (!closesAnOpenWindowEarly(s, changed, arrived)) return { state: pruneSchedule(changed), events: resolved.events };
+    fromDay = addDays(fromDay, 1);
+  }
+}
+
+/** True when a window still open (unsettled, up to `arrived`) closes earlier in `after`. */
+function closesAnOpenWindowEarly(before: GoalState, after: GoalState, arrived: DayKey | null): boolean {
+  if (arrived === null) return false;
+  for (let d = firstUnsettledDay(before); d <= arrived; d = nextGoalDay(before, d)) {
+    if (closesAt(after, d).getTime() < closesAt(before, d).getTime()) return true;
+  }
+  return false;
 }
 
 /** Change the morning reminder time. It affects reminders only, never window boundaries. */
