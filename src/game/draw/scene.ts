@@ -90,7 +90,14 @@ export function drawScene(canvas: SkCanvas, s: GameState, kit: Kit, atlas: SkIma
   if (atlas) drawBullets(canvas, s, kit, atlas, sc);
   drawRings(canvas, s, kit, sc);
   if (atlas) drawParticles(canvas, s, kit, atlas, sc);
-  if (s.phase === 'play' || s.phase === 'celebrate') drawTurret(canvas, s, kit, sc);
+  if (s.phase === 'play' || s.phase === 'celebrate') {
+    // What the player plays with, by mode.
+    switch (s.mode) {
+      case 'shooter':
+      default:
+        drawTurret(canvas, s, kit, sc);
+    }
+  }
   canvas.restore();
   if (s.flash > FLASH_MIN) {
     paintColor(kit.paints.fill, sc, kit.colors.fg, Math.min(FLASH_MAX, s.flash * FLASH_MAX));

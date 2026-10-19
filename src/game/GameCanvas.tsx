@@ -1,6 +1,6 @@
-// The shooting round's canvas. The sim and the drawing both run on the UI thread: every frame
-// steps the round, records it as one Skia picture, and sends a short report to the JS thread.
-// Touches go straight to the sim on the UI thread too. Keep this component's props stable: a
+// The round's canvas. The sim and the drawing both run on the UI thread: every frame steps the
+// round, records it as one Skia picture, and sends a short report to the JS thread. Touches go
+// straight to the sim on the UI thread too, as pointer down, move and up for the round's mode. Keep this component's props stable: a
 // new frame callback re-registers the loop, and a new `round` starts the round over.
 import {
   Canvas,
@@ -24,7 +24,7 @@ import { drawScene, makeScratch } from './draw/scene';
 import type { Scratch } from './draw/types';
 import { dropBomb } from './sim/bomb';
 import { finishAll } from './sim/finish';
-import { moveAim, pressFire, releaseFire, setReduceMotion, setWeapon } from './sim/input';
+import { pointerDown, pointerMove, pointerUp, setReduceMotion, setWeapon } from './sim/input';
 import { resetReport } from './sim/report';
 import { createGame } from './sim/spawn';
 import { step } from './sim/step';
@@ -145,17 +145,17 @@ export const GameCanvas = memo(function GameCanvas(props: {
         .onBegin((e) => {
           'worklet';
           const s = state.value;
-          if (s) pressFire(s, e.x, e.y);
+          if (s) pointerDown(s, e.x, e.y);
         })
         .onUpdate((e) => {
           'worklet';
           const s = state.value;
-          if (s) moveAim(s, e.x, e.y);
+          if (s) pointerMove(s, e.x, e.y);
         })
         .onFinalize(() => {
           'worklet';
           const s = state.value;
-          if (s) releaseFire(s);
+          if (s) pointerUp(s);
         }),
     [state],
   );

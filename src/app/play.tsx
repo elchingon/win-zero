@@ -3,7 +3,8 @@
 // the latest Yes earned (its rewards are already banked); Replay plays it again in place, with
 // no effect on the streak. /play?round=bonus plays the bonus round a Game credit paid for, which
 // changes nothing either. Before a round not yet played, a player holding a Weapon credit is
-// asked whether to borrow a weapon they haven't unlocked for it.
+// asked whether to borrow a weapon they haven't unlocked for it. Every round plays in the game
+// mode picked in Settings (SPEC 9), which in Win Zero is always the Shooter.
 // Development builds, and release builds made with EXPO_PUBLIC_PERF_BUILD=1 (eas build
 // --profile perf), can open /play?practice=N to play any N with every weapon and a frame
 // meter, and nothing about the streak changes.
@@ -13,7 +14,15 @@ import { AccessibilityInfo, StyleSheet, Text, useWindowDimensions, View } from '
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PRACTICE_BEST, PRACTICE_BOMBS, PRACTICE_MAX_N } from '@/dev/demo';
-import { composeRound, equippedWeapon, fillPlan, roundWeapons, weaponCreditOffer, type WeaponId } from '@/engine';
+import {
+  composeRound,
+  equippedWeapon,
+  fillPlan,
+  modeTier,
+  roundWeapons,
+  weaponCreditOffer,
+  type WeaponId,
+} from '@/engine';
 import { CheerPopup } from '@/game/CheerPopup';
 import { makeCues } from '@/game/cues';
 import { GameCanvas, type FrameStats, type GameHandle, type RoundSetup } from '@/game/GameCanvas';
@@ -26,6 +35,7 @@ import { WeaponCreditPrompt } from '@/game/WeaponCreditPrompt';
 import {
   appStore,
   arsenalBestOf,
+  gameModeOf,
   primarySlot,
   slotById,
   totalBombs,
@@ -196,13 +206,15 @@ function Round(props: {
   const pick = localPick ? roundPick : storePick;
   const weapon = useMemo(() => equippedWeapon(pick, best, borrowed), [pick, best, borrowed]);
   const weapons = useMemo(() => roundWeapons(best, borrowed), [best, borrowed]);
+  // Read once: replays keep the round's mode.
+  const [gameMode] = useState(() => gameModeOf(appStore.getState()));
 
   const groups = useMemo(() => composeRound(n).groups, [n]);
   const fill = useMemo(() => fillPlan(n), [n]);
   const [seed, setSeed] = useState(newSeed);
   const round = useMemo<RoundSetup>(
-    () => ({ n, groups, fill, width, height, insetTop: insets.top, insetBottom: insets.bottom, seed }),
-    [n, groups, fill, width, height, insets.top, insets.bottom, seed],
+    () => ({ n, groups, fill, width, height, insetTop: insets.top, insetBottom: insets.bottom, seed, mode: gameMode }),
+    [n, groups, fill, width, height, insets.top, insets.bottom, seed, gameMode],
   );
 
   const game = useRef<GameHandle>(null);
@@ -220,7 +232,7 @@ function Round(props: {
   const seedRef = useRef(seed);
 
   const play = useSfx();
-  const [cues] = useState(makeCues);
+  const [cues] = useState(() => makeCues(gameMode));
   const onReport = useCallback(
     (r: Report) => {
       if (r.seed !== seedRef.current) return;
@@ -315,7 +327,8 @@ function Round(props: {
           left={left}
           total={n}
           label={hudLabel(mode, n)}
-          weaponName={weapon.name}
+          mode={gameMode}
+          tierName={modeTier(gameMode, weapon.id)}
           canSwitch={weapons.length > 1}
           onSwitchWeapon={switchWeapon}
           bombs={bombs}

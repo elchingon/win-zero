@@ -25,6 +25,13 @@ describe('cues', () => {
     expect(cues(report({}), 16).shoot).toBe(false);
   });
 
+  it('plays the Shooter’s sounds by default, the same as asked for by name', () => {
+    const named = makeCues('shooter');
+    const plain = makeCues();
+    const reports = [report({ shots: 1 }), report({ kills: 2 }), report({ kills: 1 }), report({ bombs: 1 }), report({ final: true })];
+    expect(reports.map((r, i) => named(r, i * 10))).toEqual(reports.map((r, i) => plain(r, i * 10)));
+  });
+
   it(`pops for kills at most every ${POP_MIN_MS} ms, and buzzes at most every ${KILL_HAPTIC_MIN_MS} ms`, () => {
     const cues = makeCues();
     const pops: boolean[] = [];

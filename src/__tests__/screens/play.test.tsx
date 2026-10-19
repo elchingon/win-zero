@@ -1,6 +1,6 @@
 // The round screen's way in: the day's round or a bonus round, with the Weapon credit question
 // first when a credit could lend it something. The canvas (Skia) is stood in for by a line
-// naming its weapon and zeros; the HUD is the real one.
+// naming its weapon and zeros, keeping each round it's handed; the HUD is the real one.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { renderRouter, fireEvent, screen } from 'expo-router/testing-library';
@@ -15,12 +15,15 @@ import { WEAPON_PROMPT } from '@/ui/copy/credits';
 jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock'));
 jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
+const mockRounds: { n: number; mode?: string }[] = [];
 jest.mock('@/game/GameCanvas', () => {
   const { createElement } = require('react');
   const { Text } = require('react-native');
   return {
-    GameCanvas: ({ weapon, round }: { weapon: { name: string }; round: { n: number } }) =>
-      createElement(Text, null, `Canvas: ${weapon.name}, ${round.n} zeros`),
+    GameCanvas: ({ weapon, round }: { weapon: { name: string }; round: { n: number; mode?: string } }) => {
+      mockRounds.push(round);
+      return createElement(Text, null, `Canvas: ${weapon.name}, ${round.n} zeros`);
+    },
   };
 });
 jest.mock('@/game/ResultSheet', () => ({ ResultSheet: () => null }));
@@ -53,6 +56,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
+  mockRounds.length = 0;
   await AsyncStorage.clear();
   appStore.setState({ ...DEFAULT_PERSISTED, goals: [{ goal, round: null, seenThrough: null }] });
 });
@@ -116,6 +120,24 @@ describe('a bonus round', () => {
   it('goes back to base when there is none', async () => {
     const app = await open('/play?round=bonus');
     expect(app.pathname()).toBe('/');
+  });
+});
+
+describe('the game mode (SPEC 9)', () => {
+  it('plays the Shooter in Win Zero, with its hint and weapons', async () => {
+    appStore.setState({ goals: [{ goal, round: dayRound(), seenThrough: null }], credits: wallet(0) });
+    await open('/play');
+    expect(mockRounds.at(-1)?.mode).toBe('shooter');
+    expect(screen.getByText('Hold anywhere to fire', { includeHiddenElements: true })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Weapon: Twin Barrel' })).toBeOnTheScreen();
+    expect(screen.getByText('WEAPON · TAP TO SWITCH')).toBeOnTheScreen();
+  });
+
+  it('keeps Win Zero on the Shooter whatever was saved', async () => {
+    appStore.setState({ goals: [{ goal, round: dayRound(), seenThrough: null }], credits: wallet(0), gameMode: 'catch' });
+    await open('/play');
+    expect(mockRounds.length).toBeGreaterThan(0);
+    expect(mockRounds.every((r) => r.mode === 'shooter')).toBe(true);
   });
 });
 

@@ -1,5 +1,7 @@
-// What a frame's report sounds and feels like: which sounds to play and which haptics to fire.
-// Pure (the clock comes in as `nowMs`), so the throttling can be tested.
+// What a frame's report sounds and feels like: which sounds to play and which haptics to fire,
+// by game mode. Pure (the clock comes in as `nowMs`), so the throttling can be tested.
+import { DEFAULT_MODE, type ModeId } from '@/engine';
+
 import type { Report } from './sim/types';
 
 /** Pops closer together than this blur into one, as in the prototype. */
@@ -26,8 +28,10 @@ export function makeGate(minMs: number): (nowMs: number) => boolean {
   };
 }
 
-/** A cue sheet for one round: call it with each report and the time it arrived. */
-export function makeCues(): (report: Report, nowMs: number) => Cues {
+type CueSheet = (report: Report, nowMs: number) => Cues;
+
+/** The Shooter's sounds: a shot per frame that fires, pops for kills, a boom for bombs and the end. */
+function shooterCues(): CueSheet {
   const popGate = makeGate(POP_MIN_MS);
   const killGate = makeGate(KILL_HAPTIC_MIN_MS);
   return (r, nowMs) => {
@@ -42,4 +46,13 @@ export function makeCues(): (report: Report, nowMs: number) => Cues {
       boomHaptic: r.final,
     };
   };
+}
+
+/** A cue sheet for one round in `mode`: call it with each report and the time it arrived. */
+export function makeCues(mode: ModeId = DEFAULT_MODE): CueSheet {
+  switch (mode) {
+    case 'shooter':
+    default:
+      return shooterCues();
+  }
 }
