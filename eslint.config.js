@@ -119,7 +119,7 @@ module.exports = defineConfig([
   {
     // The game sim runs on the UI thread as worklets: plain data in, no platform imports.
     files: ['src/game/sim/**/*.ts'],
-    ignores: ['src/game/sim/__tests__/**'],
+    ignores: ['src/game/sim/**/__tests__/**'],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -141,7 +141,7 @@ module.exports = defineConfig([
     // lives in the game state), no classes, and no use before definition, because the worklets
     // plugin turns function declarations into constants captured when the module loads.
     files: ['src/game/sim/**/*.ts', 'src/game/draw/**/*.ts'],
-    ignores: ['src/game/*/__tests__/**'],
+    ignores: ['src/game/**/__tests__/**'],
     rules: {
       'no-restricted-syntax': [
         'error',
