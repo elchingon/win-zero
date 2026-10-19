@@ -1,6 +1,6 @@
 // Render the existing game identity with Skia and the app's bundled Bungee font.
 // No generated artwork or additional dependencies. Run: node scripts/gen-brand.mjs
-// `--variant plus` renders Win Zero Plus's set (the zero with a plus) into assets/brand-plus/.
+// `--variant plus` delegates to the Gold Edition generator in gen-brand-plus.mjs.
 // assets/brand/ is the free app's, and the website publishes from it: the free set never changes.
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
@@ -15,8 +15,12 @@ const flag = process.argv.indexOf('--variant');
 const variant = flag === -1 ? 'free' : process.argv[flag + 1];
 if (variant !== 'free' && variant !== 'plus') throw new Error(`Unknown variant: ${variant}`);
 const plus = variant === 'plus';
-const out = path.join(root, plus ? 'assets/brand-plus' : 'assets/brand');
-const TITLE = plus ? 'WIN ZERO PLUS' : 'WIN ZERO';
+if (plus) {
+  await import('./gen-brand-plus.mjs');
+  process.exit(0);
+}
+const out = path.join(root, 'assets/brand');
+const TITLE = 'WIN ZERO';
 fs.mkdirSync(out, { recursive: true });
 const kit = await CanvasKitInit({ locateFile: (name) => path.join(path.dirname(require.resolve('canvaskit-wasm')), name) });
 // Read the palette from its source so regenerated assets follow the app theme.
@@ -111,22 +115,9 @@ function backdrop(canvas, width, height) {
 }
 
 function mark(canvas, size, monochrome = false) {
-  if (plus) return plusMark(canvas, size, monochrome);
   // Use the exact squared Bungee zero and flare red from the celebration splash.
   text(canvas, '0', size * 0.74, size / 2, size / 2,
     monochrome ? '#FFFFFF' : color('flare'), monochrome ? 0 : size * 0.008);
-}
-
-/**
- * Win Zero Plus: the same zero, a little smaller and left of center, with an amber plus raised
- * at its shoulder, so the two apps tell apart at a glance. Both stay inside the adaptive icon's
- * safe circle (the middle 66%).
- */
-function plusMark(canvas, size, monochrome = false) {
-  text(canvas, '0', size * 0.52, size * 0.455, size * 0.53,
-    monochrome ? '#FFFFFF' : color('flare'), monochrome ? 0 : size * 0.008);
-  text(canvas, '+', size * 0.27, size * 0.665, size * 0.36,
-    monochrome ? '#FFFFFF' : color('amber'), monochrome ? 0 : size * 0.008);
 }
 
 function launchMark(canvas, size, monochrome = false) {
@@ -179,9 +170,7 @@ render('splash-mark.png', 1024, 1024, (c) => launchMark(c, 1024), true);
 // The Android status-bar icon: the same white zero, filling the canvas so it reads at 24 dp
 // (the adaptive monochrome layer leaves room for launcher masks, so it shows up small there).
 render('notification-icon.png', 96, 96, (c) => {
-  if (!plus) return text(c, '0', 96 * 1.12, 48, 48, '#FFFFFF');
-  text(c, '0', 96 * 0.92, 40, 52, '#FFFFFF');
-  text(c, '+', 96 * 0.5, 78, 20, '#FFFFFF');
+  text(c, '0', 96 * 1.12, 48, 48, '#FFFFFF');
 }, true);
 
 render('splash.png', 1200, 2600, (c) => {

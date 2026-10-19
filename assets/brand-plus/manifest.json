@@ -1,0 +1,165 @@
+{
+  "variant": "plus",
+  "palette": {
+    "navy": "#0D1130",
+    "panel": "#151A44",
+    "gold": "#FFB52E",
+    "white": "#FFFFFF"
+  },
+  "assets": [
+    {
+      "name": "icon.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 2,
+      "sha256": "d90ed86adcf0c1ff18037cdab141729cdfcb70b15e1ce11f3bead46b5d798e62"
+    },
+    {
+      "name": "app-store-icon.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 2,
+      "sha256": "d90ed86adcf0c1ff18037cdab141729cdfcb70b15e1ce11f3bead46b5d798e62"
+    },
+    {
+      "name": "google-play-icon.png",
+      "width": 512,
+      "height": 512,
+      "colorType": 6,
+      "sha256": "51d84741471d4033b33918143dd0f64d75c6e06874014274beffeac1bba5e221"
+    },
+    {
+      "name": "ios-icon-dark.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 6,
+      "sha256": "a8cdc276d31eabbdc9fc2cc7eb22ea7712daa4bfb85fa7a9ed042eb996507920"
+    },
+    {
+      "name": "ios-icon-tinted.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 0,
+      "sha256": "8a6013825570f16cb3522a899e5893384009d226f6df09c1e49bec5809b34d4c"
+    },
+    {
+      "name": "android-background.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 2,
+      "sha256": "d6de5aaac6de4daf2a66043458eec51d1df90ef050cb1b2a6084dd896892e240"
+    },
+    {
+      "name": "android-foreground.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 6,
+      "sha256": "d2bf51ff9d41e77e576d5c1eca6776a9b1be2659993554be9661147bd0d12d35"
+    },
+    {
+      "name": "android-monochrome.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 6,
+      "sha256": "187e853e22f795f2e4731fb5293d8f47458628cd9e8f87ae4e5dd6ebfe8ccc98"
+    },
+    {
+      "name": "notification-icon.png",
+      "width": 96,
+      "height": 96,
+      "colorType": 6,
+      "sha256": "b33300e25c062f78aaa10108a13a00e7a9fb460fa040b5c9cf707e4cc2a966a8"
+    },
+    {
+      "name": "favicon.png",
+      "width": 64,
+      "height": 64,
+      "colorType": 2,
+      "sha256": "76214d7820ae81fde2a87a1e4cc65a8fbd1e8c6d9a60736f49119d530ccad8f1"
+    },
+    {
+      "name": "splash-mark.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 6,
+      "sha256": "d2bf51ff9d41e77e576d5c1eca6776a9b1be2659993554be9661147bd0d12d35"
+    },
+    {
+      "name": "splash.png",
+      "width": 1200,
+      "height": 2600,
+      "colorType": 2,
+      "sha256": "f8779c995c307938c25d02ec92b148e50e6648e15fe6d98b562c6c55e6be68e8"
+    },
+    {
+      "name": "splash-ios.png",
+      "width": 1320,
+      "height": 2868,
+      "colorType": 2,
+      "sha256": "abe29dab88e1239319ccdd0532d2a1f67b71750745a66cf5d3bd7ceb563f194f"
+    },
+    {
+      "name": "splash-android.png",
+      "width": 1080,
+      "height": 2400,
+      "colorType": 2,
+      "sha256": "be413b8c127298cedb88e3335fc7a4005268a45efbc1ce6a0b45552b4cf35c25"
+    },
+    {
+      "name": "mark-light.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 6,
+      "sha256": "f1fdbfe5805b8b4f2e46197f51d97bafbc0437b14db7606ad46bae62128eccf3"
+    },
+    {
+      "name": "logo-light.png",
+      "width": 1600,
+      "height": 1400,
+      "colorType": 2,
+      "sha256": "621fe66de3576d0a42e34d302c2165ceb7643b37b4fbd1cf136333e5648e85b6"
+    },
+    {
+      "name": "logo-light-transparent.png",
+      "width": 1600,
+      "height": 1400,
+      "colorType": 6,
+      "sha256": "36aa8abf8d16697e08ea3058c147fa9f50720e20e332dc2b0895c0d6b401e67a"
+    },
+    {
+      "name": "mark-dark.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 6,
+      "sha256": "64ff2009f742d6a01c411d6d80680bbddbf2d08d711ae9be15b137a57c85fa93"
+    },
+    {
+      "name": "logo-dark.png",
+      "width": 1600,
+      "height": 1400,
+      "colorType": 2,
+      "sha256": "af58c371d1b8c03fb7bd7f2d5c734c9affc443847887bf706e50b84e24b853f6"
+    },
+    {
+      "name": "logo-dark-transparent.png",
+      "width": 1600,
+      "height": 1400,
+      "colorType": 6,
+      "sha256": "a5cf3350017a9dd95e9fa58246c6b0e3b7e53fd2282e35e7dd87845455e5faa6"
+    },
+    {
+      "name": "play-feature-graphic.png",
+      "width": 1024,
+      "height": 500,
+      "colorType": 2,
+      "sha256": "28d9ab9338e637e927a460a5dd1d76b56fd675c22b6ae529ac063d5bda662683"
+    },
+    {
+      "name": "brand-preview.png",
+      "width": 1800,
+      "height": 1200,
+      "colorType": 2,
+      "sha256": "f53d39833807efe1aec964f59add6d5e240584d2ebd371419b4b7738f0e5c3e1"
+    }
+  ]
+}
