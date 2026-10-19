@@ -1,7 +1,7 @@
 // Reading goals out of the store's state (SPEC 9), shared with the website. The free app and the
 // website show one goal, the first. Every selector returns something already in the state, or a
 // number, so a React selector never sees a fresh object and re-renders for nothing.
-import { arsenalReach, type GoalState } from '@/engine';
+import { arsenalReach, equippedMode, type GoalState, type ModeId } from '@/engine';
 
 import type { Limits } from './limits';
 import type { GoalSlot, PersistedState, RoundRecord } from './types';
@@ -29,6 +29,10 @@ export const arsenalStreakOf = (s: Goals): number => s.goals.reduce((m, slot) =>
 
 /** Bombs banked across every goal: what a bonus round gets to drop for free. */
 export const totalBombs = (s: Goals): number => s.goals.reduce((n, slot) => n + slot.goal.bombs, 0);
+
+/** The mode this app plays rounds in: the saved pick while this app offers it, otherwise the Shooter. */
+export const gameModeOf = (s: Pick<PersistedState, 'goals' | 'arsenalBest' | 'gameMode'> & { limits: Limits }): ModeId =>
+  equippedMode(s.gameMode, arsenalBestOf(s), { modesEnabled: s.limits.modesEnabled });
 
 /** Another goal fits under this app's limit. */
 export const canAddGoal = (s: Goals & { limits: Limits }): boolean => s.goals.length < s.limits.maxGoals;

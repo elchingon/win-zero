@@ -6,6 +6,7 @@ import type {
   GoalState,
   HistoryEntry,
   IsoInstant,
+  ModeId,
   WeaponId,
 } from '@/engine';
 
@@ -115,6 +116,8 @@ export interface PersistedState {
   arsenalBest: number;
   /** The player's weapon pick. null means the default, the highest unlocked. */
   weapon: WeaponId | null;
+  /** The game mode picked in Settings › Games (Win Zero Plus). null means the Shooter. */
+  gameMode: ModeId | null;
   prefs: Prefs;
   /** Game and Weapon credits. They outlive a goal; Erase all data clears them with everything else. */
   credits: CreditWallet;

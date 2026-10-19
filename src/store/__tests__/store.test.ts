@@ -8,8 +8,10 @@ import {
   currentCheckInTime,
   EMPTY_WALLET,
   latestScheduleEntry,
+  MODE_IDS,
   MS_PER_DAY,
   pendingWindow,
+  PLAYABLE_MODES,
   type CreditWallet,
 } from '@/engine';
 import { answerDay, at, DAY0, DENVER, newGoal, TOKYO, yesDays } from '@/engine/__tests__/fixtures';
@@ -23,10 +25,21 @@ import {
   type AppStore,
 } from '../createAppStore';
 import { startLifecycle } from '../lifecycle';
+import { DEFAULT_PERSISTED } from '../migrate';
 import { STORE_BACKUP_KEY, STORE_KEY, STORE_VERSION } from '../types';
 import { fakeAppState, flush, gid, harness, noticeOf, oneGoal, putGoal, ready, withGoal } from './harness';
 import { PLUS_LIMITS } from '../limits';
-import { arsenalBestOf, canAddGoal, isMovedOut, primaryGoal, primaryRound, primarySlot, slotById, totalBombs } from '../select';
+import {
+  arsenalBestOf,
+  canAddGoal,
+  gameModeOf,
+  isMovedOut,
+  primaryGoal,
+  primaryRound,
+  primarySlot,
+  slotById,
+  totalBombs,
+} from '../select';
 
 beforeEach(async () => {
   await AsyncStorage.clear();
@@ -699,6 +712,58 @@ describe('credits (SPEC 5)', () => {
   });
 });
 
+describe('game modes (SPEC 9)', () => {
+  const OTHER_MODES = MODE_IDS.filter((id) => id !== 'shooter');
+
+  it('plays the Shooter until a mode is picked', async () => {
+    const h = await withGoal(newGoal());
+    expect(h.store.getState().gameMode).toBeNull();
+    expect(gameModeOf(h.store.getState())).toBe('shooter');
+  });
+
+  it('keeps Win Zero on the Shooter', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 100));
+    for (const id of OTHER_MODES) expect(h.store.getState().setGameMode(id)).toBe(false);
+    expect(h.store.getState().gameMode).toBeNull();
+    expect(h.store.getState().setGameMode('shooter')).toBe(true);
+    expect(h.store.getState().gameMode).toBe('shooter');
+  });
+
+  it('offers Plus no mode whose round is not built yet', async () => {
+    const h = harness({ limits: PLUS_LIMITS });
+    await ready(h.store);
+    h.store.setState({ ...DEFAULT_PERSISTED, ...oneGoal(yesDays(newGoal(), DAY0, 100)) });
+    for (const id of OTHER_MODES.filter((m) => !PLAYABLE_MODES.includes(m))) {
+      expect(h.store.getState().setGameMode(id)).toBe(false);
+    }
+    expect(h.store.getState().setGameMode('shooter')).toBe(true);
+  });
+
+  it('waits for storage before saving a pick', async () => {
+    const h = harness();
+    expect(h.store.getState().setGameMode('shooter')).toBe(false);
+    await ready(h.store);
+    expect(h.store.getState().gameMode).toBeNull();
+  });
+
+  it('plays a saved mode only where this app offers it', async () => {
+    const free = await withGoal(newGoal());
+    free.store.setState({ gameMode: 'catch' });
+    expect(gameModeOf(free.store.getState())).toBe('shooter');
+    const plus = harness({ limits: PLUS_LIMITS });
+    await ready(plus.store);
+    plus.store.setState({ ...DEFAULT_PERSISTED, ...oneGoal(newGoal()), gameMode: 'catch' });
+    expect(gameModeOf(plus.store.getState())).toBe(PLAYABLE_MODES.includes('catch') ? 'catch' : 'shooter');
+  });
+
+  it('forgets the pick on erase', async () => {
+    const h = await withGoal(newGoal());
+    h.store.getState().setGameMode('shooter');
+    h.store.getState().erase();
+    expect(h.store.getState().gameMode).toBeNull();
+  });
+});
+
 describe('persistence', () => {
   it('round-trips through storage into a second store', async () => {
     const a = harness();
@@ -710,6 +775,7 @@ describe('persistence', () => {
     a.store.getState().setPref('reengage', false);
     a.store.getState().setPref('goalInReminders', true);
     a.store.getState().selectWeapon('pea');
+    expect(a.store.getState().setGameMode('shooter')).toBe(true);
     a.store.getState().hideReminderCard();
     a.store.getState().startMoveOut();
     a.store.setState({
@@ -725,6 +791,7 @@ describe('persistence', () => {
       archived: s.archived,
       arsenalBest: s.arsenalBest,
       weapon: s.weapon,
+      gameMode: s.gameMode,
       prefs: s.prefs,
       credits: s.credits,
       bonus: s.bonus,
@@ -735,6 +802,7 @@ describe('persistence', () => {
     });
     expect(pick(b.store.getState())).toEqual(pick(a.store.getState()));
     expect(b.store.getState().moveOut).toMatchObject({ status: 'sent' });
+    expect(b.store.getState().gameMode).toBe('shooter');
     expect(b.store.getState().reminderCardHiddenUntil).not.toBeNull();
     expect(b.store.getState().prefs).toEqual({ sound: false, haptics: true, reengage: false, goalInReminders: true });
     expect(primaryRound(b.store.getState())).toMatchObject({ n: 1, played: false });
@@ -749,6 +817,7 @@ describe('persistence', () => {
         'bonus',
         'credits',
         'devClockOffsetMs',
+        'gameMode',
         'goals',
         'imports',
         'moveOut',

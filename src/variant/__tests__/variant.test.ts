@@ -45,10 +45,17 @@ describe('variant', () => {
   });
 });
 
-describe('the move between the apps (SPEC 9)', () => {
-  it('sends from Win Zero and takes in to Plus', () => {
-    expect(load(undefined).FEATURES).toEqual({ moveOut: true, importIn: false });
-    expect(load('plus').FEATURES).toEqual({ moveOut: false, importIn: true });
+describe('what each app offers (SPEC 9)', () => {
+  it('sends the move from Win Zero, takes it in to Plus, and offers game modes in Plus', () => {
+    expect(load(undefined).FEATURES).toEqual({ moveOut: true, importIn: false, extraModes: false });
+    expect(load('plus').FEATURES).toEqual({ moveOut: false, importIn: true, extraModes: true });
+  });
+
+  it('offers game modes exactly where the store allows them', () => {
+    for (const v of [undefined, 'free', 'plus']) {
+      const app = load(v);
+      expect(app.FEATURES.extraModes).toBe(app.LIMITS.modesEnabled);
+    }
   });
 
   it('names the other app as each app’s config does', () => {

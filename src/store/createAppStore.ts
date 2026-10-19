@@ -8,6 +8,7 @@ import { createStore } from 'zustand/vanilla';
 import {
   answer as answerCheckIn,
   arsenalReach,
+  availableModes,
   claimCredits,
   createGoal,
   EMPTY_WALLET,
@@ -30,6 +31,7 @@ import {
   type ClockTime,
   type DayKey,
   type GoalState,
+  type ModeId,
   type ResolveEvent,
   type TimeZone,
   type WeaponId,
@@ -147,6 +149,8 @@ export interface AppState extends PersistedState {
    */
   borrowWeapon: (target: CreditRound, id: WeaponId) => boolean;
   selectWeapon: (id: WeaponId) => void;
+  /** Pick the game mode every round plays in: only one this app offers (Limits), so false otherwise. */
+  setGameMode: (id: ModeId) => boolean;
   /** Drop one of a goal's banked bombs, in that goal's round. */
   spendBomb: (goalId: string) => boolean;
   setGoalText: (goalId: string, text: string) => EditResult;
@@ -231,6 +235,7 @@ function persisted(s: AppState): PersistedState & LegacyCopy {
     archived: s.archived,
     arsenalBest: s.arsenalBest,
     weapon: s.weapon,
+    gameMode: s.gameMode,
     prefs: s.prefs,
     credits: s.credits,
     bonus: s.bonus,
@@ -515,6 +520,13 @@ export function createAppStore(deps: StoreDeps) {
           selectWeapon: (id) => {
             const { hydrated, goals } = get();
             if (hydrated && goals.length > 0 && isUnlocked(id, reach())) set({ weapon: id });
+          },
+
+          setGameMode: (id) => {
+            if (!get().hydrated) return false;
+            if (!availableModes(reach(), { modesEnabled: limits.modesEnabled }).some((m) => m.id === id)) return false;
+            set({ gameMode: id });
+            return true;
           },
 
           spendBomb: (goalId) => {

@@ -2,7 +2,7 @@
 // (old, unversioned, or from a newer build), and one that can't be read is flagged for backup.
 import { describe, expect, it } from '@jest/globals';
 
-import { EMPTY_WALLET } from '@/engine';
+import { EMPTY_WALLET, MODE_IDS } from '@/engine';
 import { DAY0, newGoal, yesDays } from '@/engine/__tests__/fixtures';
 
 import { applyUpgrades, hasUnreadableGoal, migratePersisted, normalizePersisted, type Upgrade } from '../migrate';
@@ -155,6 +155,14 @@ describe('reading saved credits and rounds', () => {
 
 describe('reading move records (SPEC 9)', () => {
   const at = '2026-10-13T18:00:00.000Z';
+
+  it('keeps a known game mode, and reads anything else as the Shooter (null)', () => {
+    expect(normalizePersisted({}).gameMode).toBeNull();
+    for (const id of MODE_IDS) expect(normalizePersisted({ gameMode: id }).gameMode).toBe(id);
+    for (const bad of ['pong', 'Shooter', '', 3, true, { id: 'catch' }, ['catch'], null]) {
+      expect(normalizePersisted({ gameMode: bad }).gameMode).toBeNull();
+    }
+  });
 
   it('keeps a move out with a good id and status, and drops anything else', () => {
     expect(normalizePersisted({}).moveOut).toBeNull();
