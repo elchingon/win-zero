@@ -1,5 +1,6 @@
 'worklet';
 // One frame of the round. The frame callback calls step() with the time since the last frame.
+// The round's mode moves its own pieces; effects and the ending are shared by every mode.
 import { updateBullets } from './bullets';
 import { HIT_FLASH, MAX_DT } from './constants';
 import { updateEffects } from './effects';
@@ -45,9 +46,14 @@ export function step(state: GameState, dt: number): void {
   state.time += d;
   state.phaseT += d;
   state.sinceShot += d;
-  updateFiring(state);
-  updateZeros(state, d);
-  updateBullets(state, d);
+  state.sinceDamage += d;
+  switch (state.mode) {
+    case 'shooter':
+    default:
+      updateFiring(state);
+      updateZeros(state, d);
+      updateBullets(state, d);
+  }
   updateEffects(state, d);
   updatePhase(state, d);
 }

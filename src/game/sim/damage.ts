@@ -34,6 +34,7 @@ export function killZero(s: GameState, z: Zero, quiet = false): void {
 /** Take `damage` off a zero. True when it kills. Only while the round is being played. */
 export function damageZero(s: GameState, z: Zero, damage: number): boolean {
   if (s.phase !== 'play' || damage <= 0 || !hittable(z)) return false;
+  s.sinceDamage = 0;
   z.hp -= damage;
   if (z.hp <= 0) {
     killZero(s, z);

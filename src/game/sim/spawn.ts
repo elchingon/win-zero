@@ -1,6 +1,9 @@
 'worklet';
-// Building a round: zeros from composeRound's groups, placed and set moving as in the
-// prototype's spawn(), plus every pool the frame loop will need, allocated once up front.
+// Building a round: zeros from composeRound's groups, placed and set moving the way the round's
+// mode wants (the Shooter as in the prototype's spawn()), plus every pool the frame loop will
+// need, allocated once up front.
+import { DEFAULT_MODE, PLAYABLE_MODES, type ModeId } from '@/engine';
+
 import {
   ARMOR_SIZE_SCALE,
   ARMOR_SPEED_SCALE,
@@ -34,7 +37,7 @@ import { makePool } from './pool';
 import { makeReport } from './report';
 import { between, makeRng, random } from './rng';
 import { ZERO_ASPECT, ZERO_MIN_RADIUS, zeroRadius } from './sizing';
-import type { Beam, Bolt, Bullet, GameConfig, GameState, Glyph, Particle, Ring, Zero } from './types';
+import type { Beam, Bolt, Bullet, GameConfig, GameState, Glyph, ModeState, Particle, Ring, Zero } from './types';
 
 function makeZero(): Zero {
   return {
@@ -56,6 +59,7 @@ function makeZero(): Zero {
     age: 0,
     hitFlash: 0,
     mark: 0,
+    cooldown: 0,
   };
 }
 
@@ -142,8 +146,31 @@ function spawnZeros(state: GameState, cfg: GameConfig): void {
       z.age = 0;
       z.hitFlash = 0;
       z.mark = 0;
+      z.cooldown = 0;
       i++;
     }
+  }
+}
+
+/** The mode a round plays: the one asked for once its round is built, otherwise the Shooter. */
+function roundMode(mode: ModeId | undefined): ModeId {
+  return mode !== undefined && PLAYABLE_MODES.indexOf(mode) >= 0 ? mode : DEFAULT_MODE;
+}
+
+function makeModeState(mode: ModeId): ModeState {
+  switch (mode) {
+    case 'shooter':
+    default:
+      return { mode: 'shooter' };
+  }
+}
+
+/** Place the zeros as the round's mode starts them. */
+function placeZeros(state: GameState, cfg: GameConfig): void {
+  switch (state.mode) {
+    case 'shooter':
+    default:
+      spawnZeros(state, cfg);
   }
 }
 
@@ -159,7 +186,10 @@ export function createGame(cfg: GameConfig): GameState {
   for (let i = 0; i < glyphCount; i++) glyphs.push(makeGlyph());
 
   const bottomInset = cfg.height - cfg.insetBottom;
+  const mode = roundMode(cfg.mode);
   const state: GameState = {
+    mode,
+    modeState: makeModeState(mode),
     n: cfg.n,
     seed: cfg.seed,
     width: cfg.width,
@@ -191,9 +221,11 @@ export function createGame(cfg: GameConfig): GameState {
     fillLen: 0,
 
     weapon: cfg.weapon,
+    pointer: { down: false, x: 0, y: 0 },
     aim: -Math.PI / 2,
     firing: false,
     sinceShot: Infinity,
+    sinceDamage: 0,
 
     shake: 0,
     shakeX: 0,
@@ -204,7 +236,7 @@ export function createGame(cfg: GameConfig): GameState {
     rng: makeRng(cfg.seed),
     report: makeReport(cfg.n, cfg.seed),
   };
-  spawnZeros(state, cfg);
+  placeZeros(state, cfg);
   layoutFill(state);
   return state;
 }

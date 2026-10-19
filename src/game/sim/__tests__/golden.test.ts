@@ -7,14 +7,16 @@ import { describe, expect, it } from '@jest/globals';
 
 import { WEAPONS } from '@/engine';
 
-import { moveAim, pressFire, releaseFire } from '../input';
+import { moveAim, pointerDown, pointerMove, pointerUp, pressFire, releaseFire } from '../input';
 import type { GameConfig, GameState } from '../types';
 import { makeCheckpoints, makeHasher, runScript, scriptConfig, type Hands, type Hasher } from './script';
 
 const ROUNDS = [7, 60, 250, 1000] as const;
 
-/** The touches GameCanvas made when the goldens were taken. */
+/** The touches GameCanvas made when the goldens were taken, and the website still makes. */
 const PRESS: Hands = { down: pressFire, move: moveAim, up: releaseFire };
+/** The touches GameCanvas makes since the round learned modes. */
+const POINTER: Hands = { down: pointerDown, move: pointerMove, up: pointerUp };
 
 /** The round as it stood before M5: only the fields that existed then, so new ones can't move it. */
 function foldState(h: Hasher, s: GameState): void {
@@ -259,6 +261,15 @@ const GOLDEN: Record<(typeof ROUNDS)[number], string[]> = {
 describe('the Shooter, as it shipped', () => {
   it.each(ROUNDS)('Day %i plays exactly as it did', (n) => {
     expect(fingerprint(scriptConfig(n))).toEqual(GOLDEN[n]);
+  });
+
+  // Added with the mode refactor, against the same lines.
+  it.each(ROUNDS)('Day %i plays the same as the app sets it up now: the Shooter by name, through the pointer', (n) => {
+    expect(fingerprint({ ...scriptConfig(n), mode: 'shooter' }, POINTER)).toEqual(GOLDEN[n]);
+  });
+
+  it.each(ROUNDS)('Day %i in a mode whose round isn’t built yet plays the Shooter', (n) => {
+    expect(fingerprint({ ...scriptConfig(n), mode: 'catch' })).toEqual(GOLDEN[n]);
   });
 
   it('script reaches every part of the round', () => {

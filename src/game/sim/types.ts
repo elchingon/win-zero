@@ -1,8 +1,9 @@
 'worklet';
-// The shooting round's state. It lives on the UI thread and is mutated in place every frame,
-// so everything is plain data: fixed pools of reusable objects, palette slots instead of
-// color strings, and the random number generator's state inside it.
-import type { FillPlan, WeaponDef, ZeroGroup, ZeroKind } from '@/engine';
+// The round's state. It lives on the UI thread and is mutated in place every frame, so
+// everything is plain data: fixed pools of reusable objects, palette slots instead of color
+// strings, and the random number generator's state inside it. Every game mode shares these
+// fields; what only one mode needs lives in `modeState`.
+import type { FillPlan, ModeId, WeaponDef, ZeroGroup, ZeroKind } from '@/engine';
 
 /** play → celebrate (the last zero went) → fill (the screen fills with zeros) → done (result sheet). */
 export type Phase = 'play' | 'celebrate' | 'fill' | 'done';
@@ -34,6 +35,8 @@ export interface Zero {
   hitFlash: number;
   /** Scratch mark for picking chain targets without allocating. */
   mark: number;
+  /** Seconds before it can be caught or cut again (Catch, Slice). Always 0 in the Shooter. */
+  cooldown: number;
 }
 
 export interface Bullet {
@@ -113,6 +116,21 @@ export interface Rng {
   s: number;
 }
 
+/** The player's finger, as the canvas last reported it. */
+export interface Pointer {
+  down: boolean;
+  x: number;
+  y: number;
+}
+
+/** The Shooter keeps everything it needs in the shared fields. */
+export interface ShooterState {
+  mode: 'shooter';
+}
+
+/** What the round's mode keeps beyond the shared fields. Each mode adds its own. */
+export type ModeState = ShooterState;
+
 /** What the screen hands the sim to start a round. Computed on the JS thread. */
 export interface GameConfig {
   /** Zero value in the round: the day's streak. */
@@ -128,6 +146,8 @@ export interface GameConfig {
   weapon: WeaponDef;
   seed: number;
   reduceMotion: boolean;
+  /** The game mode. Unset, or a mode whose round isn't built, plays the Shooter. */
+  mode?: ModeId;
 }
 
 /** What happened since the last report, sent to the JS thread at most once a frame. */
@@ -149,6 +169,9 @@ export interface Report {
 }
 
 export interface GameState {
+  /** The game mode this round plays: always one whose round is built (engine PLAYABLE_MODES). */
+  mode: ModeId;
+  modeState: ModeState;
   n: number;
   seed: number;
   width: number;
@@ -186,11 +209,14 @@ export interface GameState {
   fillLen: number;
 
   weapon: WeaponDef;
+  pointer: Pointer;
   /** Aim angle from the muzzle, radians; straight up is -π/2. */
   aim: number;
   firing: boolean;
   /** Seconds since the last shot. */
   sinceShot: number;
+  /** Seconds since a zero last took damage, so a mode can help with the last few. */
+  sinceDamage: number;
 
   shake: number;
   /** This frame's shake offset, drawn from the seeded generator. */
