@@ -69,14 +69,23 @@ describe('resultLines', () => {
 
     // A player catching up earns several at once.
     expect(
-      texts(3, 'real', record([grant('game', 'zeros-2'), grant('weapon', 'yes-run-3'), grant('weapon', 'comeback')]), goal, wallet(1, 2)),
+      texts(3, 'real', record([grant('game', 'zeros-3'), grant('weapon', 'yes-run-3'), grant('weapon', 'comeback')]), goal, wallet(1, 2)),
     ).toEqual([
       'New weapon unlocked: Twin Barrel. Two bullets side by side.',
-      'Game credit earned for reaching 2 zeros. You have 1.',
+      'Game credit earned for reaching 3 zeros. You have 1.',
       'Weapon credit earned for 3 Yeses in a row.',
       'Weapon credit earned for checking in again after a missed day. You have 2.',
       'Hold the line 4 more days for the Scatter Gun.',
     ]);
+  });
+
+  it('says why a repeating credit paid, and why one from a reward since changed did', () => {
+    expect(texts(3, 'real', record([grant('game', 'yes-every-7@g1:2026-10-19')]), goal, wallet(2, 0))).toContain(
+      'Game credit earned for every 7 Yeses in a row. You have 2.',
+    );
+    expect(texts(3, 'real', record([grant('weapon', 'yes-run-30')]), goal, wallet(0, 1))).toContain(
+      'Weapon credit earned for 30 Yeses in a row. You have 1.',
+    );
   });
 
   it('counts a credit that came in a bundle, and one with no reward behind it', () => {

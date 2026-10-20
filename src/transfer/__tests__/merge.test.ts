@@ -101,6 +101,15 @@ describe('a move into a Plus with goals of its own', () => {
     expect([...r.state.credits.claimed].sort()).toEqual(['comeback', 'goal-set', 'yes-run-3', 'zeros-2']);
   });
 
+  it("keeps one copy of a repeating reward's key that both apps paid, so it never pays again", () => {
+    const every = 'yes-every-7@g1:2026-10-19';
+    const both = stateOf([goalNamed('g1', 'Stop drinking', 7)], { credits: { ...freeCredits, claimed: [...freeCredits.claimed, every] } });
+    const here = { ...current, credits: { ...current.credits, claimed: [...current.credits.claimed, every] } };
+    const r = apply(here, both);
+    if (!r.ok) throw new Error(r.reason);
+    expect(r.state.credits.claimed.filter((k) => k === every)).toEqual([every]);
+  });
+
   it('refuses a goal when Plus’s are full', () => {
     const full = stateOf([goalNamed('p1', 'Walk', 1), goalNamed('p2', 'Read', 1), goalNamed('p3', 'Sleep', 1)]);
     expect(plan(full, incoming)).toEqual({ kind: 'full', maxGoals: 3 });

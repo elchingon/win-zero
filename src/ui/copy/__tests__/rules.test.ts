@@ -1,6 +1,14 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { BONUS_MAX_N, MISSED_GRACE_DAYS, SLIDE_FINAL, WEAPON_CREDIT_YES_RUNS } from '@/engine';
+import {
+  BONUS_MAX_N,
+  GAME_CREDIT_YES_EVERY,
+  GAME_CREDIT_ZEROS,
+  MISSED_GRACE_DAYS,
+  SLIDE_FINAL,
+  WEAPON_CREDIT_YES_EVERY,
+  WEAPON_CREDIT_YES_RUNS,
+} from '@/engine';
 import { formatCount } from '@/lib/format';
 
 import { howItWorks, reminderWhen, rules, RULES } from '../rules';
@@ -60,9 +68,11 @@ describe('howItWorks', () => {
   it('explains credits, with their numbers from the engine', () => {
     const credits = howItWorks({ notifications: false }).find((s) => s.title === 'Credits')?.body.join(' ') ?? '';
     expect(credits).toContain(`up to ${formatCount(BONUS_MAX_N)}`);
-    expect(credits).toContain('for reaching 2 zeros');
+    expect(credits).toContain(`for reaching ${GAME_CREDIT_ZEROS} zeros`);
+    expect(credits).toContain(`for every ${GAME_CREDIT_YES_EVERY} Yeses in a row`);
     for (const n of WEAPON_CREDIT_YES_RUNS) expect(credits).toContain(`for ${n} Yeses in a row`);
-    expect(credits).toContain('Each one is earned once');
+    expect(credits).toContain(`for every ${WEAPON_CREDIT_YES_EVERY} Yeses in a row`);
+    expect(credits).toContain('the rest are earned once');
   });
 });
 

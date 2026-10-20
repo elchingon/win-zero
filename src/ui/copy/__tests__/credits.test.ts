@@ -29,17 +29,31 @@ describe('credit copy', () => {
       'Weapon credit earned for checking in again after a missed day.',
     );
     expect(creditEarned({ kind: 'weapon', amount: 2, key: 'pack-1' })).toBe('2 Weapon credits earned.');
+    expect(creditEarned({ kind: 'game', amount: 1, key: 'yes-every-7@g1:2026-10-19' })).toBe(
+      'Game credit earned for every 7 Yeses in a row.',
+    );
+    // A round saved before the rewards changed still says why.
+    expect(creditEarned({ kind: 'game', amount: 1, key: 'zeros-2' })).toBe('Game credit earned for reaching 2 zeros.');
   });
 
   it('lists every way to earn each credit', () => {
-    expect(creditsEarnedBy('game')).toBe('You earn a Game credit for setting your goal and for reaching 2 zeros.');
+    expect(creditsEarnedBy('game')).toBe(
+      'You earn a Game credit for setting your goal, for reaching 3 zeros and for every 7 Yeses in a row.',
+    );
+    expect(creditsEarnedBy('weapon')).toBe(
+      'You earn a Weapon credit for checking in again after a missed day, for 3 Yeses in a row, for 14 Yeses in a row and for every 30 Yeses in a row.',
+    );
     for (const r of CREDIT_REWARDS) expect(creditsEarnedBy(r.kind)).toContain(r.reason);
   });
 
-  it('leaves out the ways already used, as each pays once', () => {
-    expect(creditsEarnedBy('game', ['goal-set'])).toBe('You earn a Game credit for reaching 2 zeros.');
-    expect(creditsEarnedBy('game', ['goal-set', 'zeros-2'])).toBeNull();
-    expect(creditsEarnedBy('weapon', ['comeback', 'yes-run-3', 'yes-run-14'])).toBe('You earn a Weapon credit for 30 Yeses in a row.');
+  it('leaves out the one-time ways already used, and keeps the ones that repeat', () => {
+    expect(creditsEarnedBy('game', ['goal-set'])).toBe('You earn a Game credit for reaching 3 zeros and for every 7 Yeses in a row.');
+    expect(creditsEarnedBy('game', ['goal-set', 'zeros-2', 'yes-every-7@g1:2026-10-19'])).toBe(
+      'You earn a Game credit for every 7 Yeses in a row.',
+    );
+    expect(creditsEarnedBy('weapon', ['comeback', 'yes-run-3', 'yes-run-14'])).toBe(
+      'You earn a Weapon credit for every 30 Yeses in a row.',
+    );
   });
 
   it('explains a Game credit behind its hint: what it plays, how to spend one, how to earn one', () => {
@@ -51,7 +65,14 @@ describe('credit copy', () => {
     // Every way to earn one, from the engine; the ones already earned are marked, not hidden.
     expect(help.ways).toEqual([
       { label: 'Setting your goal', earned: true },
-      { label: 'Reaching 2 zeros', earned: false },
+      { label: 'Reaching 3 zeros', earned: false },
+      { label: 'Every 7 Yeses in a row', earned: false },
+    ]);
+    // The 2-zero credit it replaced counts; a repeating way is never done.
+    expect(creditHelp('game', wallet(0, 0, ['zeros-2', 'yes-every-7@g1:2026-10-19']), 3, false).ways).toEqual([
+      { label: 'Setting your goal', earned: false },
+      { label: 'Reaching 3 zeros', earned: true },
+      { label: 'Every 7 Yeses in a row', earned: false },
     ]);
     expect(creditHelp('game', wallet(0, 0), 3, true).status).toBe(CREDITS_HELP.bonusWaiting);
   });
@@ -64,7 +85,7 @@ describe('credit copy', () => {
       { label: 'Checking in again after a missed day', earned: true },
       { label: '3 Yeses in a row', earned: true },
       { label: '14 Yeses in a row', earned: false },
-      { label: '30 Yeses in a row', earned: false },
+      { label: 'Every 30 Yeses in a row', earned: false },
     ]);
     expect(help.status).toBeNull();
     expect(creditHelp('weapon', wallet(0, 2), 3, false).status).toBeNull();

@@ -126,22 +126,25 @@ describe('Credits on Home', () => {
     expect(screen.getByText(/^A Game credit plays a bonus round with as many zeros as you like, up to 100,000\./)).toBeOnTheScreen();
     expect(screen.getByText(/^To spend one, tap Play a bonus round/)).toBeOnTheScreen();
     expect(screen.getByLabelText('Setting your goal')).toBeOnTheScreen();
-    expect(screen.getByLabelText('Reaching 2 zeros')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Reaching 3 zeros')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Every 7 Yeses in a row')).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('button', { name: 'Got it' }));
     expect(screen.queryByRole('header', { name: 'Game credits' })).not.toBeOnTheScreen();
 
     await fireEvent.press(screen.getByRole('button', { name: 'About Weapon credits' }));
     expect(screen.getByText(/^A Weapon credit lends you a weapon you haven't unlocked yet/)).toBeOnTheScreen();
     expect(screen.getByLabelText('Checking in again after a missed day')).toBeOnTheScreen();
-    expect(screen.getByLabelText('30 Yeses in a row')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Every 30 Yeses in a row')).toBeOnTheScreen();
   });
 
   it('marks the credits already earned in the hint', async () => {
-    appStore.setState({ credits: wallet(0, 0, ['goal-set', 'zeros-2']) });
+    appStore.setState({ credits: wallet(0, 0, ['goal-set', 'zeros-3', 'yes-every-7@g1:2026-10-19']) });
     await open('/', { goal: twoDays() });
     await fireEvent.press(screen.getByRole('button', { name: 'About Game credits' }));
     expect(screen.getByLabelText('Setting your goal, earned')).toBeOnTheScreen();
-    expect(screen.getByLabelText('Reaching 2 zeros, earned')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Reaching 3 zeros, earned')).toBeOnTheScreen();
+    // It keeps paying, so it's never marked.
+    expect(screen.getByLabelText('Every 7 Yeses in a row')).toBeOnTheScreen();
   });
 
   it('spends a Game credit on a bonus round of the size chosen, and opens it', async () => {

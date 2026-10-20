@@ -133,7 +133,11 @@ export function howItWorks({
       body: [
         CREDIT_USES.game,
         CREDIT_USES.weapon,
-        [creditsEarnedBy('game'), creditsEarnedBy('weapon'), 'Each one is earned once, and they stay banked until you use them.']
+        [
+          creditsEarnedBy('game'),
+          creditsEarnedBy('weapon'),
+          'The ones for every so many Yeses keep coming, the rest are earned once, and all of them stay banked until you use them.',
+        ]
           .filter(Boolean)
           .join(' '),
       ],

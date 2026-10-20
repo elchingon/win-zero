@@ -549,7 +549,7 @@ describe('weapons and rounds', () => {
         weapons: [],
         // The wallet started empty, so this Yes collects the credits the run already reached.
         credits: [
-          { kind: 'game', amount: 1, key: 'zeros-2' },
+          { kind: 'game', amount: 1, key: 'zeros-3' },
           { kind: 'weapon', amount: 1, key: 'yes-run-3' },
         ],
       },
@@ -595,21 +595,36 @@ describe('credits (SPEC 5)', () => {
   it('pays what a Yes earned into the wallet, and records it on the round', async () => {
     const h = await withGoal(yesDays(newGoal(), DAY0, 1)); // through 10-13
     h.setTime('2026-10-14', '21:00');
-    h.store.getState().answer(gid(h.store), 'yes'); // 2 zeros
-    expect(primaryRound(h.store.getState())?.rewards.credits).toEqual([{ kind: 'game', amount: 1, key: 'zeros-2' }]);
-    expect(h.store.getState().credits).toEqual({ balance: { game: 1, weapon: 0 }, claimed: ['zeros-2'] });
+    h.store.getState().answer(gid(h.store), 'yes'); // 2 zeros: nothing yet
+    expect(primaryRound(h.store.getState())?.rewards.credits).toEqual([]);
+    expect(h.store.getState().credits).toEqual(EMPTY_WALLET);
 
     h.setTime('2026-10-15', '21:00');
-    h.store.getState().answer(gid(h.store), 'yes', '2026-10-15', 'notification'); // 3 in a row, from a notification
+    h.store.getState().answer(gid(h.store), 'yes', '2026-10-15', 'notification'); // 3 zeros, 3 in a row, from a notification
     expect(primaryRound(h.store.getState())?.rewards).toMatchObject({
       weapons: ['twin'],
-      credits: [{ kind: 'weapon', amount: 1, key: 'yes-run-3' }],
+      credits: [
+        { kind: 'game', amount: 1, key: 'zeros-3' },
+        { kind: 'weapon', amount: 1, key: 'yes-run-3' },
+      ],
     });
-    expect(h.store.getState().credits.balance).toEqual({ game: 1, weapon: 1 });
+    expect(h.store.getState().credits).toEqual({ balance: { game: 1, weapon: 1 }, claimed: ['zeros-3', 'yes-run-3'] });
 
     h.setTime('2026-10-16', '21:00');
     h.store.getState().answer(gid(h.store), 'yes');
     expect(primaryRound(h.store.getState())?.rewards.credits).toEqual([]);
+  });
+
+  it('pays a Game credit for every 7 Yeses in a row, keyed by the goal and the day', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 13)); // through 10-25
+    h.store.setState({ credits: { balance: { game: 0, weapon: 0 }, claimed: ['zeros-3', 'yes-run-3'] } });
+    h.setTime('2026-10-26', '21:00');
+    h.store.getState().answer(gid(h.store), 'yes'); // the 14th in a row
+    expect(primaryRound(h.store.getState())?.rewards.credits).toEqual([
+      { kind: 'game', amount: 1, key: `yes-every-7@${gid(h.store)}:2026-10-26` },
+      { kind: 'weapon', amount: 1, key: 'yes-run-14' },
+    ]);
+    expect(h.store.getState().credits.balance).toEqual({ game: 1, weapon: 1 });
   });
 
   it('earns nothing for a Not today', async () => {
@@ -707,7 +722,13 @@ describe('credits (SPEC 5)', () => {
   it('pays every credit a debug jump reaches, and can empty the wallet, in development only', async () => {
     const h = await withGoal(yesDays(newGoal(), DAY0, 2));
     h.store.getState().devJumpToDay(gid(h.store), 30);
-    expect(primaryRound(h.store.getState())?.rewards.credits.map((g) => g.key)).toEqual(['zeros-2', 'yes-run-3', 'yes-run-14', 'yes-run-30']);
+    // One Yes after the rebuilt run: what it has reached, and the every-30 mark it lands on.
+    expect(primaryRound(h.store.getState())?.rewards.credits.map((g) => g.key.split('@')[0])).toEqual([
+      'zeros-3',
+      'yes-run-3',
+      'yes-run-14',
+      'yes-every-30',
+    ]);
     expect(h.store.getState().credits.balance).toEqual({ game: 1, weapon: 3 });
     h.store.getState().devResetCredits();
     expect(h.store.getState().credits).toEqual(EMPTY_WALLET);

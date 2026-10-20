@@ -4,8 +4,9 @@
 // the rules. Shared by the app and the website.
 import {
   BONUS_MAX_N,
+  creditReason,
   CREDIT_REWARDS,
-  creditRewardById,
+  creditRewardClaimed,
   lockedWeapons,
   type CreditGrant,
   type CreditKind,
@@ -24,7 +25,7 @@ export function creditCount(kind: CreditKind, n: number): string {
 /** A credit a Yes earned: 'Weapon credit earned for 3 Yeses in a row.' */
 export function creditEarned(grant: CreditGrant): string {
   const what = grant.amount === 1 ? NAMES[grant.kind] : creditCount(grant.kind, grant.amount);
-  const reason = creditRewardById(grant.key)?.reason;
+  const reason = creditReason(grant.key);
   return reason ? `${what} earned ${reason}.` : `${what} earned.`;
 }
 
@@ -37,10 +38,11 @@ export const CREDIT_USES: Record<CreditKind, string> = {
 
 /**
  * How a credit is earned, from the rewards themselves: 'You earn a Game credit for … and for ….'
- * Rewards in `claimed` are left out, as each pays once; null when none are left.
+ * One-time rewards already in `claimed` are left out; repeating ones always stay. Null when none
+ * are left.
  */
 export function creditsEarnedBy(kind: CreditKind, claimed: readonly string[] = []): string | null {
-  const reasons = CREDIT_REWARDS.filter((r) => r.kind === kind && !claimed.includes(r.id)).map((r) => r.reason);
+  const reasons = CREDIT_REWARDS.filter((r) => r.kind === kind && !creditRewardClaimed(r, claimed)).map((r) => r.reason);
   return reasons.length > 0 ? `You earn a ${NAMES[kind]} ${joinAnd(reasons)}.` : null;
 }
 
@@ -70,11 +72,14 @@ export const CREDITS_HELP = {
   weaponAllUnlocked: 'Every weapon is unlocked, so your Weapon credits wait here for new ones.',
   earnTitle: 'How to earn one',
   earned: 'Earned',
-  footer: 'Each one is earned once, and credits stay banked until you use them.',
+  footer: 'The ways that start with Every keep paying. The rest are earned once, and credits stay banked until you use them.',
   close: 'Got it',
 };
 
-/** One way to earn a credit, for the popup's list ("3 Yeses in a row"), and whether it's been earned. */
+/**
+ * One way to earn a credit, for the popup's list ("3 Yeses in a row"), and whether it's been
+ * earned: a repeating way ("Every 7 Yeses in a row") never is, as it keeps paying.
+ */
 export interface CreditWay {
   label: string;
   earned: boolean;
@@ -97,14 +102,14 @@ function wayLabel(reason: string): string {
 
 /**
  * The popup behind a credit count's hint: what the credit is and how it's used, where things
- * stand, and every way to earn one, from the engine's rewards, those already earned marked as
- * such. `best`: how far the arsenal reaches (whether a Weapon credit has anything left to lend).
+ * stand, and every way to earn one, from the engine's rewards, the one-time ones already earned
+ * marked as such. `best`: how far the arsenal reaches (whether a Weapon credit has anything left to lend).
  * `bonusWaiting`: a bonus round is already paid for.
  */
 export function creditHelp(kind: CreditKind, credits: CreditWallet, best: number, bonusWaiting: boolean): CreditHelp {
   const ways = CREDIT_REWARDS.filter((r) => r.kind === kind).map((r) => ({
     label: wayLabel(r.reason),
-    earned: credits.claimed.includes(r.id),
+    earned: creditRewardClaimed(r, credits.claimed),
   }));
   if (kind === 'game') {
     return {

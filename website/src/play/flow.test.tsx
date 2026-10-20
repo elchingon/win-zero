@@ -70,12 +70,13 @@ describe('the app on the web', () => {
     expect(dialog.textContent).toContain('as many zeros as you like');
     // Setting the goal earned one.
     expect(screen.getByText('Setting your goal').closest('li')?.className).toContain('earned');
-    expect(screen.getByText('Reaching 2 zeros').closest('li')?.className).not.toContain('earned');
+    expect(screen.getByText('Reaching 3 zeros').closest('li')?.className).not.toContain('earned');
+    expect(screen.getByText('Every 7 Yeses in a row')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Got it' }));
     expect(screen.queryByRole('dialog', { name: 'Game credits' })).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'About Weapon credits' }));
-    expect((await screen.findByRole('dialog', { name: 'Weapon credits' })).textContent).toContain('30 Yeses in a row');
+    expect((await screen.findByRole('dialog', { name: 'Weapon credits' })).textContent).toContain('Every 30 Yeses in a row');
   });
 
   it('answers Not today, shows the notice, and can take it back', async () => {
