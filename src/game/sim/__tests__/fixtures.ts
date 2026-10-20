@@ -1,9 +1,9 @@
 // Shared setup for sim tests: a phone-sized screen and a round built from the real engine.
-import { composeRound, fillPlan, weaponById, type WeaponId } from '@/engine';
+import { composeRound, fillPlan, weaponById, type ModeId, type WeaponId } from '@/engine';
 
 import { FINAL_RINGS } from '../constants';
 import { acquire } from '../pool';
-import { createGame } from '../spawn';
+import { buildGame, createGame } from '../spawn';
 import { step } from '../step';
 import type { Bullet, GameConfig, GameState, Ring, Zero } from '../types';
 
@@ -26,6 +26,20 @@ export function config(n: number, opts: Partial<Omit<GameConfig, 'weapon'>> & { 
 
 export function game(n: number, opts: Parameters<typeof config>[1] = {}): GameState {
   return createGame(config(n, opts));
+}
+
+/** A round in exactly `mode`, whether or not it's offered yet. */
+export function modeGame(mode: ModeId, n: number, opts: Parameters<typeof config>[1] = {}): GameState {
+  return buildGame(config(n, { ...opts, mode }), mode);
+}
+
+/** Leave only zero `i` on the board, the counter showing its value. */
+export function only(s: GameState, i: number): Zero {
+  for (let j = 0; j < s.zeros.length; j++) if (j !== i) s.zeros[j]!.alive = false;
+  const z = s.zeros[i]!;
+  s.valueLeft = z.value;
+  s.report.valueLeft = z.value;
+  return z;
 }
 
 /** Run the round for `seconds` at 60 fps. */

@@ -5,6 +5,7 @@
 // the screen calls the setters through scheduleOnUI.
 import type { WeaponDef } from '@/engine';
 
+import { aimCups } from './modes/catch';
 import { moveAim, pressFire, releaseFire } from './trigger';
 import type { GameState } from './types';
 
@@ -18,6 +19,9 @@ export function pointerDown(s: GameState, x: number, y: number): void {
   p.x = x;
   p.y = y;
   switch (s.mode) {
+    case 'catch':
+      aimCups(s, x);
+      break;
     case 'shooter':
     default:
       pressFire(s, x, y);
@@ -30,6 +34,9 @@ export function pointerMove(s: GameState, x: number, y: number): void {
   p.x = x;
   p.y = y;
   switch (s.mode) {
+    case 'catch':
+      aimCups(s, x);
+      break;
     case 'shooter':
     default:
       moveAim(s, x, y);
@@ -40,6 +47,9 @@ export function pointerMove(s: GameState, x: number, y: number): void {
 export function pointerUp(s: GameState): void {
   s.pointer.down = false;
   switch (s.mode) {
+    // The cups stay where the finger left them.
+    case 'catch':
+      break;
     case 'shooter':
     default:
       releaseFire(s);

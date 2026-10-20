@@ -128,8 +128,38 @@ export interface ShooterState {
   mode: 'shooter';
 }
 
+/** What draws zeros toward Catch's cups: nothing, a magnet near them, the Vacuum Beam's column, or the Black Hole's whole board. */
+export type CatchPull = 'none' | 'magnet' | 'vacuum' | 'hole';
+
+/** Catch (SPEC 9): zeros drift down, and cups at the bottom catch them. Per-zero arrays are indexed like `zeros`. */
+export interface CatchState {
+  mode: 'catch';
+  /** The middle of the cups, and where the finger wants it: the board's middle until it's touched. */
+  cupX: number;
+  targetX: number;
+  /** A cup's half-width for this round's zeros, before the power-up widens it. */
+  baseHalf: number;
+  /** This frame's catchers, from the power-up: how many cups, each one's half-width, the space between their middles, and what pulls zeros in. */
+  cups: number;
+  half: number;
+  gap: number;
+  pull: CatchPull;
+  /** The Vacuum Beam is drawing zeros down: the finger is on the board. */
+  pulling: boolean;
+  /** How each zero is moving: CATCH_DRIFT, CATCH_JUGGLE or CATCH_FLOAT. */
+  motion: number[];
+  /** Each zero's own drift speed, in points per second. */
+  fall: number[];
+  /** Where a floating zero turns back to drift down. */
+  apex: number[];
+  /** Where a juggled zero sits, from its cup's middle. */
+  slot: number[];
+  /** Times each zero has landed beside the cups since it was last caught. */
+  misses: number[];
+}
+
 /** What the round's mode keeps beyond the shared fields. Each mode adds its own. */
-export type ModeState = ShooterState;
+export type ModeState = ShooterState | CatchState;
 
 /** What the screen hands the sim to start a round. Computed on the JS thread. */
 export interface GameConfig {
@@ -162,6 +192,8 @@ export interface Report {
   armoredKills: number;
   blasts: number;
   bombs: number;
+  /** Catches, and balls off the paddle and bricks: a game mode's bounce sound. */
+  bounces: number;
   /** The last zero went this frame. */
   final: boolean;
   /** The fill has landed: show the result sheet. */

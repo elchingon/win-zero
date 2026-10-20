@@ -4,6 +4,7 @@
 import { updateBullets } from './bullets';
 import { HIT_FLASH, MAX_DT } from './constants';
 import { updateEffects } from './effects';
+import { stepCatch } from './modes/catch';
 import { moveZero } from './move';
 import { updatePhase } from './phase';
 import { updateFiring } from './trigger';
@@ -31,6 +32,9 @@ export function step(state: GameState, dt: number): void {
   state.sinceShot += d;
   state.sinceDamage += d;
   switch (state.mode) {
+    case 'catch':
+      stepCatch(state, d);
+      break;
     case 'shooter':
     default:
       updateFiring(state);

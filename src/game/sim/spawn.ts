@@ -34,6 +34,7 @@ import {
 import { armorBadges } from './badges';
 import { layoutFill } from './fill';
 import { makePool } from './pool';
+import { makeCatchState, placeCatch } from './modes/catch';
 import { makeReport } from './report';
 import { between, makeRng, random } from './rng';
 import { ZERO_ASPECT, ZERO_MIN_RADIUS, zeroRadius } from './sizing';
@@ -157,8 +158,10 @@ function roundMode(mode: ModeId | undefined): ModeId {
   return mode !== undefined && PLAYABLE_MODES.indexOf(mode) >= 0 ? mode : DEFAULT_MODE;
 }
 
-function makeModeState(mode: ModeId): ModeState {
+function makeModeState(mode: ModeId, count: number, cfg: GameConfig): ModeState {
   switch (mode) {
+    case 'catch':
+      return makeCatchState(count, cfg.width);
     case 'shooter':
     default:
       return { mode: 'shooter' };
@@ -168,14 +171,20 @@ function makeModeState(mode: ModeId): ModeState {
 /** Place the zeros as the round's mode starts them. */
 function placeZeros(state: GameState, cfg: GameConfig): void {
   switch (state.mode) {
+    case 'catch':
+      placeCatch(state, cfg);
+      break;
     case 'shooter':
     default:
       spawnZeros(state, cfg);
   }
 }
 
-/** A fresh round, ready for its first frame. */
-export function createGame(cfg: GameConfig): GameState {
+/**
+ * A fresh round in exactly `mode`, whether or not that mode is offered yet: createGame picks the
+ * mode, and a mode's tests build its round before it joins PLAYABLE_MODES.
+ */
+export function buildGame(cfg: GameConfig, mode: ModeId): GameState {
   let objectCount = 0;
   for (let g = 0; g < cfg.groups.length; g++) objectCount += cfg.groups[g]?.count ?? 0;
 
@@ -186,10 +195,9 @@ export function createGame(cfg: GameConfig): GameState {
   for (let i = 0; i < glyphCount; i++) glyphs.push(makeGlyph());
 
   const bottomInset = cfg.height - cfg.insetBottom;
-  const mode = roundMode(cfg.mode);
   const state: GameState = {
     mode,
-    modeState: makeModeState(mode),
+    modeState: makeModeState(mode, zeros.length, cfg),
     n: cfg.n,
     seed: cfg.seed,
     width: cfg.width,
@@ -239,4 +247,9 @@ export function createGame(cfg: GameConfig): GameState {
   placeZeros(state, cfg);
   layoutFill(state);
   return state;
+}
+
+/** A fresh round, ready for its first frame, in the mode it asks for once that mode's round is built. */
+export function createGame(cfg: GameConfig): GameState {
+  return buildGame(cfg, roundMode(cfg.mode));
 }

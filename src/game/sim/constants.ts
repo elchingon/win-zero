@@ -52,6 +52,11 @@ export const ARMOR_SIZE_SCALE = 1.3;
 export const ARMOR_SPEED_SCALE = 0.55;
 /** A zero that survives a hit flashes, fading over this long. */
 export const HIT_FLASH = 0.18;
+/**
+ * Late in a round, once only this many objects are left, every game mode but the Shooter helps
+ * with them (homing, a magnet), so the last zero can always be cleared (SPEC 9).
+ */
+export const ASSIST_LAST = 3;
 
 // --- Shots ---------------------------------------------------------------------------------
 
