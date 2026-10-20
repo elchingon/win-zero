@@ -89,7 +89,7 @@ export default function Settings() {
       )}
 
       <View style={shared.list}>
-        <ToggleRow label="Sound" detail="Pops and booms in the round." value={prefs.sound} onChange={(v) => store.setPref('sound', v)} />
+        <ToggleRow label="Sound" detail="A chime for each Yes, and pops and booms in the round." value={prefs.sound} onChange={(v) => store.setPref('sound', v)} />
         <ToggleRow label="Haptics" detail="Taps and buzzes." value={prefs.haptics} onChange={(v) => store.setPref('haptics', v)} />
         <ToggleRow
           label="Weekly nudge"

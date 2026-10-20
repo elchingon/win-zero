@@ -27,12 +27,14 @@ src/game/           the round: GameCanvas, Hud, ResultSheet (shown inside play),
   draw/             worklet Skia scene, drawn from the baked atlas
   bake/             the per-round sprite atlas and paints, built on the JS thread
   look.ts           the round's look as numbers (glow, sprite sizes), shared with the website
+  yes.ts            the Yes celebration as numbers, and its controller, shared with the website
 src/notifications/  scheduling + response handling
 src/store/          zustand store wrapping the engine
 src/theme/          tokens.ts (palette + fonts from SPEC section 7)
 src/ui/copy/        notice, rules and support copy, shared with the website
 src/dev/            demo tools: seedRun.ts and demo.ts are shared with the website
 src/variant/        which app this build is (Win Zero or Win Zero Plus) and its name; app code only
+modules/            local Expo modules: app-icons (Plus's icon switch), haptics (Android's haptics as media)
 app.config.ts       app.json for Win Zero; EXPO_PUBLIC_APP_VARIANT=plus gives Plus its own ids, scheme and art (assets/brand-plus/)
 website/            winzero.app: Vite + React, deployed by Cloudflare Pages (see website/README.md)
   src/play/         the browser app under /play; draws the round with src/game/draw via a Canvas 2D adapter

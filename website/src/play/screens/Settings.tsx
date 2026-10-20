@@ -96,7 +96,7 @@ export function Settings() {
       </div>
 
       <div className="list">
-        <ToggleRow label="Sound" detail="Pops and booms in the round." value={prefs.sound} onChange={(v) => store.setPref('sound', v)} />
+        <ToggleRow label="Sound" detail="A chime for each Yes, and pops and booms in the round." value={prefs.sound} onChange={(v) => store.setPref('sound', v)} />
         <LinkRow label="How it works" detail="The slide, shields, missed days and rewards." action="Read" to={ROUTES.howItWorks} />
         <LinkRow
           label="Need support?"
