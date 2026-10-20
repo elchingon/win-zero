@@ -65,23 +65,28 @@ export interface Section {
 /**
  * How it works, reached from Settings: where to look at the rules again, and where the words the
  * notices use ("the slide", "a fresh run", "banked") are explained. `notifications`: the app
- * sends reminders; the website doesn't. `appName`: which app is speaking.
+ * sends reminders; the website doesn't. `appName`: which app is speaking. `everyDay`: every goal
+ * checks in every day, as in Win Zero; otherwise (Win Zero Plus, SPEC 9) the words follow chosen
+ * check-in days.
  */
 export function howItWorks({
   notifications,
   appName = FREE_APP_NAME,
+  everyDay = true,
 }: {
   notifications: boolean;
   appName?: string;
+  everyDay?: boolean;
 }): Section[] {
   const only = (on: boolean, ...lines: string[]) => (on ? lines : []);
+  const when = everyDay ? 'Each day at your check-in time' : 'On each check-in day, at your check-in time';
   return [
     {
-      title: 'The daily question',
+      title: everyDay ? 'The daily question' : 'The check-in question',
       body: [
         notifications
-          ? `Each day at your check-in time, ${appName} asks one question: did you stick to your goal today? Answer Yes or Not today, from the notification or from Home.`
-          : `Each day at your check-in time, ${appName} asks one question: did you stick to your goal today? Answer Yes or Not today on Home.`,
+          ? `${when}, ${appName} asks one question: did you stick to your goal today? Answer Yes or Not today, from the notification or from Home.`
+          : `${when}, ${appName} asks one question: did you stick to your goal today? Answer Yes or Not today on Home.`,
         notifications
           ? "There's no rush. You can answer until midnight the next day, and if you haven't by your reminder time, one more reminder comes."
           : "There's no rush. You can answer until midnight the next day.",
@@ -105,7 +110,10 @@ export function howItWorks({
     {
       title: 'Missed check-ins',
       body: [
-        `Life gets busy. Missed check-ins cost nothing for the first ${MISSED_GRACE_DAYS} days in a row. After that, each missed day counts as a slip.`,
+        everyDay
+          ? `Life gets busy. Missed check-ins cost nothing for the first ${MISSED_GRACE_DAYS} days in a row. After that, each missed day counts as a slip.`
+          : `Life gets busy. The first ${MISSED_GRACE_DAYS} missed check-ins in a row cost nothing. After that, each missed check-in counts as a slip.`,
+        ...only(!everyDay, 'Rest days have no check-in, so nothing is gained or lost on them.'),
         ...only(
           notifications,
           "If a long break starts a fresh run, daily reminders pause. With Weekly nudge on in Settings, you'll get one gentle reminder a week. Answering any check-in brings daily reminders back.",

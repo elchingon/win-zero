@@ -1,6 +1,7 @@
 // What the Notice screen says: Reset / Shielded / Slipping, what a Not today or a run of missed
 // days did to the streak. The copy is supportive and plain: some people here are working on
 // sobriety. Shared by the app and the website, so it reads the same on both.
+import { MISSED_GRACE_DAYS } from '@/engine';
 import { plural } from '@/lib/format';
 import type { Notice } from '@/store/types';
 import { colors } from '@/theme/tokens';
@@ -23,8 +24,12 @@ export const KEEPSAKES = 'your weapons, bombs and shields are still yours';
 /** Read out when a Not today is taken back. */
 export const UNDONE = 'Undone. Your check-in is open again.';
 
-/** What the Notice screen says about `n`, and how its zero moves. */
-export function copyFor(n: Notice): NoticeCopy {
+/**
+ * What the Notice screen says about `n`, and how its zero moves. `everyDay`: the goal checks in
+ * every day, as every Win Zero goal does; otherwise (Win Zero Plus, SPEC 9) the free misses are
+ * counted in check-ins rather than as a week.
+ */
+export function copyFor(n: Notice, { everyDay = true }: { everyDay?: boolean } = {}): NoticeCopy {
   switch (n.kind) {
     case 'slipping': {
       const lostLine = n.lost === 1 ? 'a zero.' : `${n.lost} zeros.`;
@@ -49,7 +54,9 @@ export function copyFor(n: Notice): NoticeCopy {
           n.stopped
             ? `Your Yes stopped the slide. Your streak is at ${plural(n.streak, 'zero')}.`
             : `Check in to stop the slide. Your streak is at ${plural(n.streak, 'zero')}.`,
-          'Missed days are free for a week; after that, each one takes a zero.',
+          everyDay
+            ? 'Missed days are free for a week; after that, each one takes a zero.'
+            : `The first ${MISSED_GRACE_DAYS} missed check-ins in a row are free; after that, each one takes a zero.`,
         ],
         motion: 'shed',
         support: true,

@@ -11,6 +11,22 @@ const words = (notifications: boolean) =>
     .join(' ');
 
 describe('howItWorks', () => {
+  it('counts missed check-ins, and explains rest days, once a goal skips days (SPEC 9)', () => {
+    const daily = words(true);
+    const someDays = howItWorks({ notifications: true, appName: 'Win Zero Plus', everyDay: false });
+    const text = someDays.flatMap((s) => [s.title, ...s.body]).join(' ');
+    expect(text).toContain(`The first ${MISSED_GRACE_DAYS} missed check-ins in a row cost nothing.`);
+    expect(text).toContain('Rest days have no check-in, so nothing is gained or lost on them.');
+    expect(text).toContain('On each check-in day, at your check-in time, Win Zero Plus asks one question');
+    expect(someDays[0]?.title).toBe('The check-in question');
+    // The weekly nudge still comes once a week; only the free misses are counted in check-ins.
+    expect(text).not.toContain('days in a row');
+    // Every day, as in Win Zero: the same words as before.
+    expect(howItWorks({ notifications: true, everyDay: true })).toEqual(howItWorks({ notifications: true }));
+    expect(daily).not.toContain('Rest days');
+  });
+
+
   it('explains reminders where there are notifications', () => {
     const app = words(true);
     expect(app).toContain('from the notification or from Home');
