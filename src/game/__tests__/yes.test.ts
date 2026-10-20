@@ -162,6 +162,16 @@ describe('the celebration controller', () => {
     expect(yes.current()).toBeNull();
   });
 
+  it('plays just the cue on its own, with no show and nothing to hold back', () => {
+    const yes = createYesCelebration();
+    yes.cue(); // nothing mounted: nothing to play
+    const s = stage();
+    yes.mount(s);
+    yes.cue();
+    expect(s.cue).toHaveBeenCalledTimes(1);
+    expect(yes.current()).toBeNull();
+  });
+
   it('stays still with nothing to draw it, as in the screen tests', () => {
     const yes = createYesCelebration();
     expect(yes.armed(null, () => yes.begin())).toBe(0);

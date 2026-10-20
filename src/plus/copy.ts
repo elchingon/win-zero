@@ -1,12 +1,26 @@
 // Win Zero Plus's own words (SPEC 9): its Settings sections, goal screens and Home with several
 // goals. Plus-only, like everything in src/plus: Win Zero's bundle leaves them out. Supportive and
 // plain, and nothing is ever for sale: a locked theme or icon says only what opens it.
+import { SECRET_GAME_CREDITS } from '@/engine';
+import { creditCount, type CreditNews } from '@/ui/copy/credits';
 
 export const GAMES_COPY = {
   title: 'Games',
   lede: 'Your go-to game. You can pick another before each new round, and a replay keeps the game you played.',
   /** Each game's row, for screen readers. */
   optionHint: 'Comes up first before each new round',
+} as const;
+
+/** Home's secret: three quick taps on the Game credits count give a free one, as often as found. */
+export const SECRET_COPY = {
+  news: (balance: number): CreditNews => ({
+    badge: `+${SECRET_GAME_CREDITS}`,
+    title: SECRET_GAME_CREDITS === 1 ? 'Free Game credit!' : 'Free Game credits!',
+    lines: ['You found the secret stash.', `You now have ${creditCount('game', balance)}. Go on, play a bonus round.`],
+    button: 'Sweet!',
+  }),
+  /** The last line of Settings › Games: a nudge, not a map. */
+  hint: "Psst. Somewhere on Home, a little box hands out free games to anyone who knocks three times. You didn't hear it from us.",
 } as const;
 
 /** Before a round not yet played: which game to play it in. */

@@ -137,6 +137,14 @@ describe('Credits on Home', () => {
     expect(screen.getByLabelText('Every 30 Yeses in a row')).toBeOnTheScreen();
   });
 
+  it('keeps no secret on the Game credits count in Win Zero', async () => {
+    appStore.setState({ credits: wallet(1, 0) });
+    await open('/', { goal: twoDays() });
+    for (let i = 0; i < 3; i++) await fireEvent.press(screen.getByLabelText('1 Game credit'));
+    expect(appStore.getState().credits.balance.game).toBe(1);
+    expect(screen.queryByText('You found the secret stash.')).not.toBeOnTheScreen();
+  });
+
   it('marks the credits already earned in the hint', async () => {
     appStore.setState({ credits: wallet(0, 0, ['goal-set', 'zeros-3', 'yes-every-7@g1:2026-10-19']) });
     await open('/', { goal: twoDays() });

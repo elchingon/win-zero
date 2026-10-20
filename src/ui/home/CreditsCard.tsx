@@ -1,6 +1,6 @@
 // Home's credits: how many Game and Weapon credits there are, the bonus round waiting to be played
 // or a way to start one. A hint on each count opens what the credit is, how it's used and how to
-// earn one.
+// earn one. In Win Zero Plus, the Game credits count keeps a secret.
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -11,9 +11,19 @@ import { Card, Eyebrow, shared, StatTile } from '@/ui/bits';
 import { Button } from '@/ui/Button';
 import { creditCount, creditHelp, CREDITS_HELP, CREDITS_HOME } from '@/ui/copy/credits';
 import { HintPopup } from '@/ui/HintPopup';
+import { FEATURES } from '@/variant';
 
 import { BonusRoundSheet } from './BonusRoundSheet';
 import { CreditHelp } from './CreditHelp';
+
+// Win Zero Plus only: the Game credits count keeps a secret (three quick taps). The literal
+// comparison folds per file, so Win Zero's bundle leaves it out.
+const Secret: typeof import('@/plus/home/SecretGameTile') | null =
+  process.env.EXPO_PUBLIC_APP_VARIANT === 'plus'
+    ? // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require('@/plus/home/SecretGameTile')
+    : null;
+const GameTile = Secret && FEATURES.secretCredits ? Secret.SecretGameTile : StatTile;
 
 export function CreditsCard(props: {
   /** How far the shared arsenal reaches (arsenalBestOf): which weapons a credit could still lend. */
@@ -37,7 +47,7 @@ export function CreditsCard(props: {
     <View style={shared.section}>
       <Eyebrow header>{CREDITS_HOME.title}</Eyebrow>
       <View style={styles.row}>
-        <StatTile
+        <GameTile
           label={CREDITS_HELP.title.game}
           value={String(game)}
           accessibilityLabel={creditCount('game', game)}

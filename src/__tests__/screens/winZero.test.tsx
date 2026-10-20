@@ -71,6 +71,7 @@ describe('Win Zero', () => {
     expect(screen.queryByRole('radio')).not.toBeOnTheScreen();
     expect(screen.queryByText('Check-in days')).not.toBeOnTheScreen();
     expect(screen.queryByText(/Add a goal/)).not.toBeOnTheScreen();
+    expect(screen.queryByText(/free games/)).not.toBeOnTheScreen();
   });
 
   it('sets up a goal for every day, with no days to choose', async () => {

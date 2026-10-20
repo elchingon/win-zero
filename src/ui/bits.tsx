@@ -73,7 +73,8 @@ export function HintButton(props: { label: string; onPress: () => void; style?: 
 /**
  * A number with its label, and an optional caption under it (say, the dates it covers). `help`
  * adds a hint button in the top-right corner, outside the tile's one spoken group so screen
- * readers reach it on its own.
+ * readers reach it on its own. `onPress` (Win Zero Plus's secret) takes taps on the tile itself,
+ * with no look or role of a button.
  */
 export function StatTile(props: {
   label: string;
@@ -82,11 +83,18 @@ export function StatTile(props: {
   caption?: string;
   accessibilityLabel?: string;
   help?: { label: string; onPress: () => void };
+  onPress?: () => void;
 }) {
-  const { help } = props;
+  const { help, onPress } = props;
   const spoken = `${props.label}: ${props.value}${props.caption ? `, ${props.caption}` : ''}`;
+  const Tile = onPress ? Pressable : View;
   const tile = (
-    <View style={[styles.stat, help && styles.statFill]} accessible accessibilityLabel={props.accessibilityLabel ?? spoken}>
+    <Tile
+      style={[styles.stat, help && styles.statFill]}
+      accessible
+      accessibilityLabel={props.accessibilityLabel ?? spoken}
+      onPress={onPress}
+    >
       <Text style={[type.statLabel, help && styles.statLabelClear]} numberOfLines={2}>
         {props.label}
       </Text>
@@ -103,7 +111,7 @@ export function StatTile(props: {
           {props.caption}
         </Text>
       ) : null}
-    </View>
+    </Tile>
   );
   if (!help) return tile;
   return (

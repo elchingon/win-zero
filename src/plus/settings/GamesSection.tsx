@@ -1,5 +1,5 @@
 // Settings › Games (SPEC 9): the game every round plays in, with its hint and the power-up the
-// arsenal's reach gives it now.
+// arsenal's reach gives it now, and a hint at Home's secret.
 import { View } from 'react-native';
 
 import { availableModes, equippedWeapon, modeTier } from '@/engine';
@@ -7,7 +7,7 @@ import { appStore, arsenalBestOf, gameModeOf, useApp } from '@/store';
 import { Eyebrow, Fine, shared } from '@/ui/bits';
 import { MODE_COPY } from '@/ui/copy/modes';
 
-import { GAMES_COPY } from '../copy';
+import { GAMES_COPY, SECRET_COPY } from '../copy';
 import { ChoiceRow } from '../ui/ChoiceRow';
 
 export function GamesSection() {
@@ -32,6 +32,7 @@ export function GamesSection() {
           />
         ))}
       </View>
+      <Fine>{SECRET_COPY.hint}</Fine>
     </View>
   );
 }

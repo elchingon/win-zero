@@ -12,6 +12,7 @@ import { AccessibilityInfo } from 'react-native';
 import HomeScreen from '@/app/index';
 import { addDays, resolve, type GoalState } from '@/engine';
 import { at, DAY0, newGoal, yesDays } from '@/engine/__tests__/fixtures';
+import { SECRET_TAP_GAP_MS } from '@/plus/home/secretTaps';
 import { appStore, slotById, type GoalSlot, type RoundRecord } from '@/store';
 import { DEFAULT_PERSISTED } from '@/store/migrate';
 
@@ -65,6 +66,39 @@ beforeEach(async () => {
 afterEach(() => {
   jest.restoreAllMocks();
   jest.useRealTimers();
+});
+
+describe("Home's secret (SPEC 9)", () => {
+  const tapCount = (label: string) => fireEvent.press(screen.getByLabelText(label));
+
+  it('gives a free Game credit for three quick taps on the Game credits count, with a popup', async () => {
+    appStore.setState({ credits: { balance: { game: 1, weapon: 0 }, claimed: ['goal-set'] } });
+    await open([slot(twoDays())]);
+    for (let i = 0; i < 3; i++) await tapCount('1 Game credit');
+    expect(screen.getByRole('header', { name: /Free Game credit!/ })).toBeOnTheScreen();
+    expect(screen.getByText('You found the secret stash.')).toBeOnTheScreen();
+    expect(screen.getByText(/^You now have 2 Game credits\./)).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Sweet!' }));
+    expect(screen.queryByText('You found the secret stash.')).not.toBeOnTheScreen();
+    expect(screen.getByLabelText('2 Game credits')).toBeOnTheScreen();
+    expect(appStore.getState().credits).toEqual({ balance: { game: 2, weapon: 0 }, claimed: ['goal-set'] });
+
+    // As often as it's found.
+    for (let i = 0; i < 3; i++) await tapCount('2 Game credits');
+    expect(appStore.getState().credits.balance.game).toBe(3);
+  });
+
+  it('needs the taps quick, and leaves the hint on the "i"', async () => {
+    await open([slot(twoDays())]);
+    for (let i = 0; i < 3; i++) {
+      await tapCount('0 Game credits');
+      jest.advanceTimersByTime(SECRET_TAP_GAP_MS + 1);
+    }
+    expect(appStore.getState().credits.balance.game).toBe(0);
+    expect(screen.queryByText('You found the secret stash.')).not.toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'About Game credits' }));
+    expect(screen.getByRole('header', { name: 'Game credits' })).toBeOnTheScreen();
+  });
 });
 
 describe('the shared arsenal on Home', () => {

@@ -223,6 +223,10 @@ export function createYesCelebration() {
       notify();
       return YES_ROUTE_MS;
     },
+    /** Just the cue, the chime and its haptic, with no show: for good news away from a Yes. */
+    cue() {
+      stage?.cue();
+    },
     /** The overlay that draws the show; returns the unmount. */
     mount(s: YesStage): () => void {
       stage = s;

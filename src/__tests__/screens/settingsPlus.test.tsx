@@ -81,6 +81,11 @@ describe('Settings in Win Zero Plus', () => {
     expect(checked(/^Shooter\./)).toBe(false);
   });
 
+  it("drops a hint at Home's secret under the games, without giving it away", async () => {
+    await open();
+    expect(screen.getByText(/^Psst\. Somewhere on Home, a little box hands out free games/)).toBeOnTheScreen();
+  });
+
   it('offers the included themes, and an earned one only from its best streak, never for sale', async () => {
     await open();
     expect(checked('Classic')).toBe(true);
