@@ -9,6 +9,7 @@ import {
   answer as answerCheckIn,
   arsenalReach,
   availableModes,
+  availableThemes,
   claimCredits,
   createGoal,
   EMPTY_WALLET,
@@ -32,6 +33,7 @@ import {
   type DayKey,
   type GoalState,
   type ModeId,
+  type ThemeId,
   type ResolveEvent,
   type TimeZone,
   type WeaponId,
@@ -151,6 +153,8 @@ export interface AppState extends PersistedState {
   selectWeapon: (id: WeaponId) => void;
   /** Pick the game mode every round plays in: only one this app offers (Limits), so false otherwise. */
   setGameMode: (id: ModeId) => boolean;
+  /** Pick the theme the round and Home's zeros wear: only one this app offers and the player has earned. */
+  setTheme: (id: ThemeId) => boolean;
   /** Drop one of a goal's banked bombs, in that goal's round. */
   spendBomb: (goalId: string) => boolean;
   setGoalText: (goalId: string, text: string) => EditResult;
@@ -236,6 +240,7 @@ function persisted(s: AppState): PersistedState & LegacyCopy {
     arsenalBest: s.arsenalBest,
     weapon: s.weapon,
     gameMode: s.gameMode,
+    theme: s.theme,
     prefs: s.prefs,
     credits: s.credits,
     bonus: s.bonus,
@@ -526,6 +531,13 @@ export function createAppStore(deps: StoreDeps) {
             if (!get().hydrated) return false;
             if (!availableModes(reach(), { modesEnabled: limits.modesEnabled }).some((m) => m.id === id)) return false;
             set({ gameMode: id });
+            return true;
+          },
+
+          setTheme: (id) => {
+            if (!get().hydrated) return false;
+            if (!availableThemes(reach(), { themesEnabled: limits.themesEnabled }).some((t) => t.id === id)) return false;
+            set({ theme: id });
             return true;
           },
 

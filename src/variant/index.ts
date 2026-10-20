@@ -25,15 +25,17 @@ export const APP_NAME = IS_PLUS ? PLUS_APP_NAME : FREE_APP_NAME;
 /** The name as the top bar and check-in card set it. */
 export const APP_WORDMARK = APP_NAME.toUpperCase();
 
-/** What this app allows: Plus keeps up to three goals, on chosen weekdays, in any game mode (SPEC 9). */
+/** What this app allows: Plus keeps up to three goals, on chosen weekdays, in any game mode and theme (SPEC 9). */
 export const LIMITS: Limits = IS_PLUS ? PLUS_LIMITS : FREE_LIMITS;
 
-/** What each app offers (SPEC 9): Win Zero sends the move and Plus takes it in; Plus has game modes. */
+/** What each app offers (SPEC 9): Win Zero sends the move and Plus takes it in; Plus has game modes and themes. */
 export const FEATURES = {
   moveOut: !IS_PLUS,
   importIn: IS_PLUS,
   /** Settings › Games: the modes beyond the Shooter, as the store allows them (LIMITS). */
   extraModes: LIMITS.modesEnabled,
+  /** Settings › Themes, and a practice round's theme link, as the store allows them (LIMITS). */
+  themes: LIMITS.themesEnabled,
 } as const;
 
 /** On iPhone, the folder only the two apps share (an App Group, in app.json): a move waits there. */

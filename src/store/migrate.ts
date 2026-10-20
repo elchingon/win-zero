@@ -8,6 +8,7 @@ import {
   EMPTY_WALLET,
   isBonusSize,
   isModeId,
+  isThemeId,
   isValidDayKey,
   WEAPONS,
   type CreditGrant,
@@ -39,6 +40,7 @@ export const DEFAULT_PERSISTED: PersistedState = {
   arsenalBest: 0,
   weapon: null,
   gameMode: null,
+  theme: null,
   prefs: DEFAULT_PREFS,
   credits: EMPTY_WALLET,
   bonus: null,
@@ -250,6 +252,7 @@ export function normalizePersisted(raw: unknown): PersistedState {
     arsenalBest: archived.reduce((best, a) => Math.max(best, a.goal.bestStreak), count(r.arsenalBest, 0)),
     weapon: isWeaponId(r.weapon) ? r.weapon : null,
     gameMode: isModeId(r.gameMode) ? r.gameMode : null,
+    theme: isThemeId(r.theme) ? r.theme : null,
     prefs: {
       sound: bool(prefs.sound, DEFAULT_PREFS.sound),
       haptics: bool(prefs.haptics, DEFAULT_PREFS.haptics),

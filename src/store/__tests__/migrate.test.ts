@@ -2,7 +2,7 @@
 // (old, unversioned, or from a newer build), and one that can't be read is flagged for backup.
 import { describe, expect, it } from '@jest/globals';
 
-import { EMPTY_WALLET, MODE_IDS } from '@/engine';
+import { EMPTY_WALLET, MODE_IDS, THEME_IDS } from '@/engine';
 import { DAY0, newGoal, yesDays } from '@/engine/__tests__/fixtures';
 
 import { applyUpgrades, hasUnreadableGoal, migratePersisted, normalizePersisted, type Upgrade } from '../migrate';
@@ -161,6 +161,14 @@ describe('reading move records (SPEC 9)', () => {
     for (const id of MODE_IDS) expect(normalizePersisted({ gameMode: id }).gameMode).toBe(id);
     for (const bad of ['pong', 'Shooter', '', 3, true, { id: 'catch' }, ['catch'], null]) {
       expect(normalizePersisted({ gameMode: bad }).gameMode).toBeNull();
+    }
+  });
+
+  it('keeps a known theme, and reads anything else as Classic (null)', () => {
+    expect(normalizePersisted({}).theme).toBeNull();
+    for (const id of THEME_IDS) expect(normalizePersisted({ theme: id }).theme).toBe(id);
+    for (const bad of ['sepia', 'Classic', 'Neon Arcade', '', 7, false, { id: 'neon' }, ['neon'], null]) {
+      expect(normalizePersisted({ theme: bad }).theme).toBeNull();
     }
   });
 

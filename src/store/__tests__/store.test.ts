@@ -12,6 +12,10 @@ import {
   MS_PER_DAY,
   pendingWindow,
   PLAYABLE_MODES,
+  THEME_IDS,
+  THEME_UNLOCK_AURORA,
+  THEME_UNLOCK_EMBER,
+  THEME_UNLOCK_GOLD,
   type CreditWallet,
 } from '@/engine';
 import { answerDay, at, DAY0, DENVER, newGoal, TOKYO, yesDays } from '@/engine/__tests__/fixtures';
@@ -38,6 +42,7 @@ import {
   primaryRound,
   primarySlot,
   slotById,
+  themeOf,
   totalBombs,
 } from '../select';
 
@@ -764,6 +769,75 @@ describe('game modes (SPEC 9)', () => {
   });
 });
 
+describe('themes (SPEC 9)', () => {
+  const OTHER_THEMES = THEME_IDS.filter((id) => id !== 'classic');
+
+  it('draws in Classic until a theme is picked', async () => {
+    const h = await withGoal(newGoal());
+    expect(h.store.getState().theme).toBeNull();
+    expect(themeOf(h.store.getState())).toBe('classic');
+  });
+
+  it('keeps Win Zero in Classic', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 100));
+    h.store.setState({ arsenalBest: 400 });
+    for (const id of OTHER_THEMES) expect(h.store.getState().setTheme(id)).toBe(false);
+    expect(h.store.getState().theme).toBeNull();
+    expect(h.store.getState().setTheme('classic')).toBe(true);
+    expect(h.store.getState().theme).toBe('classic');
+  });
+
+  it('offers Plus the included themes from the start, and each earned one at its best streak', async () => {
+    const h = await withGoal(newGoal(), { limits: PLUS_LIMITS });
+    for (const id of ['classic', 'neon', 'mono', 'pastel'] as const) expect(h.store.getState().setTheme(id)).toBe(true);
+    const steps = [
+      ['ember', THEME_UNLOCK_EMBER],
+      ['aurora', THEME_UNLOCK_AURORA],
+      ['gold', THEME_UNLOCK_GOLD],
+    ] as const;
+    for (const [id, best] of steps) {
+      h.store.setState({ arsenalBest: best - 1 });
+      expect(h.store.getState().setTheme(id)).toBe(false);
+      h.store.setState({ arsenalBest: best });
+      expect(h.store.getState().setTheme(id)).toBe(true);
+      expect(themeOf(h.store.getState())).toBe(id);
+    }
+  });
+
+  it('never takes an earned theme away: it follows the shared best, not the current streak', async () => {
+    const h = await withGoal(newGoal(), { limits: PLUS_LIMITS });
+    h.store.setState({ arsenalBest: THEME_UNLOCK_EMBER });
+    expect(h.store.getState().setTheme('ember')).toBe(true);
+    expect(primaryGoal(h.store.getState())?.streak).toBe(0);
+    expect(themeOf(h.store.getState())).toBe('ember');
+  });
+
+  it('waits for storage before saving a pick', async () => {
+    const h = harness({ limits: PLUS_LIMITS });
+    expect(h.store.getState().setTheme('neon')).toBe(false);
+    await ready(h.store);
+    expect(h.store.getState().theme).toBeNull();
+  });
+
+  it('draws a saved theme only where this app offers it, and once it is earned', async () => {
+    const free = await withGoal(newGoal());
+    free.store.setState({ theme: 'neon', arsenalBest: 400 });
+    expect(themeOf(free.store.getState())).toBe('classic');
+    const plus = await withGoal(newGoal(), { limits: PLUS_LIMITS });
+    plus.store.setState({ theme: 'neon' });
+    expect(themeOf(plus.store.getState())).toBe('neon');
+    plus.store.setState({ theme: 'gold', arsenalBest: THEME_UNLOCK_GOLD - 1 });
+    expect(themeOf(plus.store.getState())).toBe('classic');
+  });
+
+  it('forgets the pick on erase', async () => {
+    const h = await withGoal(newGoal(), { limits: PLUS_LIMITS });
+    h.store.getState().setTheme('pastel');
+    h.store.getState().erase();
+    expect(h.store.getState().theme).toBeNull();
+  });
+});
+
 describe('persistence', () => {
   it('round-trips through storage into a second store', async () => {
     const a = harness();
@@ -776,6 +850,7 @@ describe('persistence', () => {
     a.store.getState().setPref('goalInReminders', true);
     a.store.getState().selectWeapon('pea');
     expect(a.store.getState().setGameMode('shooter')).toBe(true);
+    expect(a.store.getState().setTheme('classic')).toBe(true);
     a.store.getState().hideReminderCard();
     a.store.getState().startMoveOut();
     a.store.setState({
@@ -792,6 +867,7 @@ describe('persistence', () => {
       arsenalBest: s.arsenalBest,
       weapon: s.weapon,
       gameMode: s.gameMode,
+      theme: s.theme,
       prefs: s.prefs,
       credits: s.credits,
       bonus: s.bonus,
@@ -803,6 +879,7 @@ describe('persistence', () => {
     expect(pick(b.store.getState())).toEqual(pick(a.store.getState()));
     expect(b.store.getState().moveOut).toMatchObject({ status: 'sent' });
     expect(b.store.getState().gameMode).toBe('shooter');
+    expect(b.store.getState().theme).toBe('classic');
     expect(b.store.getState().reminderCardHiddenUntil).not.toBeNull();
     expect(b.store.getState().prefs).toEqual({ sound: false, haptics: true, reengage: false, goalInReminders: true });
     expect(primaryRound(b.store.getState())).toMatchObject({ n: 1, played: false });
@@ -823,6 +900,7 @@ describe('persistence', () => {
         'moveOut',
         'prefs',
         'reminderCardHiddenUntil',
+        'theme',
         'weapon',
         // Version 2's fields, copied from the first goal for a build still on it.
         'goal',

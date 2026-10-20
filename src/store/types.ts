@@ -7,6 +7,7 @@ import type {
   HistoryEntry,
   IsoInstant,
   ModeId,
+  ThemeId,
   WeaponId,
 } from '@/engine';
 
@@ -118,6 +119,8 @@ export interface PersistedState {
   weapon: WeaponId | null;
   /** The game mode picked in Settings › Games (Win Zero Plus). null means the Shooter. */
   gameMode: ModeId | null;
+  /** The theme picked in Settings › Themes (Win Zero Plus). null means Classic. */
+  theme: ThemeId | null;
   prefs: Prefs;
   /** Game and Weapon credits. They outlive a goal; Erase all data clears them with everything else. */
   credits: CreditWallet;
