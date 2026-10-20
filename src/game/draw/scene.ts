@@ -9,6 +9,7 @@ import type { GameState } from '../sim/types';
 import { makeBatch } from './batch';
 import { drawFill } from './fill';
 import { drawBeams, drawBolts, drawBullets, drawParticles, drawRings } from './fx';
+import { drawBreaker } from './modes/breaker';
 import { drawCatch } from './modes/catch';
 import { drawOrbit } from './modes/orbit';
 import { drawSlice } from './modes/slice';
@@ -67,6 +68,9 @@ export function drawScene(canvas: SkCanvas, s: GameState, kit: Kit, atlas: SkIma
         break;
       case 'slice':
         drawSlice(canvas, s, kit, sc);
+        break;
+      case 'breaker':
+        drawBreaker(canvas, s, kit, sc);
         break;
       case 'shooter':
       default:

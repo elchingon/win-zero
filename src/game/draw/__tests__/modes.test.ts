@@ -92,6 +92,7 @@ const MODES: readonly { mode: ModeId; tiers: WeaponId[] }[] = [
   { mode: 'catch', tiers: ['pea', 'twin', 'rocket', 'laser', 'nuke'] },
   { mode: 'orbit', tiers: ['pea', 'laser', 'nuke'] },
   { mode: 'slice', tiers: ['pea', 'twin', 'laser'] },
+  { mode: 'breaker', tiers: ['pea', 'scatter', 'rocket', 'chain', 'laser', 'nuke'] },
 ];
 
 /** A finger on the board, sliding: every mode has something to show for it. */

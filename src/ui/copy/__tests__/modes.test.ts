@@ -7,7 +7,7 @@ import { modeById, type ModeId } from '@/engine';
 import { MODE_COPY } from '../modes';
 
 /** Modes whose lines are final: the Shooter, and each mode as its round lands. */
-const FINAL: readonly ModeId[] = ['shooter', 'catch', 'orbit', 'slice'];
+const FINAL: readonly ModeId[] = ['shooter', 'catch', 'orbit', 'slice', 'breaker'];
 /** The hint shows over the board on one line, even on a small phone. */
 const MAX_HINT = 40;
 

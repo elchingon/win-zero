@@ -78,6 +78,17 @@ function sliceCues(): CueSheet {
   };
 }
 
+/** Breaker: a bounce for a ball off the paddle or a brick it doesn't break, the laser's shot, pops and booms. */
+function breakerCues(): CueSheet {
+  const shooter = shooterCues();
+  const bounceGate = makeGate(BOUNCE_MIN_MS);
+  return (r, nowMs) => {
+    const c = shooter(r, nowMs);
+    c.bounce = r.bounces > 0 && !c.boom && r.kills === 0 && bounceGate(nowMs);
+    return c;
+  };
+}
+
 /** A cue sheet for one round in `mode`: call it with each report and the time it arrived. */
 export function makeCues(mode: ModeId = DEFAULT_MODE): CueSheet {
   switch (mode) {
@@ -85,6 +96,8 @@ export function makeCues(mode: ModeId = DEFAULT_MODE): CueSheet {
       return catchCues();
     case 'slice':
       return sliceCues();
+    case 'breaker':
+      return breakerCues();
     // Orbit's turret sounds as the Shooter's does.
     case 'orbit':
     case 'shooter':

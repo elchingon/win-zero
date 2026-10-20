@@ -17,5 +17,5 @@ export const MODE_COPY: Record<ModeId, ModeCopy> = {
   catch: { hint: 'Slide anywhere to catch the zeros', tier: 'Catcher', switchHint: 'Switches to your next catcher' },
   orbit: { hint: 'Hold anywhere to fire all round', tier: 'Weapon', switchHint: 'Switches to your next weapon' },
   slice: { hint: 'Swipe across the zeros to slice them', tier: 'Power-up', switchHint: 'Switches to your next power-up' },
-  breaker: { hint: 'Slide to move the paddle', tier: 'Power-up', switchHint: 'Switches to your next power-up' },
+  breaker: { hint: 'Slide anywhere to move the paddle', tier: 'Power-up', switchHint: 'Switches to your next power-up' },
 };

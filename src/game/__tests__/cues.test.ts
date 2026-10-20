@@ -103,6 +103,19 @@ describe('Slice’s cues', () => {
   });
 });
 
+describe('Breaker’s cues', () => {
+  it('bounces for a ball off the paddle or a brick it doesn’t break, at most every ' + BOUNCE_MIN_MS + ' ms', () => {
+    const cues = makeCues('breaker');
+    expect([0, 20, 50].map((t) => cues(report({ bounces: 1 }), t).bounce)).toEqual([true, false, true]);
+    expect(makeCues('breaker')(report({ bounces: 1, kills: 1 }), 0)).toMatchObject({ pop: true, bounce: false });
+  });
+
+  it('fires the Laser Paddle’s shot, and booms for the last brick', () => {
+    expect(makeCues('breaker')(report({ shots: 1 }), 0).shoot).toBe(true);
+    expect(makeCues('breaker')(report({ bounces: 1, kills: 1, final: true }), 0)).toMatchObject({ boom: true, bounce: false });
+  });
+});
+
 describe('Catch’s cues', () => {
   it('bounces for a catch that doesn’t pop its zero, at most every ' + BOUNCE_MIN_MS + ' ms', () => {
     const cues = makeCues('catch');
