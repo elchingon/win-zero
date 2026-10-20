@@ -1,6 +1,7 @@
 // Settings: goal wording, times (through the engine, so an open window is respected),
 // sound / haptics / weekly nudge, reminder permission, how it works, support, about (privacy
 // policy, help, email, the move to Win Zero Plus once it's on the store, version), and erase.
+// Win Zero Plus adds its games, themes and app icons (SPEC 9).
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { useState, type ComponentType } from 'react';
@@ -28,6 +29,13 @@ const DebugSection: ComponentType | null = __DEV__
   ? // eslint-disable-next-line @typescript-eslint/no-require-imports
     require('@/dev/DebugSection').DebugSection
   : null;
+
+// Win Zero Plus only: the literal comparison folds per file, so Win Zero's bundle leaves it out.
+const PlusSettings: typeof import('@/plus/settings') | null =
+  process.env.EXPO_PUBLIC_APP_VARIANT === 'plus'
+    ? // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require('@/plus/settings')
+    : null;
 
 /** The app version from the app's config, as built. */
 const APP_VERSION = Constants.expoConfig?.version;
@@ -163,6 +171,8 @@ export default function Settings() {
           onPress={callSupportLine}
         />
       </View>
+
+      {PlusSettings ? <PlusSettings.PlusSections /> : null}
 
       <View style={shared.section}>
         <Eyebrow header>About</Eyebrow>
