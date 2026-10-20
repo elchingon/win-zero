@@ -1,9 +1,10 @@
-// Catch (SPEC 9): zeros drift down, cups at the bottom catch them, multi-hit zeros are juggled
-// until they pop, and a missed zero floats back up. Each power-up is a weapon tier, and the
-// assists make sure a cup that never moves still catches everything.
+// Catch (SPEC 9): zeros fall like floaty balls, cups at the bottom catch them, and every zero that
+// lands, in a cup or beside them, bounces back up high along its own path until it pops. Each
+// power-up is a weapon tier; nothing pulls a zero in but the Magnet, the Vacuum Beam and the
+// Black Hole, and those only on its way down.
 import { describe, expect, it } from '@jest/globals';
 
-import { weaponById } from '@/engine';
+import { weaponById, type WeaponId } from '@/engine';
 
 import { dropBomb } from '../../bomb';
 import { finishAll } from '../../finish';
@@ -12,18 +13,21 @@ import { step } from '../../step';
 import type { CatchState, GameState, Zero } from '../../types';
 import { modeGame, only, popIn, run } from '../../__tests__/fixtures';
 import {
-  CATCH_ASSIST_MISSES,
-  CATCH_DRIFT,
-  CATCH_FLOAT,
-  CATCH_JUGGLE,
+  CATCH_BOUNCE_TO_MAX,
+  CATCH_BOUNCE_TO_MIN,
+  CATCH_DEFLECT,
+  CATCH_EDGE,
   CATCH_POWER,
   CATCH_START_SHARE,
   CUP_SPEED,
   CUP_TWIN_GAP,
   cupMid,
+  landsIn,
 } from '../catch';
 
 const DT = 1 / 60;
+/** How far a bounce's peak may land from its aim, in points: the frame steps round it off. */
+const PEAK_SLACK = 10;
 
 function cs(s: GameState): CatchState {
   if (s.modeState.mode !== 'catch') throw new Error('not a Catch round');
@@ -38,13 +42,26 @@ function aboutToLand(s: GameState, z: Zero, x: number): void {
   z.vy = 200;
 }
 
-/** Step until zero `i` changes how it moves, or `seconds` pass. */
+/** Step until `test` holds, or `seconds` pass. */
 function until(s: GameState, test: () => boolean, seconds = 20): void {
   for (let f = 0; f < seconds * 60 && !test(); f++) step(s, DT);
 }
 
+/** Step until zero `z` turns at the top of its bounce, and say where it turned. */
+function peak(s: GameState, z: Zero): number {
+  until(s, () => z.vy >= 0, 5);
+  return z.y;
+}
+
+/** Where a bounce can take zero `z`: between `high` and `low`, as y on the board. */
+function bounceRange(s: GameState, z: Zero): { high: number; low: number } {
+  const top = s.top + z.ry;
+  const span = s.bottom - z.ry - top;
+  return { high: top + span * CATCH_BOUNCE_TO_MIN - PEAK_SLACK, low: top + span * CATCH_BOUNCE_TO_MAX + PEAK_SLACK };
+}
+
 describe('a Catch round', () => {
-  it('starts with every zero in the top of the board, drifting down, and the cups in the middle', () => {
+  it('starts with every zero in the top of the board, at rest, and the cups in the middle', () => {
     for (const n of [1, 7, 60, 250, 1000]) {
       const s = modeGame('catch', n);
       expect(s.mode).toBe('catch');
@@ -54,18 +71,36 @@ describe('a Catch round', () => {
         expect(z.x).toBeLessThanOrEqual(s.width - z.rx);
         expect(z.y).toBeGreaterThanOrEqual(s.top + z.ry);
         expect(z.y).toBeLessThanOrEqual(s.top + z.ry + (s.bottom - s.top - 2 * z.ry) * CATCH_START_SHARE);
-        expect(z.vy).toBeGreaterThan(0);
+        expect(z.vy).toBe(0);
       }
     }
   });
 
-  it('drifts armored zeros down slower', () => {
+  it('flies armored zeros slower', () => {
     const s = modeGame('catch', 250);
-    const speed = (kind: string) => {
-      const falls = s.zeros.map((z, i) => ({ z, fall: cs(s).fall[i]! })).filter(({ z }) => z.kind === kind);
-      return falls.reduce((sum, f) => sum + f.fall, 0) / falls.length;
+    const pace = (kind: string) => {
+      const paces = s.zeros.map((z, i) => ({ z, pace: cs(s).pace[i]! })).filter(({ z }) => z.kind === kind);
+      return paces.reduce((sum, p) => sum + p.pace, 0) / paces.length;
     };
-    expect(speed('armored')).toBeLessThan(speed('standard'));
+    expect(pace('armored')).toBeGreaterThan(pace('standard'));
+  });
+
+  it('drops a zero like a ball, faster as it falls, landing when landsIn says', () => {
+    const s = modeGame('catch', 60);
+    popIn(s);
+    const z = only(s, 0);
+    z.x = 30; // beside the cup, so it bounces
+    z.y = s.top + z.ry;
+    z.vx = 0;
+    const lands = landsIn(s, cs(s), z, 0);
+    run(s, 0.5);
+    const early = z.vy;
+    run(s, 0.5);
+    expect(early).toBeGreaterThan(0);
+    expect(z.vy).toBeGreaterThan(early);
+    let t = 1;
+    for (; t < 10 && z.vy > 0; t += DT) step(s, DT);
+    expect(t).toBeCloseTo(lands, 1);
   });
 });
 
@@ -103,62 +138,82 @@ describe('catching', () => {
     expect(s.phase).toBe('celebrate');
   });
 
-  it('juggles a tough zero in its cup until it pops, wherever the cup goes', () => {
+  it('bounces a tough zero up high off the cup, on its own path: the cup sliding away leaves it be', () => {
     const s = modeGame('catch', 7); // 3 HP each
     popIn(s);
     const z = only(s, 0);
     aboutToLand(s, z, s.width / 2);
     step(s, DT);
     expect(z.hp).toBe(2);
-    expect(cs(s).motion[0]).toBe(CATCH_JUGGLE);
     expect(z.vy).toBeLessThan(0);
-    pointerDown(s, 60, 400); // the cup slides away; the zero goes with it
-    until(s, () => !z.alive);
-    expect(z.alive).toBe(false);
-    expect(cs(s).misses[0]).toBe(0);
+    pointerDown(s, 60, 400);
+    const { high, low } = bounceRange(s, z);
+    const top = peak(s, z);
+    expect(top).toBeGreaterThanOrEqual(high);
+    expect(top).toBeLessThanOrEqual(low);
+    expect(z.x).toBeCloseTo(s.width / 2); // caught in the middle: straight up
   });
 
-  it('floats a missed zero back up, then lets it drift down again', () => {
+  it('pops a tough zero once it has been caught enough times', () => {
+    const s = modeGame('catch', 7); // 3 HP each, a Cup's catch takes 1
+    popIn(s);
+    const z = only(s, 0);
+    pointerDown(s, z.x, 400);
+    for (let f = 0; f < 20 * 60 && z.alive; f++) {
+      pointerMove(s, z.x, 400);
+      step(s, DT);
+    }
+    expect(z.alive).toBe(false);
+    expect(s.report.bounces).toBe(3);
+  });
+
+  it('deflects a catch off toward the side of the cup it struck', () => {
+    const deflected = (off: number) => {
+      const s = modeGame('catch', 7);
+      popIn(s);
+      const z = only(s, 0);
+      aboutToLand(s, z, s.width / 2 + off * cs(s).half);
+      step(s, DT);
+      expect(z.alive).toBe(true);
+      expect(Math.abs(z.vx)).toBeLessThanOrEqual(CATCH_DEFLECT * s.width);
+      return z.vx;
+    };
+    expect(deflected(0.8)).toBeGreaterThan(0);
+    expect(deflected(-0.8)).toBeLessThan(0);
+    expect(deflected(0)).toBeCloseTo(0);
+    expect(deflected(0.8)).toBeGreaterThan(deflected(0.3));
+  });
+
+  it('bounces a missed zero up high off the floor, keeping its sideways speed', () => {
     const s = modeGame('catch', 60);
     popIn(s);
-    const z = s.zeros[0]!;
+    const z = only(s, 0);
     aboutToLand(s, z, 30);
+    z.vx = 20;
     step(s, DT);
     expect(z.alive).toBe(true);
-    expect(cs(s).motion[0]).toBe(CATCH_FLOAT);
-    expect(cs(s).misses[0]).toBe(1);
-    until(s, () => cs(s).motion[0] === CATCH_DRIFT, 3);
-    expect(cs(s).motion[0]).toBe(CATCH_DRIFT);
-    expect(z.y).toBeLessThan((s.top + s.bottom) / 2);
+    expect(z.vy).toBeLessThan(0);
+    expect(z.vx).toBe(20);
+    const { high, low } = bounceRange(s, z);
+    const top = peak(s, z);
+    expect(top).toBeGreaterThanOrEqual(high);
+    expect(top).toBeLessThanOrEqual(low);
   });
 
-  it(`steers a zero missed ${CATCH_ASSIST_MISSES} times into a cup that never moves`, () => {
-    const landing = (misses: number) => {
-      const s = modeGame('catch', 60);
+  it.each(['pea', 'twin', 'scatter', 'chain'] as WeaponId[])(
+    'never draws a zero in with the %s’s cups, however long nobody catches it',
+    (weapon) => {
+      const s = modeGame('catch', 60, { weapon });
       popIn(s);
-      const z = s.zeros[0]!;
-      cs(s).misses[0] = misses;
+      const z = only(s, 0); // the last zero left, which an assist would once have steered in
       z.x = 30;
-      z.y = s.bottom - z.ry - 100;
       z.vx = 0;
-      until(s, () => !z.alive || cs(s).motion[0] === CATCH_FLOAT, 5);
-      return z.alive ? 'missed' : 'caught';
-    };
-    expect(landing(0)).toBe('missed');
-    expect(landing(CATCH_ASSIST_MISSES)).toBe('caught');
-  });
-
-  it('steers every zero in once only a few are left', () => {
-    const s = modeGame('catch', 60);
-    popIn(s);
-    for (let j = 3; j < s.zeros.length; j++) s.zeros[j]!.alive = false;
-    s.valueLeft = 3;
-    s.zeros.slice(0, 3).forEach((z, k) => {
-      z.x = k === 1 ? s.width - 30 : 30;
-    });
-    until(s, () => s.phase !== 'play', 30);
-    expect(s.valueLeft).toBe(0);
-  });
+      run(s, 20);
+      expect(z.alive).toBe(true);
+      expect(z.x).toBeCloseTo(30);
+      expect(s.sinceDamage).toBeGreaterThan(10);
+    },
+  );
 });
 
 describe('power-ups', () => {
@@ -195,19 +250,28 @@ describe('power-ups', () => {
     expect(cs(s).cups).toBe(2);
   });
 
-  it('Magnet: pulls a nearby zero into the cup, and splashes its neighbors', () => {
+  it('Magnet: pulls a falling zero beside the cup into it', () => {
     const s = modeGame('catch', 60, { weapon: 'rocket' });
+    popIn(s);
+    const z = only(s, 0);
+    z.x = s.width / 2 + cs(s).half + 40; // beside the cup, inside the magnet's reach
+    z.y = s.bottom - z.ry - 120;
+    z.vx = 0;
+    until(s, () => !z.alive || z.vy < 0, 5);
+    expect(z.alive).toBe(false); // caught on its first landing
+  });
+
+  it('Magnet: a catch splashes the zeros beside the cup', () => {
+    const s = modeGame('catch', 60, { weapon: 'rocket' });
+    step(s, DT);
     popIn(s);
     const z = only(s, 0);
     const neighbor = s.zeros[1]!;
     neighbor.alive = true;
     s.valueLeft = 2;
-    z.x = s.width / 2 + cs(s).half + 40; // beside the cup, inside the magnet's reach
-    z.y = s.bottom - z.ry - 120;
-    neighbor.x = s.width / 2 + 20;
-    neighbor.y = s.bottom - neighbor.ry - 30;
-    neighbor.vy = 0;
-    until(s, () => !z.alive, 5);
+    aboutToLand(s, z, s.width / 2);
+    aboutToLand(s, neighbor, s.width / 2 + cs(s).half + CATCH_EDGE * neighbor.rx + 4); // just past the rim
+    step(s, DT);
     expect(z.alive).toBe(false);
     expect(neighbor.alive).toBe(false); // the Rocket's splash
   });
@@ -220,31 +284,45 @@ describe('power-ups', () => {
     expect(s.bolts.count).toBeGreaterThan(0);
   });
 
-  it('Vacuum Beam: while the finger is down, zeros over the cup fall fast', () => {
-    const drift = modeGame('catch', 60, { weapon: 'laser' });
+  it('Vacuum Beam: while the finger is down, falling zeros over the cup fall fast', () => {
+    const drop = modeGame('catch', 60, { weapon: 'laser' });
     const vacuum = modeGame('catch', 60, { weapon: 'laser' });
-    for (const s of [drift, vacuum]) {
+    for (const s of [drop, vacuum]) {
       popIn(s);
       const z = only(s, 0);
       z.x = s.width / 2;
       z.y = s.top + 100;
     }
     pointerDown(vacuum, vacuum.width / 2, 300);
-    run(drift, 0.5);
-    run(vacuum, 0.5);
+    run(drop, 0.25);
+    run(vacuum, 0.25);
     expect(cs(vacuum).pulling).toBe(true);
-    expect(vacuum.zeros[0]!.y).toBeGreaterThan(drift.zeros[0]!.y + 100);
+    expect(vacuum.zeros[0]!.y).toBeGreaterThan(drop.zeros[0]!.y + 100);
   });
 
-  it('Black Hole: draws zeros in from across the board', () => {
+  it('Vacuum Beam: leaves a zero alone on its way back up', () => {
+    const s = modeGame('catch', 7, { weapon: 'laser' }); // 3 HP each; the laser's catch takes 2
+    popIn(s);
+    const z = only(s, 0);
+    pointerDown(s, s.width / 2, 300);
+    aboutToLand(s, z, s.width / 2);
+    step(s, DT);
+    expect(z.hp).toBe(1);
+    expect(cs(s).pulling).toBe(true);
+    const { high, low } = bounceRange(s, z);
+    const top = peak(s, z);
+    expect(top).toBeGreaterThanOrEqual(high);
+    expect(top).toBeLessThanOrEqual(low);
+  });
+
+  it('Black Hole: draws a zero in from across the board', () => {
     const s = modeGame('catch', 60, { weapon: 'nuke' });
     popIn(s);
     const z = only(s, 0);
     z.x = z.rx;
     z.y = s.top + z.ry;
-    until(s, () => !z.alive, 10);
-    expect(z.alive).toBe(false);
-    expect(cs(s).misses[0]).toBe(0);
+    until(s, () => !z.alive || z.vy < 0, 10);
+    expect(z.alive).toBe(false); // caught on its first landing
   });
 });
 

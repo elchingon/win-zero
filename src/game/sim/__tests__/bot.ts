@@ -4,8 +4,8 @@
 // lowest zero, leading it by the shot's flight, and holds on; in Orbit, at the nearest; in Catch
 // it slides the cups under the next zero it can reach; in Slice it strokes through the lowest
 // zero it can cut, no faster than a finger can; in Breaker it keeps the paddle under the next
-// ball down, sending it up the nearer wall. It can also keep its hands off (Catch must still clear), or play
-// down to the last few zeros and then let go. Every frame it checks what must hold in any mode
+// ball down, sending it up the nearer wall. It can also keep its hands off (Breaker must still clear), or
+// play down to the last few zeros and then let go. Every frame it checks what must hold in any mode
 // (the counter, ×V, the board's edges, the effect caps and the order of phases) and keeps what
 // broke, rather than failing on the spot.
 import { composeRound, fillPlan, type ModeId, type WeaponDef } from '@/engine';
@@ -25,7 +25,7 @@ import {
 } from '../constants';
 import { hittable } from '../hit';
 import { pointerDown, pointerMove, pointerUp } from '../input';
-import { CATCH_DRIFT, CATCH_EDGE, CUP_SPEED } from '../modes/catch';
+import { CATCH_EDGE, CUP_SPEED, landsIn } from '../modes/catch';
 import { resetReport } from '../report';
 import { buildGame } from '../spawn';
 import { step } from '../step';
@@ -152,8 +152,8 @@ function orbitTouch(s: GameState): Touch | null {
 }
 
 /**
- * Catch: slide the cups under the drifting zero that lands soonest and can still be reached in
- * time, predicting its bounces off the walls. Juggled zeros follow the cups by themselves.
+ * Catch: slide the cups under the falling zero that lands soonest and can still be reached in
+ * time, predicting its arc and its bounces off the walls.
  */
 function catchTouch(s: GameState): Touch | null {
   const cs = s.modeState;
@@ -164,8 +164,8 @@ function catchTouch(s: GameState): Touch | null {
   let soonestX = NaN;
   for (let i = 0; i < s.zeros.length; i++) {
     const z = s.zeros[i]!;
-    if (!z.alive || !hittable(z) || cs.motion[i] !== CATCH_DRIFT) continue;
-    const t = (s.bottom - z.ry - z.y) / Math.max(z.vy, (cs.fall[i] ?? 1) / 2, 1);
+    if (!hittable(z)) continue;
+    const t = landsIn(s, cs, z, i);
     const x = fold(z.x + z.vx * t, z.rx, s.width - z.rx);
     if (t < soonest) {
       soonest = t;

@@ -131,7 +131,7 @@ export interface ShooterState {
 /** What draws zeros toward Catch's cups: nothing, a magnet near them, the Vacuum Beam's column, or the Black Hole's whole board. */
 export type CatchPull = 'none' | 'magnet' | 'vacuum' | 'hole';
 
-/** Catch (SPEC 9): zeros drift down, and cups at the bottom catch them. Per-zero arrays are indexed like `zeros`. */
+/** Catch (SPEC 9): zeros fall and bounce, and cups at the bottom catch them. Per-zero arrays are indexed like `zeros`. */
 export interface CatchState {
   mode: 'catch';
   /** The middle of the cups, and where the finger wants it: the board's middle until it's touched. */
@@ -146,16 +146,8 @@ export interface CatchState {
   pull: CatchPull;
   /** The Vacuum Beam is drawing zeros down: the finger is on the board. */
   pulling: boolean;
-  /** How each zero is moving: CATCH_DRIFT, CATCH_JUGGLE or CATCH_FLOAT. */
-  motion: number[];
-  /** Each zero's own drift speed, in points per second. */
-  fall: number[];
-  /** Where a floating zero turns back to drift down. */
-  apex: number[];
-  /** Where a juggled zero sits, from its cup's middle. */
-  slot: number[];
-  /** Times each zero has landed beside the cups since it was last caught. */
-  misses: number[];
+  /** How slowly each zero flies: about 1, armored zeros slower. Its gravity is divided by the square, so it flies the same arcs in slow motion. */
+  pace: number[];
 }
 
 /**

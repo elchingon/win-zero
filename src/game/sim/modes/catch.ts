@@ -1,49 +1,37 @@
 'worklet';
-// Catch (SPEC 9): zeros drift down the board, and cups at the bottom catch them. A catch is a hit
-// from the power-up's weapon (its damage, splash and chain); a zero that survives it (energy and
-// armored zeros) is juggled, hopping in its cup until it pops. A zero that lands beside the cups
-// floats back up and drifts down again. One missed twice, or every one late in the round,
-// steers into a cup, so a round always ends, even with a cup that never moves. The cups follow
-// the finger's x, and start in the middle.
+// Catch (SPEC 9): zeros fall like floaty balls, and cups at the bottom catch them. A catch is a
+// hit from the power-up's weapon (its damage, splash and chain); a zero that survives it (energy
+// and armored zeros) bounces back up high, off toward the side of the cup it struck. A zero that
+// lands beside the cups bounces up high too, along its own path. Nothing draws a zero in but the
+// power-ups that pull (Magnet, Vacuum Beam, Black Hole), and those only on its way down: with the
+// plain cups, the player has to get under every zero. The cups follow the finger's x, and start
+// in the middle.
 import type { WeaponId } from '@/engine';
 
 import { armorBadges } from '../badges';
-import { catchable, keepOnBoard, liveZeros } from '../board';
-import { ASSIST_LAST, HIT_FLASH } from '../constants';
+import { catchable, keepOnBoard } from '../board';
+import { HIT_FLASH } from '../constants';
 import { between, random, spread } from '../rng';
 import { ZERO_ASPECT, zeroRadius } from '../sizing';
 import type { CatchPull, CatchState, GameConfig, GameState, Zero } from '../types';
 import { applyHit } from '../weapons';
 import { popInSpan, readyZero, zeroSize } from './place';
 
-/** How a zero moves: drifting down, hopping in a cup after a catch, or floating back up after a miss. */
-export const CATCH_DRIFT = 0;
-export const CATCH_JUGGLE = 1;
-export const CATCH_FLOAT = 2;
-
-/** A zero drifts from the top of the board to the bottom in about this long, give or take CATCH_FALL_JITTER; armored ones are heavy and slow. */
-export const CATCH_FALL_S = 6;
-export const CATCH_FALL_JITTER = 0.3;
+/** A zero dropped from rest at the top of the board reaches the bottom in about this long: it sets the gravity. */
+export const CATCH_DROP_S = 2.5;
+/** Each zero's pace is 1 give or take CATCH_PACE_JITTER; armored ones are heavy, and fly CATCH_ARMOR_SLOW times slower. */
+export const CATCH_PACE_JITTER = 0.3;
 export const CATCH_ARMOR_SLOW = 1.5;
 /** Zeros start in this top share of the board. */
 export const CATCH_START_SHARE = 0.55;
-/** Sideways drift: up to this many board widths a second, either way. */
+/** Sideways drift at the start: up to this many board widths a second, either way. */
 export const CATCH_SWAY = 0.05;
-/** A drifting zero eases to its drift speed at this rate, per second. */
-export const CATCH_SETTLE = 4;
 
-/** A missed zero floats back up over this long, to between these shares of the board from the top. */
-export const CATCH_FLOAT_S = 1.2;
-export const CATCH_FLOAT_TO_MIN = 0.12;
-export const CATCH_FLOAT_TO_MAX = 0.3;
-
-/** A juggled zero hops this share of the board's height, up and down in CATCH_HOP_S. */
-export const CATCH_HOP = 0.18;
-export const CATCH_HOP_S = 0.7;
-/** A juggled zero closes on its spot in the cup with this time constant, in seconds. */
-export const CATCH_JUGGLE_FOLLOW = 0.08;
-/** A juggled zero keeps within this share of its cup's half-width from the cup's middle. */
-export const CATCH_JUGGLE_SPREAD = 0.6;
+/** A bounce, off the floor or a cup, carries a zero up to between these shares of the board from the top. */
+export const CATCH_BOUNCE_TO_MIN = 0.08;
+export const CATCH_BOUNCE_TO_MAX = 0.25;
+/** A zero caught at a cup's edge leaves sideways at this many board widths a second; from its middle, straight up. */
+export const CATCH_DEFLECT = 0.25;
 /** No second catch of the same zero within this long. */
 export const CATCH_COOLDOWN = 0.15;
 
@@ -57,19 +45,15 @@ export const CUP_SPEED = 2.5;
 /** Twin Cups' middles sit this many half-widths apart. */
 export const CUP_TWIN_GAP = 2.6;
 
-/** Magnet: pulls zeros within this many board widths of a cup's middle. */
+/** Magnet: pulls falling zeros within this many board widths of a cup's middle. */
 export const MAGNET_REACH = 0.3;
 /** Pulled zeros steer sideways at up to this many board widths a second; the Black Hole's pull is stronger. */
 export const CATCH_STEER_MAX = 0.35;
 export const CATCH_HOLE_STEER = 0.6;
 /** Steering aims to arrive no sooner than this, so a zero right over the rim doesn't overshoot. */
 export const CATCH_STEER_MIN_T = 0.15;
-/** Vacuum Beam: zeros in the column over a cup fall this many times their drift speed. */
-export const CATCH_VACUUM_FALL = 4;
-
-/** Assist: a zero missed this many times, or every zero once nothing's been hit for CATCH_ASSIST_IDLE seconds (or ASSIST_LAST are left), steers into a cup. */
-export const CATCH_ASSIST_MISSES = 2;
-export const CATCH_ASSIST_IDLE = 4;
+/** Vacuum Beam: zeros falling in the column over a cup fall at least this many board heights a second. */
+export const CATCH_VACUUM_FALL = 1.5;
 
 export interface CatchPower {
   cups: number;
@@ -94,18 +78,8 @@ export const CATCH_POWER: Readonly<Record<WeaponId, CatchPower>> = {
 
 /** Catch's state for `count` zeros on a board `width` wide, cups in the middle. */
 export function makeCatchState(count: number, width: number): CatchState {
-  const motion: number[] = [];
-  const fall: number[] = [];
-  const apex: number[] = [];
-  const slot: number[] = [];
-  const misses: number[] = [];
-  for (let i = 0; i < count; i++) {
-    motion.push(CATCH_DRIFT);
-    fall.push(0);
-    apex.push(0);
-    slot.push(0);
-    misses.push(0);
-  }
+  const pace: number[] = [];
+  for (let i = 0; i < count; i++) pace.push(1);
   return {
     mode: 'catch',
     cupX: width / 2,
@@ -116,11 +90,7 @@ export function makeCatchState(count: number, width: number): CatchState {
     gap: 0,
     pull: 'none',
     pulling: false,
-    motion,
-    fall,
-    apex,
-    slot,
-    misses,
+    pace,
   };
 }
 
@@ -161,12 +131,20 @@ function cupsReach(cs: CatchState): number {
   return cs.half + ((cs.cups - 1) * cs.gap) / 2;
 }
 
-/** Points per second² that bring a juggled zero back down CATCH_HOP_S after it leaves the cup. */
-function hopGravity(s: GameState): number {
-  return (8 * CATCH_HOP * (s.bottom - s.top)) / (CATCH_HOP_S * CATCH_HOP_S);
+/** Zero `i`'s gravity, in points per second²: CATCH_DROP_S's, slowed by its pace. */
+function gravity(s: GameState, cs: CatchState, i: number): number {
+  const pace = cs.pace[i] ?? 1;
+  return (2 * (s.bottom - s.top)) / (CATCH_DROP_S * CATCH_DROP_S * pace * pace);
 }
 
-/** Place every zero in the top of the board, drifting down, and size the cups to the round. */
+/** Seconds until zero `i`, flying as it is now, comes down to the rims' level. */
+export function landsIn(s: GameState, cs: CatchState, z: Zero, i: number): number {
+  const g = gravity(s, cs, i);
+  const d = Math.max(0, s.bottom - z.ry - z.y);
+  return (Math.sqrt(z.vy * z.vy + 2 * g * d) - z.vy) / g;
+}
+
+/** Place every zero in the top of the board, at rest, and size the cups to the round. */
 export function placeCatch(s: GameState, cfg: GameConfig): void {
   const cs = s.modeState;
   if (cs.mode !== 'catch') return;
@@ -190,13 +168,10 @@ export function placeCatch(s: GameState, cfg: GameConfig): void {
       z.x = between(rng, z.rx, Math.max(z.rx, s.width - z.rx));
       const yMin = s.top + z.ry;
       z.y = between(rng, yMin, Math.max(yMin, yMin + (boardH - 2 * z.ry) * CATCH_START_SHARE));
-      const fall =
-        ((boardH / CATCH_FALL_S) * (1 - CATCH_FALL_JITTER / 2 + random(rng) * CATCH_FALL_JITTER)) /
-        (armored ? CATCH_ARMOR_SLOW : 1);
-      cs.fall[i] = fall;
-      cs.motion[i] = CATCH_DRIFT;
+      cs.pace[i] =
+        (1 - CATCH_PACE_JITTER / 2 + random(rng) * CATCH_PACE_JITTER) * (armored ? CATCH_ARMOR_SLOW : 1);
       z.vx = spread(rng, CATCH_SWAY * s.width);
-      z.vy = fall;
+      z.vy = 0;
       z.delay = random(rng) * span;
       widest = Math.max(widest, z.rx);
       i++;
@@ -217,50 +192,43 @@ function sideWalls(s: GameState, z: Zero): void {
   }
 }
 
-/** Zero `i` landed in cup `k`: a hit, then (if it survives) a hop. */
+/** Zero `i` leaves the rims' level, headed for a high point near the top of the board. */
+function bounce(s: GameState, cs: CatchState, z: Zero, i: number): void {
+  const top = s.top + z.ry;
+  const apex = top + (s.bottom - z.ry - top) * between(s.rng, CATCH_BOUNCE_TO_MIN, CATCH_BOUNCE_TO_MAX);
+  z.vy = -Math.sqrt(2 * gravity(s, cs, i) * Math.max(0, z.y - apex));
+}
+
+/** Zero `i` landed in cup `k`: a hit, then (if it survives) a bounce, off toward the side of the cup it struck. */
 function catchZero(s: GameState, cs: CatchState, z: Zero, i: number, k: number): void {
   s.report.bounces++;
   s.report.dirty = true;
-  cs.misses[i] = 0;
   applyHit(s, s.weapon, z);
   if (!z.alive) return;
-  const mid = cupMid(cs, k);
-  const room = cs.half * CATCH_JUGGLE_SPREAD;
-  cs.motion[i] = CATCH_JUGGLE;
-  cs.slot[i] = mid - cs.cupX + Math.max(-room, Math.min(room, z.x - mid));
   z.cooldown = CATCH_COOLDOWN;
-  z.vx = 0;
-  const boardH = s.bottom - s.top;
-  const height = Math.max(0, Math.min(CATCH_HOP * boardH, boardH - 2 * z.ry));
-  z.vy = -Math.sqrt(2 * hopGravity(s) * height);
+  const along = Math.max(-1, Math.min(1, (z.x - cupMid(cs, k)) / (cs.half + CATCH_EDGE * z.rx)));
+  z.vx = (along * CATCH_DEFLECT * s.width) / (cs.pace[i] ?? 1);
+  bounce(s, cs, z, i);
 }
 
-/** Zero `i` landed beside the cups: it floats back up to drift down again. */
-function missZero(s: GameState, cs: CatchState, z: Zero, i: number): void {
-  cs.misses[i] = (cs.misses[i] ?? 0) + 1;
-  cs.motion[i] = CATCH_FLOAT;
-  const top = s.top + z.ry;
-  const apex = top + (s.bottom - z.ry - top) * between(s.rng, CATCH_FLOAT_TO_MIN, CATCH_FLOAT_TO_MAX);
-  cs.apex[i] = apex;
-  z.vy = -(z.y - apex) / CATCH_FLOAT_S;
-}
-
-function drift(s: GameState, cs: CatchState, z: Zero, i: number, dt: number, late: boolean): void {
-  const fall = cs.fall[i] ?? 0;
-  z.vy += (fall - z.vy) * Math.min(1, dt * CATCH_SETTLE);
+/** The power-up's pull on a falling zero: the Vacuum Beam draws it down its column, and the Magnet, the Vacuum Beam and the Black Hole steer it in. */
+function pull(s: GameState, cs: CatchState, z: Zero, i: number): void {
   const mid = nearestCup(cs, z.x);
   const inColumn = cs.pulling && Math.abs(z.x - mid) <= cs.half + z.rx;
-  if (inColumn) z.vy = Math.max(z.vy, fall * CATCH_VACUUM_FALL);
-  // Steering: the assist and the Black Hole bring a zero all the way in; the Magnet and the
-  // Vacuum Beam pull the ones near a cup.
-  const assisted = late || cs.pull === 'hole' || (cs.misses[i] ?? 0) >= CATCH_ASSIST_MISSES;
+  if (inColumn) z.vy = Math.max(z.vy, (CATCH_VACUUM_FALL * (s.bottom - s.top)) / (cs.pace[i] ?? 1));
   const near = (cs.pull === 'magnet' && Math.abs(z.x - mid) <= MAGNET_REACH * s.width) || inColumn;
-  const steer = cs.pull === 'hole' ? CATCH_HOLE_STEER : assisted || near ? CATCH_STEER_MAX : 0;
-  if (steer > 0) {
-    const landIn = Math.max(CATCH_STEER_MIN_T, (s.bottom - z.ry - z.y) / Math.max(z.vy, 1));
-    const top = steer * s.width;
-    z.vx = Math.max(-top, Math.min(top, (mid - z.x) / landIn));
-  }
+  const steer = cs.pull === 'hole' ? CATCH_HOLE_STEER : near ? CATCH_STEER_MAX : 0;
+  if (steer <= 0) return;
+  const landIn = Math.max(CATCH_STEER_MIN_T, landsIn(s, cs, z, i));
+  const top = steer * s.width;
+  z.vx = Math.max(-top, Math.min(top, (mid - z.x) / landIn));
+}
+
+/** One frame of a zero's flight: gravity, the power-up's pull, the walls, and its landing in a cup or beside them. */
+function fly(s: GameState, cs: CatchState, z: Zero, i: number, dt: number): void {
+  z.vy += gravity(s, cs, i) * dt;
+  // The pulls draw a zero in only on its way down, so every bounce still goes up high.
+  if (z.vy > 0 && cs.pull !== 'none') pull(s, cs, z, i);
   z.x += z.vx * dt;
   z.y += z.vy * dt;
   sideWalls(s, z);
@@ -268,39 +236,11 @@ function drift(s: GameState, cs: CatchState, z: Zero, i: number, dt: number, lat
   z.y = s.bottom - z.ry;
   const k = cupUnder(cs, z);
   if (k >= 0 && catchable(z)) catchZero(s, cs, z, i, k);
-  // An assisted zero waits on the rim's level while it steers into a cup.
-  else if (assisted) z.vy = 0;
-  else missZero(s, cs, z, i);
+  // Beside the cups: off the floor and back up high, along its own path.
+  else bounce(s, cs, z, i);
 }
 
-function juggle(s: GameState, cs: CatchState, z: Zero, i: number, dt: number): void {
-  z.vy += hopGravity(s) * dt;
-  const spot = cs.cupX + (cs.slot[i] ?? 0);
-  z.x += (spot - z.x) * Math.min(1, dt / CATCH_JUGGLE_FOLLOW);
-  z.y += z.vy * dt;
-  if (z.vy <= 0 || z.y < s.bottom - z.ry) return;
-  // It lands in its spot, however fast the cup slid: a juggled zero can't be missed.
-  z.x = spot;
-  z.y = s.bottom - z.ry;
-  const k = cupUnder(cs, z);
-  if (k >= 0 && catchable(z)) catchZero(s, cs, z, i, k);
-  else if (k >= 0) z.vy = 0;
-  // The power-up changed under it and its cup moved away.
-  else missZero(s, cs, z, i);
-}
-
-function float(s: GameState, cs: CatchState, z: Zero, i: number, dt: number): void {
-  z.x += z.vx * dt;
-  z.y += z.vy * dt;
-  sideWalls(s, z);
-  const apex = cs.apex[i] ?? s.top + z.ry;
-  if (z.y > apex) return;
-  z.y = apex;
-  z.vy = 0;
-  cs.motion[i] = CATCH_DRIFT;
-}
-
-/** One frame of Catch: the cups glide toward the finger, and every zero moves, lands, or is caught. */
+/** One frame of Catch: the cups glide toward the finger, and every zero flies, lands, or is caught. */
 export function stepCatch(s: GameState, dt: number): void {
   const cs = s.modeState;
   if (cs.mode !== 'catch') return;
@@ -312,7 +252,6 @@ export function stepCatch(s: GameState, dt: number): void {
   cs.pulling = cs.pull === 'vacuum' && s.pointer.down && s.phase === 'play';
   // The fill freezes whatever's left behind it.
   const moving = s.phase === 'play' || s.phase === 'celebrate';
-  const late = s.sinceDamage >= CATCH_ASSIST_IDLE || liveZeros(s) <= ASSIST_LAST;
   for (let i = 0; i < s.zeros.length; i++) {
     const z = s.zeros[i];
     if (!z || !z.alive) continue;
@@ -320,10 +259,7 @@ export function stepCatch(s: GameState, dt: number): void {
     if (z.hitFlash > 0) z.hitFlash = Math.max(0, z.hitFlash - dt / HIT_FLASH);
     if (z.cooldown > 0) z.cooldown = Math.max(0, z.cooldown - dt);
     if (!moving || z.age < z.delay) continue;
-    const motion = cs.motion[i];
-    if (motion === CATCH_JUGGLE) juggle(s, cs, z, i, dt);
-    else if (motion === CATCH_FLOAT) float(s, cs, z, i, dt);
-    else drift(s, cs, z, i, dt, late);
+    fly(s, cs, z, i, dt);
     if (z.alive) keepOnBoard(z, s);
   }
 }

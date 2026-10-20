@@ -1,10 +1,10 @@
 // Every round can be cleared (SPEC 9: no mode can be lost). The bot plays each mode's weakest and
 // strongest power-up on a phone and a tablet, across the round sizes that change how a round is
 // built (energy zeros, standard, armored, the object cap), and every frame the counter, ×V, the
-// board's edges, the effect caps and the phases must hold. Modes that play on by themselves
-// (Catch's zeros fall, Breaker's balls serve) must also clear with nobody touching the screen,
-// on their assists alone; a long Breaker round, from the last few bricks (a full one would, but
-// can take many minutes with one ball).
+// board's edges, the effect caps and the phases must hold. Breaker plays on by itself (its balls
+// serve), so it must also clear with nobody touching the screen, on its assists alone; a long
+// round from the last few bricks (a full one would, but can take many minutes with one ball).
+// Catch has no assist (SPEC 9): its zeros bounce until the player gets a cup under them.
 import { describe, expect, it } from '@jest/globals';
 
 import { modeTier, WEAPONS, type ModeId, type WeaponDef } from '@/engine';
@@ -14,7 +14,6 @@ import { clearRound, LIMIT_FRAMES, roundConfig, SCREENS, type Cleared, type Hand
 const MODES: readonly ModeId[] = ['shooter', 'catch', 'orbit', 'slice', 'breaker'];
 /** Modes that must clear hands-off, with the weakest power-up: how, by round size. */
 const HANDS_OFF: readonly { mode: ModeId; hands: (n: number) => Hands }[] = [
-  { mode: 'catch', hands: () => 'off' },
   { mode: 'breaker', hands: (n) => (n <= 61 ? 'off' : 'tail') },
 ];
 const SIZES = [1, 7, 8, 60, 61, 250, 1000] as const;
