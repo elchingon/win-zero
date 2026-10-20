@@ -179,9 +179,10 @@ describe('a bonus round', () => {
 });
 
 describe('the game mode (SPEC 9)', () => {
-  it('plays the Shooter in Win Zero, with its hint and weapons', async () => {
+  it('plays the Shooter in Win Zero, with its hint and weapons, and never asks which game', async () => {
     appStore.setState({ goals: [{ goal, round: dayRound(), seenThrough: null }], credits: wallet(0) });
     await open('/play');
+    expect(screen.queryByRole('header', { name: 'Pick your game' })).not.toBeOnTheScreen();
     expect(mockRounds.at(-1)?.mode).toBe('shooter');
     expect(screen.getByText('Hold anywhere to fire', { includeHiddenElements: true })).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Weapon: Twin Barrel' })).toBeOnTheScreen();

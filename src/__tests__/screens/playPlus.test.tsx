@@ -1,12 +1,13 @@
 // The round's theme and game mode in Win Zero Plus (SPEC 9): a day's round wears the saved theme
-// once it's earned, and a practice link can try on any theme, and any mode whose round is built.
-// The canvas is stood in for, keeping each round it's handed and its colors.
+// once it's earned; before a round not yet played, the player picks its game; and a practice link
+// can try on any theme, and any mode whose round is built. The canvas is stood in for, keeping
+// each round it's handed and its colors.
 import './env/plus';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { beforeAll, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { router } from 'expo-router';
-import { act, renderRouter, screen } from 'expo-router/testing-library';
+import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 
 import PlayScreen from '@/app/play';
 import { PLAYABLE_MODES, THEME_UNLOCK_EMBER } from '@/engine';
@@ -14,6 +15,7 @@ import { DAY0, newGoal, yesDays } from '@/engine/__tests__/fixtures';
 import { appStore, type RoundRecord } from '@/store';
 import { DEFAULT_PERSISTED } from '@/store/migrate';
 import { THEME_LOOKS, type ThemeLook } from '@/theme/themes';
+import { WEAPON_PROMPT } from '@/ui/copy/credits';
 import { MODE_COPY } from '@/ui/copy/modes';
 
 jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock'));
@@ -52,6 +54,11 @@ async function open(path: string) {
   await renderRouter(ROUTES, { initialUrl: path });
 }
 
+/** Answer the game picker with a game, by its name. */
+const pickGame = (name: string) => fireEvent.press(screen.getByRole('button', { name: new RegExp(`^${name}[.,]`) }));
+/** Answer the game picker with the last pick. */
+const pickLast = () => fireEvent.press(screen.getByRole('button', { name: /, your last pick\./ }));
+
 beforeAll(async () => {
   for (let i = 0; i < 50 && !appStore.getState().hydrated; i++) await new Promise((r) => setTimeout(r, 0));
 });
@@ -66,6 +73,7 @@ describe('the theme in Win Zero Plus (SPEC 9)', () => {
   it("plays a day's round in the saved theme", async () => {
     appStore.setState({ theme: 'pastel' });
     await open('/play');
+    await pickLast();
     expect(mockRounds.length).toBeGreaterThan(0);
     expect(looks().every((l) => l === THEME_LOOKS.pastel)).toBe(true);
   });
@@ -73,6 +81,7 @@ describe('the theme in Win Zero Plus (SPEC 9)', () => {
   it('plays a saved theme in Classic until it is earned', async () => {
     appStore.setState({ theme: 'ember' });
     await open('/play');
+    await pickLast();
     expect(mockRounds.length).toBeGreaterThan(0);
     expect(looks().every((l) => l === THEME_LOOKS.classic)).toBe(true);
   });
@@ -80,6 +89,7 @@ describe('the theme in Win Zero Plus (SPEC 9)', () => {
   it('plays an earned theme by the shared best, whatever the streak now', async () => {
     appStore.setState({ theme: 'ember', arsenalBest: THEME_UNLOCK_EMBER });
     await open('/play');
+    await pickLast();
     expect(mockRounds.length).toBeGreaterThan(0);
     expect(looks().every((l) => l === THEME_LOOKS.ember)).toBe(true);
   });
@@ -98,10 +108,49 @@ describe('the theme in Win Zero Plus (SPEC 9)', () => {
   });
 });
 
+describe('the game picker before a round (SPEC 9)', () => {
+  it("asks which game before a day's round, then saves the pick and plays it", async () => {
+    await open('/play');
+    expect(screen.getByRole('header', { name: 'Pick your game' })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: /^Shooter, your last pick\./ })).toBeOnTheScreen();
+    expect(mockRounds).toHaveLength(0);
+    await pickGame('Slice');
+    expect(appStore.getState().gameMode).toBe('slice');
+    expect(mockRounds.length).toBeGreaterThan(0);
+    expect(mockRounds.every((r) => r.mode === 'slice')).toBe(true);
+  });
+
+  it('asks before a bonus round too', async () => {
+    appStore.setState({ bonus: { n: 100, borrowed: [], played: false } });
+    await open('/play?round=bonus');
+    await pickGame('Breaker');
+    expect(mockRounds.every((r) => r.mode === 'breaker')).toBe(true);
+    expect(screen.getByText('BONUS')).toBeOnTheScreen();
+  });
+
+  it("doesn't ask before a replay, which keeps the saved game", async () => {
+    appStore.setState({ gameMode: 'orbit', goals: [{ goal, round: { ...dayRound, played: true }, seenThrough: null }] });
+    await open('/play');
+    expect(screen.queryByRole('header', { name: 'Pick your game' })).not.toBeOnTheScreen();
+    expect(mockRounds.every((r) => r.mode === 'orbit')).toBe(true);
+  });
+
+  it('asks about a Weapon credit after the game, in its words', async () => {
+    appStore.setState({ credits: { balance: { game: 0, weapon: 1 }, claimed: [] } });
+    await open('/play');
+    await pickGame('Catch');
+    expect(screen.getByRole('header', { name: WEAPON_PROMPT.title })).toBeOnTheScreen();
+    expect(screen.getByText(/Pick a catcher you haven't unlocked yet/)).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: WEAPON_PROMPT.skip }));
+    expect(mockRounds.every((r) => r.mode === 'catch')).toBe(true);
+  });
+});
+
 describe('the game mode in Win Zero Plus (SPEC 9)', () => {
   it("plays a day's round in the saved mode, in its words", async () => {
     appStore.setState({ gameMode: 'catch' });
     await open('/play');
+    await pickLast();
     expect(mockRounds.length).toBeGreaterThan(0);
     expect(mockRounds.every((r) => r.mode === 'catch')).toBe(true);
     expect(screen.getByText('Slide anywhere to catch the zeros', { includeHiddenElements: true })).toBeOnTheScreen();
@@ -147,6 +196,7 @@ describe('a bonus round with several goals (SPEC 9)', () => {
       bonus: { n: 100, borrowed: [], played: false },
     });
     await open('/play?round=bonus');
+    await pickLast();
     expect(screen.getByRole('button', { name: 'Bomb, 5 left' })).toBeOnTheScreen();
   });
 });

@@ -4,7 +4,20 @@
 
 export const GAMES_COPY = {
   title: 'Games',
-  lede: 'Every round plays in the game you pick: your daily rounds, replays and bonus rounds.',
+  lede: 'Your go-to game. You can pick another before each new round, and a replay keeps the game you played.',
+  /** Each game's row, for screen readers. */
+  optionHint: 'Comes up first before each new round',
+} as const;
+
+/** Before a round not yet played: which game to play it in. */
+export const MODE_PICKER = {
+  title: 'Pick your game',
+  body: 'Same zeros, your way. Tap a game to play this round in it.',
+  /** On the game picked last. */
+  current: 'Last pick',
+  optionHint: 'Plays this round in this game',
+  /** One game, read out: 'Catch, your last pick. Slide anywhere to catch the zeros. Catcher: Cup.' */
+  option: (name: string, hint: string, tier: string, last: boolean) => `${name}${last ? ', your last pick' : ''}. ${hint}. ${tier}.`,
 } as const;
 
 export const THEMES_COPY = {

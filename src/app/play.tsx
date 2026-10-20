@@ -3,9 +3,10 @@
 // sheet over the fill. A real round is the one the latest Yes earned (its rewards are already
 // banked, and only revealed here); Replay plays it again in place, with
 // no effect on the streak. /play?round=bonus plays the bonus round a Game credit paid for, which
-// changes nothing either. Before a round not yet played, a player holding a Weapon credit is
-// asked whether to borrow a weapon they haven't unlocked for it. Every round plays in the game
-// mode and theme picked in Settings (SPEC 9), which in Win Zero are always the Shooter and Classic.
+// changes nothing either. Before a round not yet played, Win Zero Plus asks which game to play it
+// in (SPEC 9), and a player holding a Weapon credit is asked whether to borrow a weapon they
+// haven't unlocked for it. Every round plays in the game mode and theme picked (in Settings, or
+// for the game, before the round), which in Win Zero are always the Shooter and Classic.
 // Development builds, and release builds made with EXPO_PUBLIC_PERF_BUILD=1 (eas build
 // --profile perf), can open /play?practice=N to play any N with every weapon and a frame
 // meter, and nothing about the streak changes. In Win Zero Plus, /play?practice=N&theme=<id>
@@ -60,6 +61,14 @@ import { creditReveal } from '@/ui/copy/credits';
 import { CrashScreen } from '@/ui/CrashScreen';
 import { CreditPopup } from '@/ui/CreditPopup';
 import { FEATURES } from '@/variant';
+
+// Win Zero Plus only: the game picker before a round (SPEC 9). The literal comparison folds per
+// file, so Win Zero's bundle leaves it out.
+const PlusPlay: typeof import('@/plus/play') | null =
+  process.env.EXPO_PUBLIC_APP_VARIANT === 'plus'
+    ? // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require('@/plus/play')
+    : null;
 
 /** Practice rounds: development builds, and release builds made for measuring frame rate. */
 const PRACTICE_ENABLED = __DEV__ || process.env.EXPO_PUBLIC_PERF_BUILD === '1';
@@ -122,7 +131,7 @@ function StoreRound({ goalId: wanted }: { goalId?: string }) {
   if (!slot || !record) return <Redirect href="/" />;
   const goalId = slot.goal.goalId;
   // Home only offers rounds not yet played; one that was is a replay.
-  return (
+  const round = (
     <WeaponCreditGate target={{ round: 'daily', goalId }} fresh={!record.played} best={best} borrowed={record.borrowed}>
       {(borrowed) => (
         <Round
@@ -136,6 +145,7 @@ function StoreRound({ goalId: wanted }: { goalId?: string }) {
       )}
     </WeaponCreditGate>
   );
+  return PlusPlay ? <PlusPlay.ModeGate fresh={!record.played}>{round}</PlusPlay.ModeGate> : round;
 }
 
 const BONUS: CreditRound = { round: 'bonus' };
@@ -145,11 +155,12 @@ function BonusStoreRound() {
   const best = useApp(arsenalBestOf);
   const hasGoal = useApp((s) => s.goals.length > 0);
   if (!bonus || !hasGoal) return <Redirect href="/" />;
-  return (
+  const round = (
     <WeaponCreditGate target={BONUS} fresh={!bonus.played} best={best} borrowed={bonus.borrowed}>
       {(borrowed) => <Round initialMode="bonus" goalId={null} n={bonus.n} best={best} record={null} borrowed={borrowed} />}
     </WeaponCreditGate>
   );
+  return PlusPlay ? <PlusPlay.ModeGate fresh={!bonus.played}>{round}</PlusPlay.ModeGate> : round;
 }
 
 /**

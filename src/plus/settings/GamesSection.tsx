@@ -27,7 +27,7 @@ export function GamesSection() {
             label={m.name}
             detail={`${MODE_COPY[m.id].hint}. ${MODE_COPY[m.id].tier}: ${modeTier(m.id, weapon.id)}`}
             checked={m.id === mode}
-            accessibilityHint="Plays every round in this game"
+            accessibilityHint={GAMES_COPY.optionHint}
             onPress={() => appStore.getState().setGameMode(m.id)}
           />
         ))}
