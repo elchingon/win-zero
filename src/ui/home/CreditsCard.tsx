@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import type { CreditWallet, GoalState } from '@/engine';
+import type { CreditWallet } from '@/engine';
 import type { BonusRound } from '@/store';
 import { colors, fonts, type } from '@/theme/tokens';
 import { Card, Eyebrow, Fine, shared, StatTile } from '@/ui/bits';
@@ -14,7 +14,8 @@ import { creditCount, creditNotes, CREDITS_HOME } from '@/ui/copy/credits';
 import { BonusRoundSheet } from './BonusRoundSheet';
 
 export function CreditsCard(props: {
-  goal: GoalState;
+  /** How far the shared arsenal reaches (arsenalBestOf): which weapons a credit could still lend. */
+  best: number;
   credits: CreditWallet;
   bonus: BonusRound | null;
   /** Spend a Game credit on a bonus round of `n` zeros and open it. */
@@ -22,11 +23,11 @@ export function CreditsCard(props: {
   /** Open the bonus round already paid for. */
   onPlayBonus: () => void;
 }) {
-  const { goal, credits, bonus, onStartBonus, onPlayBonus } = props;
+  const { best, credits, bonus, onStartBonus, onPlayBonus } = props;
   const [choosing, setChoosing] = useState(false);
   const { game, weapon } = credits.balance;
   const ready = bonus && !bonus.played ? bonus : null;
-  const notes = creditNotes(credits, goal.bestStreak, ready !== null);
+  const notes = creditNotes(credits, best, ready !== null);
 
   return (
     <View style={shared.section}>

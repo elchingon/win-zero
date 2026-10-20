@@ -1,17 +1,24 @@
-// Weapons by unlock day with progress to the next one (the prototype's .arsenal list).
-// Tapping an unlocked weapon equips it; a new unlock equips itself.
+// Weapons by unlock day with progress to the next one (the prototype's .arsenal list), shared
+// by every goal (SPEC 9). Tapping an unlocked weapon equips it; a new unlock equips itself.
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { arsenal, equippedWeapon, nextUnlock, type GoalState, type WeaponId } from '@/engine';
+import { arsenal, equippedWeapon, nextUnlock, type WeaponId } from '@/engine';
 import { plural } from '@/lib/format';
 import { colors, fonts, space } from '@/theme/tokens';
 import { Eyebrow, Fine, shared } from '@/ui/bits';
 import { feedback } from '@/ui/feedback';
 
-export function Arsenal(props: { goal: GoalState; pick: WeaponId | null; onEquip: (id: WeaponId) => void }) {
-  const { goal, pick, onEquip } = props;
-  const next = nextUnlock(goal.bestStreak, goal.streak);
-  const equipped = equippedWeapon(pick, goal.bestStreak);
+export function Arsenal(props: {
+  /** How far the shared arsenal reaches (arsenalBestOf). */
+  best: number;
+  /** The streak closest to the next unlock (arsenalStreakOf). */
+  streak: number;
+  pick: WeaponId | null;
+  onEquip: (id: WeaponId) => void;
+}) {
+  const { best, streak, pick, onEquip } = props;
+  const next = nextUnlock(best, streak);
+  const equipped = equippedWeapon(pick, best);
   const progress = next ? next.progress : 1;
   return (
     <View style={shared.section}>
@@ -33,7 +40,7 @@ export function Arsenal(props: { goal: GoalState; pick: WeaponId | null; onEquip
         <View style={[styles.fill, { width: `${Math.round(progress * 100)}%` }]} />
       </View>
       <View style={shared.list}>
-        {arsenal(goal.bestStreak, goal.streak).map(({ weapon, unlocked, daysToGo }) => {
+        {arsenal(best, streak).map(({ weapon, unlocked, daysToGo }) => {
           const isEquipped = weapon.id === equipped.id;
           const status = isEquipped ? 'EQUIPPED' : unlocked ? 'READY' : `${daysToGo}D TO GO`;
           return (

@@ -14,7 +14,7 @@ import {
   type GoalState,
 } from '@/engine';
 import { formatClockTime, formatWhen } from '@/lib/format';
-import { appStore, isMovedOut, primaryGoal, primaryRound, useApp } from '@/store';
+import { appStore, arsenalBestOf, arsenalStreakOf, isMovedOut, primaryGoal, primaryRound, useApp } from '@/store';
 import { cancelMove, confirmMoveByHand, openPlus, sendMoveOut } from '@/transfer/send';
 import { colors, fonts, space, type } from '@/theme/tokens';
 import { Card, Eyebrow, Fine } from '@/ui/bits';
@@ -68,6 +68,9 @@ function MovedHome() {
 
 function HomeScreen({ goal }: { goal: GoalState }) {
   const round = useApp(primaryRound);
+  // The arsenal and credits are shared by every goal (SPEC 9): with one goal, these are its own.
+  const best = useApp(arsenalBestOf);
+  const streak = useApp(arsenalStreakOf);
   const pick = useApp((s) => s.weapon);
   const selectWeapon = useApp((s) => s.selectWeapon);
   const credits = useApp((s) => s.credits);
@@ -222,9 +225,9 @@ function HomeScreen({ goal }: { goal: GoalState }) {
         <Fine>Reminders are paused after a long break. Check in whenever you&apos;re ready and they&apos;ll pick back up.</Fine>
       ) : null}
 
-      <CreditsCard goal={goal} credits={credits} bonus={bonus} onStartBonus={startBonus} onPlayBonus={playBonus} />
+      <CreditsCard best={best} credits={credits} bonus={bonus} onStartBonus={startBonus} onPlayBonus={playBonus} />
 
-      <Arsenal goal={goal} pick={pick} onEquip={selectWeapon} />
+      <Arsenal best={best} streak={streak} pick={pick} onEquip={selectWeapon} />
 
       <HistoryCalendar
         goal={goal}
