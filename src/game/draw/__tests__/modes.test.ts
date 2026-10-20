@@ -6,7 +6,7 @@ import type { SkCanvas, SkImage } from '@shopify/react-native-skia';
 
 import type { ModeId, WeaponId } from '@/engine';
 
-import { pointerDown } from '../../sim/input';
+import { pointerDown, pointerMove } from '../../sim/input';
 import { step } from '../../sim/step';
 import type { GameState } from '../../sim/types';
 import { modeGame, popIn } from '../../sim/__tests__/fixtures';
@@ -91,14 +91,23 @@ function drawnAsShooter(s: GameState): string[] {
 const MODES: readonly { mode: ModeId; tiers: WeaponId[] }[] = [
   { mode: 'catch', tiers: ['pea', 'twin', 'rocket', 'laser', 'nuke'] },
   { mode: 'orbit', tiers: ['pea', 'laser', 'nuke'] },
+  { mode: 'slice', tiers: ['pea', 'twin', 'laser'] },
 ];
+
+/** A finger on the board, sliding: every mode has something to show for it. */
+function play(s: GameState): void {
+  pointerDown(s, s.width / 3, s.height / 2);
+  for (let f = 0; f < 30; f++) {
+    pointerMove(s, s.width / 3 + f * 6, s.height / 2 - f * 2);
+    step(s, 1 / 60);
+  }
+}
 
 describe.each(MODES)('$mode', ({ mode, tiers }) => {
   it.each(tiers)('draws its own pieces in play with the %s tier, not the turret', (tier) => {
     const s = modeGame(mode, 60, { weapon: tier });
     popIn(s);
-    pointerDown(s, s.width / 3, s.height / 2);
-    for (let f = 0; f < 30; f++) step(s, 1 / 60);
+    play(s);
     const calls = draw(s);
     expect(calls.length).toBeGreaterThan(0);
     expect(calls).not.toEqual(drawnAsShooter(s));
@@ -107,6 +116,7 @@ describe.each(MODES)('$mode', ({ mode, tiers }) => {
   it('draws its pieces through the celebration, and nothing of them over the fill', () => {
     const s = modeGame(mode, 7);
     popIn(s);
+    play(s);
     s.zeros.forEach((z) => (z.alive = false));
     s.phase = 'celebrate';
     expect(draw(s)).not.toEqual(drawnAsShooter(s));

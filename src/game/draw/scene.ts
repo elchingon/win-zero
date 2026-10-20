@@ -11,6 +11,7 @@ import { drawFill } from './fill';
 import { drawBeams, drawBolts, drawBullets, drawParticles, drawRings } from './fx';
 import { drawCatch } from './modes/catch';
 import { drawOrbit } from './modes/orbit';
+import { drawSlice } from './modes/slice';
 import { drawTurret } from './turret';
 import type { Kit, Scratch } from './types';
 import { paintColor, rect } from './util';
@@ -63,6 +64,9 @@ export function drawScene(canvas: SkCanvas, s: GameState, kit: Kit, atlas: SkIma
         break;
       case 'orbit':
         drawOrbit(canvas, s, kit, sc);
+        break;
+      case 'slice':
+        drawSlice(canvas, s, kit, sc);
         break;
       case 'shooter':
       default:

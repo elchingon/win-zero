@@ -10,6 +10,8 @@ export const POP_MIN_MS = 35;
 export const KILL_HAPTIC_MIN_MS = 60;
 /** Bounces closer together than this blur into one. */
 export const BOUNCE_MIN_MS = 45;
+/** Swishes closer together than this sound like one long one. */
+export const SWISH_MIN_MS = 90;
 
 export interface Cues {
   shoot: boolean;
@@ -20,6 +22,8 @@ export interface Cues {
   boomHaptic: boolean;
   /** Win Zero Plus's game modes only: a catch, or a ball off the paddle or a brick. */
   bounce?: boolean;
+  /** Win Zero Plus's Slice only: the blade's swing. */
+  swish?: boolean;
 }
 
 /** A gate that opens at most once per `minMs`. */
@@ -63,11 +67,24 @@ function catchCues(): CueSheet {
   };
 }
 
+/** Slice: a swish for each swing of the blade, and the Shooter's pops and booms. */
+function sliceCues(): CueSheet {
+  const shooter = shooterCues();
+  const swishGate = makeGate(SWISH_MIN_MS);
+  return (r, nowMs) => {
+    const c = shooter(r, nowMs);
+    c.swish = r.swishes > 0 && swishGate(nowMs);
+    return c;
+  };
+}
+
 /** A cue sheet for one round in `mode`: call it with each report and the time it arrived. */
 export function makeCues(mode: ModeId = DEFAULT_MODE): CueSheet {
   switch (mode) {
     case 'catch':
       return catchCues();
+    case 'slice':
+      return sliceCues();
     // Orbit's turret sounds as the Shooter's does.
     case 'orbit':
     case 'shooter':

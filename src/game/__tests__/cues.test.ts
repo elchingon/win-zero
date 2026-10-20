@@ -1,7 +1,7 @@
 // Turning frame reports into sounds and haptics, with pops and kill buzzes throttled.
 import { describe, expect, it } from '@jest/globals';
 
-import { BOUNCE_MIN_MS, KILL_HAPTIC_MIN_MS, makeCues, makeGate, POP_MIN_MS } from '../cues';
+import { BOUNCE_MIN_MS, KILL_HAPTIC_MIN_MS, makeCues, makeGate, POP_MIN_MS, SWISH_MIN_MS } from '../cues';
 import { makeReport, resetReport } from '../sim/report';
 import type { Report } from '../sim/types';
 
@@ -83,6 +83,23 @@ describe('Orbit’s cues', () => {
     const shooter = makeCues('shooter');
     const reports = [report({ shots: 1 }), report({ kills: 2 }), report({ blasts: 1 }), report({ bombs: 1 }), report({ final: true })];
     expect(reports.map((r, i) => orbit(r, i * 10))).toEqual(reports.map((r, i) => shooter(r, i * 10)));
+  });
+});
+
+describe('Slice’s cues', () => {
+  it('swishes for a swing of the blade, at most every ' + SWISH_MIN_MS + ' ms', () => {
+    const cues = makeCues('slice');
+    expect([0, 50, 95, 120].map((t) => cues(report({ swishes: 1 }), t).swish)).toEqual([true, false, true, false]);
+    expect(cues(report({}), 400).swish).toBe(false);
+  });
+
+  it('pops for a cut that destroys, and booms for the last zero', () => {
+    expect(makeCues('slice')(report({ swishes: 1, kills: 1 }), 0)).toMatchObject({ swish: true, pop: true, shoot: false });
+    expect(makeCues('slice')(report({ kills: 1, final: true }), 0)).toMatchObject({ boom: true, pop: false });
+  });
+
+  it('never swishes in the Shooter', () => {
+    expect(makeCues('shooter')(report({ swishes: 3 }), 0).swish).toBeUndefined();
   });
 });
 
