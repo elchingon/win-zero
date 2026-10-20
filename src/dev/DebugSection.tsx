@@ -1,6 +1,7 @@
 // Development builds only (Settings and Home load this behind __DEV__, so production bundles
 // leave it out). Moves the app's clock to test missed days, slips and resets on a device, jumps
-// to a long run to try later weapons, armored zeros and big fills, and sends a test check-in.
+// to a long run to try later weapons, armored zeros and big fills, and sends a test check-in. In
+// Win Zero Plus, it also switches the app icon.
 import * as Notifications from 'expo-notifications';
 import { router, usePathname } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -14,8 +15,10 @@ import { appStore, primaryGoal, useApp } from '@/store';
 import { colors, fonts, radii, space } from '@/theme/tokens';
 import { Eyebrow, Fine, TextField } from '@/ui/bits';
 import { Button, LinkButton } from '@/ui/Button';
+import { FEATURES } from '@/variant';
 
 import { debugReadout, JUMP_DAYS, parseCount, PRACTICE_MAX_N } from './demo';
+import { IconChips } from './IconChips';
 import { summarizePending, type PendingSummary } from './pending';
 import { SEED_MAX_N } from './seedRun';
 
@@ -124,6 +127,8 @@ export function DebugSection() {
         <Button small variant="ghost" label="Refresh" onPress={readScheduled} />
       </View>
       {testNote ? <Fine>{testNote}</Fine> : null}
+
+      {FEATURES.altIcons ? <IconChips /> : null}
 
       <Eyebrow>Jump to day</Eyebrow>
       <Fine>
