@@ -151,6 +151,16 @@ describe('reading saved credits and rounds', () => {
     };
     expect(firstRound({ goals: [{ goal, round: saved }] })).toMatchObject({ rewards: { credits: [grant] }, borrowed: ['nuke'] });
   });
+
+  it("keeps the earned themes a round's Yes opened, each once, and leaves the key off otherwise", () => {
+    const saved = { ...round, unlocks: ['ember', 'sepia', 'ember', 7, 'gold'] };
+    expect(firstRound({ goals: [{ goal, round: saved }] })?.unlocks).toEqual(['ember', 'gold']);
+    for (const unlocks of [[], ['sepia'], 'ember', null, { ember: true }]) {
+      expect(firstRound({ goals: [{ goal, round: { ...round, unlocks } }] })).not.toHaveProperty('unlocks');
+    }
+    // A round saved before themes, or by Win Zero, has none.
+    expect(firstRound({ goals: [{ goal, round }] })).not.toHaveProperty('unlocks');
+  });
 });
 
 describe('reading move records (SPEC 9)', () => {

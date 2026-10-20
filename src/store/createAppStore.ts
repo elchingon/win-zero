@@ -17,10 +17,12 @@ import {
   isUnlocked,
   missDigest,
   MS_PER_DAY,
+  newlyUnlockedThemes,
   nextWindow,
   pendingWindow,
   resolve,
   setCheckInDays as setGoalCheckInDays,
+  setGoalAlias as setGoalLockScreenName,
   setCheckInTime as setGoalCheckInTime,
   setGoalText as setGoalWording,
   setMorningTime as setGoalMorningTime,
@@ -158,6 +160,11 @@ export interface AppState extends PersistedState {
   /** Drop one of a goal's banked bombs, in that goal's round. */
   spendBomb: (goalId: string) => boolean;
   setGoalText: (goalId: string, text: string) => EditResult;
+  /**
+   * A goal's lock-screen name (SPEC 9): with "Goal in reminders" off and more than one goal,
+   * reminders call the goal by it. Empty clears it. Trimmed, at most GOAL_ALIAS_MAX_LENGTH.
+   */
+  setGoalAlias: (goalId: string, alias: string) => EditResult;
   setCheckInTime: (goalId: string, time: ClockTime) => EditResult;
   setMorningTime: (goalId: string, time: ClockTime) => EditResult;
   /** The weekdays a goal checks in on, where the app offers that (Limits). */
@@ -398,7 +405,8 @@ export function createAppStore(deps: StoreDeps) {
             const slot = slotOf(goalId);
             if (!slot) return null;
             const at = now();
-            const r = answerCheckIn(slot.goal, { answer: ans, day, arsenalBest: reach() }, at, timeZone());
+            const before = reach();
+            const r = answerCheckIn(slot.goal, { answer: ans, day, arsenalBest: before }, at, timeZone());
             const { notices } = get();
             if (!r.ok) {
               setSlot(goalId, r.state, {}, { rejection: { reason: r.reason, goalId }, undo: null });
@@ -406,6 +414,14 @@ export function createAppStore(deps: StoreDeps) {
               const { day, streak, rewards } = r.outcome;
               const newest = rewards.weapons.at(-1);
               const earned = claimCredits(get().credits, { type: 'yes', goal: r.state });
+              // Earned themes this Yes opened, for the result sheet (SPEC 9). Left off the round
+              // when there are none, so a round saved by Win Zero keeps its shape.
+              const after = arsenalReach(
+                get().arsenalBest,
+                get().goals.map((other) => (other.goal.goalId === goalId ? r.state : other.goal)),
+              );
+              const themesEnabled = limits.themesEnabled;
+              const unlocks = newlyUnlockedThemes(before, after, { themesEnabled }).map((t) => t.id);
               setSlot(
                 goalId,
                 r.state,
@@ -422,6 +438,7 @@ export function createAppStore(deps: StoreDeps) {
                     },
                     borrowed: [],
                     played: false,
+                    ...(unlocks.length > 0 ? { unlocks } : {}),
                   },
                 },
                 {
@@ -552,6 +569,8 @@ export function createAppStore(deps: StoreDeps) {
             if (slotOf(goalId) && !text.trim()) return { ok: false, reason: 'empty-goal' };
             return edit(goalId, (goal) => setGoalWording(goal, text));
           },
+
+          setGoalAlias: (goalId, alias) => edit(goalId, (goal) => setGoalLockScreenName(goal, alias)),
 
           setCheckInTime: (goalId, time) =>
             edit(goalId, (goal) => setGoalCheckInTime(goal, time, now(), timeZone()).state),

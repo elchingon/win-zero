@@ -7,6 +7,7 @@ import {
   BONUS_MAX_N,
   currentCheckInTime,
   EMPTY_WALLET,
+  GOAL_ALIAS_MAX_LENGTH,
   latestScheduleEntry,
   MODE_IDS,
   MS_PER_DAY,
@@ -842,6 +843,79 @@ describe('themes (SPEC 9)', () => {
     h.store.getState().setTheme('pastel');
     h.store.getState().erase();
     expect(h.store.getState().theme).toBeNull();
+  });
+});
+
+describe('themes a Yes unlocked (SPEC 9)', () => {
+  /** A goal answered Yes on the n days before 10-13, with 10-13's check-in open at 21:00. */
+  async function plusAt(n: number, opts: { limits?: typeof PLUS_LIMITS } = { limits: PLUS_LIMITS }) {
+    const from = addDays(DAY0, -n);
+    const h = await withGoal(yesDays(newGoal({ day: from }), from, n), opts);
+    h.setTime(DAY0, '21:00');
+    return h;
+  }
+
+  it('records Ember on the Yes that reaches 30', async () => {
+    const h = await plusAt(THEME_UNLOCK_EMBER - 1);
+    h.store.getState().answer(gid(h.store), 'yes');
+    expect(primaryRound(h.store.getState())).toMatchObject({ n: THEME_UNLOCK_EMBER, unlocks: ['ember'] });
+  });
+
+  it('records nothing once the shared best had already passed it', async () => {
+    const other = await plusAt(THEME_UNLOCK_EMBER - 1);
+    const from = addDays(DAY0, -40);
+    const forty = { ...yesDays(newGoal({ day: from }), from, 40), goalId: 'g2' };
+    other.store.setState({ goals: [...other.store.getState().goals, { goal: forty, round: null, seenThrough: null }] });
+    other.store.getState().answer(gid(other.store), 'yes');
+    expect(primaryRound(other.store.getState())).toMatchObject({ n: THEME_UNLOCK_EMBER });
+    expect(primaryRound(other.store.getState())).not.toHaveProperty('unlocks');
+
+    const archived = await plusAt(THEME_UNLOCK_EMBER - 1);
+    archived.store.setState({ arsenalBest: THEME_UNLOCK_EMBER });
+    archived.store.getState().answer(gid(archived.store), 'yes');
+    expect(primaryRound(archived.store.getState())).not.toHaveProperty('unlocks');
+  });
+
+  it('records only the step a debug jump takes: Ember at 30, Gold Year at 365', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 2), { limits: PLUS_LIMITS });
+    h.store.getState().devJumpToDay(gid(h.store), THEME_UNLOCK_EMBER);
+    expect(primaryRound(h.store.getState())?.unlocks).toEqual(['ember']);
+    h.store.getState().devJumpToDay(gid(h.store), THEME_UNLOCK_GOLD);
+    expect(primaryRound(h.store.getState())?.unlocks).toEqual(['gold']);
+  });
+
+  it('records nothing in Win Zero, which has no themes to earn', async () => {
+    const h = await plusAt(THEME_UNLOCK_EMBER - 1, {});
+    h.store.getState().answer(gid(h.store), 'yes');
+    expect(primaryRound(h.store.getState())).toMatchObject({ n: THEME_UNLOCK_EMBER, rewards: { weapons: ['chain'] } });
+    expect(primaryRound(h.store.getState())).not.toHaveProperty('unlocks');
+  });
+});
+
+describe('lock-screen names (SPEC 9)', () => {
+  it('keeps a trimmed name up to its limit, and clears it when emptied', async () => {
+    const h = await withGoal(newGoal(), { limits: PLUS_LIMITS });
+    const id = gid(h.store);
+    expect(h.store.getState().setGoalAlias(id, '  Morning run  ')).toEqual({ ok: true });
+    expect(primaryGoal(h.store.getState())?.alias).toBe('Morning run');
+    h.store.getState().setGoalAlias(id, 'x'.repeat(GOAL_ALIAS_MAX_LENGTH + 5));
+    expect(primaryGoal(h.store.getState())?.alias).toHaveLength(GOAL_ALIAS_MAX_LENGTH);
+    expect(h.store.getState().setGoalAlias(id, '   ')).toEqual({ ok: true });
+    expect(primaryGoal(h.store.getState())).not.toHaveProperty('alias');
+    expect(h.store.getState().setGoalAlias('nobody', 'Run')).toEqual({ ok: false, reason: 'no-goal' });
+  });
+
+  it('waits for storage, then saves it', async () => {
+    const h = harness({ limits: PLUS_LIMITS });
+    expect(h.store.getState().setGoalAlias('goal-1', 'Run')).toEqual({ ok: false, reason: 'no-goal' });
+    await ready(h.store);
+    h.store.getState().addGoal({ goal: 'Exercise more', checkInTime: '19:00', morningTime: '08:00' });
+    h.store.getState().setGoalAlias(gid(h.store), 'Run');
+    await flush();
+
+    const b = harness({ limits: PLUS_LIMITS });
+    await ready(b.store);
+    expect(primaryGoal(b.store.getState())?.alias).toBe('Run');
   });
 });
 

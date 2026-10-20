@@ -53,6 +53,8 @@ export interface RoundRecord {
   /** Weapons not yet unlocked that a Weapon credit lent this round. */
   borrowed: WeaponId[];
   played: boolean;
+  /** Earned themes this Yes opened (Win Zero Plus), for the result sheet. Absent when none. */
+  unlocks?: ThemeId[];
 }
 
 /**

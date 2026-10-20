@@ -15,6 +15,7 @@ import {
   type CreditKind,
   type CreditWallet,
   type GoalState,
+  type ThemeId,
   type WeaponId,
 } from '@/engine';
 
@@ -57,6 +58,8 @@ const bool = (v: unknown, fallback: boolean) => (typeof v === 'boolean' ? v : fa
 const count = (v: unknown, fallback: number) => (typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : fallback);
 const isWeaponId = (v: unknown): v is WeaponId => WEAPONS.some((w) => w.id === v);
 const weaponIds = (v: unknown): WeaponId[] => (Array.isArray(v) ? v.filter(isWeaponId) : []);
+/** Known theme ids, each once. */
+const themeIds = (v: unknown): ThemeId[] => (Array.isArray(v) ? [...new Set(v.filter(isThemeId))] : []);
 const isCreditKind = (v: unknown): v is CreditKind => CREDIT_KINDS.some((k) => k === v);
 const dayOrNull = (v: unknown) => (typeof v === 'string' && isValidDayKey(v) ? v : null);
 const instantOrNull = (v: unknown) => (typeof v === 'string' && !Number.isNaN(Date.parse(v)) ? v : null);
@@ -168,7 +171,10 @@ function normalizeRound(v: unknown): RoundRecord | null {
     // Added with credits (SPEC v0.5).
     credits: Array.isArray(r.credits) ? r.credits.map(normalizeGrant).filter((g) => g !== null) : [],
   };
-  return { day, n: v.n, rewards, borrowed: weaponIds(v.borrowed), played: bool(v.played, true) };
+  const round: RoundRecord = { day, n: v.n, rewards, borrowed: weaponIds(v.borrowed), played: bool(v.played, true) };
+  // Added with Win Zero Plus's themes (SPEC 9); left off when there are none, as it's saved.
+  const unlocks = themeIds(v.unlocks);
+  return unlocks.length > 0 ? { ...round, unlocks } : round;
 }
 
 /** A paid-for bonus round. When in doubt it's still there to play: the credit was spent. */
