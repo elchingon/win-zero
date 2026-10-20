@@ -1,6 +1,6 @@
 // The round screen's way in: the day's round or a bonus round, with the Weapon credit question
 // first when a credit could lend it something. The canvas (Skia) is stood in for by a line
-// naming its weapon and zeros, keeping each round it's handed; the HUD is the real one.
+// naming its weapon and zeros, keeping each round it's handed and its colors; the HUD is the real one.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { renderRouter, fireEvent, screen } from 'expo-router/testing-library';
@@ -10,18 +10,20 @@ import { weaponById, type CreditWallet, type WeaponId } from '@/engine';
 import { DAY0, newGoal, yesDays } from '@/engine/__tests__/fixtures';
 import { appStore, primaryRound, type RoundRecord } from '@/store';
 import { DEFAULT_PERSISTED } from '@/store/migrate';
+import { THEME_LOOKS, type ThemeLook } from '@/theme/themes';
 import { WEAPON_PROMPT } from '@/ui/copy/credits';
 
 jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock'));
 jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
-const mockRounds: { n: number; mode?: string }[] = [];
+const mockRounds: { n: number; mode?: string; look: ThemeLook }[] = [];
 jest.mock('@/game/GameCanvas', () => {
   const { createElement } = require('react');
   const { Text } = require('react-native');
   return {
-    GameCanvas: ({ weapon, round }: { weapon: { name: string }; round: { n: number; mode?: string } }) => {
-      mockRounds.push(round);
+    GameCanvas: (props: { weapon: { name: string }; round: { n: number; mode?: string }; look: ThemeLook }) => {
+      const { weapon, round, look } = props;
+      mockRounds.push({ ...round, look });
       return createElement(Text, null, `Canvas: ${weapon.name}, ${round.n} zeros`);
     },
   };
@@ -138,6 +140,20 @@ describe('the game mode (SPEC 9)', () => {
     await open('/play');
     expect(mockRounds.length).toBeGreaterThan(0);
     expect(mockRounds.every((r) => r.mode === 'shooter')).toBe(true);
+  });
+});
+
+describe('the theme (SPEC 9)', () => {
+  it('keeps Win Zero in Classic whatever was saved', async () => {
+    appStore.setState({
+      goals: [{ goal, round: dayRound(), seenThrough: null }],
+      credits: wallet(0),
+      theme: 'neon',
+      arsenalBest: 400,
+    });
+    await open('/play');
+    expect(mockRounds.length).toBeGreaterThan(0);
+    expect(mockRounds.every((r) => r.look === THEME_LOOKS.classic)).toBe(true);
   });
 });
 

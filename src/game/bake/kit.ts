@@ -1,5 +1,6 @@
 // Built once per round on the JS thread: the sprite sheet (zero rings with their glow baked in,
-// so the frame loop never blurs), the backdrop, and the paints the scene reuses every frame.
+// so the frame loop never blurs), the backdrop, and the paints the scene reuses every frame. The
+// rings, shots and fill come in the round's theme (bakeColors); the rest keeps section 7's colors.
 import {
   BlendMode,
   BlurStyle,
@@ -18,9 +19,10 @@ import {
 } from '@shopify/react-native-skia';
 import { PixelRatio } from 'react-native';
 
-import type { FillPlan, ZeroGroup } from '@/engine';
+import type { FillPlan, ModeId, ZeroGroup } from '@/engine';
 import { formatCount } from '@/lib/format';
-import { colors, withAlpha, zeroPalette } from '@/theme/tokens';
+import type { ThemeLook } from '@/theme/themes';
+import { colors } from '@/theme/tokens';
 
 import { TURRET_BASE_RADIUS } from '../draw/scene';
 import type { Kit, Rgba, Sprite, SpriteSheet } from '../draw/types';
@@ -37,13 +39,11 @@ import {
   BADGE_FONT,
   BADGE_HEIGHT,
   BADGE_PAD_X,
-  BULLET_LOOKS,
   BULLET_TAIL_ALPHA,
   DOT_ALPHA,
   DOT_ORIGIN,
   DOT_SIZE,
   DOT_SPACING,
-  FILL_GLOW_ALPHA,
   FILL_GLOW_RADIUS,
   fxDensity,
   FX_CONFETTI,
@@ -74,6 +74,8 @@ import { ARMOR_SIZE_SCALE } from '../sim/constants';
 import { fillGrid } from '../sim/fill';
 import { ZERO_ASPECT, ZERO_STROKE } from '../sim/sizing';
 import { highlightPath } from '../ZeroRing';
+
+import { bakeColors } from './colors';
 
 export function rgba(hex: string, alpha = 1): Rgba {
   const c = Skia.Color(hex);
@@ -330,7 +332,8 @@ export interface BakedSprites {
 
 /**
  * The round's sprite sheet: a ring per palette color, armored rings and their ×V badges when
- * the round has them, and the shots and effects. `font` is Bungee, at any size.
+ * the round has them, and the shots and effects, in the round's theme. The layout is the same in
+ * every theme. `font` is Bungee, at any size.
  */
 export function bakeSprites(opts: {
   groups: readonly ZeroGroup[];
@@ -338,6 +341,9 @@ export function bakeSprites(opts: {
   width: number;
   height: number;
   font: SkFont;
+  look: ThemeLook;
+  /** The round's mode. A mode with sprites of its own gets rows after these, so the Shooter's never move. */
+  mode?: ModeId;
 }): BakedSprites {
   const objectCount = opts.groups.reduce((sum, g) => sum + g.count, 0);
   const badgeValues = armorBadges(opts.groups);
@@ -347,11 +353,12 @@ export function bakeSprites(opts: {
   const density = ringDensity(PixelRatio.get(), biggest);
   const fxScale = fxDensity(PixelRatio.get());
   const glyphPt = fillGrid(opts.fill.glyphs, opts.width, opts.height).size;
+  const c = bakeColors(opts.look);
   const rows = {
-    zero: zeroPalette.map((c) => ringCell(ryPt * density, c, false)),
-    armored: armoredRound ? zeroPalette.map((c) => ringCell(ryPt * ARMOR_SIZE_SCALE * density, c, true)) : [],
+    zero: c.palette.map((color) => ringCell(ryPt * density, color, false)),
+    armored: armoredRound ? c.palette.map((color) => ringCell(ryPt * ARMOR_SIZE_SCALE * density, color, true)) : [],
     badges: badgeValues.map((v) => badgeCell(v, opts.font, fxScale)),
-    bullets: BULLET_LOOKS.map((look) => bulletCell(look, fxScale)),
+    bullets: c.bullets.map((look) => bulletCell(look, fxScale)),
     fx: fxCells(fxScale),
     glyph: [glyphCell(Math.min(glyphPt * fxScale, GLYPH_MAX_PX), opts.font, opts.fill.glyphs <= GLYPH_GLOW_MAX)],
   };
@@ -413,8 +420,9 @@ export function makeKit(
   width: number,
   height: number,
   sheet: SpriteSheet,
-  round: { n: number; fill: FillPlan; font: SkFont },
+  round: { n: number; fill: FillPlan; font: SkFont; look: ThemeLook },
 ): Kit {
+  const c = bakeColors(round.look);
   const r = TURRET_BASE_RADIUS;
   const big = round.fill.overlayNumber ? overlay(round.n, round.font, width, height) : null;
   const turretBase = Skia.Path.Make();
@@ -442,7 +450,7 @@ export function makeKit(
           Skia.Shader.MakeRadialGradient(
             vec(width / 2, height / 2),
             Math.max(width, height) * FILL_GLOW_RADIUS,
-            [Skia.Color(withAlpha(colors.amber, FILL_GLOW_ALPHA)), Skia.Color(withAlpha(colors.flare, 0))],
+            c.fillGlow.map((color) => Skia.Color(color)),
             null,
             TileMode.Clamp,
           ),
@@ -453,11 +461,11 @@ export function makeKit(
         p.setStrokeWidth((big?.font.getSize() ?? 0) * OVERLAY_OUTLINE);
         p.setStrokeJoin(StrokeJoin.Round);
       }),
-      overlayFill: paint(PaintStyle.Fill, (p) => p.setColor(Skia.Color(colors.amber))),
+      overlayFill: paint(PaintStyle.Fill, (p) => p.setColor(Skia.Color(c.overlay))),
     },
     overlay: big,
     blend: { modulate: BlendMode.Modulate },
-    palette: zeroPalette.map((c) => rgba(c)),
-    colors: { fg: rgba(colors.fg), shot: rgba(colors.amber), chain: rgba(colors.teal), panel2: rgba(colors.panel2) },
+    palette: c.palette.map((color) => rgba(color)),
+    colors: { fg: rgba(colors.fg), shot: rgba(c.shot), chain: rgba(c.chain), panel2: rgba(colors.panel2) },
   };
 }

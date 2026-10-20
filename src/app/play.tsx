@@ -38,11 +38,13 @@ import {
   gameModeOf,
   primarySlot,
   slotById,
+  themeOf,
   totalBombs,
   useApp,
   type CreditRound,
   type RoundRecord,
 } from '@/store';
+import { THEME_LOOKS } from '@/theme/themes';
 import { colors, fonts } from '@/theme/tokens';
 import { feedback } from '@/ui/feedback';
 import { useReduceMotion, useScreenReader } from '@/ui/a11y';
@@ -206,8 +208,9 @@ function Round(props: {
   const pick = localPick ? roundPick : storePick;
   const weapon = useMemo(() => equippedWeapon(pick, best, borrowed), [pick, best, borrowed]);
   const weapons = useMemo(() => roundWeapons(best, borrowed), [best, borrowed]);
-  // Read once: replays keep the round's mode.
+  // Read once: replays keep the round's mode and theme.
   const [gameMode] = useState(() => gameModeOf(appStore.getState()));
+  const [look] = useState(() => THEME_LOOKS[themeOf(appStore.getState())]);
 
   const groups = useMemo(() => composeRound(n).groups, [n]);
   const fill = useMemo(() => fillPlan(n), [n]);
@@ -313,6 +316,7 @@ function Round(props: {
       <GameCanvas
         ref={game}
         round={round}
+        look={look}
         weapon={weapon}
         reduceMotion={reduceMotion}
         onReport={onReport}

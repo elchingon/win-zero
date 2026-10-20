@@ -1,7 +1,8 @@
 // The round's canvas. The sim and the drawing both run on the UI thread: every frame steps the
 // round, records it as one Skia picture, and sends a short report to the JS thread. Touches go
 // straight to the sim on the UI thread too, as pointer down, move and up for the round's mode. Keep this component's props stable: a
-// new frame callback re-registers the loop, and a new `round` starts the round over.
+// new frame callback re-registers the loop, a new `round` starts the round over, and a new `look`
+// bakes the sprite sheet again (once, never per frame).
 import {
   Canvas,
   createPicture,
@@ -18,6 +19,7 @@ import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
 
 import type { WeaponDef } from '@/engine';
 import { fontAssets } from '@/theme/fonts';
+import type { ThemeLook } from '@/theme/themes';
 
 import { bakeSprites, makeKit } from './bake/kit';
 import { drawScene, makeScratch } from './draw/scene';
@@ -86,6 +88,8 @@ function finish(state: SharedValue<GameState | null>) {
 
 export const GameCanvas = memo(function GameCanvas(props: {
   round: RoundSetup;
+  /** The round's theme colors (theme/themes.ts). */
+  look: ThemeLook;
   weapon: WeaponDef;
   reduceMotion: boolean;
   onReport: (report: Report) => void;
@@ -93,21 +97,21 @@ export const GameCanvas = memo(function GameCanvas(props: {
   onFrameStats?: (stats: FrameStats) => void;
   ref?: Ref<GameHandle>;
 }) {
-  const { round, weapon, reduceMotion, onReport, onFrameStats, ref } = props;
-  const { width, height, groups, n, fill } = round;
+  const { round, look, weapon, reduceMotion, onReport, onFrameStats, ref } = props;
+  const { width, height, groups, n, fill, mode } = round;
   const font = useFont(fontAssets.Bungee_400Regular, FONT_LOAD_SIZE);
 
   // The sprite sheet waits for the font (badges and fill glyphs are Bungee); until then the
   // frame loop holds off.
   const baked = useMemo(
-    () => (font ? bakeSprites({ groups, fill, width, height, font }) : null),
-    [groups, fill, width, height, font],
+    () => (font ? bakeSprites({ groups, fill, width, height, font, look, mode }) : null),
+    [groups, fill, width, height, font, look, mode],
   );
   const sheetSize = useMemo(() => (baked ? { width: baked.sheet.width, height: baked.sheet.height } : NO_SIZE), [baked]);
   const atlas = usePictureAsTexture(baked?.picture ?? null, sheetSize);
   const kit = useMemo(
-    () => (baked && font ? makeKit(width, height, baked.sheet, { n, fill, font }) : null),
-    [width, height, baked, n, fill, font],
+    () => (baked && font ? makeKit(width, height, baked.sheet, { n, fill, font, look }) : null),
+    [width, height, baked, n, fill, font, look],
   );
 
   // Built and mutated on the UI thread only. Reading it from JS would copy the whole round.
