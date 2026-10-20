@@ -14,6 +14,7 @@ export const SHARED_ALLOWLIST = [
   'game/look.ts',
   'game/result.ts',
   'game/shareText.ts',
+  'game/yes.ts',
   'store/createAppStore.ts',
   'store/migrate.ts',
   'store/notice.ts',

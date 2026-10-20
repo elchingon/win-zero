@@ -43,6 +43,7 @@ module.exports = defineConfig([
       'src/game/look.ts',
       'src/game/result.ts',
       'src/game/shareText.ts',
+      'src/game/yes.ts',
       'src/store/createAppStore.ts',
       'src/store/migrate.ts',
       'src/store/notice.ts',
