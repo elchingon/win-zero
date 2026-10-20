@@ -97,6 +97,15 @@ const headlines = () => screen.getAllByText(/round is ready\.$|^Did you stick to
 });
 
 describe('Home with one goal in Win Zero Plus', () => {
+  it('names the arsenal by the game picked', async () => {
+    appStore.setState({ gameMode: 'catch' });
+    await open([slot(twoDays())]);
+    // Best streak 2: the Pea Shooter's tier, with the Twin Barrel's next.
+    expect(screen.getByLabelText('Cup. Equipped.')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Next catcher: Twin Cups')).toBeOnTheScreen();
+    expect(screen.queryByText('Twin Barrel')).not.toBeOnTheScreen();
+  });
+
   it("is Win Zero's Home: no goal picker, and no list of goals", async () => {
     await open([slot(twoDays())]);
     expect(screen.getByRole('header', { name: 'Daily goal' })).toBeOnTheScreen();

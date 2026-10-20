@@ -1,7 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
 
 import { EMPTY_WALLET, type CreditGrant, type CreditWallet } from '@/engine';
-import { DAY0, newGoal, yesDays } from '@/engine/__tests__/fixtures';
+import { answerDay, DAY0, newGoal, yesDays } from '@/engine/__tests__/fixtures';
 import type { RoundRecord } from '@/store/types';
 
 import { hudLabel, replayMode, resultLines, roundOverlay, sheetEyebrow } from '../result';
@@ -107,5 +107,59 @@ describe('resultLines', () => {
       "Replay: your streak and rewards don't change.",
       'Hold the line 4 more days for the Scatter Gun.',
     ]);
+  });
+});
+
+describe('resultLines in Win Zero Plus (SPEC 9)', () => {
+  const goal = yesDays(newGoal(), DAY0, 3);
+  const record = (patch: Partial<RoundRecord> = {}): RoundRecord => ({
+    day: '2026-10-15',
+    n: 3,
+    rewards: { bomb: false, shield: false, shieldCapped: false, weapons: ['twin'], credits: [] },
+    borrowed: [],
+    played: false,
+    ...patch,
+  });
+  const texts = (...args: Parameters<typeof resultLines>) => resultLines(...args).map((l) => l.text);
+
+  it('announces an earned theme like a weapon, and its icon where icons open with themes', () => {
+    const lines = resultLines(30, 'real', record({ n: 30, rewards: { ...record().rewards, weapons: ['chain'] }, unlocks: ['ember'] }), goal, EMPTY_WALLET, 30);
+    expect(lines.slice(0, 2)).toEqual([
+      { text: 'New weapon unlocked: Chain Zapper. Lightning jumps to 4 more zeros.', news: true },
+      { text: 'New theme unlocked: Ember.', news: true },
+    ]);
+    expect(texts(30, 'real', record({ n: 30, unlocks: ['ember'] }), goal, EMPTY_WALLET, 30, { icons: true })).toContain(
+      'New theme unlocked: Ember. Its app icon is unlocked too.',
+    );
+    // A replay already said so.
+    expect(texts(30, 'replay', record({ n: 30, unlocks: ['ember'] }), goal, EMPTY_WALLET, 30).join(' ')).not.toMatch(/theme/);
+  });
+
+  it("names power-ups by the game the round was played in, and keeps the Shooter's words", () => {
+    expect(texts(3, 'real', record(), goal, EMPTY_WALLET, 3, { gameMode: 'catch' })).toEqual([
+      'New catcher unlocked: Twin Cups.',
+      'Hold the line 4 more days for your next catcher: Net.',
+    ]);
+    expect(texts(3, 'real', record(), goal, EMPTY_WALLET, 3, { gameMode: 'breaker' })).toEqual([
+      'New power-up unlocked: 2 balls.',
+      'Hold the line 4 more days for your next power-up: Multi-ball.',
+    ]);
+    // Orbit's power-ups are the weapons themselves.
+    const shooter = texts(3, 'real', record(), goal, EMPTY_WALLET, 3);
+    expect(texts(3, 'real', record(), goal, EMPTY_WALLET, 3, { gameMode: 'orbit' })).toEqual(shooter);
+    expect(texts(3, 'real', record(), goal, EMPTY_WALLET, 3, { gameMode: 'shooter' })).toEqual(shooter);
+  });
+
+  it('says "next check-in" rather than "tomorrow" when the goal rests tomorrow', () => {
+    // Monday, Wednesday and Friday, answered Yes through Friday 10-16, fully armed.
+    const mwf = ['2026-10-14', '2026-10-16'].reduce((s, d) => answerDay(s, d, 'yes').state, newGoal({ days: [1, 3, 5] }));
+    const friday = record({ day: '2026-10-16', n: 2, rewards: { ...record().rewards, weapons: [] } });
+    expect(texts(2, 'real', friday, mwf, EMPTY_WALLET, 100).at(-1)).toBe('Next check-in: 3 zeros.');
+    const wednesday = record({ day: '2026-10-14', n: 1, rewards: { ...record().rewards, weapons: [] } });
+    expect(texts(1, 'real', wednesday, mwf, EMPTY_WALLET, 100).at(-1)).toBe('Next check-in: 2 zeros.');
+    // Every day, as in Win Zero.
+    expect(texts(3, 'real', record({ rewards: { ...record().rewards, weapons: [] } }), goal, EMPTY_WALLET, 100).at(-1)).toBe(
+      'Tomorrow: 4 zeros.',
+    );
   });
 });

@@ -164,6 +164,8 @@ function WeaponCreditGate(props: {
 }) {
   const { target, fresh, best, children } = props;
   const credits = useApp((s) => s.credits);
+  // The game the round will play in, which names what a credit lends (SPEC 9).
+  const [mode] = useState(() => gameModeOf(appStore.getState()));
   const [borrowed, setBorrowed] = useState(props.borrowed);
   const [asked, setAsked] = useState(!fresh);
   const offer = asked ? [] : weaponCreditOffer(credits, best, borrowed);
@@ -175,7 +177,13 @@ function WeaponCreditGate(props: {
   };
   return (
     <View style={styles.root}>
-      <WeaponCreditPrompt offer={offer} credits={credits.balance.weapon} onPick={pick} onSkip={() => setAsked(true)} />
+      <WeaponCreditPrompt
+        offer={offer}
+        credits={credits.balance.weapon}
+        mode={mode}
+        onPick={pick}
+        onSkip={() => setAsked(true)}
+      />
     </View>
   );
 }
@@ -352,7 +360,7 @@ function Round(props: {
         onFrameStats={mode === 'practice' ? setStats : undefined}
       />
       {overlay === 'sheet' ? (
-        <ResultSheet n={n} mode={mode} goalId={goalId} record={record} onBack={toBase} onReplay={replay} />
+        <ResultSheet n={n} mode={mode} goalId={goalId} record={record} gameMode={gameMode} onBack={toBase} onReplay={replay} />
       ) : overlay === 'cheer' ? (
         <CheerPopup onDismiss={dismissCheer} />
       ) : (

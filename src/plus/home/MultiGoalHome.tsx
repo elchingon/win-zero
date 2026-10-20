@@ -8,7 +8,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { dayKeyAt, openedAtSetup } from '@/engine';
 import { formatWhen } from '@/lib/format';
-import { appStore, arsenalBestOf, arsenalStreakOf, useApp } from '@/store';
+import { appStore, arsenalBestOf, arsenalStreakOf, gameModeOf, useApp } from '@/store';
 import { colors, fonts, space, type } from '@/theme/tokens';
 import { Card, Eyebrow, Fine } from '@/ui/bits';
 import { TopBar } from '@/ui/Brand';
@@ -46,6 +46,7 @@ export function MultiGoalHome() {
   const best = useApp(arsenalBestOf);
   const streak = useApp(arsenalStreakOf);
   const pick = useApp((s) => s.weapon);
+  const mode = useApp(gameModeOf);
   const selectWeapon = useApp((s) => s.selectWeapon);
   const credits = useApp((s) => s.credits);
   const bonus = useApp((s) => s.bonus);
@@ -135,7 +136,7 @@ export function MultiGoalHome() {
 
       <CreditsCard best={best} credits={credits} bonus={bonus} onStartBonus={startBonus} onPlayBonus={playBonus} />
 
-      <Arsenal best={best} streak={streak} pick={pick} onEquip={selectWeapon} />
+      <Arsenal best={best} streak={streak} pick={pick} onEquip={selectWeapon} mode={mode} />
 
       <GoalPicker slots={slots} picked={shown.goal.goalId} onPick={setPicked} />
 

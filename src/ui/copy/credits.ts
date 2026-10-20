@@ -93,10 +93,12 @@ export const BONUS_SHEET = {
 /** Before a round, when a Weapon credit could lend it something. */
 export const WEAPON_PROMPT = {
   title: 'Use a Weapon credit?',
-  body: (credits: number) =>
-    `You have ${creditCount('weapon', credits)}. Pick a weapon you haven't unlocked yet to use in this round and its replays.`,
+  /** `kind`: what the game mode calls a power-up (Win Zero Plus, SPEC 9); a weapon in the Shooter. */
+  body: (credits: number, kind = 'weapon') =>
+    `You have ${creditCount('weapon', credits)}. Pick a ${kind} you haven't unlocked yet to use in this round and its replays.`,
   skip: 'Not this time',
-  /** A screen reader's name for one weapon on offer. */
-  option: (w: WeaponDef) => `${w.name}. ${w.description} Unlocks on day ${w.unlockAt}.`,
+  /** A screen reader's name for one weapon on offer, by the game mode's name for it and its description, if any. */
+  option: (w: WeaponDef, name = w.name, about: string | null = w.description) =>
+    `${name}.${about ? ` ${about}` : ''} Unlocks on day ${w.unlockAt}.`,
   optionHint: 'Uses 1 Weapon credit for this round',
 };

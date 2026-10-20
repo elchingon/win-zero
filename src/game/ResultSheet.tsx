@@ -1,18 +1,20 @@
 // The result sheet, over the filled screen: the day, "N zeros down", what the Yes earned, and
 // the next unlock. Rewards were applied when Yes was answered; this only reveals them. A
-// replay, a bonus round or a practice round changes nothing, and says so.
+// replay, a bonus round or a practice round changes nothing, and says so. Win Zero Plus names
+// power-ups by the round's game mode, and announces a theme a Yes unlocked (SPEC 9).
 import { Canvas, LinearGradient, Rect, vec } from '@shopify/react-native-skia';
 import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import type { ModeId } from '@/engine';
 import { formatCount } from '@/lib/format';
 import { arsenalBestOf, slotById, useApp, type RoundRecord } from '@/store';
 import { colors, fonts, fontScale, space, type, withAlpha } from '@/theme/tokens';
 import { Em, Eyebrow } from '@/ui/bits';
 import { Button, LinkButton } from '@/ui/Button';
-import { APP_NAME } from '@/variant';
+import { APP_NAME, FEATURES } from '@/variant';
 
 import { resultLines, sheetEyebrow, type ResultMode } from './result';
 import { milestoneShareText, shareMilestone } from './share';
@@ -34,10 +36,12 @@ export function ResultSheet(props: {
   goalId: string | null;
   /** The day's round: what the Yes earned. Absent for bonus and practice rounds. */
   record: RoundRecord | null;
+  /** The game the round was played in. The Shooter when absent. */
+  gameMode?: ModeId;
   onBack: () => void;
   onReplay: () => void;
 }) {
-  const { n, mode, goalId, record, onBack, onReplay } = props;
+  const { n, mode, goalId, record, gameMode, onBack, onReplay } = props;
   // A round that earned something can be shared; practice rounds earn nothing.
   const shareText = mode !== 'practice' && record ? milestoneShareText(record.n, record.rewards, APP_NAME) : null;
   const goal = useApp((s) => (goalId ? (slotById(s, goalId)?.goal ?? null) : null));
@@ -58,7 +62,7 @@ export function ResultSheet(props: {
     return () => clearTimeout(id);
   }, []);
 
-  const lines = resultLines(n, mode, record, goal, credits, best);
+  const lines = resultLines(n, mode, record, goal, credits, best, { gameMode, icons: FEATURES.altIcons });
 
   return (
     <Animated.View

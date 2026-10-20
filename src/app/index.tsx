@@ -8,7 +8,16 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { currentCheckInTime, dayKeyAt, isEveryDay, nextWindow, openedAtSetup, pendingWindow, type GoalState } from '@/engine';
 import { formatClockTime, formatWhen } from '@/lib/format';
-import { appStore, arsenalBestOf, arsenalStreakOf, isMovedOut, primaryGoal, primaryRound, useApp } from '@/store';
+import {
+  appStore,
+  arsenalBestOf,
+  arsenalStreakOf,
+  gameModeOf,
+  isMovedOut,
+  primaryGoal,
+  primaryRound,
+  useApp,
+} from '@/store';
 import { cancelMove, confirmMoveByHand, openPlus, sendMoveOut } from '@/transfer/send';
 import { colors, fonts, space, type } from '@/theme/tokens';
 import { Card, Eyebrow, Fine } from '@/ui/bits';
@@ -73,6 +82,7 @@ function HomeScreen({ goal }: { goal: GoalState }) {
   const best = useApp(arsenalBestOf);
   const streak = useApp(arsenalStreakOf);
   const pick = useApp((s) => s.weapon);
+  const mode = useApp(gameModeOf);
   const selectWeapon = useApp((s) => s.selectWeapon);
   const credits = useApp((s) => s.credits);
   const bonus = useApp((s) => s.bonus);
@@ -193,7 +203,7 @@ function HomeScreen({ goal }: { goal: GoalState }) {
 
       <CreditsCard best={best} credits={credits} bonus={bonus} onStartBonus={startBonus} onPlayBonus={playBonus} />
 
-      <Arsenal best={best} streak={streak} pick={pick} onEquip={selectWeapon} />
+      <Arsenal best={best} streak={streak} pick={pick} onEquip={selectWeapon} mode={mode} />
 
       <HistoryCalendar
         goal={goal}

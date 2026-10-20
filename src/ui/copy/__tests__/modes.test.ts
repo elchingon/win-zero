@@ -2,9 +2,9 @@
 // are short, plain and kind, and read well with its power-ups' names.
 import { describe, expect, it } from '@jest/globals';
 
-import { modeById, type ModeId } from '@/engine';
+import { modeById, WEAPONS, type ModeId } from '@/engine';
 
-import { MODE_COPY } from '../modes';
+import { MODE_COPY, powerUp } from '../modes';
 
 /** Modes whose lines are final: the Shooter, and each mode as its round lands. */
 const FINAL: readonly ModeId[] = ['shooter', 'catch', 'orbit', 'slice', 'breaker'];
@@ -30,5 +30,20 @@ describe('MODE_COPY', () => {
   it.each(FINAL)('%s: the switch reads well with every power-up ("Catcher: Net", never "Blade: Blade")', (mode) => {
     const tier = MODE_COPY[mode].tier.toLowerCase();
     for (const name of modeById(mode).tiers) expect(name.toLowerCase()).not.toBe(tier);
+  });
+});
+
+describe('powerUp', () => {
+  it('is the weapon itself in the Shooter, and in Orbit', () => {
+    for (const mode of ['shooter', 'orbit'] as const) {
+      for (const w of WEAPONS) expect(powerUp(mode, w)).toEqual({ name: w.name, description: w.description, kind: 'weapon' });
+    }
+  });
+
+  it("goes by the mode's own name elsewhere, without a weapon's description", () => {
+    const twin = WEAPONS[1]!;
+    expect(powerUp('catch', twin)).toEqual({ name: 'Twin Cups', description: null, kind: 'catcher' });
+    expect(powerUp('slice', twin)).toEqual({ name: 'Twin Blade', description: null, kind: 'power-up' });
+    expect(powerUp('breaker', twin)).toEqual({ name: '2 balls', description: null, kind: 'power-up' });
   });
 });

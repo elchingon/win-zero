@@ -1,11 +1,24 @@
 // What the result sheet says under "N zeros down": what the Yes earned and the next unlock.
 // Rewards were applied when Yes was answered; this only reveals them. A replay, a bonus round or
 // a practice round changes nothing, and says so. Also the round's labels, so the app and the
-// website name each kind of round the same. Shared by both.
-import { nextUnlock, SHIELD_CAP, weaponById, type CreditWallet, type GoalState } from '@/engine';
+// website name each kind of round the same. Shared by both. In Win Zero Plus (SPEC 9), power-ups
+// go by the game mode's names, and an earned theme is announced like a weapon.
+import {
+  addDays,
+  DEFAULT_MODE,
+  nextGoalDay,
+  nextUnlock,
+  SHIELD_CAP,
+  themeById,
+  weaponById,
+  type CreditWallet,
+  type GoalState,
+  type ModeId,
+} from '@/engine';
 import { plural } from '@/lib/format';
 import type { RoundRecord } from '@/store/types';
 import { creditEarned } from '@/ui/copy/credits';
+import { powerUp } from '@/ui/copy/modes';
 
 /**
  * The round on screen. `real`: the round a Yes earned, played for the first time. `replay`: that
@@ -51,6 +64,13 @@ export function roundOverlay(landed: boolean, mode: ResultMode, cheered: boolean
   return mode === 'practice' || mode === 'bonus' || cheered ? 'sheet' : 'cheer';
 }
 
+export interface ResultOptions {
+  /** The game the round was played in: its power-ups are named by it. The Shooter by default. */
+  gameMode?: ModeId;
+  /** This app's icons open with its themes (Win Zero Plus), so a theme's line says so. */
+  icons?: boolean;
+}
+
 /**
  * The sheet's lines for a round of `n` zeros. `record` is the day's round, absent for bonus and
  * practice rounds; `credits` is the wallet now, for "You have N". `best` is how far the arsenal
@@ -63,6 +83,7 @@ export function resultLines(
   goal: GoalState | null,
   credits: CreditWallet,
   best: number = goal?.bestStreak ?? 0,
+  { gameMode = DEFAULT_MODE, icons = false }: ResultOptions = {},
 ): ResultLine[] {
   const lines: ResultLine[] = [];
   if (mode === 'practice') {
@@ -73,8 +94,11 @@ export function resultLines(
     lines.push({ text: "Replay: your streak and rewards don't change." });
   } else if (record && goal) {
     for (const id of record.rewards.weapons) {
-      const w = weaponById(id);
-      lines.push({ text: `New weapon unlocked: ${w.name}. ${w.description}`, news: true });
+      const p = powerUp(gameMode, weaponById(id));
+      lines.push({ text: `New ${p.kind} unlocked: ${p.name}.${p.description ? ` ${p.description}` : ''}`, news: true });
+    }
+    for (const id of record.unlocks ?? []) {
+      lines.push({ text: `New theme unlocked: ${themeById(id).name}.${icons ? ' Its app icon is unlocked too.' : ''}`, news: true });
     }
     if (record.rewards.bomb) lines.push({ text: `Bomb earned. You have ${goal.bombs}.`, news: true });
     if (record.rewards.shield) lines.push({ text: `Shield earned. You have ${goal.shields} of ${SHIELD_CAP}.`, news: true });
@@ -89,10 +113,16 @@ export function resultLines(
   // A bonus round's size isn't the streak, so there's no next unlock to count down to.
   if ((mode === 'real' || mode === 'replay') && goal) {
     const next = nextUnlock(best, n);
+    const p = next ? powerUp(gameMode, next.weapon) : null;
+    // A goal on chosen days (Win Zero Plus) may not check in tomorrow.
+    const tomorrow = !record || nextGoalDay(goal, record.day) === addDays(record.day, 1);
     lines.push({
-      text: next
-        ? `Hold the line ${plural(next.daysToGo, 'more day')} for the ${next.weapon.name}.`
-        : `Tomorrow: ${plural(n + 1, 'zero')}.`,
+      text:
+        next && p
+          ? p.name === next.weapon.name
+            ? `Hold the line ${plural(next.daysToGo, 'more day')} for the ${p.name}.`
+            : `Hold the line ${plural(next.daysToGo, 'more day')} for your next ${p.kind}: ${p.name}.`
+          : `${tomorrow ? 'Tomorrow' : 'Next check-in'}: ${plural(n + 1, 'zero')}.`,
     });
   }
   return lines;
