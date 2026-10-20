@@ -1,5 +1,6 @@
 // The slow field of drifting zeros behind every screen, like the prototype's attract mode:
 // a radial-gradient backdrop with a dot grid, a few faint zeros, and the screen's darkening wash.
+// The zeros wear the equipped theme's ring colors (always Classic in Win Zero).
 import {
   Canvas,
   Group,
@@ -31,7 +32,9 @@ import {
 } from '@/game/look';
 import { zeroRadius } from '@/game/sim/sizing';
 import { ZeroRing } from '@/game/ZeroRing';
-import { colors, withAlpha, zeroPalette } from '@/theme/tokens';
+import { themeOf, useApp } from '@/store';
+import { THEME_LOOKS } from '@/theme/themes';
+import { colors, withAlpha } from '@/theme/tokens';
 
 import { useReduceMotion } from './a11y';
 /** The screen wash: ink at 40% at the top, deepening to 82% by 55% of the height. */
@@ -77,6 +80,7 @@ function DriftingZero(props: { drift: SharedValue<Drift[]>; index: number; ry: n
 export function ZeroField() {
   const { width, height } = useWindowDimensions();
   const reduceMotion = useReduceMotion();
+  const palette = THEME_LOOKS[useApp(themeOf)].palette;
   // The game draws its own backdrop over this one; don't spend frames on drift nobody sees.
   const covered = usePathname() === '/play';
   const initial = useMemo(() => seed(width, height), [width, height]);
@@ -138,7 +142,7 @@ export function ZeroField() {
       <Points points={dots} mode="points" color={colors.line} opacity={DOT_ALPHA} strokeWidth={DOT_SIZE} />
       <Group opacity={FIELD_ALPHA}>
         {initial.map((z, i) => (
-          <DriftingZero key={i} drift={drift} index={i} ry={z.ry} color={zeroPalette[i % zeroPalette.length] ?? colors.amber} />
+          <DriftingZero key={i} drift={drift} index={i} ry={z.ry} color={palette[i % palette.length] ?? colors.amber} />
         ))}
       </Group>
       <Rect x={0} y={0} width={width} height={height}>
