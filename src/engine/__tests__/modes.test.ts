@@ -75,7 +75,7 @@ describe('available modes', () => {
 
   it('offers every mode whose round is built, and nothing else', () => {
     // Each mode joins as its round lands (M7).
-    expect(availableModes(100, PLUS).map((m) => m.id)).toEqual(['shooter', 'catch', 'orbit', 'slice']);
+    expect(availableModes(100, PLUS).map((m) => m.id)).toEqual(['shooter', 'catch', 'orbit', 'slice', 'breaker']);
   });
 });
 
@@ -86,12 +86,12 @@ describe('the equipped mode', () => {
     expect(equippedMode('catch', 1, PLUS)).toBe('catch');
     expect(equippedMode('orbit', 1, PLUS)).toBe('orbit');
     expect(equippedMode('slice', 1, PLUS)).toBe('slice');
+    expect(equippedMode('breaker', 1, PLUS)).toBe('breaker');
   });
 
   it('falls back to the Shooter for no pick, a mode not offered, or anything else', () => {
     expect(equippedMode(null, 50, PLUS)).toBe('shooter');
     for (const id of MODE_IDS) expect(equippedMode(id, 50, FREE)).toBe('shooter');
-    expect(equippedMode('breaker', 50, PLUS)).toBe('shooter'); // no round yet
     expect(equippedMode('pong' as ModeId, 50, PLUS)).toBe('shooter');
   });
 });

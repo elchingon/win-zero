@@ -8,7 +8,7 @@ import { beforeAll, beforeEach, describe, expect, it, jest } from '@jest/globals
 import { renderRouter, screen } from 'expo-router/testing-library';
 
 import PlayScreen from '@/app/play';
-import { MODE_IDS, PLAYABLE_MODES, THEME_UNLOCK_EMBER } from '@/engine';
+import { PLAYABLE_MODES, THEME_UNLOCK_EMBER } from '@/engine';
 import { DAY0, newGoal, yesDays } from '@/engine/__tests__/fixtures';
 import { appStore, type RoundRecord } from '@/store';
 import { DEFAULT_PERSISTED } from '@/store/migrate';
@@ -98,8 +98,6 @@ describe('the theme in Win Zero Plus (SPEC 9)', () => {
 });
 
 describe('the game mode in Win Zero Plus (SPEC 9)', () => {
-  const unbuilt = MODE_IDS.find((id) => !PLAYABLE_MODES.includes(id));
-
   it("plays a day's round in the saved mode, in its words", async () => {
     appStore.setState({ gameMode: 'catch' });
     await open('/play');
@@ -127,11 +125,5 @@ describe('the game mode in Win Zero Plus (SPEC 9)', () => {
     expect(mockRounds.at(-1)?.n).toBe(60);
     expect(mockRounds.every((r) => r.mode === 'shooter')).toBe(true);
     expect(appStore.getState().gameMode).toBeNull();
-  });
-
-  (unbuilt ? it : it.skip)('plays the saved mode when a practice link names a mode whose round isn’t built', async () => {
-    await open(`/play?practice=60&mode=${unbuilt}`);
-    expect(mockRounds.at(-1)?.n).toBe(60);
-    expect(mockRounds.every((r) => r.mode === 'shooter')).toBe(true);
   });
 });
