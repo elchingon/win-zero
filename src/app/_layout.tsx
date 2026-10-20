@@ -19,6 +19,14 @@ import { ZeroField } from '@/ui/ZeroField';
 import { LaunchSplash } from '@/ui/LaunchSplash';
 import { APP_NAME, FEATURES } from '@/variant';
 
+// Win Zero Plus only: release builds inline the variant, and Metro folds the literal comparison
+// and drops the require, so Win Zero's bundle leaves out the icon code.
+const startIconGuard: ((store: typeof appStore) => () => void) | null =
+  process.env.EXPO_PUBLIC_APP_VARIANT === 'plus'
+    ? // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require('@/plus/iconGuard').startIconGuard
+    : null;
+
 SplashScreen.preventAutoHideAsync();
 
 // Screens are transparent so the one drifting-zeros field shows through all of them.
@@ -65,6 +73,8 @@ export default function RootLayout() {
   useEffect(() => reportPath(ready && launched ? pathname : null), [ready, launched, pathname]);
   // Win Zero: Plus's word that a move arrived (SPEC 9), which +native-intent left in the inbox.
   useEffect(() => (FEATURES.moveOut ? startMoveAcks(appStore, transport) : undefined), []);
+  // Win Zero Plus: an earned theme's icon goes back to the app's own if Erase un-earns it (SPEC 9).
+  useEffect(() => startIconGuard?.(appStore), []);
   // Win Zero Plus: a move that arrived while the splash was up opens once the screens can. Each
   // delivery once: backing out of /import doesn't bring it back.
   const delivery = useSyncExternalStore(subscribe, importDelivery);
