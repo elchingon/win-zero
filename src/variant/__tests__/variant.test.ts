@@ -46,10 +46,11 @@ describe('variant', () => {
 });
 
 describe('what each app offers (SPEC 9)', () => {
-  it('sends the move from Win Zero, takes it in to Plus, and offers schedules, game modes, themes and icons in Plus', () => {
+  it('sends the move from Win Zero, takes it in to Plus, and offers goals, schedules, game modes, themes and icons in Plus', () => {
     expect(load(undefined).FEATURES).toEqual({
       moveOut: true,
       importIn: false,
+      multiGoal: false,
       schedules: false,
       extraModes: false,
       themes: false,
@@ -58,11 +59,19 @@ describe('what each app offers (SPEC 9)', () => {
     expect(load('plus').FEATURES).toEqual({
       moveOut: false,
       importIn: true,
+      multiGoal: true,
       schedules: true,
       extraModes: true,
       themes: true,
       altIcons: true,
     });
+  });
+
+  it('offers more than one goal exactly where the store allows it', () => {
+    for (const v of [undefined, 'free', 'plus']) {
+      const app = load(v);
+      expect(app.FEATURES.multiGoal).toBe(app.LIMITS.maxGoals > 1);
+    }
   });
 
   it('offers check-in days exactly where the store allows them', () => {

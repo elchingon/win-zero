@@ -3,7 +3,7 @@ import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { DEFAULT_CHECK_IN_TIME, DEFAULT_MORNING_TIME, firstCheckInOpenAt } from '@/engine';
+import { DEFAULT_CHECK_IN_TIME, DEFAULT_MORNING_TIME, EVERY_DAY, firstCheckInOpenAt, type Weekday } from '@/engine';
 import { formatClockTime } from '@/lib/format';
 import { requestReminderPermission } from '@/notifications/permissions';
 import { appStore, useApp } from '@/store';
@@ -20,6 +20,14 @@ import { APP_NAME } from '@/variant';
 
 const RULES = rules(APP_NAME);
 
+// Win Zero Plus only: check-in days (SPEC 9). The literal comparison folds per file, so Win Zero's
+// bundle leaves it out, and Win Zero's goal checks in every day.
+const PlusGoals: typeof import('@/plus/goals') | null =
+  process.env.EXPO_PUBLIC_APP_VARIANT === 'plus'
+    ? // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require('@/plus/goals')
+    : null;
+
 export default function Setup() {
   const hasGoal = useApp((s) => s.goals.length > 0);
   const addGoal = useApp((s) => s.addGoal);
@@ -28,7 +36,10 @@ export default function Setup() {
   const [goal, setGoal] = useState('');
   const [checkInTime, setCheckInTime] = useState(DEFAULT_CHECK_IN_TIME);
   const [morningTime, setMorningTime] = useState(DEFAULT_MORNING_TIME);
+  const [days, setDays] = useState<Weekday[]>([...EVERY_DAY]);
   const [busy, setBusy] = useState(false);
+  /** Chosen days in Win Zero Plus; Win Zero's goal checks in every day. */
+  const chosenDays = PlusGoals ? days : undefined;
 
   if (hasGoal && !busy) return <Redirect href="/" />;
 
@@ -37,7 +48,7 @@ export default function Setup() {
   const finish = async (askPermission: boolean) => {
     setBusy(true);
     if (askPermission) await requestReminderPermission();
-    const r = addGoal({ goal, checkInTime, morningTime });
+    const r = addGoal({ goal, checkInTime, morningTime, days: chosenDays });
     if (r.ok) {
       feedback.success();
       router.replace('/');
@@ -50,7 +61,7 @@ export default function Setup() {
   if (step === 'reminders') {
     const store = appStore.getState();
     // Past check-in time already: the first question is about today, straight away.
-    const todayCounts = firstCheckInOpenAt({ checkInTime, now: store.now(), tz: store.timeZone() });
+    const todayCounts = firstCheckInOpenAt({ checkInTime, days: chosenDays, now: store.now(), tz: store.timeZone() });
     return (
       <Screen>
         <TopBar right={<LinkButton label="Back" onPress={() => setStep('goal')} />} />
@@ -129,6 +140,7 @@ export default function Setup() {
           h24={h24}
           hint="Only if you haven't answered by then: the next morning, or later the same day if it's after check-in time."
         />
+        {PlusGoals ? <PlusGoals.ChooseDays days={days} onChange={setDays} /> : null}
         <Button
           label="Start my streak"
           onPress={() => setStep('reminders')}

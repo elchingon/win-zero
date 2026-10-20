@@ -130,6 +130,9 @@ export default function Settings() {
         />
       </View>
 
+      {PlusSettings ? <PlusSettings.DaysField key={goal.goalId} goal={goal} /> : null}
+      {PlusSettings ? <PlusSettings.GoalsGroup /> : null}
+
       <View style={shared.list}>
         <ToggleRow label="Sound" detail="Pops and booms in the round." value={prefs.sound} onChange={(v) => store.setPref('sound', v)} />
         <ToggleRow label="Haptics" detail="Taps and buzzes." value={prefs.haptics} onChange={(v) => store.setPref('haptics', v)} />

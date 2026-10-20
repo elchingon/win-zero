@@ -33,3 +33,36 @@ export const ICON_COPY = {
   unsupported: "This phone can't change app icons.",
   failed: "The icon didn't change. Try again in a moment.",
 } as const;
+
+export const DAYS_COPY = {
+  label: 'Check-in days',
+  /** Under the picker when a goal is set up. */
+  hint: 'Rest days have no check-in, so nothing is gained or lost on them.',
+  /** Under the picker for a goal already running. */
+  changeHint:
+    "Changes start from the next check-in day that hasn't opened yet. Days already answered, or open now, stay as they are.",
+  /** While a change waits: 'These days start Friday.' */
+  starts: (when: string) => `These days start ${when}.`,
+  save: 'Save days',
+  /** On the only day left on. */
+  lastDay: 'At least one day stays on',
+} as const;
+
+export const GOALS_COPY = {
+  title: 'Goals',
+  add: 'Add a goal',
+  addDetail: (max: number) => `Up to ${max}, each with its own check-ins and streak.`,
+  /** With room for `n` more. */
+  addMore: (n: number) => (n === 1 ? '1 more fits.' : `${n} more fit.`),
+  full: (max: number) => `All ${max} goals are in use. Archive one to add another.`,
+} as const;
+
+export const ADD_GOAL_COPY = {
+  title: 'Add a goal',
+  lede: 'Each goal has its own check-ins, streak and round. Weapons, credits and themes are shared.',
+  field: 'Your goal',
+  placeholder: "Something you'll do, or stop doing",
+  add: 'Add goal',
+  full: (max: number) => `All ${max} goals are in use. Archive one in Settings to make room for a new one.`,
+  back: 'Back to Settings',
+} as const;

@@ -5,8 +5,10 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, jest } from '@j
 import { Stack } from 'expo-router';
 import { renderRouter, screen } from 'expo-router/testing-library';
 
+import AddGoalScreen from '@/app/add-goal';
 import HomeScreen from '@/app/index';
 import SettingsScreen from '@/app/settings';
+import SetupScreen from '@/app/setup';
 import type { GoalState } from '@/engine';
 import { at, DAY0, newGoal, yesDays } from '@/engine/__tests__/fixtures';
 import { appStore } from '@/store';
@@ -28,14 +30,16 @@ const ROUTES = {
   play: () => null,
   notice: () => null,
   settings: SettingsScreen,
+  setup: SetupScreen,
+  'add-goal': AddGoalScreen,
 };
 
 const tz = () => appStore.getState().timeZone();
 
-async function open(path: string, goal: GoalState = yesDays(newGoal({ tz: tz() }), DAY0, 2, tz())) {
+async function open(path: string, goal: GoalState | null = yesDays(newGoal({ tz: tz() }), DAY0, 2, tz())) {
   jest.useFakeTimers();
   jest.setSystemTime(at('2026-10-15', '21:00', tz()));
-  appStore.setState({ goals: [{ goal, round: null, seenThrough: null }] });
+  appStore.setState({ goals: goal ? [{ goal, round: null, seenThrough: null }] : [] });
   const app = renderRouter(ROUTES, { initialUrl: path });
   await app;
   return { pathname: () => app.getPathname() };
@@ -59,5 +63,19 @@ describe('Win Zero', () => {
     await open('/settings');
     expect(screen.getAllByRole('header').map((h) => h.props.children)).toEqual(['Settings', 'About']);
     expect(screen.queryByRole('radio')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Check-in days')).not.toBeOnTheScreen();
+    expect(screen.queryByText(/Add a goal/)).not.toBeOnTheScreen();
+  });
+
+  it('sets up a goal for every day, with no days to choose', async () => {
+    await open('/setup', null);
+    expect(screen.queryByRole('checkbox')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Check-in days')).not.toBeOnTheScreen();
+  });
+
+  it("leads Win Zero Plus's Add a goal link Home, with nothing added", async () => {
+    const app = await open('/add-goal');
+    expect(app.pathname()).toBe('/');
+    expect(appStore.getState().goals).toHaveLength(1);
   });
 });
