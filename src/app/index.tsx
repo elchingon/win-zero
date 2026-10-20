@@ -62,7 +62,7 @@ export default function Home() {
   const several = useApp((s) => s.goals.length > 1);
   if (!goal) return <Redirect href="/setup" />;
   if (moved) return <MovedHome />;
-  if (several && MultiGoalHome) return <MultiGoalHome />;
+  if (MultiGoalHome && several) return <MultiGoalHome />;
   return <HomeScreen goal={goal} />;
 }
 

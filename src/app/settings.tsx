@@ -53,9 +53,10 @@ export default function Settings() {
   const goal = useApp(primaryGoal);
   const prefs = useApp((s) => s.prefs);
   const moved = useApp(isMovedOut);
-  // Win Zero Plus with several goals lists them, each with its own screen (SPEC 9).
-  const several = useApp((s) => PlusSettings !== null && s.goals.length > 1);
-  const pastGoals = useApp((s) => PlusSettings !== null && s.archived.length > 0);
+  // Win Zero Plus with several goals lists them, each with its own screen (SPEC 9). Below,
+  // PlusSettings comes first in each condition, so Win Zero's build folds the branch away.
+  const several = useApp((s) => s.goals.length > 1);
+  const pastGoals = useApp((s) => s.archived.length > 0);
   const { permission, turnOn } = useReminderPermission();
   const [eraseArmed, setEraseArmed] = useState(false);
 
@@ -77,7 +78,7 @@ export default function Settings() {
         Settings
       </Text>
 
-      {several && PlusSettings ? (
+      {PlusSettings && several ? (
         <PlusSettings.GoalsList />
       ) : (
         <>
@@ -99,7 +100,7 @@ export default function Settings() {
         <ToggleRow
           label="Goal in reminders"
           detail={
-            several && PlusSettings
+            PlusSettings && several
               ? PlusSettings.SETTINGS_COPY.goalInReminders
               : 'Off keeps your goal private on the lock screen. Reminders just say “your goal”.'
           }
@@ -180,7 +181,7 @@ export default function Settings() {
         <Card style={styles.erase}>
           <Text style={styles.eraseTitle}>Erase everything?</Text>
           <Fine>
-            {(several || pastGoals) && PlusSettings
+            {PlusSettings && (several || pastGoals)
               ? PlusSettings.SETTINGS_COPY.erase
               : "This deletes your goal, streak, history and rewards from this phone. It can't be undone."}
           </Fine>
