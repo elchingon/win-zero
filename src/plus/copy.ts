@@ -112,3 +112,15 @@ export const PAST_COPY = {
   deleteConfirm: 'Delete for good',
   deleteCancel: 'Keep it',
 } as const;
+
+export const HOME_COPY = {
+  yourGoals: 'Your goals',
+  pickHint: 'Shows its stats and history',
+  /** Over the goals with nothing open: all of them, or some. */
+  caughtUp: "You're all caught up.",
+  upNext: 'Up next',
+  /** 'Run: Monday at 7:00 AM'. */
+  nextCheckIn: (goal: string, when: string) => `${goal}: ${when}`,
+  paused: (goal: string) =>
+    `Reminders for “${goal}” are paused after a long break. Check in whenever you're ready and they'll pick back up.`,
+} as const;

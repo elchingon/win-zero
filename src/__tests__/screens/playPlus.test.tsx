@@ -135,3 +135,18 @@ describe('the game mode in Win Zero Plus (SPEC 9)', () => {
     expect(appStore.getState().gameMode).toBeNull();
   });
 });
+
+describe('a bonus round with several goals (SPEC 9)', () => {
+  it('drops as many free bombs as every goal has banked', async () => {
+    const run = { ...yesDays(newGoal(), DAY0, 3), goalId: 'g2', goal: 'Run', bombs: 3 };
+    appStore.setState({
+      goals: [
+        { goal: { ...goal, bombs: 2 }, round: null, seenThrough: null },
+        { goal: run, round: null, seenThrough: null },
+      ],
+      bonus: { n: 100, borrowed: [], played: false },
+    });
+    await open('/play?round=bonus');
+    expect(screen.getByRole('button', { name: 'Bomb, 5 left' })).toBeOnTheScreen();
+  });
+});
