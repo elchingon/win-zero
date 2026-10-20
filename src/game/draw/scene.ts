@@ -3,7 +3,7 @@
 // sheet a whole layer per drawAtlas call; nothing here allocates Skia objects.
 import type { SkCanvas, SkImage, SkRect } from '@shopify/react-native-skia';
 
-import { MAX_BULLETS, MAX_GLYPHS, MAX_PARTICLES } from '../sim/constants';
+import { MAX_BULLETS, MAX_GLYPHS, MAX_PARTICLES, MAX_ZEROS } from '../sim/constants';
 import type { GameState } from '../sim/types';
 
 import { makeBatch } from './batch';
@@ -31,8 +31,8 @@ export const TURRET_BASE_STROKE = 3;
 /** The white flash never fully whites out the screen. */
 const FLASH_MAX = 0.85;
 const FLASH_MIN = 0.02;
-/** Most zeros a round can have on screen (engine OBJECT_CAP), with room to spare, and their badges. */
-const ZERO_BATCH = 64;
+/** Every zero a round can hold, and a badge for each. */
+const ZERO_BATCH = MAX_ZEROS;
 const RAD_TO_DEG = 180 / Math.PI;
 
 export function makeScratch(): Scratch {

@@ -22,6 +22,12 @@ export const TURRET_Y_FROM_BOTTOM = 46;
 
 // --- Zeros ---------------------------------------------------------------------------------
 
+/**
+ * Most zeros a round ever holds: the engine's OBJECT_CAP with room to spare, which a mode may
+ * use (Orbit's split pieces). The scene's zero batches are sized from it.
+ */
+export const MAX_ZEROS = 64;
+
 /** Each zero's radius is the round's base radius times 1 ± half of this. */
 export const SIZE_JITTER = 0.3;
 export const SPEED_BASE = 110;

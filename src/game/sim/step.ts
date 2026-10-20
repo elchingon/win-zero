@@ -4,29 +4,12 @@
 import { updateBullets } from './bullets';
 import { HIT_FLASH, MAX_DT } from './constants';
 import { updateEffects } from './effects';
-import { updateFiring } from './input';
+import { moveZero } from './move';
 import { updatePhase } from './phase';
-import type { GameState, Zero } from './types';
+import { updateFiring } from './trigger';
+import type { GameState } from './types';
 
-/** Move a zero and bounce it off the play area's edges. */
-export function moveZero(z: Zero, state: GameState, dt: number): void {
-  z.x += z.vx * dt;
-  z.y += z.vy * dt;
-  if (z.x < z.rx) {
-    z.x = z.rx;
-    z.vx = Math.abs(z.vx);
-  } else if (z.x > state.width - z.rx) {
-    z.x = state.width - z.rx;
-    z.vx = -Math.abs(z.vx);
-  }
-  if (z.y < state.top + z.ry) {
-    z.y = state.top + z.ry;
-    z.vy = Math.abs(z.vy);
-  } else if (z.y > state.bottom - z.ry) {
-    z.y = state.bottom - z.ry;
-    z.vy = -Math.abs(z.vy);
-  }
-}
+export { moveZero } from './move';
 
 function updateZeros(state: GameState, dt: number): void {
   // The fill freezes whatever's left behind it.
