@@ -1,6 +1,6 @@
-// The round's theme in Win Zero Plus (SPEC 9): a day's round wears the saved theme once it's
-// earned, and a practice link can try on any theme. The canvas is stood in for, keeping each
-// round it's handed and its colors.
+// The round's theme and game mode in Win Zero Plus (SPEC 9): a day's round wears the saved theme
+// once it's earned, and a practice link can try on any theme, and any mode whose round is built.
+// The canvas is stood in for, keeping each round it's handed and its colors.
 import './env/plus';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -8,7 +8,7 @@ import { beforeAll, beforeEach, describe, expect, it, jest } from '@jest/globals
 import { renderRouter } from 'expo-router/testing-library';
 
 import PlayScreen from '@/app/play';
-import { THEME_UNLOCK_EMBER } from '@/engine';
+import { MODE_IDS, PLAYABLE_MODES, THEME_UNLOCK_EMBER } from '@/engine';
 import { DAY0, newGoal, yesDays } from '@/engine/__tests__/fixtures';
 import { appStore, type RoundRecord } from '@/store';
 import { DEFAULT_PERSISTED } from '@/store/migrate';
@@ -17,12 +17,12 @@ import { THEME_LOOKS, type ThemeLook } from '@/theme/themes';
 jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock'));
 jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
-const mockRounds: { n: number; look: ThemeLook }[] = [];
+const mockRounds: { n: number; mode?: string; look: ThemeLook }[] = [];
 jest.mock('@/game/GameCanvas', () => {
   const { createElement } = require('react');
   const { Text } = require('react-native');
   return {
-    GameCanvas: (props: { round: { n: number }; look: ThemeLook }) => {
+    GameCanvas: (props: { round: { n: number; mode?: string }; look: ThemeLook }) => {
       mockRounds.push({ ...props.round, look: props.look });
       return createElement(Text, null, `Canvas: ${props.round.n} zeros`);
     },
@@ -93,5 +93,22 @@ describe('the theme in Win Zero Plus (SPEC 9)', () => {
     await open('/play?practice=60&theme=sepia');
     expect(mockRounds.at(-1)?.n).toBe(60);
     expect(looks().every((l) => l === THEME_LOOKS.neon)).toBe(true);
+  });
+});
+
+describe('the game mode in Win Zero Plus (SPEC 9)', () => {
+  const unbuilt = MODE_IDS.find((id) => !PLAYABLE_MODES.includes(id));
+
+  it('plays the saved mode when a practice link names a mode it doesn’t know', async () => {
+    await open('/play?practice=60&mode=pong');
+    expect(mockRounds.at(-1)?.n).toBe(60);
+    expect(mockRounds.every((r) => r.mode === 'shooter')).toBe(true);
+    expect(appStore.getState().gameMode).toBeNull();
+  });
+
+  (unbuilt ? it : it.skip)('plays the saved mode when a practice link names a mode whose round isn’t built', async () => {
+    await open(`/play?practice=60&mode=${unbuilt}`);
+    expect(mockRounds.at(-1)?.n).toBe(60);
+    expect(mockRounds.every((r) => r.mode === 'shooter')).toBe(true);
   });
 });

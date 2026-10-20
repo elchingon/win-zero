@@ -8,7 +8,8 @@
 // Development builds, and release builds made with EXPO_PUBLIC_PERF_BUILD=1 (eas build
 // --profile perf), can open /play?practice=N to play any N with every weapon and a frame
 // meter, and nothing about the streak changes. In Win Zero Plus, /play?practice=N&theme=<id>
-// plays it in any theme, earned or not.
+// plays it in any theme, earned or not, and &mode=<id> in any game mode whose round is built,
+// without changing the saved pick.
 import { Redirect, router, Stack, useLocalSearchParams, type ErrorBoundaryProps } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AccessibilityInfo, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -19,10 +20,13 @@ import {
   composeRound,
   equippedWeapon,
   fillPlan,
+  isModeId,
   isThemeId,
   modeTier,
+  PLAYABLE_MODES,
   roundWeapons,
   weaponCreditOffer,
+  type ModeId,
   type ThemeId,
   type WeaponId,
 } from '@/engine';
@@ -62,16 +66,19 @@ const newSeed = () => Math.floor(Math.random() * 2 ** 31);
 const NONE_BORROWED: WeaponId[] = [];
 
 export default function Play() {
-  const { practice, round, goal, theme } = useLocalSearchParams<{
+  const { practice, round, goal, theme, mode } = useLocalSearchParams<{
     practice?: string;
     round?: string;
     goal?: string;
     theme?: string;
+    mode?: string;
   }>();
   const practiceN = PRACTICE_ENABLED && practice ? Number(practice) : NaN;
   const isPractice = Number.isInteger(practiceN) && practiceN >= 1 && practiceN <= PRACTICE_MAX_N;
-  // A practice round in Plus can try on any theme; anything else wears the equipped one.
+  // A practice round in Plus can try on any theme, and any mode whose round is built; anything
+  // else wears the equipped ones.
   const practiceTheme = FEATURES.themes && isThemeId(theme) ? theme : undefined;
+  const practiceMode = FEATURES.extraModes && isModeId(mode) && PLAYABLE_MODES.includes(mode) ? mode : undefined;
   return (
     <>
       {/* An iOS edge swipe would fight the aim. The HUD's ✕ leaves instead. */}
@@ -85,6 +92,7 @@ export default function Play() {
           record={null}
           borrowed={NONE_BORROWED}
           theme={practiceTheme}
+          gameMode={practiceMode}
         />
       ) : round === 'bonus' ? (
         <BonusStoreRound />
@@ -203,8 +211,10 @@ function Round(props: {
   borrowed: WeaponId[];
   /** A practice round's theme, from its link; otherwise the equipped one. */
   theme?: ThemeId;
+  /** A practice round's game mode, from its link; otherwise the equipped one. */
+  gameMode?: ModeId;
 }) {
-  const { initialMode, goalId, n, best, record, borrowed, theme } = props;
+  const { initialMode, goalId, n, best, record, borrowed, theme, gameMode: linkMode } = props;
   // Replay turns a real round into a replay.
   const [mode, setMode] = useState(initialMode);
   const { width, height } = useWindowDimensions();
@@ -223,7 +233,7 @@ function Round(props: {
   const weapon = useMemo(() => equippedWeapon(pick, best, borrowed), [pick, best, borrowed]);
   const weapons = useMemo(() => roundWeapons(best, borrowed), [best, borrowed]);
   // Read once: replays keep the round's mode and theme.
-  const [gameMode] = useState(() => gameModeOf(appStore.getState()));
+  const [gameMode] = useState(() => linkMode ?? gameModeOf(appStore.getState()));
   const [look] = useState(() => THEME_LOOKS[theme ?? themeOf(appStore.getState())]);
 
   const groups = useMemo(() => composeRound(n).groups, [n]);

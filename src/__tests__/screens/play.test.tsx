@@ -141,6 +141,12 @@ describe('the game mode (SPEC 9)', () => {
     expect(mockRounds.length).toBeGreaterThan(0);
     expect(mockRounds.every((r) => r.mode === 'shooter')).toBe(true);
   });
+
+  it("ignores a practice link's mode in Win Zero", async () => {
+    await open('/play?practice=60&mode=catch');
+    expect(mockRounds.at(-1)?.n).toBe(60);
+    expect(mockRounds.every((r) => r.mode === 'shooter')).toBe(true);
+  });
 });
 
 describe('the theme (SPEC 9)', () => {
