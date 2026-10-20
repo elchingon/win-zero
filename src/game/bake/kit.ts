@@ -69,7 +69,7 @@ import {
   ZERO_GLOW,
   type BulletLook,
 } from '../look';
-import { armorBadges } from '../sim/badges';
+import { armorBadges, pieceBadges } from '../sim/badges';
 import { ARMOR_SIZE_SCALE } from '../sim/constants';
 import { fillGrid } from '../sim/fill';
 import { ZERO_ASPECT, ZERO_STROKE } from '../sim/sizing';
@@ -333,7 +333,9 @@ export interface BakedSprites {
 /**
  * The round's sprite sheet: a ring per palette color, armored rings and their ×V badges when
  * the round has them, and the shots and effects, in the round's theme. The layout is the same in
- * every theme. `font` is Bungee, at any size.
+ * every theme. `font` is Bungee, at any size. Orbit's split pieces wear badges of their own,
+ * baked in a row after the rest and listed after the round's badges, so the Shooter's sheet
+ * never moves.
  */
 export function bakeSprites(opts: {
   groups: readonly ZeroGroup[];
@@ -361,9 +363,11 @@ export function bakeSprites(opts: {
     bullets: c.bullets.map((look) => bulletCell(look, fxScale)),
     fx: fxCells(fxScale),
     glyph: [glyphCell(Math.min(glyphPt * fxScale, GLYPH_MAX_PX), opts.font, opts.fill.glyphs <= GLYPH_GLOW_MAX)],
+    pieceBadges: (opts.mode === 'orbit' ? pieceBadges(opts.groups) : []).map((v) => badgeCell(v, opts.font, fxScale)),
   };
   const { picture, sprites, width, height } = pack(Object.values(rows));
-  const [zero = [], armored = [], badges = [], bullets = [], fx = [], glyphs = []] = sprites;
+  const [zero = [], armored = [], roundBadges = [], bullets = [], fx = [], glyphs = [], pieces = []] = sprites;
+  const badges = [...roundBadges, ...pieces];
   const [dot, confetti, ring] = fx;
   const [glyph] = glyphs;
   if (!dot || !confetti || !ring || !glyph) throw new Error('The effect sprites failed to pack');

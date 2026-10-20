@@ -88,7 +88,10 @@ function drawnAsShooter(s: GameState): string[] {
   return calls;
 }
 
-const MODES: readonly { mode: ModeId; tiers: WeaponId[] }[] = [{ mode: 'catch', tiers: ['pea', 'twin', 'rocket', 'laser', 'nuke'] }];
+const MODES: readonly { mode: ModeId; tiers: WeaponId[] }[] = [
+  { mode: 'catch', tiers: ['pea', 'twin', 'rocket', 'laser', 'nuke'] },
+  { mode: 'orbit', tiers: ['pea', 'laser', 'nuke'] },
+];
 
 describe.each(MODES)('$mode', ({ mode, tiers }) => {
   it.each(tiers)('draws its own pieces in play with the %s tier, not the turret', (tier) => {

@@ -68,6 +68,8 @@ export function makeCues(mode: ModeId = DEFAULT_MODE): CueSheet {
   switch (mode) {
     case 'catch':
       return catchCues();
+    // Orbit's turret sounds as the Shooter's does.
+    case 'orbit':
     case 'shooter':
     default:
       return shooterCues();

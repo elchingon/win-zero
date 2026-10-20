@@ -77,6 +77,15 @@ describe('cues', () => {
   });
 });
 
+describe('Orbit’s cues', () => {
+  it('are the Shooter’s', () => {
+    const orbit = makeCues('orbit');
+    const shooter = makeCues('shooter');
+    const reports = [report({ shots: 1 }), report({ kills: 2 }), report({ blasts: 1 }), report({ bombs: 1 }), report({ final: true })];
+    expect(reports.map((r, i) => orbit(r, i * 10))).toEqual(reports.map((r, i) => shooter(r, i * 10)));
+  });
+});
+
 describe('Catch’s cues', () => {
   it('bounces for a catch that doesn’t pop its zero, at most every ' + BOUNCE_MIN_MS + ' ms', () => {
     const cues = makeCues('catch');

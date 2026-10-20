@@ -10,31 +10,20 @@ import { makeBatch } from './batch';
 import { drawFill } from './fill';
 import { drawBeams, drawBolts, drawBullets, drawParticles, drawRings } from './fx';
 import { drawCatch } from './modes/catch';
+import { drawOrbit } from './modes/orbit';
+import { drawTurret } from './turret';
 import type { Kit, Scratch } from './types';
 import { paintColor, rect } from './util';
 import { drawEnergyBars, drawHitFlashes, drawZeros } from './zeros';
 
-/** The turret's barrel: a fg bar with a tip in the shot color, pivoting on the muzzle point. */
-const BARREL_WIDTH = 14;
-const BARREL_LENGTH = 36;
-/** The barrel starts this far out from the pivot. */
-const BARREL_REACH = 40;
-const BARREL_TIP = 6;
-/** Muzzle flash: a circle this far out, radius MUZZLE_FLASH_BASE + MUZZLE_FLASH_GROW × flash. */
-const MUZZLE_FLASH_AT = 46;
-const MUZZLE_FLASH_BASE = 4;
-const MUZZLE_FLASH_GROW = 12;
-const MUZZLE_FLASH_MIN = 0.05;
-/** The base's center sits this far below the pivot. */
-export const TURRET_BASE_DROP = 14;
-export const TURRET_BASE_RADIUS = 32;
-export const TURRET_BASE_STROKE = 3;
+// The bake sizes the turret's base from these.
+export { TURRET_BASE_DROP, TURRET_BASE_RADIUS, TURRET_BASE_STROKE } from './turret';
+
 /** The white flash never fully whites out the screen. */
 const FLASH_MAX = 0.85;
 const FLASH_MIN = 0.02;
 /** Every zero a round can hold, and a badge for each. */
 const ZERO_BATCH = MAX_ZEROS;
-const RAD_TO_DEG = 180 / Math.PI;
 
 export function makeScratch(): Scratch {
   return {
@@ -47,31 +36,6 @@ export function makeScratch(): Scratch {
     rgba: [0, 0, 0, 1],
     meter: { t: 0, frames: 0, worst: 0 },
   };
-}
-
-function drawTurret(canvas: SkCanvas, s: GameState, kit: Kit, sc: Scratch): void {
-  const { fill, stroke, glowFill } = kit.paints;
-  canvas.save();
-  canvas.translate(s.muzzleX, s.muzzleY);
-  canvas.rotate((s.aim + Math.PI / 2) * RAD_TO_DEG, 0, 0);
-  paintColor(fill, sc, kit.colors.fg, 1);
-  canvas.drawRect(rect(sc, -BARREL_WIDTH / 2, -BARREL_REACH, BARREL_WIDTH, BARREL_LENGTH), fill);
-  paintColor(fill, sc, kit.colors.shot, 1);
-  canvas.drawRect(rect(sc, -BARREL_WIDTH / 2, -BARREL_REACH, BARREL_WIDTH, BARREL_TIP), fill);
-  if (s.muzzle > MUZZLE_FLASH_MIN) {
-    paintColor(glowFill, sc, kit.colors.shot, s.muzzle);
-    canvas.drawCircle(0, -MUZZLE_FLASH_AT, MUZZLE_FLASH_GROW * s.muzzle + MUZZLE_FLASH_BASE, glowFill);
-  }
-  canvas.restore();
-
-  canvas.save();
-  canvas.translate(s.muzzleX, s.muzzleY + TURRET_BASE_DROP);
-  paintColor(fill, sc, kit.colors.panel2, 1);
-  canvas.drawPath(kit.turretBase, fill);
-  paintColor(stroke, sc, kit.colors.shot, 1);
-  stroke.setStrokeWidth(TURRET_BASE_STROKE);
-  canvas.drawPath(kit.turretBase, stroke);
-  canvas.restore();
 }
 
 /** Draw the round as it stands. `atlas` is null until the sprite sheet reaches the GPU. */
@@ -96,6 +60,9 @@ export function drawScene(canvas: SkCanvas, s: GameState, kit: Kit, atlas: SkIma
     switch (s.mode) {
       case 'catch':
         drawCatch(canvas, s, kit, sc);
+        break;
+      case 'orbit':
+        drawOrbit(canvas, s, kit, sc);
         break;
       case 'shooter':
       default:
