@@ -32,6 +32,8 @@ export const LIMITS: Limits = IS_PLUS ? PLUS_LIMITS : FREE_LIMITS;
 export const FEATURES = {
   moveOut: !IS_PLUS,
   importIn: IS_PLUS,
+  /** Goals check in on chosen weekdays, with rest days between (LIMITS). */
+  schedules: LIMITS.weekdaySchedules,
   /** Settings › Games: the modes beyond the Shooter, as the store allows them (LIMITS). */
   extraModes: LIMITS.modesEnabled,
   /** Settings › Themes, and a practice round's theme link, as the store allows them (LIMITS). */

@@ -1,15 +1,24 @@
 // One month of check-ins: yes / not today / shielded / missed, with misses after a long-break
-// reset muted as "paused". Browsable from the first goal day to today.
+// reset muted as "paused", and (Win Zero Plus, SPEC 9) rest days between chosen check-in days.
+// Browsable from the first goal day to today.
 import { useMemo, useState } from 'react';
 import { AccessibilityInfo, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { calendarMark, type CalendarMark, type DayKey, type GoalState } from '@/engine';
+import {
+  calendarMark,
+  isEveryDay,
+  isRestDay,
+  settledDays,
+  type CalendarMark,
+  type DayKey,
+  type GoalState,
+} from '@/engine';
 import { addMonths, monthGrid, monthOf, monthSummary, weekdayInitials, type MonthKey } from '@/lib/calendar';
 import { formatDayShort, formatMonth } from '@/lib/format';
 import { colors, fonts, fontScale, space } from '@/theme/tokens';
 import { Eyebrow, shared } from '@/ui/bits';
 
-type Mark = CalendarMark | 'pending';
+type Mark = CalendarMark | 'pending' | 'rest';
 
 const MARK_WORDS: Record<Mark, string> = {
   yes: 'Yes',
@@ -18,6 +27,7 @@ const MARK_WORDS: Record<Mark, string> = {
   missed: 'Missed',
   paused: 'Paused',
   pending: 'Waiting for your answer',
+  rest: 'Rest day',
 };
 
 const LEGEND: Mark[] = ['yes', 'no', 'shielded', 'missed', 'paused'];
@@ -26,8 +36,15 @@ export function MarkGlyph({ mark }: { mark: Mark }) {
   return <View style={glyphs[mark]} />;
 }
 
-export function HistoryCalendar(props: { goal: GoalState; today: DayKey; pendingDay: DayKey | null; firstWeekday: number }) {
-  const { goal, today, pendingDay, firstWeekday } = props;
+export function HistoryCalendar(props: {
+  goal: GoalState;
+  today: DayKey;
+  pendingDay: DayKey | null;
+  firstWeekday: number;
+  /** Mark rest days (SPEC 9): only where goals can check in on chosen days. */
+  restDays?: boolean;
+}) {
+  const { goal, today, pendingDay, firstWeekday, restDays = false } = props;
   const first = monthOf(goal.firstDay);
   const last = monthOf(today);
   const [month, setMonth] = useState(last);
@@ -36,7 +53,15 @@ export function HistoryCalendar(props: { goal: GoalState; today: DayKey; pending
   const marks = useMemo(() => new Map(goal.history.map((e) => [e.day, calendarMark(e)])), [goal.history]);
   const weeks = useMemo(() => monthGrid(shown, firstWeekday), [shown, firstWeekday]);
 
-  const markOf = (day: DayKey): Mark | null => marks.get(day) ?? (day === pendingDay ? 'pending' : null);
+  // History decides up to the last settled day: a day there with no entry was a rest day.
+  const settled = useMemo(() => (restDays ? settledDays(goal) : null), [restDays, goal]);
+  const legend = restDays && !isEveryDay(goal) ? [...LEGEND, 'rest' as const] : LEGEND;
+
+  /** A day before the goal began, or after today, shows no mark of its own. */
+  const isOutside = (day: DayKey) => day < goal.firstDay || day > today;
+  const markOf = (day: DayKey): Mark | null =>
+    marks.get(day) ??
+    (day === pendingDay ? 'pending' : settled && !isOutside(day) && isRestDay(goal, day, settled) ? 'rest' : null);
 
   /** Show another month, and tell a screen reader what's in it. */
   const go = (to: MonthKey) => {
@@ -91,7 +116,7 @@ export function HistoryCalendar(props: { goal: GoalState; today: DayKey; pending
             {week.map((day, i) => {
               if (!day) return <View key={i} style={styles.cell} />;
               const mark = markOf(day);
-              const outside = day < goal.firstDay || day > today;
+              const outside = isOutside(day);
               return (
                 <View
                   key={day}
@@ -114,7 +139,7 @@ export function HistoryCalendar(props: { goal: GoalState; today: DayKey; pending
 
       {/* Each day says its own mark, so screen readers skip the key. */}
       <View style={styles.legend} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-        {LEGEND.map((m) => (
+        {legend.map((m) => (
           <View key={m} style={styles.legendItem}>
             <MarkGlyph mark={m} />
             <Text style={styles.legendText}>{MARK_WORDS[m]}</Text>
@@ -134,6 +159,7 @@ const glyphs = StyleSheet.create({
   missed: { width: 8, height: 8, borderRadius: 4, borderWidth: 1.5, borderColor: colors.flare },
   paused: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.line },
   pending: { ...ring, borderWidth: 1.5, borderColor: colors.amber, opacity: 0.6 },
+  rest: { width: 8, height: 2, borderRadius: 1, backgroundColor: colors.line },
 });
 
 const styles = StyleSheet.create({

@@ -46,15 +46,30 @@ describe('variant', () => {
 });
 
 describe('what each app offers (SPEC 9)', () => {
-  it('sends the move from Win Zero, takes it in to Plus, and offers game modes, themes and icons in Plus', () => {
+  it('sends the move from Win Zero, takes it in to Plus, and offers schedules, game modes, themes and icons in Plus', () => {
     expect(load(undefined).FEATURES).toEqual({
       moveOut: true,
       importIn: false,
+      schedules: false,
       extraModes: false,
       themes: false,
       altIcons: false,
     });
-    expect(load('plus').FEATURES).toEqual({ moveOut: false, importIn: true, extraModes: true, themes: true, altIcons: true });
+    expect(load('plus').FEATURES).toEqual({
+      moveOut: false,
+      importIn: true,
+      schedules: true,
+      extraModes: true,
+      themes: true,
+      altIcons: true,
+    });
+  });
+
+  it('offers check-in days exactly where the store allows them', () => {
+    for (const v of [undefined, 'free', 'plus']) {
+      const app = load(v);
+      expect(app.FEATURES.schedules).toBe(app.LIMITS.weekdaySchedules);
+    }
   });
 
   it('offers game modes exactly where the store allows them', () => {

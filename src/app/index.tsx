@@ -35,6 +35,7 @@ import { Stats } from '@/ui/home/Stats';
 import { Screen } from '@/ui/Screen';
 import { useDeviceCalendar } from '@/ui/useDevice';
 import { useReminderPermission } from '@/ui/useReminderPermission';
+import { FEATURES } from '@/variant';
 
 // Development builds only: Metro folds __DEV__ to false in production and drops the require.
 const DemoControls: ComponentType | null = __DEV__
@@ -225,7 +226,13 @@ function HomeScreen({ goal }: { goal: GoalState }) {
 
       <Arsenal goal={goal} pick={pick} onEquip={selectWeapon} />
 
-      <HistoryCalendar goal={goal} today={today} pendingDay={pending?.day ?? null} firstWeekday={firstWeekday} />
+      <HistoryCalendar
+        goal={goal}
+        today={today}
+        pendingDay={pending?.day ?? null}
+        firstWeekday={firstWeekday}
+        restDays={FEATURES.schedules}
+      />
 
       {DemoControls ? <DemoControls /> : null}
     </Screen>
