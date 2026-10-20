@@ -6,6 +6,7 @@
 import type { WeaponDef } from '@/engine';
 
 import { aimCups } from './modes/catch';
+import { sliceDown, sliceMove } from './modes/slice';
 import { moveAim, pressFire, releaseFire } from './trigger';
 import type { GameState } from './types';
 
@@ -21,6 +22,9 @@ export function pointerDown(s: GameState, x: number, y: number): void {
   switch (s.mode) {
     case 'catch':
       aimCups(s, x);
+      break;
+    case 'slice':
+      sliceDown(s, x, y);
       break;
     // Orbit's turret, in the middle, fires as the Shooter's does.
     case 'orbit':
@@ -39,6 +43,9 @@ export function pointerMove(s: GameState, x: number, y: number): void {
     case 'catch':
       aimCups(s, x);
       break;
+    case 'slice':
+      sliceMove(s, x, y);
+      break;
     case 'orbit':
     case 'shooter':
     default:
@@ -50,8 +57,9 @@ export function pointerMove(s: GameState, x: number, y: number): void {
 export function pointerUp(s: GameState): void {
   s.pointer.down = false;
   switch (s.mode) {
-    // The cups stay where the finger left them.
+    // The cups stay where the finger left them; the blade's trail fades on its own.
     case 'catch':
+    case 'slice':
       break;
     case 'orbit':
     case 'shooter':

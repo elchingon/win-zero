@@ -2,7 +2,8 @@
 // makes, playing each game mode the way a fair player would: neither superhuman, which would
 // hide a mode that's too slow, nor clumsy, which would fake one. In the Shooter it aims at the
 // lowest zero, leading it by the shot's flight, and holds on; in Orbit, at the nearest; in Catch
-// it slides the cups under the next zero it can reach. It can also keep its hands off (Catch must still clear), or play
+// it slides the cups under the next zero it can reach; in Slice it strokes through the lowest
+// zero it can cut, no faster than a finger can. It can also keep its hands off (Catch must still clear), or play
 // down to the last few zeros and then let go. Every frame it checks what must hold in any mode
 // (the counter, ×V, the board's edges, the effect caps and the order of phases) and keeps what
 // broke, rather than failing on the spot.
@@ -33,6 +34,10 @@ export const BOT_FPS = 60;
 /** Give up on a round after this long. */
 export const LIMIT_S = 240;
 export const LIMIT_FRAMES = LIMIT_S * BOT_FPS;
+/** A fast finger's top speed across the screen, in points a second. */
+export const BOT_FINGER_SPEED = 2500;
+/** How far past a zero the bot carries its stroke. */
+const BOT_FOLLOW_THROUGH = 40;
 /** Keep this many broken rules per round: enough to see what went wrong. */
 const MAX_VIOLATIONS = 10;
 /** Rounding slack for positions on the board's edges. */
@@ -173,12 +178,45 @@ function catchTouch(s: GameState): Touch | null {
   return Number.isNaN(x) ? null : { x, y: s.bottom };
 }
 
+/**
+ * Slice: stroke through the lowest zero that can be cut, where it will be next frame, and on
+ * past it, the finger moving no faster than BOT_FINGER_SPEED. It never lifts: a lift adds
+ * nothing a stroke doesn't.
+ */
+function sliceTouch(s: GameState): Touch | null {
+  const ss = s.modeState;
+  if (ss.mode !== 'slice') return null;
+  let best: Zero | null = null;
+  for (let i = 0; i < s.zeros.length; i++) {
+    const z = s.zeros[i]!;
+    if (hittable(z) && ss.launched[i] && z.cooldown <= 0 && (!best || z.y > best.y)) best = z;
+  }
+  if (!best) return null;
+  const x = best.x + best.vx / BOT_FPS;
+  const y = best.y + best.vy / BOT_FPS;
+  const past = best.rx + BOT_FOLLOW_THROUGH;
+  // Land beside it, so the first stroke crosses it.
+  if (!s.pointer.down) return { x: x - past, y };
+  const dx = x - s.pointer.x;
+  const dy = y - s.pointer.y;
+  const dist = Math.hypot(dx, dy) || 1;
+  const goalX = x + (dx / dist) * past;
+  const goalY = y + (dy / dist) * past;
+  const gx = goalX - s.pointer.x;
+  const gy = goalY - s.pointer.y;
+  const reach = Math.hypot(gx, gy) || 1;
+  const stride = Math.min(1, BOT_FINGER_SPEED / BOT_FPS / reach);
+  return { x: s.pointer.x + gx * stride, y: s.pointer.y + gy * stride };
+}
+
 function touchFor(s: GameState): Touch | null {
   switch (s.mode) {
     case 'catch':
       return catchTouch(s);
     case 'orbit':
       return orbitTouch(s);
+    case 'slice':
+      return sliceTouch(s);
     case 'shooter':
     default:
       return shooterTouch(s);

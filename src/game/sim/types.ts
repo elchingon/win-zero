@@ -178,8 +178,48 @@ export interface OrbitState {
   pieceValues: number[];
 }
 
+/** A point on Slice's blade: where the finger passed, how long ago, and which stroke it belongs to. */
+export interface TrailPoint {
+  x: number;
+  y: number;
+  age: number;
+  stroke: number;
+}
+
+/**
+ * Slice (SPEC 9): zeros are tossed up from the bottom edge and the finger's swipe cuts them.
+ * Per-zero arrays are indexed like `zeros`.
+ */
+export interface SliceState {
+  mode: 'slice';
+  /** The blade's recent path, a fixed ring of points: `count` of them, the newest at `head`. */
+  trail: TrailPoint[];
+  head: number;
+  count: number;
+  /** Which stroke the finger is on: a new one each touch-down, so strokes don't join up. */
+  stroke: number;
+  /** Where the blade last was: each move cuts from here, however long the finger rested. */
+  lastX: number;
+  lastY: number;
+  /** How far the finger has swept since the last swish. */
+  swing: number;
+  /** Seconds before the next toss may go, and where the queue looks next. */
+  tossIn: number;
+  cursor: number;
+  /** This frame's blade, from the power-up: how many blades, how far past a zero's edge they reach, and how long the trail keeps cutting. */
+  blades: number;
+  reach: number;
+  linger: number;
+  /** Late in the round: tosses float and the blade reaches further. */
+  assist: boolean;
+  /** Whether each zero is in the air, rather than waiting on the bottom edge for its toss. */
+  launched: boolean[];
+  /** Times each zero has been cut: each cut juggles it higher. */
+  cuts: number[];
+}
+
 /** What the round's mode keeps beyond the shared fields. Each mode adds its own. */
-export type ModeState = ShooterState | CatchState | OrbitState;
+export type ModeState = ShooterState | CatchState | OrbitState | SliceState;
 
 /** What the screen hands the sim to start a round. Computed on the JS thread. */
 export interface GameConfig {
@@ -214,6 +254,8 @@ export interface Report {
   bombs: number;
   /** Catches, and balls off the paddle and bricks: a game mode's bounce sound. */
   bounces: number;
+  /** Swings of Slice's blade. */
+  swishes: number;
   /** The last zero went this frame. */
   final: boolean;
   /** The fill has landed: show the result sheet. */

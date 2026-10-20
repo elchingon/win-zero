@@ -14,6 +14,7 @@ export function makeReport(valueLeft: number, seed: number): Report {
     blasts: 0,
     bombs: 0,
     bounces: 0,
+    swishes: 0,
     final: false,
     showResult: false,
   };
@@ -29,6 +30,7 @@ export function resetReport(report: Report): void {
   report.blasts = 0;
   report.bombs = 0;
   report.bounces = 0;
+  report.swishes = 0;
   report.final = false;
   report.showResult = false;
 }

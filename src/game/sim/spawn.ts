@@ -36,6 +36,7 @@ import { layoutFill } from './fill';
 import { makePool } from './pool';
 import { makeCatchState, placeCatch } from './modes/catch';
 import { makeOrbitState, orbitSpares, placeOrbit } from './modes/orbit';
+import { makeSliceState, placeSlice } from './modes/slice';
 import { makeReport } from './report';
 import { between, makeRng, random } from './rng';
 import { ZERO_ASPECT, ZERO_MIN_RADIUS, zeroRadius } from './sizing';
@@ -165,6 +166,8 @@ function makeModeState(mode: ModeId, count: number, objectCount: number, cfg: Ga
       return makeCatchState(count, cfg.width);
     case 'orbit':
       return makeOrbitState(count, objectCount, cfg.groups);
+    case 'slice':
+      return makeSliceState(count);
     case 'shooter':
     default:
       return { mode: 'shooter' };
@@ -179,6 +182,9 @@ function placeZeros(state: GameState, cfg: GameConfig): void {
       break;
     case 'orbit':
       placeOrbit(state, cfg);
+      break;
+    case 'slice':
+      placeSlice(state, cfg);
       break;
     case 'shooter':
     default:

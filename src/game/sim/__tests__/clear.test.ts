@@ -10,7 +10,7 @@ import { modeTier, WEAPONS, type ModeId, type WeaponDef } from '@/engine';
 
 import { clearRound, LIMIT_FRAMES, roundConfig, SCREENS, type Cleared, type Hands } from './bot';
 
-const MODES: readonly ModeId[] = ['shooter', 'catch', 'orbit'];
+const MODES: readonly ModeId[] = ['shooter', 'catch', 'orbit', 'slice'];
 /** Modes that must clear hands-off, with the weakest power-up. */
 const HANDS_OFF: readonly ModeId[] = ['catch'];
 const SIZES = [1, 7, 8, 60, 61, 250, 1000] as const;
