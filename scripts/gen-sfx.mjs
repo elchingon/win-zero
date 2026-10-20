@@ -3,7 +3,8 @@
 // synthesis (docs/prototype/win-zero.html, sfx()): the shot's falling square chirp, the pop
 // of filtered noise, and the big boom (noise plus a sinking sine). Plus three the prototype
 // doesn't have: the horn fanfare that brings up the encouragement after a round, and Win Zero
-// Plus's game modes' bounce (a catch, a ball off the paddle) and swish (a blade). No
+// Plus's game modes' bounce (a catch, a ball off the paddle) and swish (a blade), and the chime
+// for a Yes, as the zero pops out of the button. No
 // dependencies; the noise is seeded, so running it again writes the same files.
 //
 //   node scripts/gen-sfx.mjs        (or: npm run gen:sfx)
@@ -238,6 +239,49 @@ function swish() {
   return render(SWISH_S, (t) => filter(rand(), center(t)) * (t < SWISH_RISE_S ? (SWISH_GAIN * t) / SWISH_RISE_S : fade(t - SWISH_RISE_S)));
 }
 
+// --- The Yes chime (new, not in the prototype) -------------------------------------------
+
+/** The zero popping out of the button: a sine rising 480 → 960 Hz, in and gone in 90 ms. */
+const BLOOP_GAIN = 0.28;
+const BLOOP_RISE_S = 0.07;
+const BLOOP_S = 0.09;
+const BLOOP_ATTACK_S = 0.005;
+/** Then a bell rising a fifth, G5 to D6. A quieter partial 2.76x up makes each ring like metal. */
+const D6 = 1174.66;
+const BELL_GAIN = 0.24;
+const BELL_PARTIAL = 2.76;
+const BELL_PARTIAL_LEVEL = 0.25;
+const BELL_ATTACK_S = 0.004;
+const BELL_DECAY_S = 0.5;
+const BELL_START_S = 0.06;
+const BELL_GAP_S = 0.08;
+
+/** One bell strike at `start`, ringing out over BELL_DECAY_S. */
+function bell(freq, start, level) {
+  const tone = sine();
+  const partial = sine();
+  const decay = expRamp(1, 0.0001, BELL_DECAY_S);
+  return (t) => {
+    const u = t - start;
+    if (u < 0 || u > BELL_DECAY_S) return 0;
+    const env = Math.min(1, u / BELL_ATTACK_S) * decay(u);
+    return (tone(freq) + BELL_PARTIAL_LEVEL * partial(freq * BELL_PARTIAL)) * env * level;
+  };
+}
+
+function yes() {
+  const osc = sine();
+  const freq = expRamp(480, 960, BLOOP_RISE_S);
+  const fade = expRamp(BLOOP_GAIN, 0.0001, BLOOP_S - BLOOP_ATTACK_S);
+  const bloop = (t) => {
+    if (t > BLOOP_S) return 0;
+    const env = t < BLOOP_ATTACK_S ? (BLOOP_GAIN * t) / BLOOP_ATTACK_S : fade(t - BLOOP_ATTACK_S);
+    return osc(freq(t)) * env;
+  };
+  const bells = [bell(G5, BELL_START_S, BELL_GAIN), bell(D6, BELL_START_S + BELL_GAP_S, BELL_GAIN)];
+  return render(BELL_START_S + BELL_GAP_S + BELL_DECAY_S, (t) => bloop(t) + bells[0](t) + bells[1](t));
+}
+
 // --- Output ---------------------------------------------------------------------------------
 
 function fadeEnds(samples) {
@@ -274,7 +318,15 @@ function wav(samples, scale) {
 
 const peakOf = (samples) => samples.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
 
-const sounds = { shoot: shoot(), pop: pop(), boom: boom(), fanfare: fanfare(), bounce: bounce(), swish: swish() };
+const sounds = {
+  shoot: shoot(),
+  pop: pop(),
+  boom: boom(),
+  fanfare: fanfare(),
+  bounce: bounce(),
+  swish: swish(),
+  yes: yes(),
+};
 for (const s of Object.values(sounds)) fadeEnds(s);
 // The boom sets the shared scale. A louder sound would quietly change every other file.
 for (const [name, samples] of Object.entries(sounds)) {
