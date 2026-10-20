@@ -155,6 +155,12 @@ describe('the theme (SPEC 9)', () => {
     expect(mockRounds.length).toBeGreaterThan(0);
     expect(mockRounds.every((r) => r.look === THEME_LOOKS.classic)).toBe(true);
   });
+
+  it("ignores a practice link's theme in Win Zero", async () => {
+    await open('/play?practice=60&theme=neon');
+    expect(mockRounds.at(-1)?.n).toBe(60);
+    expect(mockRounds.every((r) => r.look === THEME_LOOKS.classic)).toBe(true);
+  });
 });
 
 describe('whose round (SPEC 9)', () => {

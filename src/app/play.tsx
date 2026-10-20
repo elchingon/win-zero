@@ -4,10 +4,11 @@
 // no effect on the streak. /play?round=bonus plays the bonus round a Game credit paid for, which
 // changes nothing either. Before a round not yet played, a player holding a Weapon credit is
 // asked whether to borrow a weapon they haven't unlocked for it. Every round plays in the game
-// mode picked in Settings (SPEC 9), which in Win Zero is always the Shooter.
+// mode and theme picked in Settings (SPEC 9), which in Win Zero are always the Shooter and Classic.
 // Development builds, and release builds made with EXPO_PUBLIC_PERF_BUILD=1 (eas build
 // --profile perf), can open /play?practice=N to play any N with every weapon and a frame
-// meter, and nothing about the streak changes.
+// meter, and nothing about the streak changes. In Win Zero Plus, /play?practice=N&theme=<id>
+// plays it in any theme, earned or not.
 import { Redirect, router, Stack, useLocalSearchParams, type ErrorBoundaryProps } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AccessibilityInfo, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -18,9 +19,11 @@ import {
   composeRound,
   equippedWeapon,
   fillPlan,
+  isThemeId,
   modeTier,
   roundWeapons,
   weaponCreditOffer,
+  type ThemeId,
   type WeaponId,
 } from '@/engine';
 import { CheerPopup } from '@/game/CheerPopup';
@@ -49,6 +52,7 @@ import { colors, fonts } from '@/theme/tokens';
 import { feedback } from '@/ui/feedback';
 import { useReduceMotion, useScreenReader } from '@/ui/a11y';
 import { CrashScreen } from '@/ui/CrashScreen';
+import { FEATURES } from '@/variant';
 
 /** Practice rounds: development builds, and release builds made for measuring frame rate. */
 const PRACTICE_ENABLED = __DEV__ || process.env.EXPO_PUBLIC_PERF_BUILD === '1';
@@ -58,9 +62,16 @@ const newSeed = () => Math.floor(Math.random() * 2 ** 31);
 const NONE_BORROWED: WeaponId[] = [];
 
 export default function Play() {
-  const { practice, round, goal } = useLocalSearchParams<{ practice?: string; round?: string; goal?: string }>();
+  const { practice, round, goal, theme } = useLocalSearchParams<{
+    practice?: string;
+    round?: string;
+    goal?: string;
+    theme?: string;
+  }>();
   const practiceN = PRACTICE_ENABLED && practice ? Number(practice) : NaN;
   const isPractice = Number.isInteger(practiceN) && practiceN >= 1 && practiceN <= PRACTICE_MAX_N;
+  // A practice round in Plus can try on any theme; anything else wears the equipped one.
+  const practiceTheme = FEATURES.themes && isThemeId(theme) ? theme : undefined;
   return (
     <>
       {/* An iOS edge swipe would fight the aim. The HUD's ✕ leaves instead. */}
@@ -73,6 +84,7 @@ export default function Play() {
           best={PRACTICE_BEST}
           record={null}
           borrowed={NONE_BORROWED}
+          theme={practiceTheme}
         />
       ) : round === 'bonus' ? (
         <BonusStoreRound />
@@ -189,8 +201,10 @@ function Round(props: {
   record: RoundRecord | null;
   /** Weapons not yet unlocked that a Weapon credit lent this round. */
   borrowed: WeaponId[];
+  /** A practice round's theme, from its link; otherwise the equipped one. */
+  theme?: ThemeId;
 }) {
-  const { initialMode, goalId, n, best, record, borrowed } = props;
+  const { initialMode, goalId, n, best, record, borrowed, theme } = props;
   // Replay turns a real round into a replay.
   const [mode, setMode] = useState(initialMode);
   const { width, height } = useWindowDimensions();
@@ -210,7 +224,7 @@ function Round(props: {
   const weapons = useMemo(() => roundWeapons(best, borrowed), [best, borrowed]);
   // Read once: replays keep the round's mode and theme.
   const [gameMode] = useState(() => gameModeOf(appStore.getState()));
-  const [look] = useState(() => THEME_LOOKS[themeOf(appStore.getState())]);
+  const [look] = useState(() => THEME_LOOKS[theme ?? themeOf(appStore.getState())]);
 
   const groups = useMemo(() => composeRound(n).groups, [n]);
   const fill = useMemo(() => fillPlan(n), [n]);

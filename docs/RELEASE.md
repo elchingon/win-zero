@@ -145,6 +145,9 @@ variant disagree. `npm run check:variants` (also in CI) checks both apps' config
       link as `&d=wz1.…`
     - `adb shell am start -a android.intent.action.VIEW -d "winzero://moved?t=<id>"
       com.e7systems.winzero`
+- **Themes before Settings › Themes:** a Plus dev client plays a practice round in any theme, earned
+  or not: `winzeroplus://play?practice=60&theme=<id>`, where the id is `classic`, `neon`, `mono`,
+  `pastel`, `ember`, `aurora` or `gold` (QA row 22). Win Zero ignores `&theme`.
 
 ---
 
@@ -192,6 +195,7 @@ and its debug tools. The others use a TestFlight, internal or `preview` build.
 | 19 | **Move: keep using here** | After a move, tap **Keep using Win Zero here**. Then check in, and **Move** again. | Win Zero's Home comes back with its progress from the move day, and its reminders are scheduled again (pending count above 0). Days since the move count as missed, and their news shows once. The second move asks which copy of the goal to keep, suggesting Win Zero's. |
 | 20 | **Move: Plus full** | Plus with 3 goals (Add goal comes with M9; until then the screen tests cover it). **Move** from Win Zero. | Plus says "Make room first". **Manage goals** opens Settings, and nothing was added. |
 | 21 | **Move: Android cold and warm** | Move with Plus killed, then again with Plus in the background. | Plus opens on the move both times, in its own task. Back from Plus returns to the launcher, not into Win Zero. |
+| 22 | **Themes (Plus)** _dev_ | In the Plus dev client (`npm run start:plus`), open a practice round in each theme: `xcrun simctl openurl booted "winzeroplus://play?practice=60&theme=neon"`, or `adb shell am start -a android.intent.action.VIEW -d "winzeroplus://play?practice=60&theme=neon" com.e7systems.winzeroplus`, for `classic`, `neon`, `mono`, `pastel`, `ember`, `aurora` and `gold`. Fire every weapon, drop a bomb, and finish the round. Then `practice=1000&theme=pastel`. Then `winzero://play?practice=60&theme=neon` in Win Zero. | The zeros, shots, laser, bolts, shockwaves, particles and the fill take the theme's colors, and every zero stays easy to see. The backdrop, HUD, ×V badges and result sheet keep the usual colors. About 60 FPS at 1,000 zeros, as in row 6. Win Zero plays in Classic. |
 
 ### Known and accepted
 - **A move can't prove it came from Win Zero on Android.** Any app can open Plus's import link
