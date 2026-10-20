@@ -27,6 +27,8 @@ export const TURRET_Y_FROM_BOTTOM = 46;
  * use (Orbit's split pieces). The scene's zero batches are sized from it.
  */
 export const MAX_ZEROS = 64;
+/** Orbit (SPEC 9): an armored zero splits into this many smaller zeros that carry its value on. */
+export const ORBIT_PIECES = 2;
 
 /** Each zero's radius is the round's base radius times 1 ± half of this. */
 export const SIZE_JITTER = 0.3;

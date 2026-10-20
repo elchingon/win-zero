@@ -3,6 +3,7 @@
 // counter, the report and the end of the round are handled in one place.
 import { explode, wound } from './effects';
 import { hittable } from './hit';
+import { splitZero } from './modes/split';
 import { celebrate } from './phase';
 import type { GameState, Zero } from './types';
 
@@ -37,6 +38,9 @@ export function damageZero(s: GameState, z: Zero, damage: number): boolean {
   s.sinceDamage = 0;
   z.hp -= damage;
   if (z.hp <= 0) {
+    // Orbit: an armored zero splits into smaller zeros that keep its value (SPEC 9). Only a hit
+    // splits one; Finish round's kills never do, so the round always ends.
+    if (s.modeState.mode === 'orbit' && z.kind === 'armored') splitZero(s, s.modeState, z);
     killZero(s, z);
     return true;
   }

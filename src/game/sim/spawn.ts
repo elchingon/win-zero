@@ -35,6 +35,7 @@ import { armorBadges } from './badges';
 import { layoutFill } from './fill';
 import { makePool } from './pool';
 import { makeCatchState, placeCatch } from './modes/catch';
+import { makeOrbitState, orbitSpares, placeOrbit } from './modes/orbit';
 import { makeReport } from './report';
 import { between, makeRng, random } from './rng';
 import { ZERO_ASPECT, ZERO_MIN_RADIUS, zeroRadius } from './sizing';
@@ -158,10 +159,12 @@ function roundMode(mode: ModeId | undefined): ModeId {
   return mode !== undefined && PLAYABLE_MODES.indexOf(mode) >= 0 ? mode : DEFAULT_MODE;
 }
 
-function makeModeState(mode: ModeId, count: number, cfg: GameConfig): ModeState {
+function makeModeState(mode: ModeId, count: number, objectCount: number, cfg: GameConfig): ModeState {
   switch (mode) {
     case 'catch':
       return makeCatchState(count, cfg.width);
+    case 'orbit':
+      return makeOrbitState(count, objectCount, cfg.groups);
     case 'shooter':
     default:
       return { mode: 'shooter' };
@@ -173,6 +176,9 @@ function placeZeros(state: GameState, cfg: GameConfig): void {
   switch (state.mode) {
     case 'catch':
       placeCatch(state, cfg);
+      break;
+    case 'orbit':
+      placeOrbit(state, cfg);
       break;
     case 'shooter':
     default:
@@ -188,8 +194,10 @@ export function buildGame(cfg: GameConfig, mode: ModeId): GameState {
   let objectCount = 0;
   for (let g = 0; g < cfg.groups.length; g++) objectCount += cfg.groups[g]?.count ?? 0;
 
+  // A mode may keep spare slots past the round's own zeros (Orbit's split pieces).
+  const slots = objectCount + (mode === 'orbit' ? orbitSpares(cfg.groups, objectCount) : 0);
   const zeros: Zero[] = [];
-  for (let i = 0; i < objectCount; i++) zeros.push(makeZero());
+  for (let i = 0; i < slots; i++) zeros.push(makeZero());
   const glyphs: Glyph[] = [];
   const glyphCount = cfg.fill.glyphs;
   for (let i = 0; i < glyphCount; i++) glyphs.push(makeGlyph());
@@ -197,7 +205,7 @@ export function buildGame(cfg: GameConfig, mode: ModeId): GameState {
   const bottomInset = cfg.height - cfg.insetBottom;
   const state: GameState = {
     mode,
-    modeState: makeModeState(mode, zeros.length, cfg),
+    modeState: makeModeState(mode, zeros.length, objectCount, cfg),
     n: cfg.n,
     seed: cfg.seed,
     width: cfg.width,

@@ -1,8 +1,8 @@
 // A player that clears rounds, for the clear test, through the same pointer calls the canvas
 // makes, playing each game mode the way a fair player would: neither superhuman, which would
 // hide a mode that's too slow, nor clumsy, which would fake one. In the Shooter it aims at the
-// lowest zero, leading it by the shot's flight, and holds on; in Catch it slides the cups under
-// the next zero it can reach. It can also keep its hands off (Catch must still clear), or play
+// lowest zero, leading it by the shot's flight, and holds on; in Orbit, at the nearest; in Catch
+// it slides the cups under the next zero it can reach. It can also keep its hands off (Catch must still clear), or play
 // down to the last few zeros and then let go. Every frame it checks what must hold in any mode
 // (the counter, ×V, the board's edges, the effect caps and the order of phases) and keeps what
 // broke, rather than failing on the spot.
@@ -128,6 +128,21 @@ function shooterTouch(s: GameState): Touch | null {
   return z ? lead(s, z) : null;
 }
 
+/** Orbit: lead the zero nearest the turret in the middle. */
+function orbitTouch(s: GameState): Touch | null {
+  let best: Zero | null = null;
+  let bestD = Infinity;
+  for (const z of s.zeros) {
+    if (!hittable(z)) continue;
+    const d = Math.hypot(z.x - s.muzzleX, z.y - s.muzzleY);
+    if (d < bestD) {
+      bestD = d;
+      best = z;
+    }
+  }
+  return best ? lead(s, best) : null;
+}
+
 /**
  * Catch: slide the cups under the drifting zero that lands soonest and can still be reached in
  * time, predicting its bounces off the walls. Juggled zeros follow the cups by themselves.
@@ -162,6 +177,8 @@ function touchFor(s: GameState): Touch | null {
   switch (s.mode) {
     case 'catch':
       return catchTouch(s);
+    case 'orbit':
+      return orbitTouch(s);
     case 'shooter':
     default:
       return shooterTouch(s);

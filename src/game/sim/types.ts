@@ -158,8 +158,28 @@ export interface CatchState {
   misses: number[];
 }
 
+/**
+ * Orbit (SPEC 9): the turret sits in the middle and zeros circle it, each on its own oval track.
+ * Per-zero arrays are indexed like `zeros`, spare slots for split pieces included.
+ */
+export interface OrbitState {
+  mode: 'orbit';
+  /** Where each zero is around its track (radians), and how fast it goes round (radians a second, either way). */
+  angle: number[];
+  spin: number[];
+  /** Each zero's track: its size as a share of its reach, and its reach across and down from the middle. */
+  track: number[];
+  reachX: number[];
+  reachY: number[];
+  /** The first slot past the round's own zeros, kept free for the pieces armored zeros split into. */
+  spareFrom: number;
+  /** Where the pieces' badges start in the atlas, and the piece values they show, in that order. */
+  badgeBase: number;
+  pieceValues: number[];
+}
+
 /** What the round's mode keeps beyond the shared fields. Each mode adds its own. */
-export type ModeState = ShooterState | CatchState;
+export type ModeState = ShooterState | CatchState | OrbitState;
 
 /** What the screen hands the sim to start a round. Computed on the JS thread. */
 export interface GameConfig {

@@ -22,6 +22,8 @@ export function pointerDown(s: GameState, x: number, y: number): void {
     case 'catch':
       aimCups(s, x);
       break;
+    // Orbit's turret, in the middle, fires as the Shooter's does.
+    case 'orbit':
     case 'shooter':
     default:
       pressFire(s, x, y);
@@ -37,6 +39,7 @@ export function pointerMove(s: GameState, x: number, y: number): void {
     case 'catch':
       aimCups(s, x);
       break;
+    case 'orbit':
     case 'shooter':
     default:
       moveAim(s, x, y);
@@ -50,6 +53,7 @@ export function pointerUp(s: GameState): void {
     // The cups stay where the finger left them.
     case 'catch':
       break;
+    case 'orbit':
     case 'shooter':
     default:
       releaseFire(s);
