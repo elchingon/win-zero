@@ -75,7 +75,7 @@ describe('available modes', () => {
 
   it('offers every mode whose round is built, and nothing else', () => {
     // Each mode joins as its round lands (M7).
-    expect(availableModes(100, PLUS).map((m) => m.id)).toEqual(['shooter', 'catch']);
+    expect(availableModes(100, PLUS).map((m) => m.id)).toEqual(['shooter', 'catch', 'orbit']);
   });
 });
 
@@ -84,6 +84,7 @@ describe('the equipped mode', () => {
     expect(equippedMode('shooter', 1, PLUS)).toBe('shooter');
     expect(equippedMode('shooter', 1, FREE)).toBe('shooter');
     expect(equippedMode('catch', 1, PLUS)).toBe('catch');
+    expect(equippedMode('orbit', 1, PLUS)).toBe('orbit');
   });
 
   it('falls back to the Shooter for no pick, a mode not offered, or anything else', () => {

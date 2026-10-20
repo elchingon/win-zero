@@ -13,6 +13,7 @@ import { DAY0, newGoal, yesDays } from '@/engine/__tests__/fixtures';
 import { appStore, type RoundRecord } from '@/store';
 import { DEFAULT_PERSISTED } from '@/store/migrate';
 import { THEME_LOOKS, type ThemeLook } from '@/theme/themes';
+import { MODE_COPY } from '@/ui/copy/modes';
 
 jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock'));
 jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
@@ -108,10 +109,11 @@ describe('the game mode in Win Zero Plus (SPEC 9)', () => {
     expect(screen.getByRole('button', { name: 'Catcher: Twin Cups' })).toBeOnTheScreen();
   });
 
-  it.each(PLAYABLE_MODES)('plays a practice round in the mode its link names: %s', async (mode) => {
+  it.each(PLAYABLE_MODES)('plays a practice round in the mode its link names, in its words: %s', async (mode) => {
     await open(`/play?practice=60&mode=${mode}`);
     expect(mockRounds.at(-1)?.n).toBe(60);
     expect(mockRounds.every((r) => r.mode === mode)).toBe(true);
+    expect(screen.getByText(MODE_COPY[mode].hint, { includeHiddenElements: true })).toBeOnTheScreen();
   });
 
   it('leaves the saved pick alone when a practice link names a mode', async () => {
