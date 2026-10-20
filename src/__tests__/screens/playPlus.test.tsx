@@ -5,7 +5,8 @@ import './env/plus';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { beforeAll, beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { renderRouter, screen } from 'expo-router/testing-library';
+import { router } from 'expo-router';
+import { act, renderRouter, screen } from 'expo-router/testing-library';
 
 import PlayScreen from '@/app/play';
 import { PLAYABLE_MODES, THEME_UNLOCK_EMBER } from '@/engine';
@@ -118,6 +119,13 @@ describe('the game mode in Win Zero Plus (SPEC 9)', () => {
     await open('/play?practice=60&mode=catch');
     expect(mockRounds.at(-1)?.mode).toBe('catch');
     expect(appStore.getState().gameMode).toBeNull();
+  });
+
+  it('starts a new round when another practice link arrives mid-round', async () => {
+    await open('/play?practice=60&mode=catch&theme=neon');
+    await act(async () => router.navigate('/play?practice=60&mode=orbit&theme=gold'));
+    expect(mockRounds.at(-1)?.mode).toBe('orbit');
+    expect(mockRounds.at(-1)?.look).toBe(THEME_LOOKS.gold);
   });
 
   it('plays the saved mode when a practice link names a mode it doesn’t know', async () => {

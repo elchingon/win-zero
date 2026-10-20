@@ -85,6 +85,9 @@ export default function Play() {
       <Stack.Screen options={{ gestureEnabled: false }} />
       {isPractice ? (
         <Round
+          // A link to the screen already showing only changes its params, and a round reads its
+          // mode and theme once: a practice link that names others starts a new round.
+          key={`${practiceN}:${practiceMode}:${practiceTheme}`}
           initialMode="practice"
           goalId={null}
           n={practiceN}
