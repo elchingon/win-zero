@@ -1,5 +1,6 @@
 // What the result sheet says under "N zeros down": what the Yes earned and the next unlock.
-// Rewards were applied when Yes was answered; this only reveals them. A replay, a bonus round or
+// Rewards were applied when Yes was answered; this only reveals them, after the popup for any Game
+// credit the Yes earned. A replay, a bonus round or
 // a practice round changes nothing, and says so. Also the round's labels, so the app and the
 // website name each kind of round the same. Shared by both. In Win Zero Plus (SPEC 9), power-ups
 // go by the game mode's names, and an earned theme is announced like a weapon.
@@ -11,6 +12,7 @@ import {
   SHIELD_CAP,
   themeById,
   weaponById,
+  type CreditGrant,
   type CreditWallet,
   type GoalState,
   type ModeId,
@@ -51,17 +53,31 @@ export interface ResultLine {
   news?: boolean;
 }
 
-/** What covers the round: the HUD while it plays, then the encouragement popup, then the sheet. */
-export type RoundOverlay = 'hud' | 'cheer' | 'sheet';
+/**
+ * What covers the round: the HUD while it plays, then the encouragement popup, then the popup for
+ * the Game credits the Yes earned, then the sheet.
+ */
+export type RoundOverlay = 'hud' | 'cheer' | 'credit' | 'sheet';
 
 /**
  * Until the fill lands, the HUD. Then a line of encouragement until it's dismissed (`cheered`),
- * then the result sheet. The encouragement is about the day's check-in, so practice and bonus
- * rounds go straight to the sheet.
+ * then, while `creditsDue` (Game credits to reveal, not yet dismissed), their popup, then the
+ * result sheet. The encouragement is about the day's check-in, so practice and bonus rounds go
+ * straight to the sheet.
  */
-export function roundOverlay(landed: boolean, mode: ResultMode, cheered: boolean): RoundOverlay {
+export function roundOverlay(landed: boolean, mode: ResultMode, cheered: boolean, creditsDue = false): RoundOverlay {
   if (!landed) return 'hud';
-  return mode === 'practice' || mode === 'bonus' || cheered ? 'sheet' : 'cheer';
+  if (mode === 'practice' || mode === 'bonus') return 'sheet';
+  if (!cheered) return 'cheer';
+  return creditsDue ? 'credit' : 'sheet';
+}
+
+/**
+ * The Game credits a round reveals in a popup when it ends: those its Yes earned, the first time
+ * it's played. They were banked at the Yes; a replay has nothing new to show.
+ */
+export function revealedCredits(mode: ResultMode, record: RoundRecord | null): CreditGrant[] {
+  return mode === 'real' && record ? record.rewards.credits.filter((g) => g.kind === 'game') : [];
 }
 
 export interface ResultOptions {

@@ -1,6 +1,6 @@
-// Credits in plain words: their names, the result sheet's line for one a Yes earned, what each
-// is for, Home's Credits section with its hints and bonus round sheet, and the question before a
-// round. Why a credit was earned comes from the engine's rewards, so the words can't drift from
+// Credits in plain words: their names, the result sheet's line for one a Yes earned and the popup
+// that reveals a Game credit after the round, what each is for, Home's Credits section with its
+// hints and bonus round sheet, and the question before a round. Why a credit was earned comes from the engine's rewards, so the words can't drift from
 // the rules. Shared by the app and the website.
 import {
   BONUS_MAX_N,
@@ -27,6 +27,32 @@ export function creditEarned(grant: CreditGrant): string {
   const what = grant.amount === 1 ? NAMES[grant.kind] : creditCount(grant.kind, grant.amount);
   const reason = creditReason(grant.key);
   return reason ? `${what} earned ${reason}.` : `${what} earned.`;
+}
+
+/** A popup announcing new credits: a big '+1', a title, a line or two, and its button. */
+export interface CreditNews {
+  badge: string;
+  title: string;
+  lines: string[];
+  button: string;
+}
+
+/**
+ * After the first play of a round whose Yes earned Game credits (`grants`): what came in and why,
+ * and how many there are now (`balance`, the wallet's Game credits).
+ */
+export function creditReveal(grants: readonly CreditGrant[], balance: number): CreditNews {
+  const total = grants.reduce((sum, g) => sum + g.amount, 0);
+  const reasons = [...new Set(grants.map((g) => creditReason(g.key)).filter((r) => r !== undefined))];
+  return {
+    badge: `+${formatCount(total)}`,
+    title: total === 1 ? 'Game credit earned!' : 'Game credits earned!',
+    lines: [
+      ...reasons.map((r) => `Earned ${r}.`),
+      `You now have ${creditCount('game', balance)}. Spend one on a bonus round from Home, any size you like.`,
+    ],
+    button: 'Nice!',
+  };
 }
 
 /** What each credit is for. */

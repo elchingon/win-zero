@@ -4,7 +4,7 @@ import { EMPTY_WALLET, type CreditGrant, type CreditWallet } from '@/engine';
 import { answerDay, DAY0, newGoal, yesDays } from '@/engine/__tests__/fixtures';
 import type { RoundRecord } from '@/store/types';
 
-import { hudLabel, replayMode, resultLines, roundOverlay, sheetEyebrow } from '../result';
+import { hudLabel, replayMode, resultLines, revealedCredits, roundOverlay, sheetEyebrow } from '../result';
 
 describe('roundOverlay', () => {
   it('keeps the HUD up until the fill lands', () => {
@@ -24,6 +24,34 @@ describe('roundOverlay', () => {
     expect(roundOverlay(true, 'practice', false)).toBe('sheet');
     expect(roundOverlay(true, 'bonus', false)).toBe('sheet');
     expect(roundOverlay(false, 'bonus', false)).toBe('hud');
+  });
+
+  it('reveals Game credits after the cheer and before the sheet, until dismissed', () => {
+    expect(roundOverlay(false, 'real', false, true)).toBe('hud');
+    expect(roundOverlay(true, 'real', false, true)).toBe('cheer');
+    expect(roundOverlay(true, 'real', true, true)).toBe('credit');
+    expect(roundOverlay(true, 'real', true, false)).toBe('sheet');
+    expect(roundOverlay(true, 'bonus', false, true)).toBe('sheet');
+  });
+});
+
+describe('revealedCredits', () => {
+  const day = (credits: CreditGrant[]): RoundRecord => ({
+    day: '2026-10-19',
+    n: 7,
+    rewards: { bomb: false, shield: true, shieldCapped: false, weapons: ['scatter'], credits },
+    borrowed: [],
+    played: false,
+  });
+  const game = { kind: 'game' as const, amount: 1, key: 'yes-every-7@g1:2026-10-19' };
+  const weapon = { kind: 'weapon' as const, amount: 1, key: 'comeback' };
+
+  it("shows the Game credits a Yes earned, on the round's first play only", () => {
+    expect(revealedCredits('real', day([weapon, game]))).toEqual([game]);
+    expect(revealedCredits('real', day([weapon]))).toEqual([]);
+    expect(revealedCredits('replay', day([game]))).toEqual([]);
+    expect(revealedCredits('bonus', null)).toEqual([]);
+    expect(revealedCredits('practice', null)).toEqual([]);
   });
 });
 

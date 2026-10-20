@@ -9,6 +9,7 @@ import {
   creditCount,
   creditEarned,
   creditHelp,
+  creditReveal,
   creditsEarnedBy,
   CREDITS_HELP,
   CREDITS_HOME,
@@ -34,6 +35,31 @@ describe('credit copy', () => {
     );
     // A round saved before the rewards changed still says why.
     expect(creditEarned({ kind: 'game', amount: 1, key: 'zeros-2' })).toBe('Game credit earned for reaching 2 zeros.');
+  });
+
+  it('reveals a Game credit after the round: what came in, why, and how many there are now', () => {
+    expect(creditReveal([{ kind: 'game', amount: 1, key: 'yes-every-7@g1:2026-10-19' }], 2)).toEqual({
+      badge: '+1',
+      title: 'Game credit earned!',
+      lines: ['Earned for every 7 Yeses in a row.', 'You now have 2 Game credits. Spend one on a bonus round from Home, any size you like.'],
+      button: 'Nice!',
+    });
+    const two = creditReveal(
+      [
+        { kind: 'game', amount: 1, key: 'zeros-3' },
+        { kind: 'game', amount: 1, key: 'yes-every-7@g1:2026-10-13' },
+      ],
+      1,
+    );
+    expect(two.badge).toBe('+2');
+    expect(two.title).toBe('Game credits earned!');
+    expect(two.lines).toEqual([
+      'Earned for reaching 3 zeros.',
+      'Earned for every 7 Yeses in a row.',
+      'You now have 1 Game credit. Spend one on a bonus round from Home, any size you like.',
+    ]);
+    // A grant with no reward behind it just says how many there are.
+    expect(creditReveal([{ kind: 'game', amount: 3, key: 'pack-1' }], 3).lines).toHaveLength(1);
   });
 
   it('lists every way to earn each credit', () => {
@@ -112,6 +138,7 @@ describe('credit copy', () => {
         typeof v === 'function' ? [v('game'), v('weapon')] : typeof v === 'string' ? [v] : Object.values(v),
       ),
       ...Object.values(BONUS_SHEET),
+      ...Object.values(creditReveal([{ kind: 'game', amount: 1, key: 'zeros-3' }], 1)).flat(),
     ].join(' ');
     expect(all).not.toMatch(/fail|lose|lost|broke|shame|relapse/i);
   });

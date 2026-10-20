@@ -1,6 +1,7 @@
 // The shooting round: the game canvas full screen, with the HUD over it, and once the round is
-// won, a line of encouragement and then the result sheet over the fill. A real round is the one
-// the latest Yes earned (its rewards are already banked); Replay plays it again in place, with
+// won, a line of encouragement, a popup for any Game credit its Yes earned, and then the result
+// sheet over the fill. A real round is the one the latest Yes earned (its rewards are already
+// banked, and only revealed here); Replay plays it again in place, with
 // no effect on the streak. /play?round=bonus plays the bonus round a Game credit paid for, which
 // changes nothing either. Before a round not yet played, a player holding a Weapon credit is
 // asked whether to borrow a weapon they haven't unlocked for it. Every round plays in the game
@@ -34,7 +35,7 @@ import { CheerPopup } from '@/game/CheerPopup';
 import { makeCues } from '@/game/cues';
 import { GameCanvas, type FrameStats, type GameHandle, type RoundSetup } from '@/game/GameCanvas';
 import { Hud } from '@/game/Hud';
-import { hudLabel, replayMode, roundOverlay } from '@/game/result';
+import { hudLabel, replayMode, revealedCredits, roundOverlay } from '@/game/result';
 import { ResultSheet, type ResultMode } from '@/game/ResultSheet';
 import { useSfx } from '@/game/sfx';
 import type { Report } from '@/game/sim/types';
@@ -55,7 +56,9 @@ import { THEME_LOOKS } from '@/theme/themes';
 import { colors, fonts } from '@/theme/tokens';
 import { feedback } from '@/ui/feedback';
 import { useReduceMotion, useScreenReader } from '@/ui/a11y';
+import { creditReveal } from '@/ui/copy/credits';
 import { CrashScreen } from '@/ui/CrashScreen';
+import { CreditPopup } from '@/ui/CreditPopup';
 import { FEATURES } from '@/variant';
 
 /** Practice rounds: development builds, and release builds made for measuring frame rate. */
@@ -260,7 +263,11 @@ function Round(props: {
   const [over, setOver] = useState(false);
   const [landed, setLanded] = useState(false);
   const [cheered, setCheered] = useState(false);
-  const overlay = roundOverlay(landed, mode, cheered);
+  // The Game credits the Yes earned, revealed once the cheer is dismissed.
+  const earned = useMemo(() => revealedCredits(mode, record), [mode, record]);
+  const [revealed, setRevealed] = useState(false);
+  const gameCredits = useApp((s) => s.credits.balance.game);
+  const overlay = roundOverlay(landed, mode, cheered, earned.length > 0 && !revealed);
   // A real round spends banked bombs. Replays, bonus rounds and practice get free ones: a replay or
   // a bonus round as many as are banked, which it never touches.
   const [freeBombs, setFreeBombs] = useState(() => (mode === 'practice' ? PRACTICE_BOMBS : bankedBombs));
@@ -297,11 +304,15 @@ function Round(props: {
     if (mode === 'bonus') appStore.getState().finishBonusRound();
   }, [over, mode, goalId, record]);
 
-  // The encouragement arrives with a fanfare and a light tap.
+  // The encouragement arrives with a fanfare and a light tap; a Game credit with the Yes chime.
   useEffect(() => {
-    if (overlay !== 'cheer') return;
-    play('fanfare');
-    feedback.cheer();
+    if (overlay === 'cheer') {
+      play('fanfare');
+      feedback.cheer();
+    } else if (overlay === 'credit') {
+      play('yes');
+      feedback.success();
+    }
   }, [overlay, play]);
 
   // The fill runs a few seconds before the result sheet; say the round is won right away.
@@ -315,6 +326,7 @@ function Round(props: {
   };
 
   const dismissCheer = useCallback(() => setCheered(true), []);
+  const dismissCredit = useCallback(() => setRevealed(true), []);
 
   /** Play the same round again, right here, with fresh positions and free bombs. */
   const replay = () => {
@@ -363,6 +375,8 @@ function Round(props: {
         <ResultSheet n={n} mode={mode} goalId={goalId} record={record} gameMode={gameMode} onBack={toBase} onReplay={replay} />
       ) : overlay === 'cheer' ? (
         <CheerPopup onDismiss={dismissCheer} />
+      ) : overlay === 'credit' ? (
+        <CreditPopup news={creditReveal(earned, gameCredits)} onDismiss={dismissCredit} />
       ) : (
         <Hud
           left={left}

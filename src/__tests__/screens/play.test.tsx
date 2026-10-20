@@ -1,12 +1,14 @@
 // The round screen's way in: the day's round or a bonus round, with the Weapon credit question
-// first when a credit could lend it something. The canvas (Skia) is stood in for by a line
-// naming its weapon and zeros, keeping each round it's handed and its colors; the HUD is the real one.
+// first when a credit could lend it something, and its way out: the cheer, then the popup for a
+// Game credit its Yes earned. The canvas (Skia) is stood in for by a line naming its weapon and
+// zeros, keeping each round it's handed and its colors, and able to end the round; the HUD is the
+// real one.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { renderRouter, fireEvent, screen } from 'expo-router/testing-library';
+import { act, renderRouter, fireEvent, screen } from 'expo-router/testing-library';
 
 import PlayScreen from '@/app/play';
-import { weaponById, type CreditWallet, type WeaponId } from '@/engine';
+import { weaponById, type CreditGrant, type CreditWallet, type WeaponId } from '@/engine';
 import { DAY0, newGoal, yesDays } from '@/engine/__tests__/fixtures';
 import { appStore, primaryRound, type RoundRecord } from '@/store';
 import { DEFAULT_PERSISTED } from '@/store/migrate';
@@ -17,13 +19,25 @@ jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock
 jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
 const mockRounds: { n: number; mode?: string; look: ThemeLook }[] = [];
+/** Clears the round on the canvas: its last zero goes, and the fill lands. */
+const mockCanvas: { clear: () => void } = { clear: () => {} };
 jest.mock('@/game/GameCanvas', () => {
   const { createElement } = require('react');
   const { Text } = require('react-native');
   return {
-    GameCanvas: (props: { weapon: { name: string }; round: { n: number; mode?: string }; look: ThemeLook }) => {
-      const { weapon, round, look } = props;
+    GameCanvas: (props: {
+      weapon: { name: string };
+      round: { n: number; mode?: string; seed: number };
+      look: ThemeLook;
+      onReport: (r: object) => void;
+    }) => {
+      const { weapon, round, look, onReport } = props;
       mockRounds.push({ ...round, look });
+      mockCanvas.clear = () => {
+        const counts = { shots: 0, hits: 0, kills: 0, armoredKills: 0, blasts: 0, bombs: 0, bounces: 0, swishes: 0 };
+        onReport({ seed: round.seed, dirty: true, valueLeft: 0, ...counts, final: true, showResult: false });
+        onReport({ seed: round.seed, dirty: true, valueLeft: 0, ...counts, final: false, showResult: true });
+      };
       return createElement(Text, null, `Canvas: ${weapon.name}, ${round.n} zeros`);
     },
   };
@@ -38,10 +52,10 @@ const ROUTES = {
 
 const goal = yesDays(newGoal(), DAY0, 3); // best 3: Pea Shooter and Twin Barrel unlocked
 const wallet = (weapon: number): CreditWallet => ({ balance: { game: 0, weapon }, claimed: [] });
-const dayRound = (borrowed: WeaponId[] = [], played = false): RoundRecord => ({
+const dayRound = (borrowed: WeaponId[] = [], played = false, credits: CreditGrant[] = []): RoundRecord => ({
   day: '2026-10-15',
   n: 3,
-  rewards: { bomb: false, shield: false, shieldCapped: false, weapons: ['twin'], credits: [] },
+  rewards: { bomb: false, shield: false, shieldCapped: false, weapons: ['twin'], credits },
   borrowed,
   played,
 });
@@ -105,6 +119,45 @@ describe('the round, with a Weapon credit', () => {
     appStore.setState({ goals: [{ goal, round: dayRound([], true), seenThrough: null }], credits: wallet(1) });
     await open('/play');
     expect(screen.getByText('Canvas: Twin Barrel, 3 zeros')).toBeOnTheScreen();
+  });
+});
+
+describe('the end of the round', () => {
+  const zeros3: CreditGrant = { kind: 'game', amount: 1, key: 'zeros-3' };
+  const comeback: CreditGrant = { kind: 'weapon', amount: 1, key: 'comeback' };
+  const clear = () => act(() => mockCanvas.clear());
+
+  it('cheers, then reveals the Game credit its Yes earned, then lets the sheet up', async () => {
+    appStore.setState({
+      goals: [{ goal, round: dayRound([], false, [zeros3, comeback]), seenThrough: null }],
+      credits: { balance: { game: 2, weapon: 0 }, claimed: ['goal-set', 'zeros-3', 'comeback'] },
+    });
+    await open('/play');
+    await clear();
+    expect(primaryRound(appStore.getState())?.played).toBe(true);
+    expect(screen.queryByText(/Game credit earned!/)).not.toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Got it' }));
+
+    expect(screen.getByRole('header', { name: /Game credit earned!/ })).toBeOnTheScreen();
+    expect(screen.getByText('Earned for reaching 3 zeros.')).toBeOnTheScreen();
+    expect(screen.getByText(/^You now have 2 Game credits\./)).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Nice!' }));
+    expect(screen.queryByText(/Game credit earned!/)).not.toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Got it' })).not.toBeOnTheScreen();
+  });
+
+  it('reveals nothing when the Yes earned only a Weapon credit, or on a replay', async () => {
+    appStore.setState({ goals: [{ goal, round: dayRound([], false, [comeback]), seenThrough: null }] });
+    await open('/play');
+    await clear();
+    await fireEvent.press(screen.getByRole('button', { name: 'Got it' }));
+    expect(screen.queryByRole('button', { name: 'Nice!' })).not.toBeOnTheScreen();
+
+    appStore.setState({ goals: [{ goal, round: dayRound([], true, [zeros3]), seenThrough: null }] });
+    await open('/play');
+    await clear();
+    await fireEvent.press(screen.getByRole('button', { name: 'Got it' }));
+    expect(screen.queryByRole('button', { name: 'Nice!' })).not.toBeOnTheScreen();
   });
 });
 

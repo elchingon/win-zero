@@ -34,8 +34,8 @@ const SOUNDS: Record<Sound, { source: number | null; voices: number }> = {
   yes: { source: yes, voices: 1 },
 };
 
-/** The round's own sounds: what a screen loads unless it asks for others. */
-const ROUND_SOUNDS: readonly Sound[] = ['shoot', 'pop', 'boom', 'fanfare', 'bounce', 'swish'];
+/** The round's own sounds, and the chime for a Game credit after it: what a screen loads unless it asks for others. */
+const ROUND_SOUNDS: readonly Sound[] = ['shoot', 'pop', 'boom', 'fanfare', 'bounce', 'swish', 'yes'];
 
 interface Voices {
   play: (sound: Sound) => void;
