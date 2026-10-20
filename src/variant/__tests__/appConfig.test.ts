@@ -6,13 +6,27 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from '@jest/globals';
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
-import makeConfig, { assetPaths, PLUS, readVariant, withPlus } from '../../../app.config';
+import { THEME_IDS } from '@/engine';
+
+import makeConfig, { assetPaths, PLUS, PLUS_ICONS, readVariant, withPlus } from '../../../app.config';
 import appJson from '../../../app.json';
 
 const root = path.resolve(__dirname, '../../..');
 const base = appJson.expo as unknown as ExpoConfig;
 const context = { config: base, projectRoot: root } as unknown as ConfigContext;
 const saved = process.env.EXPO_PUBLIC_APP_VARIANT;
+const ICON_PLUGIN = './modules/app-icons/app.plugin.js';
+
+interface IconOption {
+  name: string;
+  ios: Record<'light' | 'dark' | 'tinted', string>;
+  android: Record<'foregroundImage' | 'backgroundImage' | 'monochromeImage', string>;
+}
+/** The options a config gives the app-icons plugin, or undefined when it doesn't use it. */
+function iconOptions(config: ExpoConfig): { icons: IconOption[] } | undefined {
+  const entry = config.plugins?.find((p) => Array.isArray(p) && p[0] === ICON_PLUGIN);
+  return Array.isArray(entry) ? (entry[1] as { icons: IconOption[] }) : undefined;
+}
 
 afterEach(() => {
   if (saved === undefined) delete process.env.EXPO_PUBLIC_APP_VARIANT;
@@ -60,7 +74,7 @@ describe('Win Zero Plus', () => {
 
   it('uses only its own art, and every file is there', () => {
     const paths = assetPaths(plus);
-    expect(paths.length).toBe(assetPaths(base).length);
+    expect(paths.length).toBe(assetPaths(base).length + 6 * PLUS_ICONS.length);
     for (const p of paths) {
       expect(p.startsWith('./assets/brand-plus/')).toBe(true);
       expect(fs.existsSync(path.join(root, p))).toBe(true);
@@ -83,6 +97,26 @@ describe('Win Zero Plus', () => {
     expect(plus.plugins?.slice(0, base.plugins?.length).map((p) => (Array.isArray(p) ? p[0] : p))).toEqual(
       base.plugins?.map((p) => (Array.isArray(p) ? p[0] : p)),
     );
+  });
+
+  it('offers an icon per theme, each in every format its own icon has (SPEC 9)', () => {
+    const options = iconOptions(plus);
+    expect(options?.icons.map((i) => i.name)).toEqual(THEME_IDS);
+    expect(PLUS_ICONS).toEqual(THEME_IDS);
+    for (const icon of options?.icons ?? []) {
+      const files = [...Object.values(icon.ios), ...Object.values(icon.android)];
+      expect(Object.keys(icon.ios)).toEqual(['light', 'dark', 'tinted']);
+      expect(Object.keys(icon.android)).toEqual(['foregroundImage', 'backgroundImage', 'monochromeImage']);
+      for (const f of files) {
+        expect(f.startsWith(`./assets/brand-plus/icons/${icon.name}/`)).toBe(true);
+        expect(fs.existsSync(path.join(root, f))).toBe(true);
+      }
+    }
+  });
+
+  it('leaves the app icons out of Win Zero, which keeps only its own', () => {
+    expect(iconOptions(base)).toBeUndefined();
+    expect(JSON.stringify(base)).not.toContain('app-icons');
   });
 
   it("doesn't touch app.json's config", () => {

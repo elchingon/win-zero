@@ -23,10 +23,32 @@ const FREE_BRAND = './assets/brand/';
 const PLUS_BRAND = './assets/brand-plus/';
 
 /**
+ * Win Zero Plus's alternate home-screen icons, one per theme (SPEC 9), drawn into
+ * assets/brand-plus/icons/<theme>/ by npm run gen:brand:plus; the app-icons module switches between
+ * them. Never rename or remove one once it has shipped: a phone showing it would lose its launcher entry.
+ */
+export const PLUS_ICONS = ['classic', 'neon', 'mono', 'pastel', 'ember', 'aurora', 'gold'] as const;
+
+function plusIcon(name: string) {
+  const dir = `${PLUS_BRAND}icons/${name}/`;
+  return {
+    name,
+    ios: { light: `${dir}app-store-icon.png`, dark: `${dir}ios-icon-dark.png`, tinted: `${dir}ios-icon-tinted.png` },
+    android: {
+      foregroundImage: `${dir}android-foreground.png`,
+      backgroundImage: `${dir}android-background.png`,
+      monochromeImage: `${dir}android-monochrome.png`,
+    },
+  };
+}
+
+/**
  * Config plugins only Plus uses. Their native modules still link into both apps (Expo autolinks
  * by package, not by variant), but only Plus configures and calls them.
  */
-const PLUS_ONLY_PLUGINS: NonNullable<ExpoConfig['plugins']> = [];
+const PLUS_ONLY_PLUGINS: NonNullable<ExpoConfig['plugins']> = [
+  ['./modules/app-icons/app.plugin.js', { icons: PLUS_ICONS.map(plusIcon) }],
+];
 
 export function readVariant(value: string | undefined): Variant {
   const v = value?.trim() ?? '';
@@ -61,12 +83,7 @@ export function assetPaths(value: unknown, found: string[] = []): string[] {
 
 export function withPlus(config: ExpoConfig, root: string): ExpoConfig {
   const plus = rebrand(config);
-  // A missing file fails here, with its name, rather than deep in a native build.
-  const missing = assetPaths(plus).filter((p) => !fs.existsSync(path.join(root, p)));
-  if (missing.length > 0) {
-    throw new Error(`Win Zero Plus art is missing: ${missing.join(', ')}. Run npm run gen:brand:plus.`);
-  }
-  return {
+  const result: ExpoConfig = {
     ...plus,
     name: PLUS.name,
     version: PLUS.version,
@@ -81,6 +98,12 @@ export function withPlus(config: ExpoConfig, root: string): ExpoConfig {
       ['expo-dev-client', { addGeneratedScheme: false }],
     ],
   };
+  // A missing file (icons included) fails here, with its name, rather than deep in a native build.
+  const missing = assetPaths(result).filter((p) => !fs.existsSync(path.join(root, p)));
+  if (missing.length > 0) {
+    throw new Error(`Win Zero Plus art is missing: ${missing.join(', ')}. Run npm run gen:brand:plus.`);
+  }
+  return result;
 }
 
 export default ({ config }: ConfigContext): ExpoConfig => {
