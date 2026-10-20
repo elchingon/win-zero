@@ -194,9 +194,9 @@ function Play(props: {
   // The last zero went: a real round or a bonus round counts as played.
   useEffect(() => {
     if (!over) return;
-    if (mode === 'real' && goalId) appStore.getState().finishRound(goalId);
+    if (mode === 'real' && goalId && record) appStore.getState().finishRound(goalId, record.day);
     if (mode === 'bonus') appStore.getState().finishBonusRound();
-  }, [over, mode, goalId]);
+  }, [over, mode, goalId, record]);
 
   // The encouragement arrives with a fanfare.
   useEffect(() => {

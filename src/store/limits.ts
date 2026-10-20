@@ -12,6 +12,8 @@ export interface Limits {
   themesEnabled: boolean;
   /** Home-screen icons beyond the app's own can be picked (engine/icons.ts). */
   iconsEnabled: boolean;
+  /** Home's Game credits count gives a free credit to three quick taps (Win Zero Plus's secret). */
+  secretCredits: boolean;
 }
 
 export const FREE_LIMITS: Limits = {
@@ -20,6 +22,7 @@ export const FREE_LIMITS: Limits = {
   modesEnabled: false,
   themesEnabled: false,
   iconsEnabled: false,
+  secretCredits: false,
 };
 export const PLUS_LIMITS: Limits = {
   maxGoals: 3,
@@ -27,4 +30,5 @@ export const PLUS_LIMITS: Limits = {
   modesEnabled: true,
   themesEnabled: true,
   iconsEnabled: true,
+  secretCredits: true,
 };

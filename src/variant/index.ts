@@ -42,6 +42,8 @@ export const FEATURES = {
   themes: LIMITS.themesEnabled,
   /** Settings › App icon, and the debug section's icon chips, as the store allows them (LIMITS). */
   altIcons: LIMITS.iconsEnabled,
+  /** Home's secret: three quick taps on the Game credits count give one free (LIMITS). */
+  secretCredits: LIMITS.secretCredits,
 } as const;
 
 /** On iPhone, the folder only the two apps share (an App Group, in app.json): a move waits there. */

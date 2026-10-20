@@ -13,6 +13,7 @@ import {
   claimCredits,
   createGoal,
   EMPTY_WALLET,
+  giftCredits,
   isBonusSize,
   isUnlocked,
   missDigest,
@@ -21,6 +22,7 @@ import {
   nextWindow,
   pendingWindow,
   resolve,
+  SECRET_GAME_CREDITS,
   setCheckInDays as setGoalCheckInDays,
   setGoalAlias as setGoalLockScreenName,
   setCheckInTime as setGoalCheckInTime,
@@ -138,8 +140,8 @@ export interface AppState extends PersistedState {
   /** The route the latest answer left, once. */
   takeRoute: () => PendingRoute | null;
   clearRejection: () => void;
-  /** A goal's round: its last zero went. */
-  finishRound: (goalId: string) => void;
+  /** A goal's round for `day`: its last zero went. A newer round the goal has since is left alone. */
+  finishRound: (goalId: string, day: DayKey) => void;
   /**
    * Spend a Game credit on a bonus round of `n` zeros. Turned down without a goal or a credit,
    * for a size out of range, or while a bonus round waits to be played.
@@ -147,6 +149,11 @@ export interface AppState extends PersistedState {
   startBonusRound: (n: number) => boolean;
   /** The bonus round's last zero went. */
   finishBonusRound: () => void;
+  /**
+   * Win Zero Plus's secret: a free Game credit (SECRET_GAME_CREDITS) for three quick taps on Home's
+   * count, as often as found. The new Game balance, or null where this app has no such secret (Limits).
+   */
+  giftCredit: () => number | null;
   /**
    * Spend a Weapon credit to lend `target`'s round weapon `id`: one the round's offer holds (not
    * yet unlocked, within the round's share), while that round waits to be played.
@@ -506,9 +513,11 @@ export function createAppStore(deps: StoreDeps) {
             if (get().rejection) set({ rejection: null });
           },
 
-          finishRound: (goalId) => {
+          finishRound: (goalId, day) => {
             const slot = slotOf(goalId);
-            if (slot?.round && !slot.round.played) setSlot(goalId, slot.goal, { round: { ...slot.round, played: true } });
+            if (slot?.round && slot.round.day === day && !slot.round.played) {
+              setSlot(goalId, slot.goal, { round: { ...slot.round, played: true } });
+            }
           },
 
           startBonusRound: (n) => {
@@ -523,6 +532,14 @@ export function createAppStore(deps: StoreDeps) {
           finishBonusRound: () => {
             const { bonus } = get();
             if (bonus && !bonus.played) set({ bonus: { ...bonus, played: true } });
+          },
+
+          giftCredit: () => {
+            const { hydrated, goals, credits } = get();
+            if (!hydrated || goals.length === 0 || !limits.secretCredits) return null;
+            const wallet = giftCredits(credits, 'game', SECRET_GAME_CREDITS);
+            set({ credits: wallet });
+            return wallet.balance.game;
           },
 
           borrowWeapon: (target, id) => {

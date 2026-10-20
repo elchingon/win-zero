@@ -46,7 +46,7 @@ describe('variant', () => {
 });
 
 describe('what each app offers (SPEC 9)', () => {
-  it('sends the move from Win Zero, takes it in to Plus, and offers goals, schedules, game modes, themes and icons in Plus', () => {
+  it('sends the move from Win Zero, takes it in to Plus, and offers goals, schedules, game modes, themes, icons and the secret credits in Plus', () => {
     expect(load(undefined).FEATURES).toEqual({
       moveOut: true,
       importIn: false,
@@ -55,6 +55,7 @@ describe('what each app offers (SPEC 9)', () => {
       extraModes: false,
       themes: false,
       altIcons: false,
+      secretCredits: false,
     });
     expect(load('plus').FEATURES).toEqual({
       moveOut: false,
@@ -64,6 +65,7 @@ describe('what each app offers (SPEC 9)', () => {
       extraModes: true,
       themes: true,
       altIcons: true,
+      secretCredits: true,
     });
   });
 

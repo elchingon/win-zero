@@ -558,7 +558,9 @@ describe('weapons and rounds', () => {
     });
     expect(primaryGoal(h.store.getState())?.bombs).toBe(1);
 
-    h.store.getState().finishRound(gid(h.store));
+    h.store.getState().finishRound(gid(h.store), '2026-10-16'); // an older round's: left alone
+    expect(primaryRound(h.store.getState())?.played).toBe(false);
+    h.store.getState().finishRound(gid(h.store), '2026-10-17');
     expect(primaryRound(h.store.getState())?.played).toBe(true);
 
     h.setTime('2026-10-18', '21:00');
@@ -687,7 +689,7 @@ describe('credits (SPEC 5)', () => {
     const h = await withGoal(yesDays(newGoal(), DAY0, 3));
     h.setTime('2026-10-16', '21:00');
     h.store.getState().answer(gid(h.store), 'yes');
-    h.store.getState().finishRound(gid(h.store));
+    h.store.getState().finishRound(gid(h.store), '2026-10-16');
     h.store.setState({ credits: holding(0, 1) });
     expect(h.store.getState().borrowWeapon({ round: 'daily', goalId: gid(h.store) }, 'rocket')).toBe(false);
     expect(h.store.getState().credits.balance.weapon).toBe(1);
@@ -737,6 +739,24 @@ describe('credits (SPEC 5)', () => {
     prod.store.setState({ credits: holding(1, 1) });
     prod.store.getState().devResetCredits();
     expect(prod.store.getState().credits).toEqual(holding(1, 1));
+  });
+
+  it("gives a free Game credit for Plus's secret, every time, and claims nothing", async () => {
+    const h = await withGoal(newGoal(), { limits: PLUS_LIMITS });
+    h.store.setState({ credits: { balance: { game: 1, weapon: 0 }, claimed: ['goal-set'] } });
+    expect(h.store.getState().giftCredit()).toBe(2);
+    expect(h.store.getState().giftCredit()).toBe(3);
+    expect(h.store.getState().credits).toEqual({ balance: { game: 3, weapon: 0 }, claimed: ['goal-set'] });
+  });
+
+  it('has no secret credits in Win Zero or on the website, or before a goal', async () => {
+    const free = await withGoal(newGoal());
+    expect(free.store.getState().giftCredit()).toBeNull();
+    expect(free.store.getState().credits.balance.game).toBe(0);
+
+    const empty = await withGoal(newGoal(), { limits: PLUS_LIMITS });
+    empty.store.setState({ goals: [] });
+    expect(empty.store.getState().giftCredit()).toBeNull();
   });
 });
 
@@ -1372,7 +1392,7 @@ describe('several goals (SPEC 9)', () => {
     expect(store.getState().undo).toBeNull();
     expect(store.getState().notices[b]).toEqual({ kind: 'noted' });
     expect(store.getState().nextNotice()).toMatchObject({ source: 'answer', goalId: b });
-    store.getState().finishRound(a);
+    store.getState().finishRound(a, slotById(store.getState(), a)?.round?.day ?? '');
     expect(slotById(store.getState(), a)?.round?.played).toBe(true);
     expect(store.getState().spendBomb(b)).toBe(false);
   });
