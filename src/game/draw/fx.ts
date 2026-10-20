@@ -12,11 +12,11 @@ import { paintColor } from './util';
 /** Shockwaves start at this opacity and never get thinner than RING_MIN_WIDTH. */
 const RING_ALPHA = 0.9;
 const RING_MIN_WIDTH = 0.5;
-/** Laser beams, at full strength: a soft amber glow, the amber beam, and a fg core (widths in points). */
+/** Laser beams, at full strength: a soft glow and the beam in the shot color, and a fg core (widths in points). */
 const BEAM_GLOW = { width: 30, alpha: 0.3 };
 const BEAM_WIDTH = 14;
 const BEAM_CORE = 4;
-/** Lightning bolts: a teal glow under a thin teal line. */
+/** Lightning bolts: a glow under a thin line, in the chain shot's color. */
 const BOLT_GLOW = { width: 9, alpha: 0.35 };
 const BOLT_WIDTH = 3;
 
@@ -40,7 +40,7 @@ export function drawBullets(canvas: SkCanvas, s: GameState, kit: Kit, atlas: SkI
     const b = s.bullets.items[i];
     if (!b) continue;
     const w = b.weapon;
-    // Rockets and nukes are big flare bolts, the zapper's are teal, the rest amber.
+    // Rockets and nukes are big shots, the zapper's are chain shots, the rest the usual.
     const sprite = w.splash ? kinds[2] : w.chain ? kinds[1] : kinds[0];
     if (!sprite) continue;
     pushSprite(batch, sprite, b.x, b.y, 1 / sprite.ry, Math.atan2(b.vy, b.vx));
@@ -56,10 +56,10 @@ export function drawBeams(canvas: SkCanvas, s: GameState, kit: Kit, sc: Scratch)
     const b = s.beams.items[i];
     if (!b) continue;
     const k = 1 - b.t / b.dur;
-    paintColor(paint, sc, kit.colors.amber, k * BEAM_GLOW.alpha);
+    paintColor(paint, sc, kit.colors.shot, k * BEAM_GLOW.alpha);
     paint.setStrokeWidth(BEAM_GLOW.width * k);
     canvas.drawLine(b.x1, b.y1, b.x2, b.y2, paint);
-    paintColor(paint, sc, kit.colors.amber, k);
+    paintColor(paint, sc, kit.colors.shot, k);
     paint.setStrokeWidth(BEAM_WIDTH * k);
     canvas.drawLine(b.x1, b.y1, b.x2, b.y2, paint);
     paintColor(paint, sc, kit.colors.fg, 1);
@@ -74,7 +74,7 @@ function boltPass(canvas: SkCanvas, s: GameState, kit: Kit, sc: Scratch, width: 
   for (let i = 0; i < s.bolts.count; i++) {
     const b = s.bolts.items[i];
     if (!b) continue;
-    paintColor(paint, sc, kit.colors.teal, (1 - b.t / b.dur) * alpha);
+    paintColor(paint, sc, kit.colors.chain, (1 - b.t / b.dur) * alpha);
     for (let p = 1; p < b.xs.length; p++) {
       canvas.drawLine(b.xs[p - 1] ?? 0, b.ys[p - 1] ?? 0, b.xs[p] ?? 0, b.ys[p] ?? 0, paint);
     }

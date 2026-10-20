@@ -13,7 +13,7 @@ import type { Kit, Scratch } from './types';
 import { paintColor, rect } from './util';
 import { drawEnergyBars, drawHitFlashes, drawZeros } from './zeros';
 
-/** The turret's barrel: a fg bar with an amber tip, pivoting on the muzzle point. */
+/** The turret's barrel: a fg bar with a tip in the shot color, pivoting on the muzzle point. */
 const BARREL_WIDTH = 14;
 const BARREL_LENGTH = 36;
 /** The barrel starts this far out from the pivot. */
@@ -55,10 +55,10 @@ function drawTurret(canvas: SkCanvas, s: GameState, kit: Kit, sc: Scratch): void
   canvas.rotate((s.aim + Math.PI / 2) * RAD_TO_DEG, 0, 0);
   paintColor(fill, sc, kit.colors.fg, 1);
   canvas.drawRect(rect(sc, -BARREL_WIDTH / 2, -BARREL_REACH, BARREL_WIDTH, BARREL_LENGTH), fill);
-  paintColor(fill, sc, kit.colors.amber, 1);
+  paintColor(fill, sc, kit.colors.shot, 1);
   canvas.drawRect(rect(sc, -BARREL_WIDTH / 2, -BARREL_REACH, BARREL_WIDTH, BARREL_TIP), fill);
   if (s.muzzle > MUZZLE_FLASH_MIN) {
-    paintColor(glowFill, sc, kit.colors.amber, s.muzzle);
+    paintColor(glowFill, sc, kit.colors.shot, s.muzzle);
     canvas.drawCircle(0, -MUZZLE_FLASH_AT, MUZZLE_FLASH_GROW * s.muzzle + MUZZLE_FLASH_BASE, glowFill);
   }
   canvas.restore();
@@ -67,7 +67,7 @@ function drawTurret(canvas: SkCanvas, s: GameState, kit: Kit, sc: Scratch): void
   canvas.translate(s.muzzleX, s.muzzleY + TURRET_BASE_DROP);
   paintColor(fill, sc, kit.colors.panel2, 1);
   canvas.drawPath(kit.turretBase, fill);
-  paintColor(stroke, sc, kit.colors.amber, 1);
+  paintColor(stroke, sc, kit.colors.shot, 1);
   stroke.setStrokeWidth(TURRET_BASE_STROKE);
   canvas.drawPath(kit.turretBase, stroke);
   canvas.restore();

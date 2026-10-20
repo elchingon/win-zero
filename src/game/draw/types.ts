@@ -23,7 +23,7 @@ export interface SpriteSheet {
   zero: Sprite[];
   /** An armored ring per palette slot; empty when the round has none. */
   armored: Sprite[];
-  /** Bullet streaks, head at the sprite's center, pointing right: amber, teal (chain), flare (big). */
+  /** Bullet streaks, head at the sprite's center, pointing right: the usual, the chain and the big shot. */
   bullets: Sprite[];
   /** A ×V badge per distinct armored value, in armorBadges order. Drawn at natural size (ry = px per point). */
   badges: Sprite[];
@@ -55,9 +55,9 @@ export interface Kit {
     spriteAdd: SkPaint;
     /** Additive strokes: shockwaves, beams, bolts. */
     glowStroke: SkPaint;
-    /** The fill's warm radial glow (a shader); its alpha ramps in. */
+    /** The fill's radial glow (a shader); its alpha ramps in. */
     fillGlow: SkPaint;
-    /** The overlaid number: an ink outline under amber. */
+    /** The overlaid number: an ink outline under the palette's primary color. */
     overlayStroke: SkPaint;
     overlayFill: SkPaint;
   };
@@ -65,9 +65,14 @@ export interface Kit {
   overlay: { label: string; font: SkFont; x: number; y: number } | null;
   /** Skia enum values the worklets can't import: drawAtlas tints multiply the sprite. */
   blend: { modulate: BlendMode };
-  /** tokens.zeroPalette: amber, flare, teal, fg. */
+  /** The round's ring colors by palette slot, in tokens.zeroPalette's roles (amber, flare, teal, fg in Classic). */
   palette: Rgba[];
-  colors: { fg: Rgba; amber: Rgba; teal: Rgba; panel2: Rgba };
+  /**
+   * `shot` is the usual shot's color: the turret's tip and rim, its muzzle flash and the laser
+   * (amber in Classic). `chain` is the chain shot's, for its bolts (teal in Classic). `fg` and
+   * `panel2` are the section 7 colors.
+   */
+  colors: { fg: Rgba; shot: Rgba; chain: Rgba; panel2: Rgba };
 }
 
 /** One RSXform: rotation and scale (scos, ssin) and translation. */

@@ -64,7 +64,7 @@ function stubKit(n: number, fill: FillPlan, tints: TintTable): Kit {
     overlay: fill.overlayNumber ? { label: n.toLocaleString('en-US'), font: { css: '100px Bungee', size: 100 }, x: -150, y: 40 } : null,
     blend: { modulate: 0 },
     palette: zeroPalette.map((c) => rgba(c)),
-    colors: { fg: rgba(colors.fg), amber: rgba(colors.amber), teal: rgba(colors.teal), panel2: rgba(colors.panel2) },
+    colors: { fg: rgba(colors.fg), shot: rgba(colors.amber), chain: rgba(colors.teal), panel2: rgba(colors.panel2) },
   };
 }
 

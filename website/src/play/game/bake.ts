@@ -405,7 +405,7 @@ export function bakeRound(opts: {
     overlay: big,
     blend: { modulate: 0 },
     palette: zeroPalette.map((c) => rgba(c)),
-    colors: { fg: rgba(colors.fg), amber: rgba(colors.amber), teal: rgba(colors.teal), panel2: rgba(colors.panel2) },
+    colors: { fg: rgba(colors.fg), shot: rgba(colors.amber), chain: rgba(colors.teal), panel2: rgba(colors.panel2) },
   };
   return { kit, atlas, tints };
 }
