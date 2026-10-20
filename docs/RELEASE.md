@@ -148,9 +148,10 @@ variant disagree. `npm run check:variants` (also in CI) checks both apps' config
 - **Themes before Settings › Themes:** a Plus dev client plays a practice round in any theme, earned
   or not: `winzeroplus://play?practice=60&theme=<id>`, where the id is `classic`, `neon`, `mono`,
   `pastel`, `ember`, `aurora` or `gold` (QA row 22). Win Zero ignores `&theme`.
-- **Game modes before Settings › Games:** a Plus dev client plays a practice round in any game mode
-  whose round is built, `winzeroplus://play?practice=60&mode=<id>` with `catch`, `orbit`, `slice` or `breaker`, and `&theme=` works
-  alongside (QA rows 23–26). A `perf-plus` build does the same in release mode. Win Zero ignores `&mode`.
+- **Game modes before Settings › Games:** a Plus dev client plays a practice round in any game mode,
+  `winzeroplus://play?practice=60&mode=<id>`, where the id is `catch`, `orbit`, `slice` or `breaker`,
+  and `&theme=` works alongside (QA rows 23–26). A `perf-plus` build does the same in release mode.
+  Win Zero ignores `&mode`.
 
 ---
 
@@ -202,7 +203,7 @@ and its debug tools. The others use a TestFlight, internal or `preview` build.
 | 23 | **Game modes (Plus)** _dev_ | In the Plus dev client, open each mode on a small phone and on a tablet (or an iPad simulator): `winzeroplus://play?practice=7&mode=catch`, then `practice=60` and `practice=1000`, for `catch`, `orbit`, `slice` and `breaker`. In each, switch power-ups mid-round, drop a bomb, and play to the end. Then `winzero://play?practice=60&mode=catch` in Win Zero. | Each mode shows its own hint and power-up names. **Catch:** the cups follow the finger from anywhere on the board and stay clear of the HUD's buttons; a zero that lands beside them floats back up, and tough zeros hop in the cup until they pop; with the finger lifted, the zeros still end up in a cup. **Orbit:** the turret sits in the middle and fires all round, the zeros circle it without touching it or leaving the board, and an armored zero splits into two smaller ones whose ×badges add up to its own. **Slice:** zeros are tossed up a few at a time; a swipe cuts them, a tough zero hops higher with each cut, a zero that falls back is tossed again, and the blade's trail follows the finger. **Breaker:** the zeros stand as bricks, steel on top; the paddle follows the finger, a dropped ball comes back to the paddle and serves itself at a brick, and with the finger lifted the round still ends (slowly, with one ball). Every round ends with the usual celebration, fill and result sheet. Win Zero plays the Shooter. |
 | 24 | **Game modes with Reduce Motion** _dev_ | Turn on OS Reduce Motion, then play each mode at `practice=60` (row 23's links). | Less shake and fewer particles, as in row 7. Nothing in a mode needs motion to read: the Black Hole's rings hold still. |
 | 25 | **Finish round in each mode** _dev_ | With VoiceOver, then TalkBack, open each mode at `practice=60` and `practice=1000` and use **Finish round**. | The board clears, the finale plays, "Round cleared." is announced, and the result sheet comes up. |
-| 26 | **Game modes at 60 FPS** | `eas build --profile perf-plus --platform android`, then each mode (`catch`, `orbit`, `slice`, `breaker`) at `winzeroplus://play?practice=60&mode=catch&theme=gold` and `practice=1000`. | About 60 FPS on the frame meter, with the worst frame under about 25 ms, as in row 6, in every mode with Gold Year, the brightest palette. |
+| 26 | **Game modes at 60 FPS** | `eas build --profile perf-plus --platform android`, then each mode at `winzeroplus://play?practice=60&mode=<id>&theme=gold` and `practice=1000`, for `catch`, `orbit`, `slice` and `breaker`. | About 60 FPS on the frame meter, with the worst frame under about 25 ms, as in row 6, in every mode with Gold Year, the brightest palette. |
 
 ### Known and accepted
 - **A move can't prove it came from Win Zero on Android.** Any app can open Plus's import link
