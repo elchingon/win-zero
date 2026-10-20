@@ -184,12 +184,12 @@ Every round (daily, replay or bonus) plays in the mode picked in Settings › Ga
 | Mode | How it plays | Multi-hit / armored zeros | Power-ups (best streak 1 → 100) |
 |---|---|---|---|
 | **Shooter** | The free game (section 6). | As section 4 | The weapons (section 5) |
-| **Catch** | Zeros drift down; slide a cup to catch them. A miss floats back up. | Bounces up until caught enough times / heavy, slow, worth ×V | Cup → Twin Cups → Net → Magnet → Chain Catch → Vacuum Beam → Black Hole |
+| **Catch** | Zeros fall and bounce; slide a cup to catch them. Every zero bounces back up high, off the floor or the cup, along its own arc; only the Magnet, Vacuum Beam and Black Hole draw zeros in. | Bounces up high until caught enough times / heavy, slow, worth ×V | Cup → Twin Cups → Net → Magnet → Chain Catch → Vacuum Beam → Black Hole |
 | **Orbit** | The turret sits in the middle and aims all round. | As now / splits into smaller zeros that keep its value | The weapons |
 | **Slice** | Zeros are tossed up in waves; swipe to slice. Missed ones are tossed again. | Each cut juggles it higher until it pops / big, slow zeros | Blade → Twin Blade → Wide Arc → Explosive Cut → Arcing Cut → Lingering Blade → Nova |
 | **Breaker** | Zeros are bricks, with a paddle and ball. A dropped ball just respawns. | Brick hits / steel bricks worth ×V | 1 ball → 2 balls → Multi-ball → Fireball → Lightning Ball → Laser Paddle → Mega Ball |
 
-Every mode uses `composeRound(n)`, can't be lost (no lives or timers; missed zeros come back), ends with the same celebration, fill and result sheet, and supports **Finish round** and bombs. Late in a round, gentle assists (homing, magnet) make sure the last zero can always be cleared. A Weapon credit lends a locked power-up in any mode.
+Every mode uses `composeRound(n)`, can't be lost (no lives or timers; missed zeros come back), ends with the same celebration, fill and result sheet, and supports **Finish round** and bombs. Late in a round, gentle assists (homing, magnet) make sure the last zero can always be cleared. Catch has none: its zeros keep bouncing until they're caught. A Weapon credit lends a locked power-up in any mode.
 
 ### Themes and app icons
 - Themes recolor the round (zeros, shots and the fill) and Home's drifting zeros. The rest of the app keeps the section 7 palette.
