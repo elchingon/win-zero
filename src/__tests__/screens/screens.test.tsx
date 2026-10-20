@@ -113,19 +113,35 @@ describe('Setup', () => {
 describe('Credits on Home', () => {
   const wallet = (game: number, weapon: number, claimed: string[] = []) => ({ balance: { game, weapon }, claimed });
 
-  it('shows none yet, and how to earn them', async () => {
+  it('shows none yet, with how to earn them behind each count’s hint', async () => {
     await open('/', { goal: twoDays() });
     expect(screen.getByLabelText('0 Game credits')).toBeOnTheScreen();
     expect(screen.getByLabelText('0 Weapon credits')).toBeOnTheScreen();
-    expect(screen.getByText('You earn a Game credit for setting your goal and for reaching 2 zeros.')).toBeOnTheScreen();
-    expect(screen.getByText(/^You earn a Weapon credit for checking in again after a missed day, for 3 Yeses in a row/)).toBeOnTheScreen();
+    // The notes moved into the hints: the card itself stays short.
+    expect(screen.queryByText(/as many zeros as you like/)).not.toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Play a bonus round' })).not.toBeOnTheScreen();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'About Game credits' }));
+    expect(screen.getByRole('header', { name: 'Game credits' })).toBeOnTheScreen();
+    expect(screen.getByText(/^A Game credit plays a bonus round with as many zeros as you like, up to 100,000\./)).toBeOnTheScreen();
+    expect(screen.getByText(/^To spend one, tap Play a bonus round/)).toBeOnTheScreen();
+    expect(screen.getByLabelText('Setting your goal')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Reaching 2 zeros')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Got it' }));
+    expect(screen.queryByRole('header', { name: 'Game credits' })).not.toBeOnTheScreen();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'About Weapon credits' }));
+    expect(screen.getByText(/^A Weapon credit lends you a weapon you haven't unlocked yet/)).toBeOnTheScreen();
+    expect(screen.getByLabelText('Checking in again after a missed day')).toBeOnTheScreen();
+    expect(screen.getByLabelText('30 Yeses in a row')).toBeOnTheScreen();
   });
 
-  it("doesn't offer credits already earned", async () => {
+  it('marks the credits already earned in the hint', async () => {
     appStore.setState({ credits: wallet(0, 0, ['goal-set', 'zeros-2']) });
     await open('/', { goal: twoDays() });
-    expect(screen.queryByText(/You earn a Game credit/)).not.toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'About Game credits' }));
+    expect(screen.getByLabelText('Setting your goal, earned')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Reaching 2 zeros, earned')).toBeOnTheScreen();
   });
 
   it('spends a Game credit on a bonus round of the size chosen, and opens it', async () => {
@@ -162,15 +178,10 @@ describe('Credits on Home', () => {
     expect(app.pathname()).toBe('/play');
   });
 
-  it('says when a Weapon credit comes up', async () => {
-    appStore.setState({ credits: wallet(0, 1) });
-    await open('/', { goal: twoDays() });
-    expect(screen.getByText("You'll be asked before your next round whether to use one.")).toBeOnTheScreen();
-  });
-
-  it('keeps Weapon credits for new weapons once every one is unlocked', async () => {
+  it('keeps Weapon credits for new weapons once every one is unlocked, as its hint says', async () => {
     appStore.setState({ credits: wallet(0, 2) });
     await open('/', { goal: { ...twoDays(), bestStreak: 100 } });
+    await fireEvent.press(screen.getByRole('button', { name: 'About Weapon credits' }));
     expect(screen.getByText('Every weapon is unlocked, so your Weapon credits wait here for new ones.')).toBeOnTheScreen();
   });
 });

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // The screens on the shared store, in a browser-like page with the game's canvas stubbed out:
 // setting up, checking in Yes (to the round), Not today (to the notice, with Undo), and credits:
-// a bonus round, and the Weapon credit question before a round.
+// their hints, a bonus round, and the Weapon credit question before a round.
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -61,6 +61,21 @@ describe('the app on the web', () => {
     // Back on Home, the unplayed round waits there.
     await router.navigate('/');
     expect(await screen.findByText('Your Day 1 round is ready.')).toBeTruthy();
+  });
+
+  it('explains each credit behind its hint, with the ways already earned marked', async () => {
+    await setUp('Read 20 minutes');
+    fireEvent.click(screen.getByRole('button', { name: 'About Game credits' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Game credits' });
+    expect(dialog.textContent).toContain('as many zeros as you like');
+    // Setting the goal earned one.
+    expect(screen.getByText('Setting your goal').closest('li')?.className).toContain('earned');
+    expect(screen.getByText('Reaching 2 zeros').closest('li')?.className).not.toContain('earned');
+    fireEvent.click(screen.getByRole('button', { name: 'Got it' }));
+    expect(screen.queryByRole('dialog', { name: 'Game credits' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'About Weapon credits' }));
+    expect((await screen.findByRole('dialog', { name: 'Weapon credits' })).textContent).toContain('30 Yeses in a row');
   });
 
   it('answers Not today, shows the notice, and can take it back', async () => {

@@ -44,12 +44,50 @@ export function Chip(props: { label: string; selected: boolean; onPress: () => v
   );
 }
 
-/** A number with its label, and an optional caption under it (say, the dates it covers). */
-export function StatTile(props: { label: string; value: string; hero?: boolean; caption?: string; accessibilityLabel?: string }) {
-  const spoken = `${props.label}: ${props.value}${props.caption ? `, ${props.caption}` : ''}`;
+/** The hint button: a small "i" in a ring, with a touch target of 44 points. */
+const HINT_SIZE = 22;
+const HINT_SLOP = (44 - HINT_SIZE) / 2;
+/** How far a hint sits in from a tile's top-right corner. */
+const HINT_INSET = 8;
+
+/** A small "i" in a ring that opens a hint, such as on a stat tile's corner. */
+export function HintButton(props: { label: string; onPress: () => void; style?: StyleProp<ViewStyle> }) {
   return (
-    <View style={styles.stat} accessible accessibilityLabel={props.accessibilityLabel ?? spoken}>
-      <Text style={type.statLabel} numberOfLines={2}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={props.label}
+      hitSlop={HINT_SLOP}
+      onPress={() => {
+        feedback.press();
+        props.onPress();
+      }}
+      style={({ pressed }) => [styles.hint, pressed && { opacity: 0.6 }, props.style]}
+    >
+      <Text style={styles.hintGlyph} maxFontSizeMultiplier={1} importantForAccessibility="no">
+        i
+      </Text>
+    </Pressable>
+  );
+}
+
+/**
+ * A number with its label, and an optional caption under it (say, the dates it covers). `help`
+ * adds a hint button in the top-right corner, outside the tile's one spoken group so screen
+ * readers reach it on its own.
+ */
+export function StatTile(props: {
+  label: string;
+  value: string;
+  hero?: boolean;
+  caption?: string;
+  accessibilityLabel?: string;
+  help?: { label: string; onPress: () => void };
+}) {
+  const { help } = props;
+  const spoken = `${props.label}: ${props.value}${props.caption ? `, ${props.caption}` : ''}`;
+  const tile = (
+    <View style={[styles.stat, help && styles.statFill]} accessible accessibilityLabel={props.accessibilityLabel ?? spoken}>
+      <Text style={[type.statLabel, help && styles.statLabelClear]} numberOfLines={2}>
         {props.label}
       </Text>
       <Text
@@ -65,6 +103,13 @@ export function StatTile(props: { label: string; value: string; hero?: boolean; 
           {props.caption}
         </Text>
       ) : null}
+    </View>
+  );
+  if (!help) return tile;
+  return (
+    <View style={styles.statWrap}>
+      {tile}
+      <HintButton label={help.label} onPress={help.onPress} style={styles.statHint} />
     </View>
   );
 }
@@ -174,6 +219,20 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   statHero: { color: colors.amber, fontSize: 40, lineHeight: 42 },
+  statWrap: { flex: 1, minWidth: 0 },
+  statFill: { flex: 0, flexGrow: 1 },
+  statLabelClear: { paddingRight: HINT_SIZE + space.xs },
+  statHint: { position: 'absolute', top: HINT_INSET, right: HINT_INSET },
+  hint: {
+    width: HINT_SIZE,
+    height: HINT_SIZE,
+    borderRadius: HINT_SIZE / 2,
+    borderWidth: 1.5,
+    borderColor: colors.muted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hintGlyph: { fontFamily: fonts.bodyBold, fontSize: 13, lineHeight: 15, color: colors.muted },
   card: {
     backgroundColor: colors.panel,
     borderWidth: 1,

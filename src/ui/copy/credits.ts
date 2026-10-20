@@ -1,6 +1,7 @@
 // Credits in plain words: their names, the result sheet's line for one a Yes earned, what each
-// is for, Home's Credits section and bonus round sheet, and the question before a round. Why a credit was earned comes from the engine's rewards, so the words can't drift
-// from the rules. Shared by the app and the website.
+// is for, Home's Credits section with its hints and bonus round sheet, and the question before a
+// round. Why a credit was earned comes from the engine's rewards, so the words can't drift from
+// the rules. Shared by the app and the website.
 import {
   BONUS_MAX_N,
   CREDIT_REWARDS,
@@ -51,28 +52,74 @@ export const CREDITS_HOME = {
   title: 'Credits',
   playBonus: 'Play a bonus round',
   playBonusHint: 'Uses 1 Game credit. You choose how many zeros.',
-  bonusAbout: 'As many zeros as you like. Your streak and rewards stay as they are.',
   bonusReady: (n: number) => `Your bonus round of ${zeros(n)} is ready.`,
   bonusReadyLede: "It's paid for. Play it whenever you like.",
   playBonusNow: 'Play bonus round',
-  weaponWaiting: "You'll be asked before your next round whether to use one.",
-  weaponAllUnlocked: 'Every weapon is unlocked, so your Weapon credits wait here for new ones.',
 };
 
+/** Each credit count's label, and the title of the popup its hint opens. */
+const COUNT_TITLES: Record<CreditKind, string> = { game: 'Game credits', weapon: 'Weapon credits' };
+
+/** The hint on each credit count, and the popup it opens. */
+export const CREDITS_HELP = {
+  title: COUNT_TITLES,
+  /** The hint button, for screen readers: 'About Game credits'. */
+  button: (kind: CreditKind) => `About ${COUNT_TITLES[kind]}`,
+  gameSpend: 'To spend one, tap Play a bonus round and choose how many zeros. The round waits on Home until you play it.',
+  bonusWaiting: 'Your bonus round is paid for and waiting on Home.',
+  weaponAllUnlocked: 'Every weapon is unlocked, so your Weapon credits wait here for new ones.',
+  earnTitle: 'How to earn one',
+  earned: 'Earned',
+  footer: 'Each one is earned once, and credits stay banked until you use them.',
+  close: 'Got it',
+};
+
+/** One way to earn a credit, for the popup's list ("3 Yeses in a row"), and whether it's been earned. */
+export interface CreditWay {
+  label: string;
+  earned: boolean;
+}
+
+export interface CreditHelp {
+  title: string;
+  /** What the credit does and how it's used. */
+  lines: string[];
+  /** Where things stand right now, when that's worth a line. */
+  status: string | null;
+  ways: CreditWay[];
+}
+
+/** A reward's reason as a list item: 'for setting your goal' is 'Setting your goal'. */
+function wayLabel(reason: string): string {
+  const what = reason.replace(/^for /, '');
+  return what.charAt(0).toUpperCase() + what.slice(1);
+}
+
 /**
- * Home's notes under the credit counts, in plain words: with none of a kind, how to earn one; with
- * some, what it's for, or when it comes up. `bonusWaiting`: a bonus round is already paid for.
+ * The popup behind a credit count's hint: what the credit is and how it's used, where things
+ * stand, and every way to earn one, from the engine's rewards, those already earned marked as
+ * such. `best`: how far the arsenal reaches (whether a Weapon credit has anything left to lend).
+ * `bonusWaiting`: a bonus round is already paid for.
  */
-export function creditNotes(credits: CreditWallet, bestStreak: number, bonusWaiting: boolean): string[] {
-  const { game, weapon } = credits.balance;
-  const gameNote = game > 0 ? (bonusWaiting ? null : CREDITS_HOME.bonusAbout) : creditsEarnedBy('game', credits.claimed);
-  const weaponNote =
-    weapon > 0
-      ? lockedWeapons(bestStreak).length > 0
-        ? CREDITS_HOME.weaponWaiting
-        : CREDITS_HOME.weaponAllUnlocked
-      : creditsEarnedBy('weapon', credits.claimed);
-  return [gameNote, weaponNote].filter((n): n is string => n !== null);
+export function creditHelp(kind: CreditKind, credits: CreditWallet, best: number, bonusWaiting: boolean): CreditHelp {
+  const ways = CREDIT_REWARDS.filter((r) => r.kind === kind).map((r) => ({
+    label: wayLabel(r.reason),
+    earned: credits.claimed.includes(r.id),
+  }));
+  if (kind === 'game') {
+    return {
+      title: CREDITS_HELP.title.game,
+      lines: [CREDIT_USES.game, CREDITS_HELP.gameSpend],
+      status: bonusWaiting ? CREDITS_HELP.bonusWaiting : null,
+      ways,
+    };
+  }
+  return {
+    title: CREDITS_HELP.title.weapon,
+    lines: [CREDIT_USES.weapon],
+    status: credits.balance.weapon > 0 && lockedWeapons(best).length === 0 ? CREDITS_HELP.weaponAllUnlocked : null,
+    ways,
+  };
 }
 
 /** Ready-made sizes for a bonus round, and the one the sheet starts on. */

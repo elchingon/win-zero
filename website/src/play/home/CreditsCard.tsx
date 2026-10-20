@@ -1,15 +1,26 @@
 // Home's credits, as on the app: how many Game and Weapon credits there are, the bonus round
-// waiting to be played or a way to start one, and in plain words what's next. Choosing a bonus
-// round's size opens a form in place: a number, or one of a few ready-made sizes, then Start.
-import { useState } from 'react';
+// waiting to be played or a way to start one, and a hint on each count that opens what the credit
+// is, how it's used and how to earn one. Choosing a bonus round's size opens a form in place: a
+// number, or one of a few ready-made sizes, then Start.
+import { useId, useState } from 'react';
 
-import { BONUS_MAX_N, type CreditWallet, type GoalState } from '@/engine';
+import { BONUS_MAX_N, type CreditKind, type CreditWallet, type GoalState } from '@/engine';
 import { formatCount, parseCount } from '@/lib/format';
 import type { BonusRound } from '@/store/types';
-import { BONUS_DEFAULT_N, BONUS_PRESETS, BONUS_SHEET, creditCount, creditNotes, CREDITS_HOME } from '@/ui/copy/credits';
+import {
+  BONUS_DEFAULT_N,
+  BONUS_PRESETS,
+  BONUS_SHEET,
+  creditCount,
+  creditHelp,
+  CREDITS_HELP,
+  CREDITS_HOME,
+  type CreditHelp,
+} from '@/ui/copy/credits';
 
 import { Card, Chip, Eyebrow, Field, Fine, Lede, StatTile } from '../ui/bits';
 import { Button } from '../ui/Button';
+import { Popup } from '../ui/Popup';
 
 export function CreditsCard(props: {
   goal: GoalState;
@@ -22,9 +33,11 @@ export function CreditsCard(props: {
 }) {
   const { goal, credits, bonus, onStartBonus, onPlayBonus } = props;
   const [choosing, setChoosing] = useState(false);
+  const [hint, setHint] = useState<CreditKind | null>(null);
   const { game, weapon } = credits.balance;
   const ready = bonus && !bonus.played ? bonus : null;
-  const notes = creditNotes(credits, goal.bestStreak, ready !== null);
+  const help = hint ? creditHelp(hint, credits, goal.bestStreak, ready !== null) : null;
+  const helpFor = (kind: CreditKind) => ({ label: CREDITS_HELP.button(kind), onPress: () => setHint(kind) });
 
   return (
     <section className="section" aria-labelledby="credits-title">
@@ -32,8 +45,18 @@ export function CreditsCard(props: {
         <span id="credits-title">{CREDITS_HOME.title}</span>
       </Eyebrow>
       <div className="stats">
-        <StatTile label="Game credits" value={String(game)} spoken={creditCount('game', game)} />
-        <StatTile label="Weapon credits" value={String(weapon)} spoken={creditCount('weapon', weapon)} />
+        <StatTile
+          label={CREDITS_HELP.title.game}
+          value={String(game)}
+          spoken={creditCount('game', game)}
+          help={helpFor('game')}
+        />
+        <StatTile
+          label={CREDITS_HELP.title.weapon}
+          value={String(weapon)}
+          spoken={creditCount('weapon', weapon)}
+          help={helpFor('weapon')}
+        />
       </div>
       {ready ? (
         <Card>
@@ -52,10 +75,40 @@ export function CreditsCard(props: {
       ) : game > 0 ? (
         <Button label={CREDITS_HOME.playBonus} variant="ghost" hint={CREDITS_HOME.playBonusHint} onPress={() => setChoosing(true)} />
       ) : null}
-      {notes.map((note) => (
-        <Fine key={note}>{note}</Fine>
-      ))}
+      {help ? <CreditHelpPopup help={help} onClose={() => setHint(null)} /> : null}
     </section>
+  );
+}
+
+/** What a credit count's hint says, as on the app: what it is, where things stand, how to earn one. */
+function CreditHelpPopup({ help, onClose }: { help: CreditHelp; onClose: () => void }) {
+  const title = useId();
+  return (
+    <Popup onDismiss={onClose} labelledBy={title} fixed>
+      <h2 id={title} className="popup-title">
+        {help.title}
+      </h2>
+      <div className="hint-body">
+        {help.lines.map((line) => (
+          <p key={line} className="hint-line">
+            {line}
+          </p>
+        ))}
+        {help.status ? <p className="hint-line hint-status">{help.status}</p> : null}
+        <Eyebrow>{CREDITS_HELP.earnTitle}</Eyebrow>
+        <ul className="hint-ways">
+          {help.ways.map((way) => (
+            <li key={way.label} className={`hint-way${way.earned ? ' earned' : ''}`}>
+              <span className="hint-ring" aria-hidden="true" />
+              <span className="hint-way-label">{way.label}</span>
+              {way.earned ? <span className="hint-earned">{CREDITS_HELP.earned}</span> : null}
+            </li>
+          ))}
+        </ul>
+        <Fine>{CREDITS_HELP.footer}</Fine>
+      </div>
+      <Button label={CREDITS_HELP.close} onPress={onClose} />
+    </Popup>
   );
 }
 

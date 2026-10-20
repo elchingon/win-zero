@@ -3,7 +3,18 @@ import { describe, expect, it } from '@jest/globals';
 import { BONUS_MAX_N, CREDIT_REWARDS } from '@/engine';
 import { formatCount } from '@/lib/format';
 
-import { BONUS_SHEET, CREDIT_USES, creditCount, creditEarned, creditNotes, creditsEarnedBy, CREDITS_HOME } from '../credits';
+import {
+  BONUS_SHEET,
+  CREDIT_USES,
+  creditCount,
+  creditEarned,
+  creditHelp,
+  creditsEarnedBy,
+  CREDITS_HELP,
+  CREDITS_HOME,
+} from '../credits';
+
+const wallet = (game: number, weapon: number, claimed: string[] = []) => ({ balance: { game, weapon }, claimed });
 
 describe('credit copy', () => {
   it('counts credits', () => {
@@ -31,14 +42,39 @@ describe('credit copy', () => {
     expect(creditsEarnedBy('weapon', ['comeback', 'yes-run-3', 'yes-run-14'])).toBe('You earn a Weapon credit for 30 Yeses in a row.');
   });
 
-  it("notes what's next for each kind of credit on Home", () => {
-    const wallet = (game: number, weapon: number, claimed: string[] = []) => ({ balance: { game, weapon }, claimed });
-    expect(creditNotes(wallet(0, 0, ['goal-set', 'zeros-2', 'comeback', 'yes-run-3', 'yes-run-14']), 3, false)).toEqual([
-      'You earn a Weapon credit for 30 Yeses in a row.',
+  it('explains a Game credit behind its hint: what it plays, how to spend one, how to earn one', () => {
+    const help = creditHelp('game', wallet(1, 0, ['goal-set']), 3, false);
+    expect(help.title).toBe('Game credits');
+    expect(help.lines).toEqual([CREDIT_USES.game, CREDITS_HELP.gameSpend]);
+    expect(help.lines.join(' ')).toContain('as many zeros as you like');
+    expect(help.status).toBeNull();
+    // Every way to earn one, from the engine; the ones already earned are marked, not hidden.
+    expect(help.ways).toEqual([
+      { label: 'Setting your goal', earned: true },
+      { label: 'Reaching 2 zeros', earned: false },
     ]);
-    expect(creditNotes(wallet(1, 1), 3, false)).toEqual([CREDITS_HOME.bonusAbout, CREDITS_HOME.weaponWaiting]);
-    // With a bonus round waiting, its card says enough.
-    expect(creditNotes(wallet(1, 1), 100, true)).toEqual([CREDITS_HOME.weaponAllUnlocked]);
+    expect(creditHelp('game', wallet(0, 0), 3, true).status).toBe(CREDITS_HELP.bonusWaiting);
+  });
+
+  it('explains a Weapon credit behind its hint, and says when there is nothing left to lend', () => {
+    const help = creditHelp('weapon', wallet(0, 0, ['comeback', 'yes-run-3']), 3, false);
+    expect(help.title).toBe('Weapon credits');
+    expect(help.lines).toEqual([CREDIT_USES.weapon]);
+    expect(help.ways).toEqual([
+      { label: 'Checking in again after a missed day', earned: true },
+      { label: '3 Yeses in a row', earned: true },
+      { label: '14 Yeses in a row', earned: false },
+      { label: '30 Yeses in a row', earned: false },
+    ]);
+    expect(help.status).toBeNull();
+    expect(creditHelp('weapon', wallet(0, 2), 3, false).status).toBeNull();
+    expect(creditHelp('weapon', wallet(0, 2), 100, false).status).toBe(CREDITS_HELP.weaponAllUnlocked);
+  });
+
+  it('lists exactly the engine’s rewards in the hints', () => {
+    const ways = [...creditHelp('game', wallet(0, 0), 0, false).ways, ...creditHelp('weapon', wallet(0, 0), 0, false).ways];
+    expect(ways).toHaveLength(CREDIT_REWARDS.length);
+    expect(CREDITS_HELP.button('weapon')).toBe('About Weapon credits');
   });
 
   it('takes the bonus round ceiling from the engine', () => {
@@ -51,6 +87,9 @@ describe('credit copy', () => {
       creditsEarnedBy('game'),
       creditsEarnedBy('weapon'),
       ...Object.values(CREDITS_HOME).map((v) => (typeof v === 'function' ? v(250) : v)),
+      ...Object.values(CREDITS_HELP).flatMap((v) =>
+        typeof v === 'function' ? [v('game'), v('weapon')] : typeof v === 'string' ? [v] : Object.values(v),
+      ),
       ...Object.values(BONUS_SHEET),
     ].join(' ');
     expect(all).not.toMatch(/fail|lose|lost|broke|shame|relapse/i);

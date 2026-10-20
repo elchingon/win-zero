@@ -1,10 +1,11 @@
 // A card that pops up over the round and dims what's behind it: the encouragement after a round,
-// and the question before one. Escape or a click outside the card dismisses it, and keyboard and
+// and the question before one. `fixed` pins it over the window instead, for a scrolling screen's
+// hints. Escape or a click outside the card dismisses it, and keyboard and
 // screen reader users land on its first button, or on the one marked data-autofocus.
 import { useEffect, useRef, type ReactNode } from 'react';
 
-export function Popup(props: { onDismiss: () => void; labelledBy: string; children: ReactNode }) {
-  const { onDismiss, labelledBy, children } = props;
+export function Popup(props: { onDismiss: () => void; labelledBy: string; fixed?: boolean; children: ReactNode }) {
+  const { onDismiss, labelledBy, fixed, children } = props;
   const card = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -22,7 +23,7 @@ export function Popup(props: { onDismiss: () => void; labelledBy: string; childr
 
   return (
     // A click on the dimmed round dismisses; the keyboard has Escape and the card's buttons.
-    <div className="popup-backdrop" onClick={onDismiss}>
+    <div className={`popup-backdrop${fixed ? ' fixed' : ''}`} onClick={onDismiss}>
       <section
         ref={card}
         className="card popup"
