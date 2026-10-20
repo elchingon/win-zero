@@ -5,7 +5,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { Stack } from 'expo-router';
-import { fireEvent, renderRouter, screen } from 'expo-router/testing-library';
+import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 import { Linking } from 'react-native';
 
 import HowItWorksScreen from '@/app/how-it-works';
@@ -15,8 +15,10 @@ import SettingsScreen from '@/app/settings';
 import SetupScreen from '@/app/setup';
 import type { GoalState } from '@/engine';
 import { at, DAY0, newGoal, yesDays } from '@/engine/__tests__/fixtures';
+import { YES_ROUTE_MS } from '@/game/yes';
 import { appStore, primaryGoal } from '@/store';
 import { DEFAULT_PERSISTED } from '@/store/migrate';
+import { yesCelebration } from '@/ui/celebrate';
 import { APP_LINKS, SUPPORT_LINE } from '@/ui/support';
 
 // Reanimated 4's mock needs the worklets runtime mocked first.
@@ -178,6 +180,40 @@ describe('Home', () => {
     await open('/', { goal: twoDays() });
     expect(screen.getByText('Did you stick to “Stop drinking” today?')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Yes, I did' })).toBeOnTheScreen();
+  });
+
+  it('celebrates a Yes from where it was tapped, and opens the round once the screen is covered', async () => {
+    const cue = jest.fn();
+    const unmount = yesCelebration.mount({ motion: () => true, cue });
+    try {
+      const app = await open('/', { goal: twoDays() });
+      await fireEvent.press(screen.getByRole('button', { name: 'Yes, I did' }), { nativeEvent: { pageX: 120, pageY: 600 } });
+      expect(cue).toHaveBeenCalledTimes(1);
+      expect(yesCelebration.current()?.origin).toEqual({ x: 120, y: 600 });
+      expect(appStore.getState().goals[0]?.goal.streak).toBe(3);
+      await act(() => jest.advanceTimersByTime(YES_ROUTE_MS - 1));
+      expect(app.pathname()).toBe('/');
+      await act(() => jest.advanceTimersByTime(1));
+      expect(app.pathname()).toBe('/play');
+    } finally {
+      const show = yesCelebration.current();
+      if (show) yesCelebration.end(show.id);
+      unmount();
+    }
+  });
+
+  it('opens the round at once under reduced motion, still with the chime', async () => {
+    const cue = jest.fn();
+    const unmount = yesCelebration.mount({ motion: () => false, cue });
+    try {
+      const app = await open('/', { goal: twoDays() });
+      await fireEvent.press(screen.getByRole('button', { name: 'Yes, I did' }));
+      expect(cue).toHaveBeenCalledTimes(1);
+      expect(yesCelebration.current()).toBeNull();
+      expect(app.pathname()).toBe('/play');
+    } finally {
+      unmount();
+    }
   });
 
   it('shows Yes days, this month, and the dates of the best run', async () => {

@@ -7,12 +7,14 @@ import { useState, type ComponentType } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { dayKeyAt, openedAtSetup } from '@/engine';
+import type { Point } from '@/game/yes';
 import { formatWhen } from '@/lib/format';
 import { appStore, arsenalBestOf, arsenalStreakOf, gameModeOf, useApp } from '@/store';
 import { colors, fonts, space, type } from '@/theme/tokens';
 import { Card, Eyebrow, Fine } from '@/ui/bits';
 import { TopBar } from '@/ui/Brand';
 import { LinkButton } from '@/ui/Button';
+import { yesCelebration } from '@/ui/celebrate';
 import { goalEyebrow } from '@/ui/copy/goals';
 import { feedback } from '@/ui/feedback';
 import { Arsenal } from '@/ui/home/Arsenal';
@@ -65,10 +67,13 @@ export function MultiGoalHome() {
   useBoundaryRefresh(boundary);
   useHomeRouting();
 
-  const answer = (goalId: string, yes: boolean) => {
-    if (yes) feedback.success();
-    else feedback.soft();
-    appStore.getState().answer(goalId, yes ? 'yes' : 'not-today');
+  // The celebration plays a Yes's chime and haptic as its round opens.
+  const onYes = (goalId: string, at: Point | null) => {
+    yesCelebration.armed(at, () => appStore.getState().answer(goalId, 'yes'));
+  };
+  const onNotToday = (goalId: string) => {
+    feedback.soft();
+    appStore.getState().answer(goalId, 'not-today');
   };
 
   const playBonus = () => router.push({ pathname: '/play', params: { round: 'bonus' } });
@@ -102,8 +107,8 @@ export function MultiGoalHome() {
             now={now}
             tz={tz}
             h24={h24}
-            onYes={() => answer(goal.goalId, true)}
-            onNotToday={() => answer(goal.goalId, false)}
+            onYes={(at) => onYes(goal.goalId, at)}
+            onNotToday={() => onNotToday(goal.goalId)}
           />
         </View>
       ))}

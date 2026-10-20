@@ -13,10 +13,12 @@ import { fontAssets } from '@/theme/fonts';
 import { colors } from '@/theme/tokens';
 import { importDelivery, startMoveAcks, subscribe } from '@/transfer/inbox';
 import { transport } from '@/transfer/transport';
+import { playAnimation } from '@/ui/celebrate';
 import { CrashScreen } from '@/ui/CrashScreen';
 import { APP_LINKS } from '@/ui/support';
 import { ZeroField } from '@/ui/ZeroField';
 import { LaunchSplash } from '@/ui/LaunchSplash';
+import { YesCelebration } from '@/ui/YesCelebration';
 import { APP_NAME, FEATURES } from '@/variant';
 
 // Win Zero Plus only: release builds inline the variant, and Metro folds the literal comparison
@@ -105,7 +107,11 @@ export default function RootLayout() {
             contentStyle: { backgroundColor: 'transparent' },
             animation: 'fade',
           }}
-        />
+        >
+          {/* A Yes's round opens under the celebration's dark, with no fade of its own. */}
+          <Stack.Screen name="play" options={() => ({ animation: playAnimation() })} />
+        </Stack>
+        <YesCelebration />
       </ThemeProvider>
     </GestureHandlerRootView>
   );

@@ -13,6 +13,7 @@ jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock
 jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
 jest.mock('@/notifications', () => ({ startNotifications: () => () => {} }));
 jest.mock('@/ui/ZeroField', () => ({ ZeroField: () => null }));
+jest.mock('@/ui/YesCelebration', () => ({ YesCelebration: () => null }));
 jest.mock('@/ui/LaunchSplash', () => ({ LaunchSplash: () => null }));
 jest.mock('@/game/GameCanvas', () => ({ GameCanvas: () => null }));
 jest.mock('@/game/Hud', () => ({ Hud: () => null }));

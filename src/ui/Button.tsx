@@ -1,6 +1,6 @@
 // Buttons from the prototype: amber primary with the amber-deep ledge that presses down,
 // ghost outline, a flare variant for destructive actions, and an underlined text link.
-import { Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, Text, type GestureResponderEvent, type StyleProp, type ViewStyle } from 'react-native';
 
 import { colors, fonts, radii, type } from '@/theme/tokens';
 
@@ -10,7 +10,8 @@ type Variant = 'primary' | 'ghost' | 'danger';
 
 export function Button(props: {
   label: string;
-  onPress: () => void;
+  /** With the press, when the caller wants to know where it was. */
+  onPress: (e: GestureResponderEvent) => void;
   variant?: Variant;
   small?: boolean;
   disabled?: boolean;
@@ -27,9 +28,9 @@ export function Button(props: {
       accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled: !!disabled }}
       disabled={disabled}
-      onPress={() => {
+      onPress={(e) => {
         if (!silent) feedback.press();
-        onPress();
+        onPress(e);
       }}
       style={({ pressed }) => [
         styles.base,

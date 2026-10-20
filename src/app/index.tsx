@@ -7,6 +7,7 @@ import { useEffect, useState, type ComponentType } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { currentCheckInTime, dayKeyAt, isEveryDay, nextWindow, openedAtSetup, pendingWindow, type GoalState } from '@/engine';
+import type { Point } from '@/game/yes';
 import { formatClockTime, formatWhen } from '@/lib/format';
 import {
   appStore,
@@ -23,6 +24,7 @@ import { colors, fonts, space, type } from '@/theme/tokens';
 import { Card, Eyebrow, Fine } from '@/ui/bits';
 import { TopBar } from '@/ui/Brand';
 import { LinkButton } from '@/ui/Button';
+import { yesCelebration } from '@/ui/celebrate';
 import { goalEyebrow } from '@/ui/copy/goals';
 import { feedback } from '@/ui/feedback';
 import { Arsenal } from '@/ui/home/Arsenal';
@@ -120,9 +122,9 @@ function HomeScreen({ goal }: { goal: GoalState }) {
 
   useHomeRouting();
 
-  const onYes = () => {
-    feedback.success();
-    appStore.getState().answer(goal.goalId, 'yes');
+  // The celebration plays the Yes's chime and haptic as the round opens.
+  const onYes = (at: Point | null) => {
+    yesCelebration.armed(at, () => appStore.getState().answer(goal.goalId, 'yes'));
   };
 
   const onNotToday = () => {

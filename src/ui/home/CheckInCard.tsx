@@ -1,8 +1,9 @@
 // The in-app check-in, styled like the notification it mirrors (the prototype's .notif card).
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View, type GestureResponderEvent } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { isWindowToday, type CheckInWindow, type GoalState, type TimeZone } from '@/engine';
+import type { Point } from '@/game/yes';
 import { formatInstantTime, formatUntil } from '@/lib/format';
 import { colors, fonts, fontScale, radii, space } from '@/theme/tokens';
 import { Button } from '@/ui/Button';
@@ -17,7 +18,8 @@ export function CheckInCard(props: {
   /** The device's time zone: times show as the phone's clock reads them. */
   tz: TimeZone;
   h24: boolean;
-  onYes: () => void;
+  /** `at`: where on the screen Yes was tapped, for the celebration to start from; null if unknown. */
+  onYes: (at: Point | null) => void;
   onNotToday: () => void;
 }) {
   const { goal, window, now, tz, h24, onYes, onNotToday } = props;
@@ -45,7 +47,7 @@ export function CheckInCard(props: {
       <View style={[styles.actions, stack && styles.stacked]}>
         <Button
           label="Yes, I did"
-          onPress={onYes}
+          onPress={(e) => onYes(tapPoint(e))}
           silent
           accessibilityHint={stakesHint(stakes.yes)}
           style={!stack && styles.yes}
@@ -61,6 +63,12 @@ export function CheckInCard(props: {
       </View>
     </Animated.View>
   );
+}
+
+/** Where a press landed, in screen points; null without one (a screen reader's activation, a test's press). */
+function tapPoint(e: GestureResponderEvent | undefined): Point | null {
+  const n = e?.nativeEvent;
+  return n && (n.pageX || n.pageY) ? { x: n.pageX, y: n.pageY } : null;
 }
 
 const styles = StyleSheet.create({
