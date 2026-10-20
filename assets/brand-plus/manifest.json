@@ -6,6 +6,69 @@
     "gold": "#FFB52E",
     "white": "#FFFFFF"
   },
+  "icons": {
+    "classic": {
+      "zero": "#FFB52E",
+      "plus": "#3FDCCB",
+      "glow": [
+        "#FFB52E",
+        "#FF4F6D"
+      ]
+    },
+    "neon": {
+      "zero": "#FF3DCB",
+      "plus": "#2EE6FF",
+      "glow": [
+        "#FF3DCB",
+        "#2EE6FF"
+      ]
+    },
+    "mono": {
+      "zero": "#39FF6E",
+      "plus": "#8CFFAE",
+      "glow": [
+        "#39FF6E",
+        "#1FB85A"
+      ]
+    },
+    "pastel": {
+      "zero": "#FFC7A6",
+      "plus": "#A6EBD6",
+      "glow": [
+        "#FFC7A6",
+        "#FF9EBD"
+      ]
+    },
+    "ember": {
+      "zero": "#FF8A1F",
+      "plus": "#FFD447",
+      "glow": [
+        "#FF8A1F",
+        "#FF3B30"
+      ]
+    },
+    "aurora": {
+      "zero": "#4DFFB4",
+      "plus": "#6AA9FF",
+      "glow": [
+        "#4DFFB4",
+        "#8B5CFF"
+      ]
+    },
+    "gold": {
+      "zero": "#FFD24D",
+      "plus": "#F3E3B0",
+      "glow": [
+        "#FFD24D",
+        "#B9770A"
+      ],
+      "field": [
+        "#FFFDF4",
+        "#FFD24D",
+        "#B9770A"
+      ]
+    }
+  },
   "assets": [
     {
       "name": "icon.png",
@@ -160,6 +223,307 @@
       "height": 1200,
       "colorType": 2,
       "sha256": "f53d39833807efe1aec964f59add6d5e240584d2ebd371419b4b7738f0e5c3e1"
+    },
+    {
+      "name": "icons/classic/app-store-icon.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 2,
+      "sha256": "b5c289614a40f682453923438ec27252ced66bad4cf9803fbded39d67365dbec"
+    },
+    {
+      "name": "icons/classic/ios-icon-dark.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 6,
+      "sha256": "3a48ea6c9743654ef4a63f3773156b40690072dd93483cf3c72b59aa39e52f88"
+    },
+    {
+      "name": "icons/classic/ios-icon-tinted.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 0,
+      "sha256": "8a6013825570f16cb3522a899e5893384009d226f6df09c1e49bec5809b34d4c"
+    },
+    {
+      "name": "icons/classic/android-background.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 2,
+      "sha256": "3af044c694c3506b5461b77bd1df2db83705df5b8e563369570ef3e49aa551c1"
+    },
+    {
+      "name": "icons/classic/android-foreground.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 6,
+      "sha256": "9714e4ef16226934b5364378a4f69a4528cf31c49ec680f4de111deedc02c1f2"
+    },
+    {
+      "name": "icons/classic/android-monochrome.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 6,
+      "sha256": "187e853e22f795f2e4731fb5293d8f47458628cd9e8f87ae4e5dd6ebfe8ccc98"
+    },
+    {
+      "name": "icons/neon/app-store-icon.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 2,
+      "sha256": "2f309061d9f2004cba51d57ed448b9bc4945b8869361c5d5cd7c7d14c380fde2"
+    },
+    {
+      "name": "icons/neon/ios-icon-dark.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 6,
+      "sha256": "1d46d0d08a6b749201a256d31048e3008faf6628c055fea6e272d8eb24fd7339"
+    },
+    {
+      "name": "icons/neon/ios-icon-tinted.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 0,
+      "sha256": "8a6013825570f16cb3522a899e5893384009d226f6df09c1e49bec5809b34d4c"
+    },
+    {
+      "name": "icons/neon/android-background.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 2,
+      "sha256": "2c56905532fb5a492e550c25d595a334e122792001096da05fe8d3a80de72462"
+    },
+    {
+      "name": "icons/neon/android-foreground.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 6,
+      "sha256": "5646bda5c13f62fca1722566cc17f9b926fa266813a5365bcbe6eff59fb0c357"
+    },
+    {
+      "name": "icons/neon/android-monochrome.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 6,
+      "sha256": "187e853e22f795f2e4731fb5293d8f47458628cd9e8f87ae4e5dd6ebfe8ccc98"
+    },
+    {
+      "name": "icons/mono/app-store-icon.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 2,
+      "sha256": "aaf8cfa87faec372c673259fce26de6c5a68dfdecb3bf1e794ff50eed599cfd7"
+    },
+    {
+      "name": "icons/mono/ios-icon-dark.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 6,
+      "sha256": "02d723b8198d1338167f22d1f735df2269cdd5451ebd6c2e67c8b712c15f3858"
+    },
+    {
+      "name": "icons/mono/ios-icon-tinted.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 0,
+      "sha256": "8a6013825570f16cb3522a899e5893384009d226f6df09c1e49bec5809b34d4c"
+    },
+    {
+      "name": "icons/mono/android-background.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 2,
+      "sha256": "54ee8207a4803acb834c60fd31142b6daa03d0f768061a80468c461192bdf116"
+    },
+    {
+      "name": "icons/mono/android-foreground.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 6,
+      "sha256": "e1a7c1c792562b87264247a9ed79a62fa9272a661ffa12cde52a225b3fd9d6c8"
+    },
+    {
+      "name": "icons/mono/android-monochrome.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 6,
+      "sha256": "187e853e22f795f2e4731fb5293d8f47458628cd9e8f87ae4e5dd6ebfe8ccc98"
+    },
+    {
+      "name": "icons/pastel/app-store-icon.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 2,
+      "sha256": "d25f3a635dce5997b4c1d587ad6e538ab95c7e7926e88ad0295d7bf789b66ac4"
+    },
+    {
+      "name": "icons/pastel/ios-icon-dark.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 6,
+      "sha256": "e6cca0daff986513b2a465b52ff82daccdb2d766b601965785bdd7236decfba9"
+    },
+    {
+      "name": "icons/pastel/ios-icon-tinted.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 0,
+      "sha256": "8a6013825570f16cb3522a899e5893384009d226f6df09c1e49bec5809b34d4c"
+    },
+    {
+      "name": "icons/pastel/android-background.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 2,
+      "sha256": "82c0fdb53c5a60f0ee0a9480361ff74578fc87fb45b18850acafd3228752c1cf"
+    },
+    {
+      "name": "icons/pastel/android-foreground.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 6,
+      "sha256": "114e4da386f431e5f2cfdb6c5adf6e017b14b470c27cddf67394b1df7d9b49a2"
+    },
+    {
+      "name": "icons/pastel/android-monochrome.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 6,
+      "sha256": "187e853e22f795f2e4731fb5293d8f47458628cd9e8f87ae4e5dd6ebfe8ccc98"
+    },
+    {
+      "name": "icons/ember/app-store-icon.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 2,
+      "sha256": "85650c442d6c04eafd32a27e8df589ecf8c55828c36104b5bc2cf275c7eb1f05"
+    },
+    {
+      "name": "icons/ember/ios-icon-dark.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 6,
+      "sha256": "eed71b46398e9d3a7b810d6b4d457b4c28ddc8d034b733c4d01149393e819af8"
+    },
+    {
+      "name": "icons/ember/ios-icon-tinted.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 0,
+      "sha256": "8a6013825570f16cb3522a899e5893384009d226f6df09c1e49bec5809b34d4c"
+    },
+    {
+      "name": "icons/ember/android-background.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 2,
+      "sha256": "a2f70a45655d1445130aa01577b8bcd14334828e71c0642ba0fc8ded308af530"
+    },
+    {
+      "name": "icons/ember/android-foreground.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 6,
+      "sha256": "3a12b9d57b68eaaafa14a5b67284536eb51b317fb7f9de9495c00483c50c1158"
+    },
+    {
+      "name": "icons/ember/android-monochrome.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 6,
+      "sha256": "187e853e22f795f2e4731fb5293d8f47458628cd9e8f87ae4e5dd6ebfe8ccc98"
+    },
+    {
+      "name": "icons/aurora/app-store-icon.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 2,
+      "sha256": "3c2aff5fdb5b1cf4101bc6666f335deecc4559a6330532b85c73ac52440d9d06"
+    },
+    {
+      "name": "icons/aurora/ios-icon-dark.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 6,
+      "sha256": "1d4e7b644254cebc7176f15d7781fa4e077e5f5429736aab8b812947f98db6ac"
+    },
+    {
+      "name": "icons/aurora/ios-icon-tinted.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 0,
+      "sha256": "8a6013825570f16cb3522a899e5893384009d226f6df09c1e49bec5809b34d4c"
+    },
+    {
+      "name": "icons/aurora/android-background.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 2,
+      "sha256": "1a6301f5d00bbbea335ef21c54fec036ece85d890bcaf9f35cd88f31c24e5230"
+    },
+    {
+      "name": "icons/aurora/android-foreground.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 6,
+      "sha256": "8fca8a4f1d55a1b7fa1a0dfb6d5600977510e482de35e484e55267c6e18ff033"
+    },
+    {
+      "name": "icons/aurora/android-monochrome.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 6,
+      "sha256": "187e853e22f795f2e4731fb5293d8f47458628cd9e8f87ae4e5dd6ebfe8ccc98"
+    },
+    {
+      "name": "icons/gold/app-store-icon.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 2,
+      "sha256": "80e683b09d76456034572ba6a624709f7b31343266fa8f64f7cf2fe7183648a5"
+    },
+    {
+      "name": "icons/gold/ios-icon-dark.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 6,
+      "sha256": "5814e73e542500f5eb06d6132be08c92595de7382aad747a4080477e3489a855"
+    },
+    {
+      "name": "icons/gold/ios-icon-tinted.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 0,
+      "sha256": "8a6013825570f16cb3522a899e5893384009d226f6df09c1e49bec5809b34d4c"
+    },
+    {
+      "name": "icons/gold/android-background.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 2,
+      "sha256": "85af58eb5a491b3adf3e208b84f174fffefe2100e584846cb2c57d89fd35fc18"
+    },
+    {
+      "name": "icons/gold/android-foreground.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 6,
+      "sha256": "41752a455173dce2253e3a03de09616006ee4300b4691891602aac47d9802347"
+    },
+    {
+      "name": "icons/gold/android-monochrome.png",
+      "width": 1024,
+      "height": 1024,
+      "colorType": 6,
+      "sha256": "187e853e22f795f2e4731fb5293d8f47458628cd9e8f87ae4e5dd6ebfe8ccc98"
+    },
+    {
+      "name": "icons-preview.png",
+      "width": 1440,
+      "height": 1844,
+      "colorType": 6,
+      "sha256": "d30ff986a2bbbc7d2faf329561a81b31a720719d545139fd1c1e802af56d073e"
     }
   ]
 }

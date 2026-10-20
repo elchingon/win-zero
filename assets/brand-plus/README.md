@@ -22,6 +22,26 @@ All files in this folder belong to **Win Zero Plus**. Regular Win Zero and the w
 
 Store icon masters are square, without baked-in rounded corners or drop shadows. Android adaptive foregrounds keep every nontransparent pixel inside the central 66/108 safe circle; launchers apply their own masks.
 
+## Alternate icons (one per theme)
+
+Settings › App icon offers the Plus icon and one per theme (SPEC 9). Each theme has a folder, `icons/<theme>/` (`classic`, `neon`, `mono`, `pastel`, `ember`, `aurora`, `gold`), with the formats the main icon uses:
+
+| File | Pixels | Use |
+| --- | --- | --- |
+| `app-store-icon.png` | 1024 × 1024 | iOS light appearance; opaque RGB |
+| `ios-icon-dark.png` | 1024 × 1024 | iOS dark appearance; transparent |
+| `ios-icon-tinted.png` | 1024 × 1024 | iOS tinted appearance; opaque grayscale, gamma 2.2 (the Plus icon's, since iOS tints by brightness) |
+| `android-background.png` | 1024 × 1024 | Adaptive icon background, full bleed |
+| `android-foreground.png` | 1024 × 1024 | Adaptive icon foreground, transparent, inside the 66/108 safe circle |
+| `android-monochrome.png` | 1024 × 1024 | Themed icon mask (the Plus icon's, since themed icons use the shape alone) |
+
+- **The mark:** every icon keeps the 0 + mark at the Plus icon's size and place, so none can pass for Win Zero's.
+- **Six themes:** navy, with the theme's fill glow behind the mark. The zero is in the theme's first color with a soft glow, the plus in its third.
+- **Gold Year:** a gold field with a navy mark, so it can't pass for the navy Plus icon.
+- **Colors:** they come from `src/theme/themes.ts`. `manifest.json` records them under `icons`, and `src/theme/__tests__/iconArt.test.ts` checks them against the themes.
+- **Review:** `icons-preview.png` shows every icon as each launcher shows it. `node scripts/gen-brand-plus.mjs --out <dir>` renders the theme icons and that sheet somewhere else, to try changes without touching this folder.
+- **Wiring:** `app.config.ts` gives the icons to the app-icons module (`modules/app-icons`), and they're compiled in only with a new native build.
+
 ## Logos
 
 | File | Pixels | Use |
@@ -46,7 +66,7 @@ The operating-system splash displays the centered 0 + mark. The app's full-scree
 
 ## Preview, regeneration, and wiring
 
-Open `brand-preview.png` to review the actual production exports. `manifest.json` records dimensions, PNG color types, and SHA-256 hashes for all 22 images.
+Open `brand-preview.png` to review the actual production exports, and `icons-preview.png` for the theme icons. `manifest.json` records dimensions, PNG color types, and SHA-256 hashes for all 65 images, and each theme icon's colors.
 
 ```sh
 npm run gen:brand:plus
