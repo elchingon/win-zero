@@ -218,8 +218,51 @@ export interface SliceState {
   cuts: number[];
 }
 
+/** One of Breaker's balls. */
+export interface Ball {
+  /** In play: flying, or held on the paddle. */
+  live: boolean;
+  /** Sitting on the paddle, waiting to serve. */
+  held: boolean;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  /** Seconds before a held ball serves itself. */
+  serve: number;
+  /** Its speed: the board's, up a little with each paddle hit until it drops. */
+  speed: number;
+  /** Times it has come back to the paddle without touching a brick. */
+  returns: number;
+}
+
+/** How Breaker's balls look, by power-up. */
+export type BallLook = 'plain' | 'fire' | 'lightning' | 'mega';
+
+/** Breaker (SPEC 9): the zeros are bricks, and balls off a paddle break them. */
+export interface BreakerState {
+  mode: 'breaker';
+  /** The paddle's middle and half-width, and where the finger wants it: the board's middle until it's touched. */
+  paddleX: number;
+  targetX: number;
+  half: number;
+  /** A fixed set of balls; `balls` of them in play for this power-up. */
+  ball: Ball[];
+  balls: number;
+  /** This frame's balls, from the power-up: their radius and look, and whether they burn through bricks they break. */
+  radius: number;
+  look: BallLook;
+  pierce: boolean;
+  /** The paddle fires the Rail Laser while the finger is down. */
+  laser: boolean;
+  /** The board's ball speed, in points a second. */
+  speed: number;
+  /** Late in the round: balls head for the bricks. */
+  assist: boolean;
+}
+
 /** What the round's mode keeps beyond the shared fields. Each mode adds its own. */
-export type ModeState = ShooterState | CatchState | OrbitState | SliceState;
+export type ModeState = ShooterState | CatchState | OrbitState | SliceState | BreakerState;
 
 /** What the screen hands the sim to start a round. Computed on the JS thread. */
 export interface GameConfig {

@@ -5,6 +5,7 @@
 // the screen calls the setters through scheduleOnUI.
 import type { WeaponDef } from '@/engine';
 
+import { breakerDown, breakerMove } from './modes/breaker';
 import { aimCups } from './modes/catch';
 import { sliceDown, sliceMove } from './modes/slice';
 import { moveAim, pressFire, releaseFire } from './trigger';
@@ -26,6 +27,9 @@ export function pointerDown(s: GameState, x: number, y: number): void {
     case 'slice':
       sliceDown(s, x, y);
       break;
+    case 'breaker':
+      breakerDown(s, x);
+      break;
     // Orbit's turret, in the middle, fires as the Shooter's does.
     case 'orbit':
     case 'shooter':
@@ -46,6 +50,9 @@ export function pointerMove(s: GameState, x: number, y: number): void {
     case 'slice':
       sliceMove(s, x, y);
       break;
+    case 'breaker':
+      breakerMove(s, x);
+      break;
     case 'orbit':
     case 'shooter':
     default:
@@ -57,9 +64,11 @@ export function pointerMove(s: GameState, x: number, y: number): void {
 export function pointerUp(s: GameState): void {
   s.pointer.down = false;
   switch (s.mode) {
-    // The cups stay where the finger left them; the blade's trail fades on its own.
+    // The cups and the paddle stay where the finger left them; the blade's trail fades on its
+    // own; the Laser Paddle stops with the finger (it fires while the pointer is down).
     case 'catch':
     case 'slice':
+    case 'breaker':
       break;
     case 'orbit':
     case 'shooter':

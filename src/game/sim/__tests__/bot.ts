@@ -3,7 +3,8 @@
 // hide a mode that's too slow, nor clumsy, which would fake one. In the Shooter it aims at the
 // lowest zero, leading it by the shot's flight, and holds on; in Orbit, at the nearest; in Catch
 // it slides the cups under the next zero it can reach; in Slice it strokes through the lowest
-// zero it can cut, no faster than a finger can. It can also keep its hands off (Catch must still clear), or play
+// zero it can cut, no faster than a finger can; in Breaker it keeps the paddle under the next
+// ball down, sending it up the nearer wall. It can also keep its hands off (Catch must still clear), or play
 // down to the last few zeros and then let go. Every frame it checks what must hold in any mode
 // (the counter, ×V, the board's edges, the effect caps and the order of phases) and keeps what
 // broke, rather than failing on the spot.
@@ -38,6 +39,8 @@ export const LIMIT_FRAMES = LIMIT_S * BOT_FPS;
 export const BOT_FINGER_SPEED = 2500;
 /** How far past a zero the bot carries its stroke. */
 const BOT_FOLLOW_THROUGH = 40;
+/** Breaker: the bot meets a ball this share of the paddle's half-width off its middle. */
+const BOT_PADDLE_ANGLE = 0.5;
 /** Keep this many broken rules per round: enough to see what went wrong. */
 const MAX_VIOLATIONS = 10;
 /** Rounding slack for positions on the board's edges. */
@@ -209,6 +212,29 @@ function sliceTouch(s: GameState): Touch | null {
   return { x: s.pointer.x + gx * stride, y: s.pointer.y + gy * stride };
 }
 
+/**
+ * Breaker: put the paddle under the flying ball that comes down soonest, predicting its bounces
+ * off the walls, and meet it a little off the middle so it heads for the nearer wall and up the
+ * gutter beside the bricks, as a practised player would.
+ */
+function breakerTouch(s: GameState): Touch | null {
+  const bs = s.modeState;
+  if (bs.mode !== 'breaker') return null;
+  const r = bs.radius;
+  let soonest = Infinity;
+  let x = NaN;
+  for (const b of bs.ball) {
+    if (!b.live || b.held || b.vy <= 0) continue;
+    const t = (s.bottom - r - b.y) / b.vy;
+    if (t < 0 || t >= soonest) continue;
+    soonest = t;
+    x = fold(b.x + b.vx * t, r, s.width - r);
+  }
+  if (Number.isNaN(x)) return null;
+  const side = x < s.width / 2 ? -1 : 1;
+  return { x: x - side * BOT_PADDLE_ANGLE * bs.half, y: s.bottom };
+}
+
 function touchFor(s: GameState): Touch | null {
   switch (s.mode) {
     case 'catch':
@@ -217,6 +243,8 @@ function touchFor(s: GameState): Touch | null {
       return orbitTouch(s);
     case 'slice':
       return sliceTouch(s);
+    case 'breaker':
+      return breakerTouch(s);
     case 'shooter':
     default:
       return shooterTouch(s);

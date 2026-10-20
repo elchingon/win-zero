@@ -34,6 +34,7 @@ import {
 import { armorBadges } from './badges';
 import { layoutFill } from './fill';
 import { makePool } from './pool';
+import { makeBreakerState, placeBreaker } from './modes/breaker';
 import { makeCatchState, placeCatch } from './modes/catch';
 import { makeOrbitState, orbitSpares, placeOrbit } from './modes/orbit';
 import { makeSliceState, placeSlice } from './modes/slice';
@@ -168,6 +169,8 @@ function makeModeState(mode: ModeId, count: number, objectCount: number, cfg: Ga
       return makeOrbitState(count, objectCount, cfg.groups);
     case 'slice':
       return makeSliceState(count);
+    case 'breaker':
+      return makeBreakerState(cfg.width);
     case 'shooter':
     default:
       return { mode: 'shooter' };
@@ -185,6 +188,9 @@ function placeZeros(state: GameState, cfg: GameConfig): void {
       break;
     case 'slice':
       placeSlice(state, cfg);
+      break;
+    case 'breaker':
+      placeBreaker(state, cfg);
       break;
     case 'shooter':
     default:

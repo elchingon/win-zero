@@ -4,6 +4,7 @@
 import { updateBullets } from './bullets';
 import { HIT_FLASH, MAX_DT } from './constants';
 import { updateEffects } from './effects';
+import { stepBreaker } from './modes/breaker';
 import { stepCatch } from './modes/catch';
 import { stepOrbit } from './modes/orbit';
 import { stepSlice } from './modes/slice';
@@ -44,6 +45,9 @@ export function step(state: GameState, dt: number): void {
       break;
     case 'slice':
       stepSlice(state, d);
+      break;
+    case 'breaker':
+      stepBreaker(state, d);
       break;
     case 'shooter':
     default:
