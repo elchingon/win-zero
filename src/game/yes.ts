@@ -27,8 +27,8 @@ export const YES_ROUTE_MS = YES_POP_MS + YES_FLOOD_MS;
 
 /** The zero's vertical radius once popped, in points. */
 export const YES_ZERO_RY = 34;
-/** How far it floats up from the tap as it pops. */
-export const YES_RISE = 26;
+/** How far it floats up from the tap as it pops: clear of the button, which is amber like the zero. */
+export const YES_RISE = 64;
 /** How much its hole swells while the dark floods out. */
 export const YES_HOLE_SWELL = 1.3;
 /** The ring's thickness once the hole has opened past the corners. */
@@ -41,7 +41,7 @@ export const YES_DEFAULT_AT = { x: 0.5, y: 0.62 };
 
 /** The mini zeros that burst out of the tap: how many (a cap), how big, how far, how long. */
 export const YES_SPARKS = 12;
-export const YES_SPARK_RY = 6;
+export const YES_SPARK_RY = 8;
 export const YES_SPARK_REACH = 96;
 export const YES_SPARK_MS = 480;
 /** Every other spark flies this much less far, and this far round, so the burst isn't a ring. */
@@ -79,9 +79,9 @@ const easeOutCubic = (p: number) => {
   'worklet';
   return 1 - (1 - p) ** 3;
 };
-const easeInCubic = (p: number) => {
+const easeInQuad = (p: number) => {
   'worklet';
-  return p ** 3;
+  return p * p;
 };
 const easeInOutCubic = (p: number) => {
   'worklet';
@@ -144,7 +144,7 @@ export function yesFrame(t: number, origin: Point, size: Size): YesFrame {
     return { x, y, hole, ring, cover: from + (to - from) * easeOutCubic(f), coverAlpha: 1, rimAlpha: 1 - f };
   }
   const g = clamp01((t - YES_ROUTE_MS) / YES_OPEN_MS);
-  const e = easeInCubic(g);
+  const e = easeInQuad(g);
   const reach = reachOf(center.x, center.y, size);
   const hole = holeF + (reach * YES_OPEN_MARGIN - holeF) * e;
   const ring = ringF + (YES_OPEN_RING - ringF) * e;
