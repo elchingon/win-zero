@@ -6,7 +6,7 @@
 import { describe, expect, it } from '@jest/globals';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 
-import { nonWorklets, sourceFiles, specifiers } from '../../__tests__/workletSources';
+import { importCycles, importGraph, nonWorklets, sourceFiles, specifiers } from '../../__tests__/workletSources';
 
 const SIM_DIR = join(__dirname, '..');
 
@@ -47,5 +47,22 @@ describe('sim purity', () => {
     const mod = require(join(SIM_DIR, file)) as Record<string, unknown>;
     const bad = Object.entries(mod).flatMap(([name, value]) => nonWorklets(value, name));
     expect(bad).toEqual([]);
+  });
+
+  // A worklet binds its imports when its module loads, so in an import cycle one side would
+  // capture nothing, on a device as in whichever order a test happens to load them.
+  it('imports in no circles', () => {
+    const graph = importGraph([SIM_DIR]);
+    expect([...graph.values()].flat().length).toBeGreaterThan(0);
+    expect(importCycles(graph, SIM_DIR)).toEqual([]);
+  });
+
+  it('would see a circle if there were one', () => {
+    const graph = new Map([
+      [join(SIM_DIR, 'a.ts'), [join(SIM_DIR, 'b.ts')]],
+      [join(SIM_DIR, 'b.ts'), [join(SIM_DIR, 'c.ts')]],
+      [join(SIM_DIR, 'c.ts'), [join(SIM_DIR, 'a.ts')]],
+    ]);
+    expect(importCycles(graph, SIM_DIR)).toEqual([['a.ts', 'b.ts', 'c.ts', 'a.ts']]);
   });
 });

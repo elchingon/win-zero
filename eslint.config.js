@@ -139,7 +139,9 @@ module.exports = defineConfig([
   {
     // Sim and scene drawing both run as worklets: no clock or Math.random (the seeded generator
     // lives in the game state), no classes, and no use before definition, because the worklets
-    // plugin turns function declarations into constants captured when the module loads.
+    // plugin turns function declarations into constants captured when the module loads. They run
+    // every frame too, so nothing that allocates as it goes: iterators, spreads, rest, and the
+    // array helpers that build arrays or take a callback.
     files: ['src/game/sim/**/*.ts', 'src/game/draw/**/*.ts'],
     ignores: ['src/game/**/__tests__/**'],
     rules: {
@@ -159,6 +161,18 @@ module.exports = defineConfig([
           message: 'Worklets take dt; they never read the clock.',
         },
         { selector: 'ClassDeclaration', message: 'Worklets can’t carry classes to the UI thread; use plain objects.' },
+        { selector: 'ForOfStatement', message: 'Worklets run every frame: loop by index, so no iterator is made.' },
+        { selector: 'SpreadElement', message: 'Worklets run every frame: a spread copies; set fields in place.' },
+        { selector: 'RestElement', message: 'Worklets run every frame: rest makes a new array or object.' },
+        {
+          selector:
+            "CallExpression[callee.property.name=/^(map|filter|forEach|some|every|find|findIndex|reduce|slice|concat|flat|flatMap)$/]",
+          message: 'Worklets run every frame: loop by index instead (these make arrays or callbacks).',
+        },
+        {
+          selector: "CallExpression[callee.object.name='Object'][callee.property.name=/^(keys|values|entries)$/]",
+          message: 'Worklets run every frame: Object.keys/values/entries make arrays.',
+        },
       ],
       '@typescript-eslint/no-use-before-define': [
         'error',

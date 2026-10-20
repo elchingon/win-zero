@@ -4,7 +4,7 @@
 import { describe, expect, it } from '@jest/globals';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 
-import { nonWorklets, sourceFiles } from '../../__tests__/workletSources';
+import { importCycles, importGraph, nonWorklets, sourceFiles } from '../../__tests__/workletSources';
 
 const DRAW_DIR = join(__dirname, '..');
 const SIM_DIR = join(DRAW_DIR, '..', 'sim');
@@ -42,5 +42,12 @@ describe('draw worklets', () => {
   it.each(sources)('$file exports only worklets', ({ file }) => {
     const mod = require(join(DRAW_DIR, file)) as Record<string, unknown>;
     expect(Object.entries(mod).flatMap(([name, value]) => nonWorklets(value, name))).toEqual([]);
+  });
+
+  // As in the sim: a worklet binds its imports when its module loads, so no circles.
+  it('imports in no circles, with the sim it draws', () => {
+    const graph = importGraph([DRAW_DIR, SIM_DIR]);
+    expect([...graph.values()].flat().length).toBeGreaterThan(0);
+    expect(importCycles(graph, join(DRAW_DIR, '..'))).toEqual([]);
   });
 });
