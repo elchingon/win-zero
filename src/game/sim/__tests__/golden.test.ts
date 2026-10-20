@@ -5,7 +5,7 @@
 // shipped. If one changes, the Shooter now plays differently: fix the code, never these lines.
 import { describe, expect, it } from '@jest/globals';
 
-import { WEAPONS } from '@/engine';
+import { MODE_IDS, PLAYABLE_MODES, WEAPONS, type ModeId } from '@/engine';
 
 import { moveAim, pointerDown, pointerMove, pointerUp, pressFire, releaseFire } from '../input';
 import type { GameConfig, GameState } from '../types';
@@ -268,8 +268,10 @@ describe('the Shooter, as it shipped', () => {
     expect(fingerprint({ ...scriptConfig(n), mode: 'shooter' }, POINTER)).toEqual(GOLDEN[n]);
   });
 
-  it.each(ROUNDS)('Day %i in a mode whose round isn’t built yet plays the Shooter', (n) => {
-    expect(fingerprint({ ...scriptConfig(n), mode: 'catch' })).toEqual(GOLDEN[n]);
+  // A mode not yet built while modes land (M7), then one the round doesn't know.
+  const notPlayable = MODE_IDS.find((id) => !PLAYABLE_MODES.includes(id)) ?? ('retired' as ModeId);
+  it.each(ROUNDS)('Day %i in a mode whose round isn’t built, or isn’t known, plays the Shooter', (n) => {
+    expect(fingerprint({ ...scriptConfig(n), mode: notPlayable })).toEqual(GOLDEN[n]);
   });
 
   it('script reaches every part of the round', () => {

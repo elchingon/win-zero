@@ -52,7 +52,7 @@ export const MODE_IDS: readonly ModeId[] = MODES.map((m) => m.id);
  * mode joins as its round lands (M7). The sim reads this too, and plays anything else as the
  * Shooter.
  */
-export const PLAYABLE_MODES: readonly ModeId[] = ['shooter'];
+export const PLAYABLE_MODES: readonly ModeId[] = ['shooter', 'catch'];
 
 export interface ModeOptions {
   /** This app offers modes beyond the Shooter (Win Zero Plus). */

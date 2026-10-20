@@ -2,7 +2,7 @@
 // modes lean on. Until other modes' rounds are built, everything plays the Shooter.
 import { describe, expect, it } from '@jest/globals';
 
-import { PLAYABLE_MODES } from '@/engine';
+import { PLAYABLE_MODES, type ModeId } from '@/engine';
 
 import { damageZero } from '../damage';
 import { moveAim, pointerDown, pointerMove, pointerUp, pressFire, releaseFire } from '../input';
@@ -17,13 +17,19 @@ describe('the round’s mode', () => {
     }
   });
 
-  it('plays the Shooter for a mode whose round isn’t built yet', () => {
-    for (const mode of ['catch', 'orbit', 'slice', 'breaker'] as const) {
+  it('plays the Shooter for a mode whose round isn’t built yet, or one it doesn’t know', () => {
+    for (const mode of ['catch', 'orbit', 'slice', 'breaker', 'pong'] as ModeId[]) {
       if (PLAYABLE_MODES.includes(mode)) continue;
       const s = game(7, { mode });
       expect(s.mode).toBe('shooter');
       expect(s.modeState).toEqual({ mode: 'shooter' });
     }
+  });
+
+  it.each(PLAYABLE_MODES)('plays %s when asked', (mode) => {
+    const s = game(60, { mode });
+    expect(s.mode).toBe(mode);
+    expect(s.modeState.mode).toBe(mode);
   });
 
   it('starts every zero ready to be caught or cut', () => {

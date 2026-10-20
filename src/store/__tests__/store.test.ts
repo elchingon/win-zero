@@ -17,6 +17,7 @@ import {
   THEME_UNLOCK_EMBER,
   THEME_UNLOCK_GOLD,
   type CreditWallet,
+  type ModeId,
 } from '@/engine';
 import { answerDay, at, DAY0, DENVER, newGoal, TOKYO, yesDays } from '@/engine/__tests__/fixtures';
 
@@ -734,14 +735,20 @@ describe('game modes (SPEC 9)', () => {
     expect(h.store.getState().gameMode).toBe('shooter');
   });
 
-  it('offers Plus no mode whose round is not built yet', async () => {
+  it('saves any mode whose round is built in Plus, and nothing else', async () => {
     const h = harness({ limits: PLUS_LIMITS });
     await ready(h.store);
     h.store.setState({ ...DEFAULT_PERSISTED, ...oneGoal(yesDays(newGoal(), DAY0, 100)) });
     for (const id of OTHER_MODES.filter((m) => !PLAYABLE_MODES.includes(m))) {
       expect(h.store.getState().setGameMode(id)).toBe(false);
     }
-    expect(h.store.getState().setGameMode('shooter')).toBe(true);
+    expect(h.store.getState().setGameMode('pong' as ModeId)).toBe(false);
+    for (const id of PLAYABLE_MODES) {
+      expect(h.store.getState().setGameMode(id)).toBe(true);
+      expect(h.store.getState().gameMode).toBe(id);
+    }
+    expect(h.store.getState().setGameMode('catch')).toBe(true);
+    expect(gameModeOf(h.store.getState())).toBe('catch');
   });
 
   it('waits for storage before saving a pick', async () => {
@@ -758,7 +765,7 @@ describe('game modes (SPEC 9)', () => {
     const plus = harness({ limits: PLUS_LIMITS });
     await ready(plus.store);
     plus.store.setState({ ...DEFAULT_PERSISTED, ...oneGoal(newGoal()), gameMode: 'catch' });
-    expect(gameModeOf(plus.store.getState())).toBe(PLAYABLE_MODES.includes('catch') ? 'catch' : 'shooter');
+    expect(gameModeOf(plus.store.getState())).toBe('catch');
   });
 
   it('forgets the pick on erase', async () => {

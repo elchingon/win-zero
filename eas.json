@@ -50,6 +50,12 @@
         "buildType": "apk"
       }
     },
+    "perf-plus": {
+      "extends": "perf",
+      "env": {
+        "EXPO_PUBLIC_APP_VARIANT": "plus"
+      }
+    },
     "production": {
       "environment": "production",
       "autoIncrement": true,

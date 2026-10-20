@@ -5,7 +5,7 @@ import './env/plus';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { beforeAll, beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { renderRouter } from 'expo-router/testing-library';
+import { renderRouter, screen } from 'expo-router/testing-library';
 
 import PlayScreen from '@/app/play';
 import { MODE_IDS, PLAYABLE_MODES, THEME_UNLOCK_EMBER } from '@/engine';
@@ -98,6 +98,27 @@ describe('the theme in Win Zero Plus (SPEC 9)', () => {
 
 describe('the game mode in Win Zero Plus (SPEC 9)', () => {
   const unbuilt = MODE_IDS.find((id) => !PLAYABLE_MODES.includes(id));
+
+  it("plays a day's round in the saved mode, in its words", async () => {
+    appStore.setState({ gameMode: 'catch' });
+    await open('/play');
+    expect(mockRounds.length).toBeGreaterThan(0);
+    expect(mockRounds.every((r) => r.mode === 'catch')).toBe(true);
+    expect(screen.getByText('Slide anywhere to catch the zeros', { includeHiddenElements: true })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Catcher: Twin Cups' })).toBeOnTheScreen();
+  });
+
+  it.each(PLAYABLE_MODES)('plays a practice round in the mode its link names: %s', async (mode) => {
+    await open(`/play?practice=60&mode=${mode}`);
+    expect(mockRounds.at(-1)?.n).toBe(60);
+    expect(mockRounds.every((r) => r.mode === mode)).toBe(true);
+  });
+
+  it('leaves the saved pick alone when a practice link names a mode', async () => {
+    await open('/play?practice=60&mode=catch');
+    expect(mockRounds.at(-1)?.mode).toBe('catch');
+    expect(appStore.getState().gameMode).toBeNull();
+  });
 
   it('plays the saved mode when a practice link names a mode it doesn’t know', async () => {
     await open('/play?practice=60&mode=pong');

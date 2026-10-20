@@ -73,9 +73,9 @@ describe('available modes', () => {
     for (const best of [0, 1, 100]) expect(availableModes(best, PLUS).map((m) => m.id)).toEqual([...PLAYABLE_MODES]);
   });
 
-  it('offers nothing that has no round yet', () => {
-    // Until each mode's round lands (M7), Plus too plays only the Shooter.
-    expect(availableModes(100, PLUS).map((m) => m.id)).toEqual(['shooter']);
+  it('offers every mode whose round is built, and nothing else', () => {
+    // Each mode joins as its round lands (M7).
+    expect(availableModes(100, PLUS).map((m) => m.id)).toEqual(['shooter', 'catch']);
   });
 });
 
@@ -83,6 +83,7 @@ describe('the equipped mode', () => {
   it('is the pick while it is available', () => {
     expect(equippedMode('shooter', 1, PLUS)).toBe('shooter');
     expect(equippedMode('shooter', 1, FREE)).toBe('shooter');
+    expect(equippedMode('catch', 1, PLUS)).toBe('catch');
   });
 
   it('falls back to the Shooter for no pick, a mode not offered, or anything else', () => {
