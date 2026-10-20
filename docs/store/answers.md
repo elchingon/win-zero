@@ -46,8 +46,8 @@ Answer each question honestly. These are the ones that apply:
 - **The rest:**
   - Unrestricted web access: **No**.
   - User-generated content shared with others: **No**. The goal text never leaves the phone.
-  - Gambling, contests and loot boxes: **No**. Rewards come only from check-ins, never from
-    purchases.
+  - Gambling, contests and loot boxes: **No**. Rewards come only from check-ins (and, in Win
+    Zero Plus, a free hidden credit on Home), never from purchases.
 
 ### App Review notes (paste into "Notes")
 ```

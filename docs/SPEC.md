@@ -14,7 +14,7 @@ The playable web prototype at `docs/prototype/win-zero.html` sets the **look, fe
 2. At check-in time, a notification asks: *Did you stick to "<goal>" today?* with **Yes** and **Not today** buttons.
 3. **Yes** from the notification opens the app on Home, with a shooting round of `streak` zeros ready to play whenever the user likes. **Yes** on Home's check-in card starts the round straight away. A player holding a Weapon credit is asked first whether to use one (section 5).
 4. Shooting the last zero triggers the big celebration explosion. Then the screen fills with `streak` giant zeros, a line of encouragement pops up with a horn fanfare, and a result sheet appears.
-5. Rewards (weapons, bombs, shields, credits) are granted on the result sheet.
+5. Rewards (weapons, bombs, shields, credits) are granted on the result sheet. A Game credit the Yes earned gets its own popup first (section 5).
 
 ## 2. Check-in windows
 
@@ -112,18 +112,23 @@ Two banked currencies, spent only when the player chooses. They live in a wallet
 - **Game credit:** plays a **bonus round** of any number of zeros from 1 to 100,000, chosen on Home. The credit is spent when the round is started; the round then waits on Home until played, so a closed app never loses it, and only one waits at a time. A bonus round changes nothing: no streak effect, no rewards, and free bombs as many as are banked, like a replay. Replay keeps it a bonus round. The HUD reads **BONUS**.
 - **Weapon credit:** lends one weapon not yet unlocked for one round and its replays, a daily round or a bonus round. Before a round not yet played, a player holding a Weapon credit, with a weapon still locked, is asked **Use a Weapon credit?**, with each locked weapon listed like the arsenal, or **Not this time** (tapping outside, Escape and Android back too; on the web the keyboard starts there). The borrowed weapon starts equipped, the HUD switch cycles it with the unlocked ones, and it never becomes the saved pick. The borrow is saved on the round, so coming back to it doesn't ask again, and a round that goes unplayed takes its borrow with it. One per round. With every weapon unlocked there's nothing to ask, and credits wait for new weapons.
 
-**Earning.** Each reward pays once per install, keyed by its id. A reward tests whether its mark has been reached, so a player already past it collects it the next time it's checked: a save from before credits gets the goal's credit when it's upgraded, and the rest on the next Yes.
+**Earning.** A one-time reward pays once per install, keyed by its id. It tests whether its mark has been reached, so a player already past it collects it the next time it's checked: a save from before credits gets the goal's credit when it's upgraded, and the rest on the next Yes. A repeating reward (**every**) pays at the Yes that reaches each of its marks, keyed by its id, the goal and the day, so each mark pays once and each goal's runs pay their own (section 9). A mark already passed isn't paid later.
 
 | Reward | Credit |
 |---|---|
 | Setting the goal | +1 Game |
-| The Yes that makes 2 zeros (`streak` ≥ 2) | +1 Game |
+| The Yes that makes 3 zeros (`streak` ≥ 3) | +1 Game |
+| Every 7 Yeses in a row (7, 14, 21, …) | +1 Game |
 | The first Yes after an unanswered day (a Not today doesn't count) | +1 Weapon |
 | 3 Yeses in a row | +1 Weapon |
 | 14 Yeses in a row | +1 Weapon |
-| 30 Yeses in a row | +1 Weapon |
+| Every 30 Yeses in a row (30, 60, 90, …) | +1 Weapon |
 
-**In a row** counts consecutive check-ins answered Yes, apart from the sliding `streak`: any other day (a Not today, a shielded day, a missed day) starts it over, even one of the free missed days.
+**In a row** counts consecutive check-ins answered Yes, apart from the sliding `streak`: any other day (a Not today, a shielded day, a missed day) starts it over, even one of the free missed days. A new run pays its every-7 and every-30 marks again.
+
+The 3-zero credit took over from a 2-zero one, and every 30 in a row from a one-time 30: a player already paid the 2-zero credit isn't paid the 3-zero one, and a round saved with an old reward still says why it paid.
+
+**Revealing a Game credit.** Credits are banked at the Yes, so a closed app never loses one. A Game credit the Yes earned is revealed after its round is first played to the end: once the encouragement is dismissed, a popup shows a big **+1**, "Game credit earned!", why, and how many there are now, with the Yes chime and a success haptic. **Nice!**, tapping outside, Escape or Android back dismisses it, and the result sheet rises, listing it with the rest. Replays, bonus rounds and practice show none. After a notification's Yes, Home's count shows the credit while the round waits.
 
 New ways to earn (accomplishments) are new entries in `CREDIT_REWARDS` (`src/engine/creditRewards.ts`). Credit packs, if they come, grant into the same wallet keyed by the purchase's transaction id, so a purchase delivered twice pays once.
 
@@ -132,9 +137,9 @@ On the website, practice rounds (any size, every weapon) run only in demo mode, 
 ## 6. Screens
 
 - **Onboarding / Setup:** goal (free text plus suggestion chips), check-in time, reminder time (any time of day), notification permission request with a short explanation first. Set up after the check-in time, today counts: today's check-in is open straight away, and both Setup's last step and Home (until the first answer) say so plainly.
-- **Home:** goal, current streak, best run (with the dates it ran), Yes days in all and this month, bombs, shields; pending check-in card (same Yes / Not today as the notification; a Yes tapped there celebrates on the way into the round: a zero pops out of the button with a burst of mini zeros, a chime and a small haptic, dark floods out from it, and its hole opens onto the round. Under reduced motion, only the chime and haptic); credits: Game and Weapon counts, each with a hint (a small "i" in its corner) that opens what the credit does, how to spend it and every way to earn one, the ones already earned marked; a bonus round waiting to be played or **Play a bonus round** (a sheet to choose the size, typed or from 10 · 100 · 1,000 · 10,000); arsenal list with next-unlock progress; history calendar (yes / no / shielded / missed). While reminders are off (never turned on, or off in system settings), a card offers to turn them on; its "Not now" hides it for a week.
-- **Play:** full-screen Skia canvas, HUD (value left, day or BONUS, weapon switch, bomb button, sound toggle), turret at bottom center. `/play?round=bonus` plays the bonus round. Before a round not yet played, the Weapon credit question comes first (section 5).
-- **Encouragement:** when the fill lands after a real round or a replay, a popup over the zeros shows one line of encouragement, picked at random with no repeat back to back (`src/ui/copy/cheers.ts`). A short horn fanfare and a light haptic play as it appears, following the sound and haptics settings. **Got it**, tapping outside, Escape or Android back dismisses it, and the result sheet rises. None in practice or bonus rounds, which have no check-in to cheer.
+- **Home:** goal, current streak, best run (with the dates it ran), Yes days in all and this month, bombs, shields; pending check-in card (same Yes / Not today as the notification; a Yes tapped there celebrates on the way into the round: a zero pops out of the button with a burst of mini zeros, a chime and a small haptic, dark floods out from it, and its hole opens onto the round. Under reduced motion, only the chime and haptic); credits: Game and Weapon counts, each with a hint (a small "i" in its corner) that opens what the credit does, how to spend it and every way to earn one, the one-time ones already earned marked; a bonus round waiting to be played or **Play a bonus round** (a sheet to choose the size, typed or from 10 · 100 · 1,000 · 10,000); arsenal list with next-unlock progress; history calendar (yes / no / shielded / missed). While reminders are off (never turned on, or off in system settings), a card offers to turn them on; its "Not now" hides it for a week.
+- **Play:** full-screen Skia canvas, HUD (value left, day or BONUS, weapon switch, bomb button, sound toggle), turret at bottom center. `/play?round=bonus` plays the bonus round. Before a round not yet played, the Weapon credit question comes first (section 5); in Win Zero Plus, the game picker before it (section 9).
+- **Encouragement:** when the fill lands after a real round or a replay, a popup over the zeros shows one line of encouragement, picked at random with no repeat back to back (`src/ui/copy/cheers.ts`). A short horn fanfare and a light haptic play as it appears, following the sound and haptics settings. **Got it**, tapping outside, Escape or Android back dismisses it; then the popup for a Game credit the Yes earned, if any (section 5), and the result sheet rises. None in practice or bonus rounds, which have no check-in to cheer.
 - **Result sheet:** over the filled screen, showing day (or "Bonus round"), "N zeros down", rewards earned (credits too: "Weapon credit earned for 3 Yeses in a row. You have 1."), next unlock (not after a bonus round), and buttons for Back to base and Replay (replay has no streak effect). A round that earned something (a weapon, a bomb or a shield; credits alone don't count) offers **Share this milestone**: plain text through the phone's share sheet, for example "Day 30 on Win Zero: 30 zeros down. I unlocked the Chain Zapper." It never includes the goal's wording.
 - **Reset / Shielded / Slipping:** supportive copy, never shaming. Slipping covers any slip that cost a zero, from a Not today or from missed days found on opening: "You've lost a zero. Check in to stop the slide." The final shows Reset (encouraging) or Shielded. After a Not today, the screen offers **Undo Not today** for 10 seconds (30 with a screen reader on), in case it was a mis-tap: the goal and round go back to just before the answer, as long as that check-in is still open.
 - **Settings:** edit goal and times, sound/haptics, re-engagement toggle, erase data, support link, an **About** section (privacy policy, support page, support email, app version), and **How it works**: the rules in plain words (the daily question, the slide and the final, a fresh run, missed days, banked rewards, credits), with numbers and ways to earn taken from the engine.
@@ -150,7 +155,7 @@ On the website, practice rounds (any size, every weapon) run only in demo mode, 
 - Respect the OS reduce-motion setting: less shake, fewer particles.
 
 ## 8. Out of scope for v1
-Accounts and cloud sync, leaderboards, IAP. Multiple goals, weekday schedules, game modes and themes are Win Zero Plus (section 9). Credit packs would grant into the credit wallet (section 5); the store answers (`docs/store/answers.md`) say rewards come only from check-ins and there are no digital purchases, so they'd change with it, as would the privacy policy for a payment provider. Keep the data model ready for a later FastAPI + Postgres sync backend (stable IDs, ISO dates, append-only history).
+Accounts and cloud sync, leaderboards, IAP. Multiple goals, weekday schedules, game modes and themes are Win Zero Plus (section 9). Credit packs would grant into the credit wallet (section 5); the store answers (`docs/store/answers.md`) say rewards come only from check-ins (and Plus's free secret credit) and there are no digital purchases, so they'd change with it, as would the privacy policy for a payment provider. Keep the data model ready for a later FastAPI + Postgres sync backend (stable IDs, ISO dates, append-only history).
 
 ## 9. Win Zero Plus
 
@@ -172,14 +177,15 @@ Guardrails for both apps:
 ### Multiple goals
 - Up to 3 goals. Each has its own wording, check-in and reminder times, days, streak, best run, bombs, shields, history, round and notices.
 - **Shared arsenal.** Weapons (and mode power-ups) unlock from the best streak any goal has reached (`arsenalBest`, which never decreases). Adding or archiving a goal never takes a weapon away, and a Yes announces a weapon only when it raises that shared best.
-- **One credit wallet**, as in section 5. Each reward still pays once per install, so "Setting your first goal" pays once however many goals are added.
+- **One credit wallet**, as in section 5. Each one-time reward still pays once per install, so "Setting your first goal" pays once however many goals are added. The repeating ones (every 7 and every 30 Yeses in a row) pay for each goal's own runs.
+- **Home's secret.** Three quick taps on Home's Game credits count give a free Game credit, as often as they're found, with a popup ("You found the secret stash.") and the Yes chime and haptic. The count looks and reads as in the free app, and its hint still opens on the "i". Settings › Games ends with a playful nudge toward it. It's free, like everything else in Plus: nothing is for sale.
 - A bonus round's free bombs are the total banked across goals.
 - **Archiving.** Removing a goal archives it: read-only history under Settings › Past goals, no reminders, and its slot is free. **Delete for good** is offered only from the archive.
 - **Home** shows ready rounds, then open check-ins (the one that opened first, first), with a goal picker for the stats and history calendar. With one goal it looks exactly like the free app.
 - **Reminders.** Each goal has its own notifications with its own Yes / Not today. With "Goal in reminders" off and more than one goal, a reminder names the goal by its optional lock-screen name, or by its place ("your second goal"). At most 60 notifications are pending across all goals, filled in this order: each goal's next 2 windows, the first weekly nudge, the other reminders earliest first, then the remaining nudges. Weekly nudges are one stream that never names a goal. Every app open reschedules, as now.
 
 ### Game modes
-Every round (daily, replay or bonus) plays in the mode picked in Settings › Games. All modes are available from the start.
+Before each round not yet played (a day's or a bonus round), Plus asks **Pick your game**: one row per game, with its hint and the power-up it has now, the last pick marked. A tap plays the round in that game and saves the pick, as Settings › Games does; tapping outside or Android back plays the last pick. The Weapon credit question comes after it, in that game's words. A replay keeps its game. All modes are available from the start; modes earned later will join the picker.
 
 | Mode | How it plays | Multi-hit / armored zeros | Power-ups (best streak 1 → 100) |
 |---|---|---|---|
