@@ -124,6 +124,21 @@ variant disagree. `npm run check:variants` (also in CI) checks both apps' config
 - [ ] **Release order for the move:** release **Plus 1.0 first** and wait until it's live in both
   stores. Then release **free 1.2**, with the Plus store URLs set. A free build with the URLs set
   before Plus is live would offer a move to an app nobody can install.
+- [ ] **App icons (SPEC 9):** Plus has its own icon and one per theme (`PLUS_ICONS` in
+  `app.config.ts`, art in `assets/brand-plus/icons/`). The local module `modules/app-icons` switches
+  between them, not a library. `expo-alternate-app-icons` 8.0.0 and `@howincodes/expo-dynamic-app-icon`
+  3.0.2 both turn off `MainActivity` while an alternate icon shows. On a Pixel, 8.0.0 then broke
+  `winzeroplus://` links, the dev client, and Win Zero's move, which is an intent to
+  `com.e7systems.winzeroplus.MainActivity` by name. The module keeps `MainActivity` on and moves
+  only its launcher entry to one alias per icon (`.AppIcon_<id>`). Known and accepted:
+  - **iPhone** always shows "You have changed the icon for 'Win Zero Plus'" (public API only).
+  - **Android** closes the app on a switch if it was opened from the icon being replaced. The
+    process lives on, and the app opens again from the new icon. Pixel Launcher keeps a pinned
+    icon and swaps it in place.
+  - **Never rename or remove a shipped icon id.** A phone showing it would be left without a
+    launcher entry (and notification taps look one up).
+  - **The native module links into Win Zero too,** unused. Only Plus's config sets it up, and its
+    startup check runs only where `app_icons_enabled` is set (Plus).
 
 ### Building and testing both apps
 
@@ -152,6 +167,11 @@ variant disagree. `npm run check:variants` (also in CI) checks both apps' config
   `winzeroplus://play?practice=60&mode=<id>`, where the id is `catch`, `orbit`, `slice` or `breaker`,
   and `&theme=` works alongside (QA rows 23–26). A `perf-plus` build does the same in release mode.
   Win Zero ignores `&mode`.
+- **App icons before Settings › App icon:** a Plus dev client's debug section in Settings has **App
+  icon** chips for the Plus icon and each theme's, the locked ones included (QA rows 27–33). Icons
+  are native: after a change to the art or `PLUS_ICONS`, build the dev client again
+  (`EXPO_PUBLIC_APP_VARIANT=plus node scripts/prebuild.mjs android`, then `npx expo run:android`
+  with the variant set); a JS reload won't show them.
 
 ---
 
@@ -204,6 +224,14 @@ and its debug tools. The others use a TestFlight, internal or `preview` build.
 | 24 | **Game modes with Reduce Motion** _dev_ | Turn on OS Reduce Motion, then play each mode at `practice=60` (row 23's links). | Less shake and fewer particles, as in row 7. Nothing in a mode needs motion to read: the Black Hole's rings hold still. |
 | 25 | **Finish round in each mode** _dev_ | With VoiceOver, then TalkBack, open each mode at `practice=60` and `practice=1000` and use **Finish round**. | The board clears, the finale plays, "Round cleared." is announced, and the result sheet comes up. |
 | 26 | **Game modes at 60 FPS** | `eas build --profile perf-plus --platform android`, then each mode at `winzeroplus://play?practice=60&mode=<id>&theme=gold` and `practice=1000`, for `catch`, `orbit`, `slice` and `breaker`. | About 60 FPS on the frame meter, with the worst frame under about 25 ms, as in row 6, in every mode with Gold Year, the brightest palette. |
+| 27 | **App icons: switching (Plus)** _dev_ | In the Plus dev client, Settings → debug section → **App icon**: tap each chip, then **Win Zero Plus**. Do it once after opening Plus from its home-screen icon, and once after opening it from a link (row 28's). On iPhone, then look at the home screen. | The home-screen icon becomes that theme's, and the drawer (Android) shows one Win Zero Plus entry. Android: opened from the icon, the app closes and opens again from the new icon; opened from a link, it stays open. A pinned icon swaps in place. iPhone: "You have changed the icon for 'Win Zero Plus'" with the new icon, and the app stays open. **Win Zero Plus** puts back the Gold Edition icon. |
+| 28 | **Links after an icon switch** _dev_ | With a theme's icon on (row 27), open `winzeroplus://play?practice=60&mode=catch` with Plus running and then killed: `adb shell am start -a android.intent.action.VIEW -d "'winzeroplus://play?practice=60&mode=catch'"`, with and without `com.e7systems.winzeroplus` at the end, or `xcrun simctl openurl booted …`. Then the dev client's own link, `winzeroplus://expo-development-client/?url=<server>`. | The practice round opens each time (killed, a dev client asks for its server first, then opens it). The dev client link loads Plus. Nothing says "unable to resolve". |
+| 29 | **Notifications after an icon switch** _dev_ | Settings → **Send test check-in**, then switch icons (row 27) before it arrives (10 s), and tap it. Again, tapping **Yes, I did**. Then let one arrive, switch icons, and tap it. | Each tap opens Plus. Yes reaches the app (for a window that isn't open yet, Home says "That check-in isn't open yet."). |
+| 30 | **The move after an icon switch** _dev_ | Plus on Ember's icon (row 27). Then row 15 from Win Zero. | As row 15: Plus opens on the preview. Win Zero never says Plus isn't on the phone. |
+| 31 | **Android themed icons (Plus)** | Wallpaper & style → Themed icons on. Each icon through row 27's chips. | Every Plus icon shows as the 0 + mark in the wallpaper's colors, like the main icon. |
+| 32 | **iPhone dark and tinted (Plus)** | Home Screen → Customize → Dark, then Tinted, with each icon from row 27. | Dark: the theme's mark on the dark tile. Tinted: the mark in the tint. None falls back to its light version. |
+| 33 | **Erase with an earned icon (Plus)** _dev_ | In **Jump to day**, type 365 and **Go**. Pick **Gold Year** (row 27), then Settings → **Erase all data**. Again with **Neon Arcade**. | After the Gold Year erase, the home-screen icon goes back to the Plus icon (iPhone says the icon changed). After the Neon erase, Neon stays: it comes with Plus. |
+| 34 | **Win Zero has no alternate icons** | In Win Zero's dev client, open Settings' debug section. `adb shell dumpsys package com.e7systems.winzero \| grep AppIcon_`. On iOS, `plutil -p <Win Zero.app>/Info.plist \| grep CFBundleAlternateIcons`. | No App icon chips. Both commands print nothing. The launcher shows one Win Zero icon, the same as before. |
 
 ### Known and accepted
 - **A move can't prove it came from Win Zero on Android.** Any app can open Plus's import link
