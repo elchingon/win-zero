@@ -11,6 +11,7 @@ export * from './rewards';
 export * from './round';
 export * from './rules';
 export * from './summary';
+export * from './themes';
 export * from './types';
 export * from './weapons';
 export * from './windows';
