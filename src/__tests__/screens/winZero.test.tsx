@@ -7,6 +7,8 @@ import { renderRouter, screen } from 'expo-router/testing-library';
 
 import AddGoalScreen from '@/app/add-goal';
 import GoalScreen from '@/app/goal';
+import PastGoalScreen from '@/app/past-goal';
+import PastGoalsScreen from '@/app/past-goals';
 import HomeScreen from '@/app/index';
 import SettingsScreen from '@/app/settings';
 import SetupScreen from '@/app/setup';
@@ -34,6 +36,8 @@ const ROUTES = {
   setup: SetupScreen,
   'add-goal': AddGoalScreen,
   goal: GoalScreen,
+  'past-goals': PastGoalsScreen,
+  'past-goal': PastGoalScreen,
 };
 
 const tz = () => appStore.getState().timeZone();
@@ -75,7 +79,7 @@ describe('Win Zero', () => {
     expect(screen.queryByText('Check-in days')).not.toBeOnTheScreen();
   });
 
-  it.each(['/add-goal', '/goal?id=g1'])("leads Win Zero Plus's link %s Home, with nothing changed", async (path) => {
+  it.each(['/add-goal', '/goal?id=g1', '/past-goals', '/past-goal?id=g1'])("leads Win Zero Plus's link %s Home, with nothing changed", async (path) => {
     const app = await open(path);
     expect(app.pathname()).toBe('/');
     expect(appStore.getState().goals).toHaveLength(1);

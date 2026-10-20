@@ -55,6 +55,7 @@ export default function Settings() {
   const moved = useApp(isMovedOut);
   // Win Zero Plus with several goals lists them, each with its own screen (SPEC 9).
   const several = useApp((s) => PlusSettings !== null && s.goals.length > 1);
+  const pastGoals = useApp((s) => PlusSettings !== null && s.archived.length > 0);
   const { permission, turnOn } = useReminderPermission();
   const [eraseArmed, setEraseArmed] = useState(false);
 
@@ -178,7 +179,11 @@ export default function Settings() {
       {eraseArmed ? (
         <Card style={styles.erase}>
           <Text style={styles.eraseTitle}>Erase everything?</Text>
-          <Fine>This deletes your goal, streak, history and rewards from this phone. It can&apos;t be undone.</Fine>
+          <Fine>
+            {(several || pastGoals) && PlusSettings
+              ? PlusSettings.SETTINGS_COPY.erase
+              : "This deletes your goal, streak, history and rewards from this phone. It can't be undone."}
+          </Fine>
           <View style={styles.eraseRow}>
             <Button variant="danger" label="Erase everything" onPress={erase} silent style={styles.flex} />
             <Button variant="ghost" label="Keep my data" onPress={() => setEraseArmed(false)} style={styles.flex} />

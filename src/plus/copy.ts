@@ -67,8 +67,9 @@ export const ADD_GOAL_COPY = {
   back: 'Back to Settings',
 } as const;
 
-/** Settings' own words, as they read with several goals. */
+/** Settings' own words, as they read with several goals, or past ones. */
 export const SETTINGS_COPY = {
+  erase: "This deletes your goals, past goals, streaks, history and rewards from this phone. It can't be undone.",
   goalInReminders:
     'Off keeps your goals private on the lock screen. Reminders use a goal’s lock-screen name, or “your second goal”.',
 } as const;
@@ -82,4 +83,32 @@ export const GOAL_COPY = {
   aliasSaved: 'Saved. With Goal in reminders off, reminders call this goal by this name instead.',
   aliasSave: 'Save name',
   aliasClear: 'Clear name',
+} as const;
+
+export const ARCHIVE_COPY = {
+  link: 'Archive this goal',
+  hint: 'Asks first. Its history stays under Past goals.',
+  title: (goal: string) => `Archive “${goal}”?`,
+  body: 'Its reminders stop and its slot frees up. Its history stays under Past goals, and what it unlocked stays yours.',
+  confirm: 'Archive goal',
+  cancel: 'Keep it',
+} as const;
+
+export const PAST_COPY = {
+  title: 'Past goals',
+  /** Settings' row: how many. */
+  count: (n: number) => (n === 1 ? '1 goal' : `${n} goals`),
+  lede: (max: number) => `Goals you've archived keep their history here. They have no reminders, and don't count toward your ${max}.`,
+  none: 'No past goals.',
+  view: 'View',
+  rowHint: "Opens this goal's history",
+  /** Under its name: 'Archived Oct 3 · best run 41 days'. */
+  detail: (day: string, best: string) => `Archived ${day} · best run ${best}`,
+  archived: (day: string) => `Archived ${day}`,
+  deleteLink: 'Delete for good',
+  deleteHint: 'Asks first',
+  deleteTitle: (goal: string) => `Delete “${goal}” for good?`,
+  deleteBody: "Its history leaves this phone and can't come back. Weapons and themes it unlocked stay yours.",
+  deleteConfirm: 'Delete for good',
+  deleteCancel: 'Keep it',
 } as const;

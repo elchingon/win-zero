@@ -1,5 +1,6 @@
 // Win Zero Plus's goals (SPEC 9): adding one with its check-in days, Setup's days, changing a
-// goal's days in Settings, and each goal's own screen once there are several.
+// goal's days in Settings, each goal's own screen once there are several, and archiving one to
+// Past goals, where it can be deleted for good.
 import './env/plus';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -9,6 +10,8 @@ import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-librar
 
 import AddGoalScreen from '@/app/add-goal';
 import GoalScreen from '@/app/goal';
+import PastGoalScreen from '@/app/past-goal';
+import PastGoalsScreen from '@/app/past-goals';
 import SettingsScreen from '@/app/settings';
 import SetupScreen from '@/app/setup';
 import { latestScheduleEntry, type GoalState } from '@/engine';
@@ -34,6 +37,8 @@ const ROUTES = {
   settings: SettingsScreen,
   'add-goal': AddGoalScreen,
   goal: GoalScreen,
+  'past-goals': PastGoalsScreen,
+  'past-goal': PastGoalScreen,
 };
 
 const tz = () => appStore.getState().timeZone();
@@ -218,5 +223,69 @@ describe('several goals in Settings', () => {
   it('goes to Settings from a link to a goal that isn’t here', async () => {
     const app = await open('/goal?id=nobody', two());
     expect(app.pathname()).toBe('/settings');
+  });
+});
+
+describe('archiving, and Past goals', () => {
+  const run = () => ({ ...yesDays(newGoal({ tz: tz() }), DAY0, 2, tz()), goalId: 'g2', goal: 'Run' });
+
+  it('archives a goal only after asking, and lists it under Past goals, read-only', async () => {
+    const app = await open('/settings', [twoDays(), run()]);
+    await fireEvent.press(screen.getByRole('button', { name: /^Run/ }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Archive this goal' }));
+    expect(screen.getByText('Archive “Run”?')).toBeOnTheScreen();
+    expect(appStore.getState().goals).toHaveLength(2);
+    await fireEvent.press(screen.getByRole('button', { name: 'Keep it' }));
+    expect(screen.queryByText('Archive “Run”?')).not.toBeOnTheScreen();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Archive this goal' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Archive goal' }));
+    expect(app.pathname()).toBe('/settings');
+    expect(appStore.getState().goals.map((s) => s.goal.goal)).toEqual(['Stop drinking']);
+    expect(appStore.getState().archived.map((a) => a.goal.goal)).toEqual(['Run']);
+    // One goal again: its fields are back in Settings, with the past one a row away.
+    expect(screen.getByLabelText('Daily goal')).toBeOnTheScreen();
+    // Erase says it takes the past goals too, and nothing goes without the second tap.
+    await fireEvent.press(screen.getByRole('button', { name: 'Erase all data' }));
+    expect(screen.getByText(/deletes your goals, past goals, streaks, history and rewards/)).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Keep my data' }));
+
+    await fireEvent.press(screen.getByRole('button', { name: /^Past goals/ }));
+    expect(app.pathname()).toBe('/past-goals');
+    expect(screen.getByText('Archived Oct 15 · best run 2 days')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: /^Run/ }));
+    expect(app.pathname()).toBe('/past-goal');
+    expect(screen.getByRole('header', { name: 'Run' })).toBeOnTheScreen();
+    expect(screen.getByLabelText('Best run: 2 days, Oct 13 to Oct 14')).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: /Save/ })).not.toBeOnTheScreen();
+    expect(screen.queryByLabelText('Goal')).not.toBeOnTheScreen();
+  });
+
+  it('deletes a past goal for good only after asking, keeping what it unlocked', async () => {
+    const old = { ...run(), bestStreak: 30 };
+    appStore.setState({ archived: [{ goal: old, archivedAt: at(DAY0, '12:00', tz()).toISOString() }] });
+    const app = await open('/settings');
+    expect(screen.getByText('1 goal')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: /^Past goals/ }));
+    await fireEvent.press(screen.getByRole('button', { name: /^Run/ }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Delete for good' }));
+    expect(screen.getByText('Delete “Run” for good?')).toBeOnTheScreen();
+    expect(appStore.getState().archived).toHaveLength(1);
+    await fireEvent.press(screen.getByRole('button', { name: 'Delete for good' }));
+    expect(appStore.getState().archived).toHaveLength(0);
+    expect(appStore.getState().arsenalBest).toBe(30);
+    // The last one gone: back to Settings, with no Past goals row.
+    expect(app.pathname()).toBe('/settings');
+    expect(screen.queryByRole('button', { name: /^Past goals/ })).not.toBeOnTheScreen();
+  });
+
+  it('offers no Archive with a single goal, as in Win Zero', async () => {
+    await open('/goal?id=g1');
+    expect(screen.queryByRole('button', { name: 'Archive this goal' })).not.toBeOnTheScreen();
+  });
+
+  it('says so when there are no past goals', async () => {
+    await open('/past-goals');
+    expect(screen.getByText('No past goals.')).toBeOnTheScreen();
   });
 });
