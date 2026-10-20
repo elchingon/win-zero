@@ -66,3 +66,20 @@ export const ADD_GOAL_COPY = {
   full: (max: number) => `All ${max} goals are in use. Archive one in Settings to make room for a new one.`,
   back: 'Back to Settings',
 } as const;
+
+/** Settings' own words, as they read with several goals. */
+export const SETTINGS_COPY = {
+  goalInReminders:
+    'Off keeps your goals private on the lock screen. Reminders use a goal’s lock-screen name, or “your second goal”.',
+} as const;
+
+export const GOAL_COPY = {
+  /** Read out on a goal's row in Settings. */
+  rowHint: "Opens this goal's settings",
+  edit: 'Edit',
+  aliasLabel: 'Lock-screen name',
+  aliasHint: 'With Goal in reminders off, reminders call this goal by this name instead.',
+  aliasSaved: 'Saved. With Goal in reminders off, reminders call this goal by this name instead.',
+  aliasSave: 'Save name',
+  aliasClear: 'Clear name',
+} as const;

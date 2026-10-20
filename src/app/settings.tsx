@@ -1,26 +1,23 @@
 // Settings: goal wording, times (through the engine, so an open window is respected),
 // sound / haptics / weekly nudge, reminder permission, how it works, support, about (privacy
 // policy, help, email, the move to Win Zero Plus once it's on the store, version), and erase.
-// Win Zero Plus adds its games, themes and app icons (SPEC 9).
+// Win Zero Plus adds check-in days and more goals, each with its own screen once there are
+// several, and its games, themes and app icons (SPEC 9).
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { useState, type ComponentType } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { currentCheckInTime, firstUpcomingDay, opensAt, pendingWindow, type ClockTime } from '@/engine';
-import { formatUntil, formatWhen } from '@/lib/format';
 import type { ReminderPermission } from '@/notifications/permissions';
 import { appStore, isMovedOut, primaryGoal, useApp } from '@/store';
 import { colors, space, type } from '@/theme/tokens';
-import { Card, Eyebrow, Field, Fine, Row, shared, TextField, ToggleRow } from '@/ui/bits';
+import { Card, Eyebrow, Fine, Row, shared, ToggleRow } from '@/ui/bits';
 import { TopBar } from '@/ui/Brand';
 import { Button, LinkButton } from '@/ui/Button';
-import { GOAL_MAX_LENGTH } from '@/ui/copy/rules';
 import { feedback } from '@/ui/feedback';
 import { Screen } from '@/ui/Screen';
+import { GoalFields } from '@/ui/settings/GoalFields';
 import { APP_LINKS, callSupportLine, emailSupport, openPage, SUPPORT_LINE } from '@/ui/support';
-import { TimeField } from '@/ui/TimeField';
-import { useDeviceCalendar } from '@/ui/useDevice';
 import { useReminderPermission } from '@/ui/useReminderPermission';
 import { APP_NAME, FEATURES, PLUS_STORE_URL } from '@/variant';
 
@@ -56,10 +53,8 @@ export default function Settings() {
   const goal = useApp(primaryGoal);
   const prefs = useApp((s) => s.prefs);
   const moved = useApp(isMovedOut);
-  useApp((s) => s.devClockOffsetMs); // the "next check-in" line follows the debug clock
-  const { h24 } = useDeviceCalendar();
-  const [draft, setDraft] = useState(goal?.goal ?? '');
-  const [saved, setSaved] = useState(false);
+  // Win Zero Plus with several goals lists them, each with its own screen (SPEC 9).
+  const several = useApp((s) => PlusSettings !== null && s.goals.length > 1);
   const { permission, turnOn } = useReminderPermission();
   const [eraseArmed, setEraseArmed] = useState(false);
 
@@ -67,21 +62,6 @@ export default function Settings() {
   if (!goal) return null;
 
   const store = appStore.getState();
-  const now = store.now();
-  const tz = store.timeZone();
-  const pending = pendingWindow(goal, now);
-  const upcoming = opensAt(goal, firstUpcomingDay(goal, now));
-  const goalChanged = draft.trim() !== goal.goal && draft.trim().length > 0;
-
-  const saveGoal = () => {
-    if (store.setGoalText(goal.goalId, draft).ok) {
-      setDraft(draft.trim());
-      setSaved(true);
-    }
-  };
-
-  const changeCheckIn = (time: ClockTime) => store.setCheckInTime(goal.goalId, time);
-  const changeMorning = (time: ClockTime) => store.setMorningTime(goal.goalId, time);
 
   const erase = () => {
     feedback.press();
@@ -96,42 +76,15 @@ export default function Settings() {
         Settings
       </Text>
 
-      <View style={shared.section}>
-        <Field label="Daily goal" hint={saved ? 'Saved. Your streak and history stay the same.' : 'Your streak and history stay the same.'}>
-          <TextField
-            value={draft}
-            onChangeText={(t) => {
-              setDraft(t);
-              setSaved(false);
-            }}
-            maxLength={GOAL_MAX_LENGTH}
-            returnKeyType="done"
-            onSubmitEditing={() => goalChanged && saveGoal()}
-            accessibilityLabel="Daily goal"
-          />
-        </Field>
-        {goalChanged ? <Button small label="Save goal" onPress={saveGoal} style={styles.start} /> : null}
-      </View>
-
-      <View style={shared.section}>
-        <TimeField
-          label="Check-in time"
-          value={currentCheckInTime(goal)}
-          onChange={changeCheckIn}
-          h24={h24}
-          hint={`${pending ? `A check-in is open until ${formatUntil(pending.closesAt, now, tz, h24)}. ` : ''}Next check-in: ${formatWhen(upcoming, now, tz, h24)}.`}
-        />
-        <TimeField
-          label="Reminder"
-          value={goal.morningTime}
-          onChange={changeMorning}
-          h24={h24}
-          hint="Only if you haven't answered by then: the next morning, or later the same day if it's after check-in time. Set it to check-in time to get one notification a day."
-        />
-      </View>
-
-      {PlusSettings ? <PlusSettings.DaysField key={goal.goalId} goal={goal} /> : null}
-      {PlusSettings ? <PlusSettings.GoalsGroup /> : null}
+      {several && PlusSettings ? (
+        <PlusSettings.GoalsList />
+      ) : (
+        <>
+          <GoalFields key={goal.goalId} goal={goal} />
+          {PlusSettings ? <PlusSettings.DaysField key={`${goal.goalId}-days`} goal={goal} /> : null}
+          {PlusSettings ? <PlusSettings.GoalsGroup /> : null}
+        </>
+      )}
 
       <View style={shared.list}>
         <ToggleRow label="Sound" detail="Pops and booms in the round." value={prefs.sound} onChange={(v) => store.setPref('sound', v)} />
@@ -144,7 +97,11 @@ export default function Settings() {
         />
         <ToggleRow
           label="Goal in reminders"
-          detail="Off keeps your goal private on the lock screen. Reminders just say “your goal”."
+          detail={
+            several && PlusSettings
+              ? PlusSettings.SETTINGS_COPY.goalInReminders
+              : 'Off keeps your goal private on the lock screen. Reminders just say “your goal”.'
+          }
           value={prefs.goalInReminders}
           onChange={(v) => store.setPref('goalInReminders', v)}
         />
@@ -237,7 +194,6 @@ export default function Settings() {
 }
 
 const styles = StyleSheet.create({
-  start: { alignSelf: 'flex-start' },
   call: { ...type.eyebrow, color: colors.amber },
   erase: { borderColor: colors.flare, gap: space.md },
   eraseTitle: { ...type.question },

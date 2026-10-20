@@ -1,5 +1,5 @@
-// Win Zero Plus's goals (SPEC 9): adding one with its check-in days, Setup's days, and changing a
-// goal's days in Settings.
+// Win Zero Plus's goals (SPEC 9): adding one with its check-in days, Setup's days, changing a
+// goal's days in Settings, and each goal's own screen once there are several.
 import './env/plus';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -8,6 +8,7 @@ import { Stack } from 'expo-router';
 import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 
 import AddGoalScreen from '@/app/add-goal';
+import GoalScreen from '@/app/goal';
 import SettingsScreen from '@/app/settings';
 import SetupScreen from '@/app/setup';
 import { latestScheduleEntry, type GoalState } from '@/engine';
@@ -32,6 +33,7 @@ const ROUTES = {
   setup: SetupScreen,
   settings: SettingsScreen,
   'add-goal': AddGoalScreen,
+  goal: GoalScreen,
 };
 
 const tz = () => appStore.getState().timeZone();
@@ -168,5 +170,53 @@ describe("a goal's check-in days in Settings", () => {
     });
     expect(latestScheduleEntry(primaryGoal(appStore.getState())!).time).toBe('19:00');
     expect(screen.queryByText(/These days start/)).not.toBeOnTheScreen();
+  });
+});
+
+describe('several goals in Settings', () => {
+  const two = () => [twoDays(), { ...newGoal({ tz: tz(), days: [1, 3, 5], checkInTime: '07:00' }), goalId: 'g2', goal: 'Run' }];
+
+  it('lists each goal with its days and check-in time, and opens its own screen', async () => {
+    const app = await open('/settings', two());
+    expect(screen.getByRole('header', { name: 'Goals' })).toBeOnTheScreen();
+    expect(screen.queryByLabelText('Daily goal')).not.toBeOnTheScreen();
+    // The test phone keeps a 24-hour clock.
+    expect(screen.getByText('Every day · 20:00')).toBeOnTheScreen();
+    expect(screen.getByText('Mon, Wed, Fri · 07:00')).toBeOnTheScreen();
+    expect(screen.getByText('1 more fits.')).toBeOnTheScreen();
+    expect(screen.getByText(/Reminders use a goal’s lock-screen name/)).toBeOnTheScreen();
+
+    await fireEvent.press(screen.getByRole('button', { name: /^Run/ }));
+    expect(app.pathname()).toBe('/goal');
+    expect(screen.getByRole('header', { name: 'Run' })).toBeOnTheScreen();
+    expect(screen.getByText('Goal · Mon, Wed, Fri')).toBeOnTheScreen();
+  });
+
+  it("changes a goal's wording, days and lock-screen name on its screen", async () => {
+    await open('/goal?id=g2', two());
+    await fireEvent.changeText(screen.getByLabelText('Goal'), 'Run 5k');
+    await fireEvent.press(screen.getByRole('button', { name: 'Save goal' }));
+    await fireEvent.press(day('Saturday'));
+    await fireEvent.press(screen.getByRole('button', { name: 'Save days' }));
+    const run = () => appStore.getState().goals[1]!.goal;
+    expect(run().goal).toBe('Run 5k');
+    expect(latestScheduleEntry(run()).days).toEqual([1, 3, 5, 6]);
+
+    const name = screen.getByLabelText('Lock-screen name');
+    expect(name.props.placeholder).toBe('your second goal');
+    await fireEvent.changeText(name, '  Legs  ');
+    await fireEvent.press(screen.getByRole('button', { name: 'Save name' }));
+    expect(run().alias).toBe('Legs');
+    expect(screen.getByText(/^Saved\. With Goal in reminders off/)).toBeOnTheScreen();
+    await fireEvent.changeText(name, '');
+    await fireEvent.press(screen.getByRole('button', { name: 'Clear name' }));
+    expect(run()).not.toHaveProperty('alias');
+    // The first goal is as it was.
+    expect(appStore.getState().goals[0]!.goal.goal).toBe('Stop drinking');
+  });
+
+  it('goes to Settings from a link to a goal that isn’t here', async () => {
+    const app = await open('/goal?id=nobody', two());
+    expect(app.pathname()).toBe('/settings');
   });
 });
