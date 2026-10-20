@@ -8,6 +8,8 @@ import type { Report } from './sim/types';
 export const POP_MIN_MS = 35;
 /** Kill haptics closer together than this feel like one long buzz. */
 export const KILL_HAPTIC_MIN_MS = 60;
+/** Bounces closer together than this blur into one. */
+export const BOUNCE_MIN_MS = 45;
 
 export interface Cues {
   shoot: boolean;
@@ -16,6 +18,8 @@ export interface Cues {
   killHaptic: boolean;
   bombHaptic: boolean;
   boomHaptic: boolean;
+  /** Win Zero Plus's game modes only: a catch, or a ball off the paddle or a brick. */
+  bounce?: boolean;
 }
 
 /** A gate that opens at most once per `minMs`. */
@@ -48,9 +52,22 @@ function shooterCues(): CueSheet {
   };
 }
 
+/** Catch: the Shooter's pops and booms, with a bounce for a catch that doesn't pop its zero. */
+function catchCues(): CueSheet {
+  const shooter = shooterCues();
+  const bounceGate = makeGate(BOUNCE_MIN_MS);
+  return (r, nowMs) => {
+    const c = shooter(r, nowMs);
+    c.bounce = r.bounces > 0 && !c.boom && r.kills === 0 && bounceGate(nowMs);
+    return c;
+  };
+}
+
 /** A cue sheet for one round in `mode`: call it with each report and the time it arrived. */
 export function makeCues(mode: ModeId = DEFAULT_MODE): CueSheet {
   switch (mode) {
+    case 'catch':
+      return catchCues();
     case 'shooter':
     default:
       return shooterCues();

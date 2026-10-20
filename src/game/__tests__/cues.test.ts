@@ -1,7 +1,7 @@
 // Turning frame reports into sounds and haptics, with pops and kill buzzes throttled.
 import { describe, expect, it } from '@jest/globals';
 
-import { KILL_HAPTIC_MIN_MS, makeCues, makeGate, POP_MIN_MS } from '../cues';
+import { BOUNCE_MIN_MS, KILL_HAPTIC_MIN_MS, makeCues, makeGate, POP_MIN_MS } from '../cues';
 import { makeReport, resetReport } from '../sim/report';
 import type { Report } from '../sim/types';
 
@@ -74,5 +74,27 @@ describe('cues', () => {
       bombHaptic: false,
       boomHaptic: false,
     });
+  });
+});
+
+describe('Catch’s cues', () => {
+  it('bounces for a catch that doesn’t pop its zero, at most every ' + BOUNCE_MIN_MS + ' ms', () => {
+    const cues = makeCues('catch');
+    const bounces = [0, 20, 50, 60].map((t) => cues(report({ bounces: 1 }), t).bounce);
+    expect(bounces).toEqual([true, false, true, false]);
+  });
+
+  it('pops, without the bounce, for a catch that does', () => {
+    const c = makeCues('catch')(report({ bounces: 1, kills: 1 }), 0);
+    expect(c).toMatchObject({ pop: true, bounce: false, killHaptic: true });
+  });
+
+  it('booms for a bomb and the last zero, as the Shooter does', () => {
+    expect(makeCues('catch')(report({ bounces: 1, kills: 1, final: true }), 0)).toMatchObject({ boom: true, bounce: false, pop: false });
+    expect(makeCues('catch')(report({ bombs: 1 }), 0)).toMatchObject({ boom: true, bombHaptic: true });
+  });
+
+  it('never bounces in the Shooter', () => {
+    expect(makeCues('shooter')(report({ bounces: 3 }), 0).bounce).toBeUndefined();
   });
 });

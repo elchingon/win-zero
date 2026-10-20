@@ -9,6 +9,7 @@ import type { GameState } from '../sim/types';
 import { makeBatch } from './batch';
 import { drawFill } from './fill';
 import { drawBeams, drawBolts, drawBullets, drawParticles, drawRings } from './fx';
+import { drawCatch } from './modes/catch';
 import type { Kit, Scratch } from './types';
 import { paintColor, rect } from './util';
 import { drawEnergyBars, drawHitFlashes, drawZeros } from './zeros';
@@ -93,6 +94,9 @@ export function drawScene(canvas: SkCanvas, s: GameState, kit: Kit, atlas: SkIma
   if (s.phase === 'play' || s.phase === 'celebrate') {
     // What the player plays with, by mode.
     switch (s.mode) {
+      case 'catch':
+        drawCatch(canvas, s, kit, sc);
+        break;
       case 'shooter':
       default:
         drawTurret(canvas, s, kit, sc);

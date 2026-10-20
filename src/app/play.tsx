@@ -270,6 +270,7 @@ function Round(props: {
       if (c.shoot) play('shoot');
       if (c.pop) play('pop');
       if (c.boom) play('boom');
+      if (c.bounce) play('bounce');
       if (c.killHaptic) feedback.kill();
       if (c.bombHaptic) feedback.bomb();
       if (c.boomHaptic) feedback.boom();
