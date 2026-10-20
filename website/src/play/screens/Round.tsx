@@ -1,6 +1,7 @@
 // The shooting round: the canvas filling the screen, the HUD over it, and once the round is won,
-// a line of encouragement and then the result sheet over the fill. A real round is the one the
-// latest Yes earned (its rewards are already banked); Replay plays it again in place, with no
+// a line of encouragement, a popup for any Game credit its Yes earned, and then the result sheet
+// over the fill. A real round is the one the latest Yes earned (its rewards are already banked,
+// and only revealed here); Replay plays it again in place, with no
 // effect on the streak. ?round=bonus plays the bonus round a Game credit paid for, which changes
 // nothing either. Before a round not yet played, a player holding a Weapon credit is asked
 // whether to borrow a weapon they haven't unlocked for it. In demo mode, ?practice=N plays any N
@@ -11,12 +12,14 @@ import { Navigate, useSearchParams } from 'react-router';
 import { parseCount, PRACTICE_BEST, PRACTICE_BOMBS, PRACTICE_MAX_N } from '@/dev/demo';
 import { composeRound, equippedWeapon, fillPlan, roundWeapons, weaponCreditOffer, type WeaponId } from '@/engine';
 import { makeCues } from '@/game/cues';
-import { hudLabel, replayMode, roundOverlay, type ResultMode } from '@/game/result';
+import { hudLabel, replayMode, revealedCredits, roundOverlay, type ResultMode } from '@/game/result';
 import type { Report } from '@/game/sim/types';
 import { arsenalBestOf, primarySlot, slotById, totalBombs } from '@/store/select';
 import type { CreditRound, RoundRecord } from '@/store/types';
+import { creditReveal } from '@/ui/copy/credits';
 
 import { CheerPopup } from '../game/CheerPopup';
+import { CreditPopup } from '../game/CreditPopup';
 import { GameCanvas, type FrameStats, type GameHandle, type RoundSetup } from '../game/GameCanvas';
 import { Hud } from '../game/Hud';
 import { ResultSheet } from '../game/ResultSheet';
@@ -152,7 +155,11 @@ function Play(props: {
   const [over, setOver] = useState(false);
   const [landed, setLanded] = useState(false);
   const [cheered, setCheered] = useState(false);
-  const overlay = roundOverlay(landed, mode, cheered);
+  // The Game credits the Yes earned, revealed once the cheer is dismissed.
+  const earned = useMemo(() => revealedCredits(mode, record), [mode, record]);
+  const [revealed, setRevealed] = useState(false);
+  const gameCredits = useApp((s) => s.credits.balance.game);
+  const overlay = roundOverlay(landed, mode, cheered, earned.length > 0 && !revealed);
   // A real round spends banked bombs. Replays, bonus rounds and practice get free ones: a replay or
   // a bonus round as many as are banked, which it never touches.
   const [freeBombs, setFreeBombs] = useState(() => (mode === 'practice' ? PRACTICE_BOMBS : bankedBombs));
@@ -198,9 +205,10 @@ function Play(props: {
     if (mode === 'bonus') appStore.getState().finishBonusRound();
   }, [over, mode, goalId, record]);
 
-  // The encouragement arrives with a fanfare.
+  // The encouragement arrives with a fanfare, and a Game credit with the Yes chime.
   useEffect(() => {
     if (overlay === 'cheer') play('fanfare');
+    if (overlay === 'credit') play('yes');
   }, [overlay, play]);
 
   // The fill runs a few seconds before the result sheet; say the round is won right away.
@@ -214,6 +222,7 @@ function Play(props: {
   };
 
   const dismissCheer = useCallback(() => setCheered(true), []);
+  const dismissCredit = useCallback(() => setRevealed(true), []);
 
   /** Play the same round again, right here, with fresh positions and free bombs. */
   const replay = () => {
@@ -262,6 +271,8 @@ function Play(props: {
         <ResultSheet n={n} mode={mode} goalId={goalId} record={record} onBack={goHome} onReplay={replay} />
       ) : overlay === 'cheer' ? (
         <CheerPopup onDismiss={dismissCheer} />
+      ) : overlay === 'credit' ? (
+        <CreditPopup news={creditReveal(earned, gameCredits)} onDismiss={dismissCredit} />
       ) : (
         <Hud
           left={left}

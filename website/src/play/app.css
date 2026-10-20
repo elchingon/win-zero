@@ -1438,6 +1438,24 @@ a {
   text-align: center;
 }
 
+/* A Game credit's popup after the round: a big amber +1 over its title. */
+.credit-title {
+  line-height: 30px;
+}
+
+.credit-badge {
+  display: block;
+  font-size: 56px;
+  line-height: 64px;
+  color: var(--amber);
+}
+
+.credit-line {
+  margin: 0;
+  color: var(--fg);
+  text-align: center;
+}
+
 /* Pinned over the window, for a hint on a scrolling screen. */
 .popup-backdrop.fixed {
   position: fixed;
