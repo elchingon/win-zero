@@ -7,11 +7,15 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { weaponById } from '@/engine';
+import { YES_ROUTE_MS } from '@/game/yes';
 import { primaryGoal, primaryRound } from '@/store/select';
 import { WEAPON_PROMPT } from '@/ui/copy/credits';
 
 import { routes } from './router';
 import { appStore } from './store';
+
+/** A Yes's round opens once its celebration has covered the screen; allow for a slow machine. */
+const ROUND_OPENS_MS = YES_ROUTE_MS + 1500;
 
 beforeAll(() => {
   HTMLCanvasElement.prototype.getContext = (() => null) as typeof HTMLCanvasElement.prototype.getContext;
@@ -47,7 +51,9 @@ describe('the app on the web', () => {
   it('sets up a goal, checks in Yes, and opens the round', async () => {
     const router = await setUp('Read 20 minutes');
     fireEvent.click(screen.getByRole('button', { name: 'Yes, I did' }));
-    await waitFor(() => expect(router.state.location.pathname).toBe('/round'));
+    // The celebration holds the round back until it has covered the screen.
+    expect(router.state.location.pathname).toBe('/');
+    await waitFor(() => expect(router.state.location.pathname).toBe('/round'), { timeout: ROUND_OPENS_MS });
     expect(primaryRound(appStore.getState())).toMatchObject({ n: 1, played: false });
     expect(primaryGoal(appStore.getState())?.streak).toBe(1);
     expect(await screen.findByRole('button', { name: 'Leave the round' })).toBeTruthy();
@@ -98,7 +104,7 @@ describe('the app on the web', () => {
     const { credits } = appStore.getState();
     appStore.setState({ credits: { ...credits, balance: { ...credits.balance, weapon: 1 } } });
     fireEvent.click(screen.getByRole('button', { name: 'Yes, I did' }));
-    await waitFor(() => expect(router.state.location.pathname).toBe('/round'));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/round'), { timeout: ROUND_OPENS_MS });
     expect(await screen.findByRole('dialog', { name: 'Use a Weapon credit?' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: WEAPON_PROMPT.option(weaponById('rocket')) }));
     expect(await screen.findByRole('button', { name: /^Weapon: Rocket/ })).toBeTruthy();

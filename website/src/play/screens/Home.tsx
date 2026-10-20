@@ -9,6 +9,7 @@ import { formatWhen } from '@/lib/format';
 import { REJECTED } from '@/ui/copy/rules';
 import { startHomeRouting } from '@/ui/home/routing';
 
+import { yesCelebration } from '../celebrate';
 import { DemoControls } from '../demo/DemoControls';
 import { Arsenal } from '../home/Arsenal';
 import { CheckInCard } from '../home/CheckInCard';
@@ -17,6 +18,7 @@ import { HistoryCalendar } from '../home/HistoryCalendar';
 import { Stats } from '../home/Stats';
 import { BONUS_ROUND, pathForAnswer, roundFor, ROUTES } from '../nav';
 import { announce } from '../platform/announce';
+import { loadSounds, resumeAudio } from '../platform/audio';
 import { deviceCalendar } from '../platform/calendar';
 import { appStore, useApp } from '../store';
 import { Card, Eyebrow, Fine, Lede } from '../ui/bits';
@@ -66,8 +68,32 @@ function HomeScreen({ goal }: { goal: GoalState }) {
   }, [boundary, tick, clockOffset]);
 
   // An answer leaves a screen to open: the round for Yes, the notice for Not today. Otherwise,
-  // whenever days settle while Home is showing, show any Slipping / Reset / Shielded news once.
-  useEffect(() => startHomeRouting(appStore, (route) => navigate(pathForAnswer(route))), [navigate]);
+  // whenever days settle while Home is showing, show any Slipping / Reset / Shielded news once. A
+  // Yes clicked here holds its round back while the celebration covers the screen.
+  useEffect(
+    () =>
+      startHomeRouting(appStore, (route) => {
+        const open = () => navigate(pathForAnswer(route));
+        const hold = route.path === '/play' ? yesCelebration.begin() : 0;
+        if (hold > 0) window.setTimeout(open, hold);
+        else open();
+      }),
+    [navigate],
+  );
+
+  // The Yes chime loads on the first press, which also lets the browser start audio.
+  useEffect(() => {
+    const warm = () => {
+      void loadSounds();
+      void resumeAudio();
+    };
+    window.addEventListener('pointerdown', warm, { capture: true, once: true });
+    window.addEventListener('keydown', warm, { capture: true, once: true });
+    return () => {
+      window.removeEventListener('pointerdown', warm, { capture: true });
+      window.removeEventListener('keydown', warm, { capture: true });
+    };
+  }, []);
 
   const banner = rejection ? REJECTED[rejection.reason] : null;
   useEffect(() => {
@@ -118,7 +144,7 @@ function HomeScreen({ goal }: { goal: GoalState }) {
             now={now}
             tz={tz}
             h24={h24}
-            onYes={() => appStore.getState().answer(goal.goalId, 'yes')}
+            onYes={(at) => yesCelebration.armed(at, () => appStore.getState().answer(goal.goalId, 'yes'))}
             onNotToday={() => appStore.getState().answer(goal.goalId, 'not-today')}
           />
         </>
