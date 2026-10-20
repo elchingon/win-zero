@@ -11,7 +11,7 @@ module.exports = defineConfig([
   {
     // Win Zero Plus's own code (src/plus) is required only where it's gated on the variant, with
     // the literal comparison release builds fold, so the free bundle leaves it out. A static import
-    // would pull it into both apps.
+    // would pull it into both apps. The app-icons module's JavaScript goes through src/plus too.
     files: ['src/**/*.{ts,tsx}'],
     ignores: ['src/plus/**', 'src/**/__tests__/**'],
     rules: {
@@ -22,6 +22,10 @@ module.exports = defineConfig([
             {
               group: ['@/plus', '@/plus/*'],
               message: "Plus-only code: require it behind process.env.EXPO_PUBLIC_APP_VARIANT === 'plus'.",
+            },
+            {
+              group: ['**/modules/app-icons', '**/modules/app-icons/*'],
+              message: 'Win Zero Plus only: use src/plus/appIcon.ts, required behind the variant.',
             },
           ],
         },

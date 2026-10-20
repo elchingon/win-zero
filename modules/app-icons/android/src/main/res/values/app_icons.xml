@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- False here; the config plugin sets it true in an app that has icon aliases (Win Zero Plus). -->
+  <bool name="app_icons_enabled">false</bool>
+</resources>
