@@ -44,7 +44,7 @@ export function ResultSheet(props: {
 }) {
   const { n, mode, goalId, record, gameMode, onBack, onReplay } = props;
   // A round that earned something can be shared; practice rounds earn nothing.
-  const shareText = mode !== 'practice' && record ? milestoneShareText(record.n, record.rewards, APP_NAME) : null;
+  const shareText = mode !== 'practice' && record ? milestoneShareText(record.n, record.rewards, APP_NAME, gameMode) : null;
   const goal = useApp((s) => (goalId ? (slotById(s, goalId)?.goal ?? null) : null));
   const best = useApp(arsenalBestOf);
   const credits = useApp((s) => s.credits);

@@ -3,7 +3,8 @@
 import './env/plus';
 
 import { beforeAll, describe, expect, it, jest } from '@jest/globals';
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
+import { Share } from 'react-native';
 
 import { DAY0, newGoal, yesDays } from '@/engine/__tests__/fixtures';
 import { ResultSheet } from '@/game/ResultSheet';
@@ -48,5 +49,16 @@ describe('the result sheet in Win Zero Plus', () => {
     );
     expect(screen.getByText('New catcher unlocked: Chain Catch.')).toBeOnTheScreen();
     expect(screen.getByText(/^Hold the line \d+ more days for your next catcher: Vacuum Beam\.$/)).toBeOnTheScreen();
+  });
+
+  it('shares the milestone in the words of the game it was played in', async () => {
+    const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
+    await render(
+      <ResultSheet n={30} mode="real" goalId="g1" record={day30} gameMode="catch" onBack={() => {}} onReplay={() => {}} />,
+    );
+    await fireEvent.press(screen.getByRole('button', { name: /Share/ }));
+    expect(share).toHaveBeenCalledWith({
+      message: 'Day 30 on Win Zero Plus: 30 zeros down. I unlocked a new catcher, Chain Catch, and earned a bomb.',
+    });
   });
 });

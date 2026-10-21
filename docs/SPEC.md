@@ -202,7 +202,7 @@ Before each round not yet played (a day's or a bonus round), Plus asks **Pick yo
 | **Slice** | Zeros are tossed up in waves; swipe to slice. Missed ones are tossed again. | Each cut juggles it higher until it pops / big, slow zeros | Blade → Twin Blade → Wide Arc → Explosive Cut → Arcing Cut → Lingering Blade → Nova |
 | **Breaker** | Zeros are bricks, with a paddle and ball. A dropped ball just respawns. | Brick hits / steel bricks worth ×V | 1 ball → 2 balls → Multi-ball → Fireball → Lightning Ball → Laser Paddle → Mega Ball |
 
-Every mode uses `composeRound(n)`, can't be lost (no lives or timers; missed zeros come back), ends with the same celebration, fill and result sheet, and supports **Finish round** and bombs. Late in a round, gentle assists (homing, magnet) make sure the last zero can always be cleared. Catch has none: its zeros keep bouncing until they're caught. A Weapon credit lends a locked power-up in any mode.
+Every mode uses `composeRound(n)`, can't be lost (no lives or timers; missed zeros come back), ends with the same celebration, fill and result sheet, and supports **Finish round** and bombs. Late in a round, gentle assists (homing, magnet) make sure the last zero can always be cleared. Catch has none: its zeros keep bouncing until they're caught. A Weapon credit lends a locked power-up in any mode. **Share this milestone** names a new power-up as the game played does: "I unlocked a new catcher, Twin Cups".
 
 ### Themes and app icons
 - Themes recolor the round (zeros, shots and the fill) and Home's drifting zeros. The rest of the app keeps the section 7 palette.
