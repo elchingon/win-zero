@@ -18,7 +18,6 @@ import { TimeField } from '@/ui/TimeField';
 import { useDeviceCalendar } from '@/ui/useDevice';
 import { APP_NAME } from '@/variant';
 
-const RULES = rules(APP_NAME);
 
 // Win Zero Plus only: check-in days (SPEC 9). The literal comparison folds per file, so Win Zero's
 // bundle leaves it out, and Win Zero's goal checks in every day.
@@ -40,6 +39,10 @@ export default function Setup() {
   const [busy, setBusy] = useState(false);
   /** Chosen days in Win Zero Plus; Win Zero's goal checks in every day. */
   const chosenDays = PlusGoals ? days : undefined;
+  // The rules and the goal's label follow the days as they're picked, below them.
+  const everyDay = !chosenDays || chosenDays.length === EVERY_DAY.length;
+  const ruleList = rules(APP_NAME, { everyDay });
+  const goalLabel = everyDay ? 'Your daily goal' : 'Your goal';
 
   if (hasGoal && !busy) return <Redirect href="/" />;
 
@@ -101,7 +104,7 @@ export default function Setup() {
         Every day you win, there&apos;s <Em>one more zero</Em> to shoot.
       </Text>
       <View style={styles.rules}>
-        {RULES.map((r) => (
+        {ruleList.map((r) => (
           <View key={r.mark} style={styles.rule}>
             <Text style={[styles.ruleMark, r.tone === 'flare' && { color: colors.flare }]}>{r.mark}</Text>
             <Text style={[type.body, styles.ruleText]}>{r.text}</Text>
@@ -110,7 +113,7 @@ export default function Setup() {
       </View>
 
       <View style={styles.form}>
-        <Field label="Your daily goal">
+        <Field label={goalLabel}>
           <TextField
             value={goal}
             onChangeText={setGoal}
@@ -118,7 +121,7 @@ export default function Setup() {
             maxLength={GOAL_MAX_LENGTH}
             returnKeyType="done"
             autoCapitalize="sentences"
-            accessibilityLabel="Your daily goal"
+            accessibilityLabel={goalLabel}
           />
           <View style={shared.chips}>
             {SUGGESTIONS.map((s) => (

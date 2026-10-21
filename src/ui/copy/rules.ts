@@ -32,17 +32,30 @@ export interface Rule {
   text: string;
 }
 
-/** Setup's rules, beside their marks, for the app named `appName`. */
-export function rules(appName: string = FREE_APP_NAME): Rule[] {
+/**
+ * Setup's rules, beside their marks, for the app named `appName`. `everyDay`: the goal checks in
+ * every day, as in Win Zero; otherwise (Win Zero Plus, SPEC 9) on the days picked.
+ */
+export function rules(appName: string = FREE_APP_NAME, { everyDay = true }: { everyDay?: boolean } = {}): Rule[] {
   return [
-    { mark: '?', text: `Every day at your check-in time, ${appName} asks one question: did you do it today?` },
+    {
+      mark: '?',
+      text: everyDay
+        ? `Every day at your check-in time, ${appName} asks one question: did you do it today?`
+        : `On each check-in day, at your check-in time, ${appName} asks one question: did you do it today?`,
+    },
     { mark: '000', text: 'Yes adds a zero. Shoot every one of them. The last zero goes out with a huge explosion.' },
     {
       mark: '−1',
       tone: 'flare',
       text: 'Not today costs one zero. Seven in a row starts a fresh run, unless a shield saves it. You earn a shield every 7 days.',
     },
-    { mark: '7D', text: "Missed a check-in? Nothing's lost for a week. After that, each missed day counts like a Not today." },
+    {
+      mark: '7D',
+      text: everyDay
+        ? "Missed a check-in? Nothing's lost for a week. After that, each missed day counts like a Not today."
+        : `Missed a check-in? The first ${MISSED_GRACE_DAYS} in a row cost nothing. After that, each one counts like a Not today.`,
+    },
     { mark: '+', text: 'Longer streaks unlock new weapons, and every 5 days earns a bomb.' },
   ];
 }

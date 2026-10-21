@@ -138,6 +138,16 @@ describe('Setup in Win Zero Plus', () => {
     expect(latestScheduleEntry(primaryGoal(appStore.getState())!).days).toEqual([1, 3, 5]);
   });
 
+  it('words the rules and the goal for the days picked', async () => {
+    await open('/setup', []);
+    expect(screen.getByText(/Nothing's lost for a week/)).toBeOnTheScreen();
+    await untick('Saturday', 'Sunday');
+    expect(screen.queryByText(/Nothing's lost for a week/)).not.toBeOnTheScreen();
+    expect(screen.getByText(/Missed a check-in\? The first 7 in a row cost nothing/)).toBeOnTheScreen();
+    expect(screen.getByText(/^On each check-in day, at your check-in time/)).toBeOnTheScreen();
+    expect(screen.getByLabelText('Your goal')).toBeOnTheScreen();
+  });
+
   it('still counts today on a check-in day after check-in time', async () => {
     await open('/setup', []);
     await fireEvent.changeText(screen.getByLabelText('Your daily goal'), 'Run');

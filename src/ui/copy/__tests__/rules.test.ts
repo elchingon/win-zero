@@ -60,6 +60,15 @@ describe('howItWorks', () => {
     expect(rules('Win Zero Plus')[0]?.text).toContain('Win Zero Plus asks');
   });
 
+  it("follows a goal's check-in days in Setup, where they aren't every day", () => {
+    const plus = rules('Win Zero Plus', { everyDay: false }).map((r) => r.text);
+    expect(plus[0]).toBe('On each check-in day, at your check-in time, Win Zero Plus asks one question: did you do it today?');
+    // Not "a week": with three check-in days, seven missed ones run past two weeks.
+    expect(plus.join(' ')).toContain(`Missed a check-in? The first ${MISSED_GRACE_DAYS} in a row cost nothing.`);
+    expect(plus.join(' ')).not.toContain('week');
+    expect(rules('Win Zero Plus').map((r) => r.text)).toEqual(RULES.map((r) => r.text.replace('Win Zero', 'Win Zero Plus')));
+  });
+
   it('takes its numbers from the engine on both', () => {
     for (const notifications of [true, false]) {
       expect(words(notifications)).toContain(`the first ${MISSED_GRACE_DAYS} days in a row`);
