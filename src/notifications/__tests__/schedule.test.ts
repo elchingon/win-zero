@@ -20,6 +20,7 @@ import { at, DAY0, DENVER, newGoal, TOKYO, yesDays } from '@/engine/__tests__/fi
 import {
   BOTH_OPEN_BODY,
   bothOpenBody,
+  checkInTitle,
   goalLabel,
   MAX_SCHEDULED,
   NUDGES,
@@ -44,6 +45,21 @@ function pausedGoal() {
   expect(goal.paused).toBe(true);
   return { goal, now };
 }
+
+describe('checkInTitle', () => {
+  it("calls a daily goal's check-in daily, and not one on chosen days (SPEC 9)", () => {
+    expect(checkInTitle(newGoal())).toBe('Daily check-in');
+    expect(checkInTitle(newGoal({ days: [1, 3, 5] }))).toBe('Check-in time');
+  });
+
+  it("titles a goal's notifications by its days", () => {
+    const reqs = reminderRequests(input(newGoal({ days: [0, 1, 2, 3, 4, 5] }), at(DAY0, '12:00')));
+    const checkins = reqs.filter((r) => r.content.data.kind === 'checkin');
+    expect(checkins.length).toBeGreaterThan(0);
+    expect(checkins.every((r) => r.content.title === 'Check-in time')).toBe(true);
+    expect(reqs.filter((r) => r.content.data.kind === 'morning').every((r) => r.content.title === 'Still time to check in')).toBe(true);
+  });
+});
 
 describe('reminderRequests', () => {
   it('asks the evening question and the next-morning one, without naming the goal', () => {

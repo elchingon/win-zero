@@ -10,6 +10,7 @@ import {
 
 import {
   diffDays,
+  isEveryDay,
   isWindowToday,
   nextWindow,
   planAllReminders,
@@ -32,6 +33,8 @@ export const MAX_SCHEDULED = IOS_PENDING_LIMIT - PENDING_RESERVE;
 export const TEST_DELAY_SECONDS = 10;
 
 const CHECKIN_TITLE = 'Daily check-in';
+/** The check-in's title for a goal on chosen days (SPEC 9), which isn't daily. */
+const DAYS_CHECKIN_TITLE = 'Check-in time';
 const MORNING_TITLE = 'Still time to check in';
 /** Today's check-in while yesterday's is still open. Home asks about yesterday first. */
 export const BOTH_OPEN_BODY = "Yesterday's check-in is still open, and today's is ready. Tap to answer.";
@@ -89,6 +92,11 @@ export function goalLabel(goal: GoalState, place: number, count: number, showGoa
   return ordinal ? `your ${ordinal} goal` : 'your goal';
 }
 
+/** A check-in's title: "Daily check-in", unless the goal checks in on chosen days only. */
+export function checkInTitle(goal: GoalState): string {
+  return isEveryDay(goal) ? CHECKIN_TITLE : DAYS_CHECKIN_TITLE;
+}
+
 /** "Did you stick to your goal today?", with the goal as `label` names it. */
 export function checkInQuestion(label: string, when: 'today' | 'yesterday'): string {
   return `Did you stick to ${label} ${when}?`;
@@ -105,11 +113,11 @@ function contentFor(state: GoalState, r: GoalReminder, label: string, several: b
   // No buttons: a Yes here couldn't say which day it means. A tap opens Home, which asks about
   // yesterday first. Answering yesterday reschedules this as a plain check-in.
   if (r.earlier) {
-    return { title: CHECKIN_TITLE, body: several ? bothOpenBody(label) : BOTH_OPEN_BODY, data, sound: 'default' };
+    return { title: checkInTitle(state), body: several ? bothOpenBody(label) : BOTH_OPEN_BODY, data, sound: 'default' };
   }
   const when = isWindowToday(windowFor(state, r.day), r.at) ? 'today' : 'yesterday';
   return {
-    title: r.kind === 'checkin' ? CHECKIN_TITLE : MORNING_TITLE,
+    title: r.kind === 'checkin' ? checkInTitle(state) : MORNING_TITLE,
     body: checkInQuestion(label, when),
     data,
     categoryIdentifier: CHECKIN_CATEGORY_ID,
@@ -153,7 +161,7 @@ export function testCheckInRequest(
   return {
     identifier,
     content: {
-      title: CHECKIN_TITLE,
+      title: checkInTitle(state),
       body: checkInQuestion(goalLabel(state, 0, 1, input.showGoal), when),
       data,
       categoryIdentifier: CHECKIN_CATEGORY_ID,
