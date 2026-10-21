@@ -15,6 +15,24 @@ const NOTICES: Notice[] = [
 ];
 
 describe('copyFor', () => {
+  it("says it's the slide that starts over when a shield holds, not the streak", () => {
+    const held = copyFor({ kind: 'shielded', cause: 'answer', lost: 0, streak: 6, shieldsLeft: 1, days: 1 });
+    expect(held.body).toEqual([
+      'That Not today would have started a fresh run, so a shield stepped in. Your streak stays at 6 zeros.',
+      'The slide starts over. Shields left: 1.',
+    ]);
+  });
+
+  it('says a reset goes back to zero, as Home shows, and promises no shields', () => {
+    const reset = copyFor({ kind: 'reset', cause: 'answer', lostStreak: 9, bestStreak: 10, days: 1, stopped: false });
+    expect(reset.title).toEqual(['Back to ', 'zero.']);
+    expect(reset.body[1]).toBe(
+      'Your next Yes starts a new run. Your best run stays on the board at 10 days, and your weapons and bombs are still yours.',
+    );
+    const away = copyFor({ kind: 'reset', cause: 'missed', lostStreak: 9, bestStreak: 10, days: 30, stopped: false });
+    expect(away.body.join(' ')).not.toMatch(/shield/);
+  });
+
   const away: Notice = { kind: 'slipping', cause: 'missed', lost: 2, streak: 3, days: 9, stopped: false };
 
   it('says the free missed days last a week for a goal that checks in every day', () => {

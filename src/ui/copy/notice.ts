@@ -20,7 +20,8 @@ export interface NoticeCopy {
   support?: boolean;
 }
 
-export const KEEPSAKES = 'your weapons, bombs and shields are still yours';
+/** What a reset leaves. Not shields: a reset almost always comes with none left. */
+export const KEEPSAKES = 'your weapons and bombs are still yours';
 /** Read out when a Not today is taken back. */
 export const UNDONE = 'Undone. Your check-in is open again.';
 
@@ -72,7 +73,7 @@ export function copyFor(n: Notice, { everyDay = true }: { everyDay?: boolean } =
             : n.lost > 0
               ? `You lost ${plural(n.lost, 'zero')} while you were away, and then a shield stopped the slide. Your streak is at ${plural(n.streak, 'zero')}.`
               : `A shield kept your streak at ${plural(n.streak, 'zero')}.`,
-          `The count starts over. Shields left: ${n.shieldsLeft}.`,
+          `The slide starts over. Shields left: ${n.shieldsLeft}.`,
         ],
         motion: 'absorb',
       };
@@ -80,7 +81,7 @@ export function copyFor(n: Notice, { everyDay = true }: { everyDay?: boolean } =
       return n.cause === 'answer'
         ? {
             eyebrow: 'A fresh start',
-            title: ['Back to ', 'one zero.'],
+            title: ['Back to ', 'zero.'],
             body: [
               "Thanks for being honest. Hard stretches happen, and you're still here checking in.",
               `Your next Yes starts a new run. Your best run stays on the board at ${plural(n.bestStreak, 'day')}, and ${KEEPSAKES}.`,

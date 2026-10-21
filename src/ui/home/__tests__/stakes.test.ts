@@ -12,7 +12,7 @@ describe('check-in stakes', () => {
     expect(stakesLine(slip)).toBe('Yes: 6 zeros to shoot. Not today: one zero comes off.');
     expect(stakesHint(slip.notToday!)).toBe('One zero comes off.');
 
-    expect(checkInStakes(stateWith({ streak: 5, slide: 6 })).notToday).toBe('a fresh start, from one zero');
+    expect(checkInStakes(stateWith({ streak: 5, slide: 6 })).notToday).toBe('a fresh start, from zero');
     expect(checkInStakes(stateWith({ streak: 5, slide: 6, shields: 1 })).notToday).toBe('a shield keeps your streak');
   });
 
