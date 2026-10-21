@@ -141,6 +141,8 @@ export const PAST_COPY = {
 } as const;
 
 export const HOME_COPY = {
+  /** Below the check-ins: the picked goal's numbers, or the shared credits and arsenal. */
+  tabs: { goals: 'Goals', game: 'Game' },
   yourGoals: 'Your goals',
   pickHint: 'Shows its stats and history',
   /** Over the goals with nothing open: all of them, or some. */

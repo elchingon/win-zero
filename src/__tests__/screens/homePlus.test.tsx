@@ -1,6 +1,6 @@
 // Win Zero Plus's Home (SPEC 9): with one goal, Win Zero's Home; with several, ready rounds, then
-// open check-ins, then the rest, a goal picker for the numbers and history, and the shared arsenal
-// and credits.
+// open check-ins, then the rest, and two tabs: Goals (a goal picker for the numbers and history)
+// and Game (the shared credits and arsenal).
 import './env/plus';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -147,6 +147,7 @@ describe('Home with one goal in Win Zero Plus', () => {
     expect(screen.queryByRole('header', { name: 'Your goals' })).not.toBeOnTheScreen();
     expect(screen.queryByRole('radio')).not.toBeOnTheScreen();
     expect(screen.queryByText(/caught up|Up next/)).not.toBeOnTheScreen();
+    expect(screen.queryByRole('tab')).not.toBeOnTheScreen();
   });
 
   it('names the days of a goal that skips some, and asks about reminders without "each day"', async () => {
@@ -194,6 +195,32 @@ describe('Home with several goals', () => {
     expect(screen.getByRole('radio', { name: 'Run' }).props.accessibilityState).toMatchObject({ checked: true });
     expect(screen.getByLabelText('Current streak: 5 zeros')).toBeOnTheScreen();
     expect(screen.getByLabelText('Oct 15, today: Waiting for your answer')).toBeOnTheScreen();
+  });
+
+  it('shows the goals first, and the credits and arsenal under Game', async () => {
+    await open(two());
+    const tab = (name: string) => screen.getByRole('tab', { name });
+    expect(tab('Goals').props.accessibilityState).toMatchObject({ selected: true });
+    expect(tab('Game').props.accessibilityState).toMatchObject({ selected: false });
+    expect(screen.getByRole('header', { name: 'Your goals' })).toBeOnTheScreen();
+    expect(screen.queryByRole('header', { name: 'Arsenal' })).not.toBeOnTheScreen();
+    expect(screen.queryByLabelText('0 Game credits')).not.toBeOnTheScreen();
+
+    await fireEvent.press(tab('Game'));
+    expect(tab('Game').props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByRole('header', { name: 'Arsenal' })).toBeOnTheScreen();
+    expect(screen.getByLabelText('0 Game credits')).toBeOnTheScreen();
+    expect(screen.queryByRole('header', { name: 'Your goals' })).not.toBeOnTheScreen();
+    // The check-ins stay above the tabs.
+    expect(headlines()).toEqual([
+      'Your Day 2 round is ready.',
+      'Did you stick to “Run” today?',
+      'Did you stick to “Stop drinking” today?',
+    ]);
+
+    await fireEvent.press(tab('Goals'));
+    expect(screen.getByRole('radio', { name: 'Stop drinking' })).toBeOnTheScreen();
+    expect(screen.queryByRole('header', { name: 'Arsenal' })).not.toBeOnTheScreen();
   });
 
   it('says which goals have paused reminders', async () => {

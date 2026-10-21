@@ -1,7 +1,7 @@
 // Win Zero Plus's Home with several goals (SPEC 9): rounds ready to play, then the open check-ins
-// (the one that opened first, first), then when the others check in next. The credits and the
-// arsenal are shared; a picker chooses whose numbers and history calendar show. With one goal,
-// Home is Win Zero's (src/app/index.tsx).
+// (the one that opened first, first), then when the others check in next. Below them, two tabs:
+// Goals, where a picker chooses whose numbers and history calendar show, and Game, with the shared
+// credits and arsenal. With one goal, Home is Win Zero's (src/app/index.tsx).
 import { router } from 'expo-router';
 import { useState, type ComponentType } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -35,6 +35,7 @@ import { FEATURES } from '@/variant';
 
 import { HOME_COPY } from '../copy';
 import { GoalPicker } from './GoalPicker';
+import { HomeTabs, type HomeTab } from './HomeTabs';
 import { homeCards } from './order';
 
 // Development builds only: Metro folds __DEV__ to false in production and drops the require.
@@ -56,6 +57,8 @@ export function MultiGoalHome() {
   const reminders = useReminderPermission();
   const { h24, firstWeekday } = useDeviceCalendar();
   const [picked, setPicked] = useState<string | null>(null);
+  // The goals first; a round and back keeps the tab, since Home stays under it.
+  const [tab, setTab] = useState<HomeTab>('goals');
 
   const store = appStore.getState();
   const now = store.now();
@@ -139,27 +142,35 @@ export function MultiGoalHome() {
           <Fine key={goal.goalId}>{HOME_COPY.paused(goal.goal)}</Fine>
         ))}
 
-      <CreditsCard best={best} credits={credits} bonus={bonus} onStartBonus={startBonus} onPlayBonus={playBonus} />
+      <HomeTabs tab={tab} onTab={setTab} />
 
-      <Arsenal best={best} streak={streak} pick={pick} onEquip={selectWeapon} mode={mode} />
+      {tab === 'goals' ? (
+        <>
+          <GoalPicker slots={slots} picked={shown.goal.goalId} onPick={setPicked} />
 
-      <GoalPicker slots={slots} picked={shown.goal.goalId} onPick={setPicked} />
+          <View style={styles.goal}>
+            <Eyebrow>{goalEyebrow(shown.goal, firstWeekday)}</Eyebrow>
+            <Text style={type.goal}>{shown.goal.goal}</Text>
+          </View>
 
-      <View style={styles.goal}>
-        <Eyebrow>{goalEyebrow(shown.goal, firstWeekday)}</Eyebrow>
-        <Text style={type.goal}>{shown.goal.goal}</Text>
-      </View>
+          <Stats goal={shown.goal} today={today} />
 
-      <Stats goal={shown.goal} today={today} />
+          <HistoryCalendar
+            key={shown.goal.goalId}
+            goal={shown.goal}
+            today={today}
+            pendingDay={shownPending?.day ?? null}
+            firstWeekday={firstWeekday}
+            restDays={FEATURES.schedules}
+          />
+        </>
+      ) : (
+        <>
+          <CreditsCard best={best} credits={credits} bonus={bonus} onStartBonus={startBonus} onPlayBonus={playBonus} />
 
-      <HistoryCalendar
-        key={shown.goal.goalId}
-        goal={shown.goal}
-        today={today}
-        pendingDay={shownPending?.day ?? null}
-        firstWeekday={firstWeekday}
-        restDays={FEATURES.schedules}
-      />
+          <Arsenal best={best} streak={streak} pick={pick} onEquip={selectWeapon} mode={mode} />
+        </>
+      )}
 
       {DemoControls ? <DemoControls /> : null}
     </Screen>
