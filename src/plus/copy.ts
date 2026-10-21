@@ -78,6 +78,7 @@ export const DAYS_COPY = {
 export const GOALS_COPY = {
   title: 'Goals',
   add: 'Add a goal',
+  addHint: 'Opens a new goal to fill in',
   addDetail: (max: number) => `Up to ${max}, each with its own check-ins and streak.`,
   /** With room for `n` more. */
   addMore: (n: number) => (n === 1 ? '1 more fits.' : `${n} more fit.`),
@@ -144,6 +145,8 @@ export const HOME_COPY = {
   /** Below the check-ins: the picked goal's numbers, or the shared credits and arsenal. */
   tabs: { goals: 'Goals', game: 'Game' },
   yourGoals: 'Your goals',
+  /** Beside Your goals, while there's room for another. */
+  addGoal: 'Add goal',
   pickHint: 'Shows its stats and history',
   /** Over the goals with nothing open: all of them, or some. */
   caughtUp: "You're all caught up.",

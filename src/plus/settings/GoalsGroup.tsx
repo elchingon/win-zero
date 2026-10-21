@@ -24,7 +24,7 @@ export function GoalsGroup({ children }: { children?: ReactNode }) {
             label={GOALS_COPY.add}
             detail={count > 1 ? GOALS_COPY.addMore(room) : GOALS_COPY.addDetail(maxGoals)}
             right={<Text style={styles.call}>Add</Text>}
-            hint="Opens a new goal to fill in"
+            hint={GOALS_COPY.addHint}
             onPress={() => router.push('/add-goal')}
           />
         ) : (

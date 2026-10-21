@@ -9,7 +9,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { dayKeyAt, openedAtSetup } from '@/engine';
 import type { Point } from '@/game/yes';
 import { formatWhen } from '@/lib/format';
-import { appStore, arsenalBestOf, arsenalStreakOf, gameModeOf, useApp } from '@/store';
+import { appStore, arsenalBestOf, arsenalStreakOf, canAddGoal, gameModeOf, useApp } from '@/store';
 import { colors, fonts, space, type } from '@/theme/tokens';
 import { Card, Eyebrow, Fine } from '@/ui/bits';
 import { TopBar } from '@/ui/Brand';
@@ -47,6 +47,7 @@ const DemoControls: ComponentType | null = __DEV__
 
 export function MultiGoalHome() {
   const slots = useApp((s) => s.goals);
+  const roomy = useApp(canAddGoal);
   const best = useApp(arsenalBestOf);
   const streak = useApp(arsenalStreakOf);
   const pick = useApp((s) => s.weapon);
@@ -147,7 +148,12 @@ export function MultiGoalHome() {
 
       {tab === 'goals' ? (
         <>
-          <GoalPicker slots={slots} picked={shown.goal.goalId} onPick={setPicked} />
+          <GoalPicker
+            slots={slots}
+            picked={shown.goal.goalId}
+            onPick={setPicked}
+            onAdd={roomy ? () => router.push('/add-goal') : undefined}
+          />
 
           <View style={styles.goal}>
             <Eyebrow>{goalEyebrow(shown.goal, firstWeekday)}</Eyebrow>

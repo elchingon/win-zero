@@ -151,6 +151,7 @@ describe('Home with one goal in Win Zero Plus', () => {
     expect(screen.queryByText(/caught up|Up next/)).not.toBeOnTheScreen();
     expect(screen.queryByRole('tab')).not.toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Add goal' })).not.toBeOnTheScreen();
   });
 
   it('names the days of a goal that skips some, and asks about reminders without "each day"', async () => {
@@ -239,6 +240,18 @@ describe('Home with several goals', () => {
     await fireEvent.press(screen.getByRole('button', { name: 'Edit' }));
     expect(app.pathname()).toBe('/goal');
     expect(app.params()).toMatchObject({ id: 'g2' });
+  });
+
+  it('adds a goal from beside Your goals while there is room', async () => {
+    const app = await open(two());
+    await fireEvent.press(screen.getByRole('button', { name: 'Add goal' }));
+    expect(app.pathname()).toBe('/add-goal');
+  });
+
+  it('leaves out Add goal once the goals are full', async () => {
+    await open([...two(), slot(another('g3', 'Read', 2))]);
+    expect(screen.getByRole('header', { name: 'Your goals' })).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Add goal' })).not.toBeOnTheScreen();
   });
 
   it('says which goals have paused reminders', async () => {
