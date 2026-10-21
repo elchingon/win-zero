@@ -11,7 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { IOS, NAMES, PARK, parkedPath, planIosSwitch } from './ios-workspace.cjs';
+import { IOS, NAMES, PARK, parkedPath, planIosSwitch, setMarketingVersion, pointVersionsAtSettings } from './ios-workspace.cjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MARKER = '.win-zero-variant';
@@ -42,6 +42,22 @@ function expoPrebuild(platform, { clean, install }) {
   );
 }
 
+/**
+ * Xcode's General tab shows the app's own version (app.json, or PLUS.version for Plus), and its
+ * build number is the one set there, kept from run to run.
+ */
+function syncVersions(dir, variant) {
+  const projects = fs.readdirSync(dir).filter((name) => name.endsWith('.xcodeproj'));
+  if (projects.length !== 1) throw new Error(`ios/ should hold one Xcode project, not ${projects.length}.`);
+  const name = projects[0].slice(0, -'.xcodeproj'.length);
+  const plistFile = path.join(dir, name, 'Info.plist');
+  const pbxprojFile = path.join(dir, projects[0], 'project.pbxproj');
+  const { plist, version } = pointVersionsAtSettings(fs.readFileSync(plistFile, 'utf8'));
+  fs.writeFileSync(plistFile, plist);
+  fs.writeFileSync(pbxprojFile, setMarketingVersion(fs.readFileSync(pbxprojFile, 'utf8'), version));
+  console.log(`${NAMES[variant]} ${version}. Set its build number in Xcode's General tab: it carries over.`);
+}
+
 /** Puts this app's Xcode project in ios/, parking the other app's, and refreshes it. */
 function prebuildIos(variant, install) {
   const dir = path.join(root, IOS);
@@ -61,6 +77,7 @@ function prebuildIos(variant, install) {
   // Never --clean: that would throw away this app's signing, build number and Pods.
   expoPrebuild('ios', { clean: false, install });
   fs.writeFileSync(path.join(dir, MARKER), `${variant}\n`);
+  syncVersions(dir, variant);
   // A parked project was installed against node_modules as they were then. A switch always got a
   // fresh pod install when it started clean, so it still gets one.
   if (plan.restored && install) {

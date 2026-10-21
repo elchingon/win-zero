@@ -48,4 +48,48 @@ function planIosSwitch({ active, parked }, want) {
   return { moves, parked: active, restored: parked[want] };
 }
 
-module.exports = { IOS, PARK, NAMES, parkedPath, planIosSwitch };
+/**
+ * Info.plist's version and build number, as the build settings Xcode's General tab shows and edits.
+ * Prebuild writes both as plain values from the config (the build number is always 1 here), while
+ * the General tab showed the template's MARKETING_VERSION of 1.0.
+ */
+const VERSION_SETTINGS = { CFBundleShortVersionString: '$(MARKETING_VERSION)', CFBundleVersion: '$(CURRENT_PROJECT_VERSION)' };
+
+/** The <string> value of `key` in a plist's XML: groups 1 and 3 surround the value. */
+const plistString = (key) => new RegExp(`(<key>${key}</key>\\s*<string>)([^<]*)(</string>)`);
+
+/**
+ * Points Info.plist's version and build number at Xcode's build settings, and returns the version
+ * prebuild had written there from app.json (or PLUS.version) for MARKETING_VERSION. The build number
+ * stays wherever CURRENT_PROJECT_VERSION says, which prebuild never touches, so one set in Xcode
+ * carries over.
+ * @param {string} plist Info.plist's XML, just after prebuild
+ * @returns {{ plist: string, version: string }}
+ */
+function pointVersionsAtSettings(plist) {
+  const current = plist.match(plistString('CFBundleShortVersionString'))?.[2];
+  if (current === undefined) throw new Error('Info.plist has no CFBundleShortVersionString.');
+  if (current.startsWith('$(')) throw new Error(`Info.plist's version is ${current}, not the one prebuild writes from the config.`);
+  let out = plist;
+  for (const [key, setting] of Object.entries(VERSION_SETTINGS)) {
+    const entry = plistString(key);
+    if (!entry.test(out)) throw new Error(`Info.plist has no ${key}.`);
+    out = out.replace(entry, (_, open, _value, close) => `${open}${setting}${close}`);
+  }
+  return { plist: out, version: current };
+}
+
+/**
+ * Sets MARKETING_VERSION in the app's project.pbxproj (its Debug and Release configs; Pods are a
+ * project of their own).
+ * @param {string} pbxproj
+ * @param {string} version
+ */
+function setMarketingVersion(pbxproj, version) {
+  const setting = /(\bMARKETING_VERSION = )[^;]*;/g;
+  if (!setting.test(pbxproj)) throw new Error('project.pbxproj has no MARKETING_VERSION.');
+  const value = /^[\w.]+$/.test(version) ? version : JSON.stringify(version);
+  return pbxproj.replace(setting, (_, head) => `${head}${value};`);
+}
+
+module.exports = { IOS, PARK, NAMES, parkedPath, planIosSwitch, pointVersionsAtSettings, setMarketingVersion };
