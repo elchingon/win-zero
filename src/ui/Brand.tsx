@@ -23,7 +23,8 @@ export function Mark({ size = 1 }: { size?: number }) {
 export function TopBar({ right }: { right?: ReactNode }) {
   return (
     <View style={styles.bar}>
-      <View style={styles.brand} accessibilityRole="header" accessibilityLabel={APP_NAME}>
+      {/* One element, so iOS reads the name as a heading rather than the wordmark as text. */}
+      <View style={styles.brand} accessible accessibilityRole="header" accessibilityLabel={APP_NAME}>
         <Mark size={TOP_BAR_MARK_SIZE} />
         {/* Win Zero Plus's longer name shrinks to fit beside the bar's action on a narrow phone. */}
         <Text style={styles.word} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>

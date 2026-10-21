@@ -67,7 +67,9 @@ afterEach(() => {
 describe('Win Zero', () => {
   it("has none of Win Zero Plus's Settings sections", async () => {
     await open('/settings');
-    expect(screen.getAllByRole('header').map((h) => h.props.children)).toEqual(['Settings', 'About']);
+    // The top bar's name first, then the screen's own headings.
+    const headers = screen.getAllByRole('header').map((h) => h.props.accessibilityLabel ?? h.props.children);
+    expect(headers).toEqual(['Win Zero', 'Settings', 'About']);
     expect(screen.queryByRole('radio')).not.toBeOnTheScreen();
     expect(screen.queryByText('Check-in days')).not.toBeOnTheScreen();
     expect(screen.queryByText(/Add a goal/)).not.toBeOnTheScreen();

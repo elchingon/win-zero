@@ -20,6 +20,7 @@ import { appStore, primaryGoal } from '@/store';
 import { DEFAULT_PERSISTED } from '@/store/migrate';
 import { yesCelebration } from '@/ui/celebrate';
 import { APP_LINKS, SUPPORT_LINE } from '@/ui/support';
+import { APP_NAME } from '@/variant';
 
 // Reanimated 4's mock needs the worklets runtime mocked first.
 jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock'));
@@ -321,6 +322,11 @@ describe('Notice', () => {
 });
 
 describe('Settings', () => {
+  it('names the app as a heading in the top bar', async () => {
+    await open('/settings', { goal: twoDays() });
+    expect(screen.getByRole('header', { name: APP_NAME })).toBeOnTheScreen();
+  });
+
   it('has About with the support email, and leaves out pages whose URLs are unset', async () => {
     await open('/settings', { goal: twoDays() });
     expect(screen.getByRole('header', { name: 'About' })).toBeOnTheScreen();
