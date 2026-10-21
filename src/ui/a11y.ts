@@ -6,7 +6,7 @@ import { ReduceMotion } from 'react-native-reanimated';
 
 import { useApp } from '@/store';
 
-type FlagEvent = 'reduceMotionChanged' | 'screenReaderChanged';
+type FlagEvent = 'reduceMotionChanged' | 'screenReaderChanged' | 'boldTextChanged';
 
 function useA11yFlag(read: () => Promise<boolean>, event: FlagEvent): boolean {
   const [on, setOn] = useState(false);
@@ -42,6 +42,11 @@ export function useReduceEffects(): boolean {
 /** For Reanimated's entering animations, which follow only the OS: reduced too while Reduce effects is on. */
 export function useAnimationMotion(): ReduceMotion {
   return useApp((s) => s.prefs.reduceEffects) ? ReduceMotion.Always : ReduceMotion.System;
+}
+
+/** iOS's Bold Text setting; always false on Android. */
+export function useSystemBoldText(): boolean {
+  return useA11yFlag(AccessibilityInfo.isBoldTextEnabled, 'boldTextChanged');
 }
 
 /** VoiceOver or TalkBack is on. */

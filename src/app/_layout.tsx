@@ -1,4 +1,3 @@
-import { useFonts } from 'expo-font';
 import { DarkTheme, router, Stack, ThemeProvider, usePathname, type ErrorBoundaryProps } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -9,13 +8,13 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { startNotifications } from '@/notifications';
 import { reportPath } from '@/notifications/route';
 import { appStore, startLifecycle, useApp } from '@/store';
-import { fontAssets } from '@/theme/fonts';
 import { colors } from '@/theme/tokens';
 import { importDelivery, startMoveAcks, subscribe } from '@/transfer/inbox';
 import { transport } from '@/transfer/transport';
 import { playAnimation } from '@/ui/celebrate';
 import { CrashScreen } from '@/ui/CrashScreen';
 import { APP_LINKS } from '@/ui/support';
+import { useAppFonts } from '@/ui/useAppFonts';
 import { ZeroField } from '@/ui/ZeroField';
 import { LaunchSplash } from '@/ui/LaunchSplash';
 import { YesCelebration } from '@/ui/YesCelebration';
@@ -59,7 +58,7 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
 }
 
 export default function RootLayout() {
-  const [fontsLoaded, fontError] = useFonts(fontAssets);
+  const [fontsLoaded, fontError] = useAppFonts();
   const hydrated = useApp((s) => s.hydrated);
   // On a font error, fall through to system fonts rather than holding the splash.
   const ready = (fontsLoaded || !!fontError) && hydrated;

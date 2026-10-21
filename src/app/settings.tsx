@@ -7,18 +7,20 @@
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { useState, type ComponentType } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import type { ReminderPermission } from '@/notifications/permissions';
 import { appStore, isMovedOut, primaryGoal, useApp } from '@/store';
 import { colors, space, type } from '@/theme/tokens';
 import { Card, Eyebrow, Fine, Row, shared, ToggleRow } from '@/ui/bits';
+import { useSystemBoldText } from '@/ui/a11y';
 import { TopBar } from '@/ui/Brand';
 import { Button, LinkButton } from '@/ui/Button';
 import { feedback } from '@/ui/feedback';
 import { Screen } from '@/ui/Screen';
 import { GoalFields } from '@/ui/settings/GoalFields';
 import { APP_LINKS, callSupportLine, emailSupport, openPage, SUPPORT_LINE } from '@/ui/support';
+import { boldAtLaunch } from '@/ui/useAppFonts';
 import { useReminderPermission } from '@/ui/useReminderPermission';
 import { APP_NAME, FEATURES, PLUS_STORE_URL } from '@/variant';
 
@@ -59,12 +61,20 @@ export default function Settings() {
   const several = useApp((s) => s.goals.length > 1);
   const pastGoals = useApp((s) => s.archived.length > 0);
   const { permission, turnOn } = useReminderPermission();
+  const systemBold = useSystemBoldText();
   const [eraseArmed, setEraseArmed] = useState(false);
 
   // Erasing empties the goal on the way out; render nothing while the screen leaves.
   if (!goal) return null;
 
   const store = appStore.getState();
+  // Fonts load at launch, so a change to Bold text shows from the next one.
+  const launchedBold = boldAtLaunch();
+  const boldDetail = [
+    `Heavier text across the app, from the next time you open ${APP_NAME}.`,
+    ...(Platform.OS === 'ios' ? ["Always on while Bold Text is on in your iPhone's settings."] : []),
+    ...(launchedBold !== null && launchedBold !== (prefs.boldText || systemBold) ? [`Close and reopen ${APP_NAME} to see it.`] : []),
+  ].join(' ');
 
   const erase = () => {
     feedback.press();
@@ -156,6 +166,7 @@ export default function Settings() {
             value={prefs.finishButton}
             onChange={(v) => store.setPref('finishButton', v)}
           />
+          <ToggleRow label="Bold text" detail={boldDetail} value={prefs.boldText} onChange={(v) => store.setPref('boldText', v)} />
         </View>
       </View>
 
