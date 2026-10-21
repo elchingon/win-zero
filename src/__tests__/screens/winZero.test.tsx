@@ -69,7 +69,7 @@ describe('Win Zero', () => {
     await open('/settings');
     // The top bar's name first, then the screen's own headings.
     const headers = screen.getAllByRole('header').map((h) => h.props.accessibilityLabel ?? h.props.children);
-    expect(headers).toEqual(['Win Zero', 'Settings', 'About']);
+    expect(headers).toEqual(['Win Zero', 'Settings', 'Accessibility', 'About']);
     expect(screen.queryByRole('radio')).not.toBeOnTheScreen();
     expect(screen.queryByText('Check-in days')).not.toBeOnTheScreen();
     expect(screen.queryByText(/Add a goal/)).not.toBeOnTheScreen();

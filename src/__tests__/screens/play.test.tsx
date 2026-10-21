@@ -18,7 +18,7 @@ import { WEAPON_PROMPT } from '@/ui/copy/credits';
 jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock'));
 jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
-const mockRounds: { n: number; mode?: string; look: ThemeLook }[] = [];
+const mockRounds: { n: number; mode?: string; look: ThemeLook; reduceMotion: boolean }[] = [];
 /** Clears the round on the canvas: its last zero goes, and the fill lands. */
 const mockCanvas: { clear: () => void } = { clear: () => {} };
 jest.mock('@/game/GameCanvas', () => {
@@ -29,10 +29,11 @@ jest.mock('@/game/GameCanvas', () => {
       weapon: { name: string };
       round: { n: number; mode?: string; seed: number };
       look: ThemeLook;
+      reduceMotion: boolean;
       onReport: (r: object) => void;
     }) => {
-      const { weapon, round, look, onReport } = props;
-      mockRounds.push({ ...round, look });
+      const { weapon, round, look, reduceMotion, onReport } = props;
+      mockRounds.push({ ...round, look, reduceMotion });
       mockCanvas.clear = () => {
         const counts = { shots: 0, hits: 0, kills: 0, armoredKills: 0, blasts: 0, bombs: 0, bounces: 0, swishes: 0 };
         onReport({ seed: round.seed, dirty: true, valueLeft: 0, ...counts, final: true, showResult: false });
@@ -175,6 +176,16 @@ describe('a bonus round', () => {
   it('goes back to base when there is none', async () => {
     const app = await open('/play?round=bonus');
     expect(app.pathname()).toBe('/');
+  });
+});
+
+describe('accessibility switches', () => {
+  it('calms the round with Reduce effects on, as with the phone\'s Reduce Motion', async () => {
+    appStore.setState({ goals: [{ goal, round: dayRound(), seenThrough: null }], credits: wallet(0) });
+    await open('/play');
+    expect(mockRounds.at(-1)?.reduceMotion).toBe(false);
+    await act(async () => appStore.getState().setPref('reduceEffects', true));
+    expect(mockRounds.at(-1)?.reduceMotion).toBe(true);
   });
 });
 

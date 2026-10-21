@@ -12,6 +12,7 @@ import type { ModeId } from '@/engine';
 import { formatCount } from '@/lib/format';
 import { arsenalBestOf, slotById, useApp, type RoundRecord } from '@/store';
 import { colors, fonts, fontScale, space, type, withAlpha } from '@/theme/tokens';
+import { useAnimationMotion } from '@/ui/a11y';
 import { Em, Eyebrow } from '@/ui/bits';
 import { Button, LinkButton } from '@/ui/Button';
 import { APP_NAME, FEATURES } from '@/variant';
@@ -47,6 +48,7 @@ export function ResultSheet(props: {
   const goal = useApp((s) => (goalId ? (slotById(s, goalId)?.goal ?? null) : null));
   const best = useApp(arsenalBestOf);
   const credits = useApp((s) => s.credits);
+  const motion = useAnimationMotion();
   const { width, height: screenHeight, fontScale: textScale } = useWindowDimensions();
   // At large text sizes the buttons stack, so their labels needn't shrink to fit side by side.
   const stack = textScale > fontScale.stackButtons;
@@ -66,7 +68,7 @@ export function ResultSheet(props: {
 
   return (
     <Animated.View
-      entering={FadeInDown.duration(RISE_MS)}
+      entering={FadeInDown.duration(RISE_MS).reduceMotion(motion)}
       style={[styles.sheet, { paddingBottom: insets.bottom + BOTTOM, maxHeight: screenHeight - insets.top }]}
       onLayout={(e) => setHeight(e.nativeEvent.layout.height)}
       accessibilityViewIsModal

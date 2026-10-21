@@ -1,6 +1,7 @@
 // Settings: goal wording, times (through the engine, so an open window is respected),
-// sound / haptics / weekly nudge, reminder permission, how it works, support, about (privacy
-// policy, help, email, the move to Win Zero Plus once it's on the store, version), and erase.
+// sound / haptics / weekly nudge, reminder permission, how it works, support, accessibility
+// switches that change the app for whoever turns them on, about (privacy policy, help, email, the
+// move to Win Zero Plus once it's on the store, version), and erase.
 // Win Zero Plus adds check-in days and more goals, each with its own screen once there are
 // several, and its games, themes and app icons (SPEC 9).
 import Constants from 'expo-constants';
@@ -132,6 +133,18 @@ export default function Settings() {
           hint="Calls the helpline"
           onPress={callSupportLine}
         />
+      </View>
+
+      <View style={shared.section}>
+        <Eyebrow header>Accessibility</Eyebrow>
+        <View style={shared.list}>
+          <ToggleRow
+            label="Reduce effects"
+            detail="Less shake, softer flashes and fewer particles, and a still background. Always on while your phone's Reduce Motion is on."
+            value={prefs.reduceEffects}
+            onChange={(v) => store.setPref('reduceEffects', v)}
+          />
+        </View>
       </View>
 
       {PlusSettings ? <PlusSettings.PlusSections /> : null}

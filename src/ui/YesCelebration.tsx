@@ -15,7 +15,7 @@ import { themeOf, useApp } from '@/store';
 import { THEME_LOOKS } from '@/theme/themes';
 import { colors } from '@/theme/tokens';
 
-import { useReduceMotion } from './a11y';
+import { useReduceEffects } from './a11y';
 import { yesCelebration } from './celebrate';
 import { feedback } from './feedback';
 
@@ -36,7 +36,7 @@ function addZeroOval(path: SkPath, x: number, y: number, ry: number) {
 }
 
 export function YesCelebration() {
-  const reduceMotion = useReduceMotion();
+  const reduceMotion = useReduceEffects();
   const play = useSfx(SOUNDS);
   const still = useRef(reduceMotion);
   useEffect(() => {

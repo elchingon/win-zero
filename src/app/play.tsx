@@ -56,7 +56,7 @@ import {
 import { THEME_LOOKS } from '@/theme/themes';
 import { colors, fonts } from '@/theme/tokens';
 import { feedback } from '@/ui/feedback';
-import { useReduceMotion, useScreenReader } from '@/ui/a11y';
+import { useReduceEffects, useScreenReader } from '@/ui/a11y';
 import { creditReveal } from '@/ui/copy/credits';
 import { CrashScreen } from '@/ui/CrashScreen';
 import { CreditPopup } from '@/ui/CreditPopup';
@@ -244,7 +244,7 @@ function Round(props: {
   const [mode, setMode] = useState(initialMode);
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const reduceMotion = useReduceMotion();
+  const reduceMotion = useReduceEffects();
   const screenReader = useScreenReader();
   const sound = useApp((s) => s.prefs.sound);
   // A goal's round has that goal's bombs; a bonus round gets as many as every goal has banked.

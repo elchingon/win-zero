@@ -336,6 +336,15 @@ describe('Settings', () => {
     expect(screen.queryByText('Privacy policy')).not.toBeOnTheScreen();
   });
 
+  it('turns on the accessibility switches, which start off', async () => {
+    await open('/settings', { goal: twoDays() });
+    expect(screen.getByRole('header', { name: 'Accessibility' })).toBeOnTheScreen();
+    const reduce = screen.getByRole('switch', { name: 'Reduce effects' });
+    expect(reduce.props.value).toBe(false);
+    await fireEvent(reduce, 'valueChange', true);
+    expect(appStore.getState().prefs.reduceEffects).toBe(true);
+  });
+
   it('opens How it works', async () => {
     const app = await open('/settings', { goal: twoDays() });
     await fireEvent.press(screen.getByText('How it works'));

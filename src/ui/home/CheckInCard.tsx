@@ -6,6 +6,7 @@ import { isWindowToday, type CheckInWindow, type GoalState, type TimeZone } from
 import type { Point } from '@/game/yes';
 import { formatInstantTime, formatUntil } from '@/lib/format';
 import { colors, fonts, fontScale, radii, space } from '@/theme/tokens';
+import { useAnimationMotion } from '@/ui/a11y';
 import { Button } from '@/ui/Button';
 import { APP_WORDMARK } from '@/variant';
 
@@ -27,8 +28,9 @@ export function CheckInCard(props: {
   const stakes = checkInStakes(goal);
   // At large text sizes the buttons stack, so their labels needn't shrink to fit side by side.
   const stack = useWindowDimensions().fontScale > fontScale.stackButtons;
+  const motion = useAnimationMotion();
   return (
-    <Animated.View entering={FadeInDown.springify().damping(14)} style={styles.card}>
+    <Animated.View entering={FadeInDown.springify().damping(14).reduceMotion(motion)} style={styles.card}>
       {/* Dressed like a notification; screen readers start at the question. */}
       <View style={styles.head} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
         <View style={styles.app}>

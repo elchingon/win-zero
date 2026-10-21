@@ -36,7 +36,7 @@ import { themeOf, useApp } from '@/store';
 import { THEME_LOOKS } from '@/theme/themes';
 import { colors, withAlpha } from '@/theme/tokens';
 
-import { useReduceMotion } from './a11y';
+import { useReduceEffects } from './a11y';
 /** The screen wash: ink at 40% at the top, deepening to 82% by 55% of the height. */
 const WASH = [withAlpha(colors.ink, 0.4), withAlpha(colors.ink, 0.82)];
 const WASH_STOPS = [0, 0.55];
@@ -79,7 +79,7 @@ function DriftingZero(props: { drift: SharedValue<Drift[]>; index: number; ry: n
 
 export function ZeroField() {
   const { width, height } = useWindowDimensions();
-  const reduceMotion = useReduceMotion();
+  const reduceMotion = useReduceEffects();
   const palette = THEME_LOOKS[useApp(themeOf)].palette;
   // The game draws its own backdrop over this one; don't spend frames on drift nobody sees.
   const covered = usePathname() === '/play';

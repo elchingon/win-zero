@@ -6,6 +6,7 @@ import { AccessibilityInfo, BackHandler, Pressable, StyleSheet, View, type Text 
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 
 import { colors, space, withAlpha } from '@/theme/tokens';
+import { useAnimationMotion } from '@/ui/a11y';
 import { Card } from '@/ui/bits';
 
 const POP_MS = 320;
@@ -13,6 +14,7 @@ const CARD_MAX_WIDTH = 360;
 
 export function Popup(props: { onDismiss: () => void; focus?: RefObject<Text | null>; children: ReactNode }) {
   const { onDismiss, focus, children } = props;
+  const motion = useAnimationMotion();
 
   useEffect(() => {
     const id = setTimeout(() => {
@@ -31,10 +33,10 @@ export function Popup(props: { onDismiss: () => void; focus?: RefObject<Text | n
 
   return (
     <View style={[StyleSheet.absoluteFill, styles.root]} accessibilityViewIsModal>
-      <Animated.View entering={FadeIn.duration(POP_MS)} style={StyleSheet.absoluteFill}>
+      <Animated.View entering={FadeIn.duration(POP_MS).reduceMotion(motion)} style={StyleSheet.absoluteFill}>
         <Pressable style={styles.backdrop} onPress={onDismiss} accessible={false} importantForAccessibility="no" />
       </Animated.View>
-      <Animated.View entering={ZoomIn.duration(POP_MS)} style={styles.wrap}>
+      <Animated.View entering={ZoomIn.duration(POP_MS).reduceMotion(motion)} style={styles.wrap}>
         <Card style={styles.card}>{children}</Card>
       </Animated.View>
     </View>
