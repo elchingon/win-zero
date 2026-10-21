@@ -1,6 +1,8 @@
-// What a release build carries from its environment (scripts/release-env.cjs).
+// What a release build carries from its environment (scripts/release-env.cjs), and the version code
+// a local Android upload needs (scripts/android-version.cjs).
 import { describe, expect, it } from '@jest/globals';
 
+import { MAX_VERSION_CODE, readVersion, setVersionCode, takeVersionCode } from '../../../scripts/android-version.cjs';
 import { checkReleaseEnv } from '../../../scripts/release-env.cjs';
 
 const PAGES = { EXPO_PUBLIC_PRIVACY_URL: 'https://winzero.app/privacy', EXPO_PUBLIC_SUPPORT_URL: 'https://winzero.app/support' };
@@ -66,5 +68,32 @@ describe('checkReleaseEnv', () => {
         'Release this build only once Win Zero Plus is live on Google Play.',
     ]);
     expect(checkReleaseEnv(env, { variant: 'plus', platform: 'android' }).notes).toEqual([`Update Win Zero Plus opens ${PLAY}.`]);
+  });
+});
+
+describe('the Android version code', () => {
+  it('takes --version-code out of the arguments, leaving the rest for Gradle', () => {
+    expect(takeVersionCode(['--version-code', '3', '--max-workers=2'])).toEqual({ code: 3, rest: ['--max-workers=2'] });
+    expect(takeVersionCode(['-PreactNativeArchitectures=arm64-v8a', '--version-code=12'])).toEqual({
+      code: 12,
+      rest: ['-PreactNativeArchitectures=arm64-v8a'],
+    });
+    expect(takeVersionCode([])).toEqual({ code: null, rest: [] });
+  });
+
+  it('refuses a version code Play would refuse', () => {
+    for (const args of [['--version-code'], ['--version-code', '0'], ['--version-code', '2.5'], ['--version-code=abc']]) {
+      expect(() => takeVersionCode(args)).toThrow(/whole number from 1 to 2100000000/);
+    }
+    expect(() => takeVersionCode(['--version-code', String(MAX_VERSION_CODE + 1)])).toThrow();
+    expect(takeVersionCode(['--version-code', String(MAX_VERSION_CODE)]).code).toBe(MAX_VERSION_CODE);
+  });
+
+  it("writes it into prebuild's build.gradle, and reads the version back", () => {
+    const gradle = 'android {\n    defaultConfig {\n        versionCode 1\n        versionName "1.1.5"\n    }\n}\n';
+    const out = setVersionCode(gradle, 7);
+    expect(out).toBe(gradle.replace('versionCode 1', 'versionCode 7'));
+    expect(readVersion(out)).toEqual({ name: '1.1.5', code: 7 });
+    expect(() => setVersionCode('android {}', 7)).toThrow(/once, not 0 times/);
   });
 });
