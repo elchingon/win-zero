@@ -8,12 +8,15 @@
 // Signs with the debug key prebuild generates. To sign with an upload key (Play only takes that
 // one), put ANDROID_UPLOAD_STORE_FILE, ANDROID_UPLOAD_STORE_PASSWORD, ANDROID_UPLOAD_KEY_ALIAS and
 // ANDROID_UPLOAD_KEY_PASSWORD in .env.signing (gitignored) and run npm run build:android:upload.
+// Before building, it checks the links and Plus store page the bundle will carry
+// (scripts/release-env.cjs): an upload build stops on a problem, a test build only warns.
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { prebuild } from './prebuild.mjs';
+import { checkReleaseEnv, localReleaseEnv, report } from './release-env.cjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const android = path.join(root, 'android');
@@ -22,14 +25,22 @@ const out = path.join(root, 'build');
 const KEY_VARS = ['ANDROID_UPLOAD_STORE_FILE', 'ANDROID_UPLOAD_STORE_PASSWORD', 'ANDROID_UPLOAD_KEY_ALIAS', 'ANDROID_UPLOAD_KEY_PASSWORD'];
 
 const run = (cmd, args, cwd = root) => execFileSync(cmd, args, { cwd, stdio: 'inherit' });
+const upload = Boolean(process.env.ANDROID_UPLOAD_STORE_FILE);
 
 // The android/ folder is generated: refresh it from the config so the build matches it. In place,
 // so Gradle reuses earlier native builds, unless it was generated for the other app.
 const variant = prebuild('android', { install: false });
 const name = variant === 'plus' ? 'win-zero-plus' : 'win-zero';
 
+const appName = variant === 'plus' ? 'Win Zero Plus' : 'Win Zero';
+const envOk = report(checkReleaseEnv(localReleaseEnv(root), { variant, platform: 'android' }), {
+  title: `${appName} release build, from .env:`,
+  strict: upload,
+});
+if (!envOk) process.exit(1);
+
 let signing = [];
-if (process.env.ANDROID_UPLOAD_STORE_FILE) {
+if (upload) {
   const missing = KEY_VARS.filter((name) => !process.env[name]);
   if (missing.length > 0) {
     console.error(`Set ${missing.join(', ')} too, or unset ANDROID_UPLOAD_STORE_FILE to sign with the debug key.`);

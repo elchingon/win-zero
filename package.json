@@ -20,6 +20,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "expo lint .",
     "check:variants": "node scripts/check-variants.mjs",
+    "check:release:ios": "node scripts/check-release.mjs --local ios",
+    "check:release:ios:plus": "EXPO_PUBLIC_APP_VARIANT=plus node scripts/check-release.mjs --local ios",
     "gen:sfx": "node scripts/gen-sfx.mjs",
     "gen:brand": "node scripts/gen-brand.mjs",
     "gen:brand:plus": "node scripts/gen-brand.mjs --variant plus",

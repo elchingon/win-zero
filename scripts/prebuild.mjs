@@ -12,6 +12,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { IOS, NAMES, PARK, parkedPath, planIosSwitch, setMarketingVersion, pointVersionsAtSettings } from './ios-workspace.cjs';
+import { checkReleaseEnv, localReleaseEnv, report } from './release-env.cjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MARKER = '.win-zero-variant';
@@ -78,6 +79,12 @@ function prebuildIos(variant, install) {
   expoPrebuild('ios', { clean: false, install });
   fs.writeFileSync(path.join(dir, MARKER), `${variant}\n`);
   syncVersions(dir, variant);
+  // What a Release build from Xcode will carry. Only a warning here, since Debug runs use the same
+  // project; npm run check:release:ios (or :plus) stops on it before an archive.
+  report(checkReleaseEnv(localReleaseEnv(root), { variant, platform: 'ios' }), {
+    title: `A Release build of ${NAMES[variant]} from Xcode, from .env:`,
+    strict: false,
+  });
   // A parked project was installed against node_modules as they were then. A switch always got a
   // fresh pod install when it started clean, so it still gets one.
   if (plan.restored && install) {
