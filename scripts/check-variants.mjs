@@ -2,6 +2,8 @@
 // check each one's identity and art: Win Zero and Win Zero Plus must never share a bundle id or a
 // URL scheme, and every icon and splash file either names must exist. Both must be in the App
 // Group a move between them goes through on iPhone (SPEC 9), and only Plus has alternate icons.
+// Only Plus pins its variant in its Xcode project (plugins/xcode-variant.js), so an Xcode build of
+// Plus bundles Plus's JavaScript.
 // Run: npm run check:variants
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -12,9 +14,10 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const APP_GROUP = 'group.com.e7systems.winzero';
 
 const ICON_PLUGIN = './modules/app-icons/app.plugin.js';
+const VARIANT_PLUGIN = './plugins/xcode-variant.js';
 const EXPECTED = {
-  free: { name: 'Win Zero', id: 'com.e7systems.winzero', scheme: 'winzero', brand: './assets/brand/', icons: 0 },
-  plus: { name: 'Win Zero Plus', id: 'com.e7systems.winzeroplus', scheme: 'winzeroplus', brand: './assets/brand-plus/', icons: 7 },
+  free: { name: 'Win Zero', id: 'com.e7systems.winzero', scheme: 'winzero', brand: './assets/brand/', icons: 0, pinned: false },
+  plus: { name: 'Win Zero Plus', id: 'com.e7systems.winzeroplus', scheme: 'winzeroplus', brand: './assets/brand-plus/', icons: 7, pinned: true },
 };
 
 /** The alternate icons a config gives the app-icons plugin: none without it. */
@@ -54,6 +57,8 @@ for (const [variant, want] of Object.entries(EXPECTED)) {
   if (!groups.includes(APP_GROUP)) problems.push(`${variant}: ios.entitlements has no App Group ${APP_GROUP}`);
   const icons = alternateIcons(c);
   check('alternate icons', icons.length, want.icons);
+  const pinned = (c.plugins ?? []).some((p) => (Array.isArray(p) ? p[0] : p) === VARIANT_PLUGIN);
+  check(`${VARIANT_PLUGIN} in plugins`, pinned, want.pinned);
   const assets = assetPaths(c);
   if (assets.length === 0) problems.push(`${variant}: no art found in the config`);
   for (const p of assets) {

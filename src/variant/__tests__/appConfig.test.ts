@@ -85,6 +85,11 @@ describe('Win Zero Plus', () => {
     expect(plus.plugins).toContainEqual(['expo-dev-client', { addGeneratedScheme: false }]);
   });
 
+  it('pins its variant in its own Xcode project, so a build made in Xcode bundles Plus', () => {
+    expect(plus.plugins).toContain('./plugins/xcode-variant.js');
+    expect(JSON.stringify(base)).not.toContain('xcode-variant');
+  });
+
   it('keeps the rest: the same EAS project, App Group, plugins and privacy answers', () => {
     expect(plus.slug).toBe(base.slug);
     // The folder a move from Win Zero waits in (SPEC 9): both apps must be in the group.

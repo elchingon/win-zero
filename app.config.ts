@@ -48,6 +48,9 @@ function plusIcon(name: string) {
  */
 const PLUS_ONLY_PLUGINS: NonNullable<ExpoConfig['plugins']> = [
   ['./modules/app-icons/app.plugin.js', { icons: PLUS_ICONS.map(plusIcon) }],
+  // Plus's Xcode project pins the variant, so a build made in Xcode (which never has this
+  // environment) bundles Plus's JavaScript, not Win Zero's.
+  './plugins/xcode-variant.js',
 ];
 
 export function readVariant(value: string | undefined): Variant {
