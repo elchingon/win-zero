@@ -287,7 +287,7 @@ describe('Notice', () => {
   it('offers the helpline when zeros slip, after a Not today or missed days', async () => {
     appStore.setState({ notices: { g1: { kind: 'slipping', cause: 'answer', lost: 1, streak: 1, days: 1, stopped: false } } });
     await open('/notice', { goal: twoDays() });
-    expect(screen.getByText(/You've lost/)).toBeOnTheScreen();
+    expect(screen.getByText(/came off/)).toBeOnTheScreen();
     expect(screen.getByText(`Need support? ${SUPPORT_LINE.name}, ${SUPPORT_LINE.display}`)).toBeOnTheScreen();
   });
 

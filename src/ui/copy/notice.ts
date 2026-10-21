@@ -33,11 +33,11 @@ export const UNDONE = 'Undone. Your check-in is open again.';
 export function copyFor(n: Notice, { everyDay = true }: { everyDay?: boolean } = {}): NoticeCopy {
   switch (n.kind) {
     case 'slipping': {
-      const lostLine = n.lost === 1 ? 'a zero.' : `${n.lost} zeros.`;
+      const zerosOff = n.lost === 1 ? 'One zero ' : `${n.lost} zeros `;
       if (n.cause === 'answer') {
         return {
           eyebrow: 'Not today',
-          title: ["You've lost ", lostLine],
+          title: [zerosOff, 'came off.'],
           body: [
             'Thanks for being honest.',
             n.streak > 0
@@ -50,7 +50,7 @@ export function copyFor(n: Notice, { everyDay = true }: { everyDay?: boolean } =
       }
       return {
         eyebrow: 'While you were away',
-        title: ["You've lost ", lostLine],
+        title: [zerosOff, 'came off.'],
         body: [
           n.stopped
             ? `Your Yes stopped the slide. Your streak is at ${plural(n.streak, 'zero')}.`
@@ -71,7 +71,7 @@ export function copyFor(n: Notice, { everyDay = true }: { everyDay?: boolean } =
           n.cause === 'answer'
             ? `That Not today would have started a fresh run, so a shield stepped in. Your streak stays at ${plural(n.streak, 'zero')}.`
             : n.lost > 0
-              ? `You lost ${plural(n.lost, 'zero')} while you were away, and then a shield stopped the slide. Your streak is at ${plural(n.streak, 'zero')}.`
+              ? `${plural(n.lost, 'zero')} came off while you were away, and then a shield stopped the slide. Your streak is at ${plural(n.streak, 'zero')}.`
               : `A shield kept your streak at ${plural(n.streak, 'zero')}.`,
           `The slide starts over. Shields left: ${n.shieldsLeft}.`,
         ],

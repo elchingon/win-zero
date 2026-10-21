@@ -33,6 +33,18 @@ describe('copyFor', () => {
     expect(away.body.join(' ')).not.toMatch(/shield/);
   });
 
+  it('says a slip took zeros off, gently, rather than that they were lost', () => {
+    const one = copyFor({ kind: 'slipping', cause: 'answer', lost: 1, streak: 4, days: 1, stopped: false });
+    expect(one.title).toEqual(['One zero ', 'came off.']);
+    const away = copyFor({ kind: 'slipping', cause: 'missed', lost: 3, streak: 2, days: 10, stopped: true });
+    expect(away.title).toEqual(['3 zeros ', 'came off.']);
+    const held = copyFor({ kind: 'shielded', cause: 'missed', lost: 2, streak: 6, shieldsLeft: 0, days: 14 });
+    expect(held.body[0]).toBe(
+      '2 zeros came off while you were away, and then a shield stopped the slide. Your streak is at 6 zeros.',
+    );
+    for (const n of NOTICES) expect(JSON.stringify(copyFor(n))).not.toMatch(/lost/i);
+  });
+
   const away: Notice = { kind: 'slipping', cause: 'missed', lost: 2, streak: 3, days: 9, stopped: false };
 
   it('says the free missed days last a week for a goal that checks in every day', () => {
