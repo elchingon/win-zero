@@ -307,6 +307,17 @@ describe('Notice', () => {
     await fireEvent.press(screen.getByText(`Need support? ${SUPPORT_LINE.name}, ${SUPPORT_LINE.display}`));
     expect(call).toHaveBeenCalledWith(SUPPORT_LINE.tel);
   });
+
+  it('scrolls, so its buttons stay in reach at the largest text sizes', async () => {
+    appStore.setState({
+      notices: { g1: { kind: 'reset', cause: 'answer', lostStreak: 9, bestStreak: 10, days: 1, stopped: false } },
+    });
+    await open('/notice', { goal: twoDays() });
+    type HostNode = { type: unknown; parent: HostNode | null };
+    let node = screen.getByText(/A fresh start/i) as unknown as HostNode | null;
+    while (node && node.type !== 'RCTScrollView') node = node.parent;
+    expect(node).not.toBeNull();
+  });
 });
 
 describe('Settings', () => {
