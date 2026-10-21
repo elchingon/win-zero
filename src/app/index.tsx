@@ -1,7 +1,7 @@
 // Home: the goal, the numbers, today's check-in (or when the next one comes), credits and the
 // bonus round, the arsenal, and the history calendar. Once Win Zero has moved to Win Zero Plus
-// (SPEC 9), only where the goals went. Win Zero Plus with several goals has its own Home
-// (src/plus/home); with one, it's this one.
+// (SPEC 9), only where the goals went. Win Zero Plus has its own Home (src/plus/home), with one
+// goal or several.
 import { Redirect, router } from 'expo-router';
 import { useEffect, useState, type ComponentType } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -52,19 +52,18 @@ const DemoControls: ComponentType | null = __DEV__
   : null;
 
 // Win Zero Plus only: the literal comparison folds per file, so Win Zero's bundle leaves it out.
-const MultiGoalHome: ComponentType | null =
+const PlusHome: ComponentType | null =
   process.env.EXPO_PUBLIC_APP_VARIANT === 'plus'
     ? // eslint-disable-next-line @typescript-eslint/no-require-imports
-      require('@/plus/home/MultiGoalHome').MultiGoalHome
+      require('@/plus/home/PlusHome').PlusHome
     : null;
 
 export default function Home() {
   const goal = useApp(primaryGoal);
   const moved = useApp(isMovedOut);
-  const several = useApp((s) => s.goals.length > 1);
   if (!goal) return <Redirect href="/setup" />;
   if (moved) return <MovedHome />;
-  if (MultiGoalHome && several) return <MultiGoalHome />;
+  if (PlusHome) return <PlusHome />;
   return <HomeScreen goal={goal} />;
 }
 

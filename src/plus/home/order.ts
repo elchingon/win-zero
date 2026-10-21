@@ -1,4 +1,4 @@
-// What Home shows first with several goals (SPEC 9): rounds ready to play, in goal order, then the
+// What Win Zero Plus's Home shows first (SPEC 9): rounds ready to play, in goal order, then the
 // open check-ins, the one that opened first, first; the other goals wait for their next check-in.
 // Pure: it takes the clock.
 import { nextWindow, pendingWindow, type CheckInWindow } from '@/engine';

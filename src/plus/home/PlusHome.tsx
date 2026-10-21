@@ -1,7 +1,7 @@
-// Win Zero Plus's Home with several goals (SPEC 9): rounds ready to play, then the open check-ins
-// (the one that opened first, first), then when the others check in next. Below them, two tabs:
-// Goals, where a picker chooses whose numbers and history calendar show, and Game, with the shared
-// credits and arsenal. With one goal, Home is Win Zero's (src/app/index.tsx).
+// Win Zero Plus's Home (SPEC 9), with one goal or several: rounds ready to play, then the open
+// check-ins (the one that opened first, first), then when the others check in next. Below them,
+// two tabs: Goals, where a picker chooses whose numbers and history calendar show, and Game, with
+// the shared credits and arsenal.
 import { router } from 'expo-router';
 import { useState, type ComponentType } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -45,7 +45,7 @@ const DemoControls: ComponentType | null = __DEV__
     require('@/dev/DebugSection').DemoControls
   : null;
 
-export function MultiGoalHome() {
+export function PlusHome() {
   const slots = useApp((s) => s.goals);
   const roomy = useApp(canAddGoal);
   const best = useApp(arsenalBestOf);

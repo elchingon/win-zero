@@ -1,4 +1,4 @@
-// Which goal's numbers and history calendar Home shows, with several goals (SPEC 9): one chip per
+// Which goal's numbers and history calendar Win Zero Plus's Home shows (SPEC 9): one chip per
 // goal, read out as radios under a visible heading (a screen reader doesn't read a group's label).
 // Beside the heading, Add goal while there's room for another.
 import { Pressable, Text, View } from 'react-native';

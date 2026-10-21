@@ -1,6 +1,6 @@
-// Win Zero Plus's Home (SPEC 9): with one goal, Win Zero's Home; with several, ready rounds, then
-// open check-ins, then the rest, and two tabs: Goals (a goal picker for the numbers and history)
-// and Game (the shared credits and arsenal).
+// Win Zero Plus's Home (SPEC 9), with one goal or several: ready rounds, then open check-ins, then
+// the rest, and two tabs: Goals (a goal picker for the numbers and history) and Game (the shared
+// credits and arsenal).
 import './env/plus';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -55,6 +55,9 @@ async function open(goals: GoalSlot[], opts: { day?: string; time?: string } = {
 /** Answered Yes on 10-13 and 10-14, so 10-15's check-in is open at 21:00 on 10-15. */
 const twoDays = () => yesDays(newGoal({ tz: tz() }), DAY0, 2, tz());
 
+/** The credits and arsenal are under the Game tab. */
+const toGame = () => fireEvent.press(screen.getByRole('tab', { name: 'Game' }));
+
 beforeAll(async () => {
   for (let i = 0; i < 50 && !appStore.getState().hydrated; i++) await new Promise((r) => setTimeout(r, 0));
 });
@@ -76,6 +79,7 @@ describe("Home's secret (SPEC 9)", () => {
   it('gives a free Game credit for three quick taps on the Game credits count, with a popup', async () => {
     appStore.setState({ credits: { balance: { game: 1, weapon: 0 }, claimed: ['goal-set'] } });
     await open([slot(twoDays())]);
+    await toGame();
     for (let i = 0; i < 3; i++) await tapCount('1 Game credit');
     expect(screen.getByRole('header', { name: /Free Game credit!/ })).toBeOnTheScreen();
     expect(screen.getByText('You found the secret stash.')).toBeOnTheScreen();
@@ -92,6 +96,7 @@ describe("Home's secret (SPEC 9)", () => {
 
   it('needs the taps quick, and leaves the hint on the "i"', async () => {
     await open([slot(twoDays())]);
+    await toGame();
     for (let i = 0; i < 3; i++) {
       await tapCount('0 Game credits');
       jest.advanceTimersByTime(SECRET_TAP_GAP_MS + 1);
@@ -108,6 +113,7 @@ describe('the shared arsenal on Home', () => {
     const old = { ...yesDays(newGoal({ tz: tz() }), DAY0, 2, tz()), goalId: 'old', bestStreak: 30 };
     appStore.setState({ archived: [{ goal: old, archivedAt: at(DAY0, '12:00', tz()).toISOString() }], arsenalBest: 30 });
     await open([slot(twoDays())]);
+    await toGame();
     expect(screen.getByLabelText(/^Chain Zapper\. .* Equipped\.$/)).toBeOnTheScreen();
     // The next one counts from the goal's streak, 2.
     expect(screen.getByLabelText(/^Rail Laser\. .* Unlocks in 58 days\.$/)).toBeOnTheScreen();
@@ -136,28 +142,40 @@ describe('Home with one goal in Win Zero Plus', () => {
   it('names the arsenal by the game picked', async () => {
     appStore.setState({ gameMode: 'catch' });
     await open([slot(twoDays())]);
+    await toGame();
     // Best streak 2: the Pea Shooter's tier, with the Twin Barrel's next.
     expect(screen.getByLabelText('Cup. Equipped.')).toBeOnTheScreen();
     expect(screen.getByLabelText('Next catcher: Twin Cups')).toBeOnTheScreen();
     expect(screen.queryByText('Twin Barrel')).not.toBeOnTheScreen();
   });
 
-  it("is Win Zero's Home: no goal picker, and no list of goals", async () => {
+  it('is laid out as with several: Your goals, its tabs, and the goal picked', async () => {
     await open([slot(twoDays())]);
-    expect(screen.getByRole('header', { name: 'Daily goal' })).toBeOnTheScreen();
     expect(screen.getByText('Did you stick to “Stop drinking” today?')).toBeOnTheScreen();
-    expect(screen.queryByRole('header', { name: 'Your goals' })).not.toBeOnTheScreen();
-    expect(screen.queryByRole('radio')).not.toBeOnTheScreen();
-    expect(screen.queryByText(/caught up|Up next/)).not.toBeOnTheScreen();
-    expect(screen.queryByRole('tab')).not.toBeOnTheScreen();
-    expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeOnTheScreen();
-    expect(screen.queryByRole('button', { name: 'Add goal' })).not.toBeOnTheScreen();
+    expect(screen.getByRole('header', { name: 'Your goals' })).toBeOnTheScreen();
+    expect(screen.getByRole('radio', { name: 'Stop drinking' }).props.accessibilityState).toMatchObject({ checked: true });
+    expect(screen.getByText('Daily goal')).toBeOnTheScreen();
+    expect(screen.getByRole('tab', { name: 'Goals' }).props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByLabelText('Current streak: 2 zeros')).toBeOnTheScreen();
+  });
+
+  it('edits the goal from beside its name', async () => {
+    const app = await open([slot(twoDays())]);
+    await fireEvent.press(screen.getByRole('button', { name: 'Edit' }));
+    expect(app.pathname()).toBe('/goal');
+    expect(app.params()).toMatchObject({ id: 'g1' });
+  });
+
+  it('adds a goal from beside Your goals', async () => {
+    const app = await open([slot(twoDays())]);
+    await fireEvent.press(screen.getByRole('button', { name: 'Add goal' }));
+    expect(app.pathname()).toBe('/add-goal');
   });
 
   it('names the days of a goal that skips some, and asks about reminders without "each day"', async () => {
     mockPermission.value = 'undetermined';
     await open([slot({ ...newGoal({ tz: tz(), days: [1, 3, 5] }) })]);
-    expect(screen.getByRole('header', { name: 'Goal · Mon, Wed, Fri' })).toBeOnTheScreen();
+    expect(screen.getByText('Goal · Mon, Wed, Fri')).toBeOnTheScreen();
     expect(await screen.findByText('Win Zero Plus asks at each check-in time. A reminder makes sure it finds you.')).toBeOnTheScreen();
   });
 });

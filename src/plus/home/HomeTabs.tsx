@@ -1,4 +1,4 @@
-// The two halves of Home with several goals (SPEC 9), below the check-ins: Goals (the picked
+// The two halves of Win Zero Plus's Home (SPEC 9), below the check-ins: Goals (the picked
 // goal's numbers and history) and Game (the shared credits and arsenal). Read out as tabs.
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
