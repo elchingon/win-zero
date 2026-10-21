@@ -1,9 +1,11 @@
-// The round's HUD on its own: the mode's hint, and how it fades.
+// The round's HUD on its own: the mode's hint, how it fades, and its buttons' touch targets.
 import { afterEach, describe, expect, it, jest } from '@jest/globals';
 import { render, screen } from '@testing-library/react-native';
+import { StyleSheet, type ViewStyle } from 'react-native';
 import * as Reanimated from 'react-native-reanimated';
 
 import { Hud } from '@/game/Hud';
+import { MIN_TARGET } from '@/ui/target';
 
 jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock'));
 jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
@@ -45,5 +47,21 @@ describe('the hint', () => {
   it("shows the mode's hint", async () => {
     await show({ mode: 'catch' });
     expect(screen.getByText('Slide anywhere to catch the zeros', { includeHiddenElements: true })).toBeOnTheScreen();
+  });
+});
+
+describe('the buttons', () => {
+  it('are at least MIN_TARGET each way, by their own bounds', async () => {
+    await show({ canSwitch: true });
+    const buttons = [
+      screen.getByRole('switch', { name: 'Sound' }),
+      screen.getByRole('button', { name: 'Leave the round' }),
+      screen.getByRole('button', { name: 'Bomb, 1 left' }),
+      screen.getByRole('button', { name: 'Weapon: Pea Shooter' }),
+    ];
+    for (const el of buttons) {
+      const s = StyleSheet.flatten(el.props.style as ViewStyle);
+      expect([s.minWidth, s.minHeight]).toEqual([MIN_TARGET, MIN_TARGET]);
+    }
   });
 });

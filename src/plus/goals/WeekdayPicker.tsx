@@ -8,10 +8,13 @@ import { formatDays } from '@/lib/format';
 import { colors, fonts, space } from '@/theme/tokens';
 import { Field, Fine } from '@/ui/bits';
 import { feedback } from '@/ui/feedback';
+import { MIN_TARGET } from '@/ui/target';
 import { useDeviceCalendar } from '@/ui/useDevice';
 
 import { DAYS_COPY } from '../copy';
 
+/** A day's circle, at most. */
+const DAY_SIZE = 44;
 /** Read out for each toggle: 0 = Sunday … 6 = Saturday. */
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
 
@@ -42,10 +45,11 @@ export function WeekdayPicker(props: { days: readonly Weekday[]; onChange: (days
               accessibilityLabel={DAY_NAMES[day]}
               accessibilityHint={last ? DAYS_COPY.lastDay : undefined}
               onPress={() => toggle(day)}
-              hitSlop={4}
-              style={({ pressed }) => [styles.day, on && styles.dayOn, pressed && !last && { opacity: 0.7 }]}
+              style={({ pressed }) => [styles.target, pressed && !last && { opacity: 0.7 }]}
             >
-              <Text style={[styles.initial, on && styles.initialOn]}>{initials[i]}</Text>
+              <View style={[styles.day, on && styles.dayOn]}>
+                <Text style={[styles.initial, on && styles.initialOn]}>{initials[i]}</Text>
+              </View>
             </Pressable>
           );
         })}
@@ -66,10 +70,13 @@ export function ChooseDays(props: { days: readonly Weekday[]; onChange: (days: W
 
 const styles = StyleSheet.create({
   block: { gap: space.sm },
-  row: { flexDirection: 'row', justifyContent: 'space-between', gap: space.xs },
+  // Each day's target fills its seventh of the row, at least MIN_TARGET tall (and wide, on a
+  // phone wide enough), with the circle inside it.
+  row: { flexDirection: 'row' },
+  target: { flex: 1, minHeight: MIN_TARGET, paddingHorizontal: space.xs / 2, alignItems: 'center', justifyContent: 'center' },
   day: {
-    flex: 1,
-    maxWidth: 44,
+    width: '100%',
+    maxWidth: DAY_SIZE,
     aspectRatio: 1,
     borderRadius: 999,
     borderWidth: 1,

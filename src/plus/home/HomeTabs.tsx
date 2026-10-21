@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, fonts, radii, space } from '@/theme/tokens';
 import { feedback } from '@/ui/feedback';
+import { MIN_TARGET } from '@/ui/target';
 
 import { HOME_COPY } from '../copy';
 
@@ -11,8 +12,6 @@ export type HomeTab = 'goals' | 'game';
 
 const TABS: readonly HomeTab[] = ['goals', 'game'];
 
-/** A tab's height: a 44-point touch target. */
-const TAB_HEIGHT = 44;
 
 export function HomeTabs(props: { tab: HomeTab; onTab: (tab: HomeTab) => void }) {
   const { tab, onTab } = props;
@@ -52,7 +51,7 @@ const styles = StyleSheet.create({
   },
   tab: {
     flex: 1,
-    minHeight: TAB_HEIGHT,
+    minHeight: MIN_TARGET,
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',

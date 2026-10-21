@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, type GestureResponderEvent, type StyleProp
 import { colors, fonts, radii, type } from '@/theme/tokens';
 
 import { feedback } from './feedback';
+import { MIN_TARGET } from './target';
 
 type Variant = 'primary' | 'ghost' | 'danger';
 
@@ -70,13 +71,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  small: { paddingVertical: 9, paddingHorizontal: 12, borderRadius: radii.sm },
+  small: { minHeight: MIN_TARGET, paddingVertical: 9, paddingHorizontal: 12, borderRadius: radii.sm },
   smallLabel: { fontSize: 13 },
   primary: { backgroundColor: colors.amber, boxShadow: `0 4px 0 ${colors.amberDeep}` },
   ghost: { borderWidth: 1, borderColor: colors.line },
   danger: { borderWidth: 1, borderColor: colors.flare },
   disabled: { opacity: 0.4 },
-  link: { paddingVertical: 6, alignSelf: 'flex-start' },
+  link: { minHeight: MIN_TARGET, justifyContent: 'center', alignSelf: 'flex-start' },
   linkLabel: {
     fontFamily: fonts.bodySemiBold,
     fontSize: 13,

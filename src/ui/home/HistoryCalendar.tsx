@@ -17,6 +17,7 @@ import { addMonths, monthGrid, monthOf, monthSummary, weekdayInitials, type Mont
 import { formatDayShort, formatMonth } from '@/lib/format';
 import { colors, fonts, fontScale, space } from '@/theme/tokens';
 import { Eyebrow, shared } from '@/ui/bits';
+import { MIN_TARGET, targetInset } from '@/ui/target';
 
 type Mark = CalendarMark | 'pending' | 'rest';
 
@@ -82,7 +83,7 @@ export function HistoryCalendar(props: {
             accessibilityState={{ disabled: shown <= first }}
             disabled={shown <= first}
             onPress={() => go(prev)}
-            hitSlop={10}
+            style={styles.arrowTarget}
           >
             <Text style={[styles.arrow, shown <= first && styles.arrowOff]}>‹</Text>
           </Pressable>
@@ -95,7 +96,7 @@ export function HistoryCalendar(props: {
             accessibilityState={{ disabled: shown >= last }}
             disabled={shown >= last}
             onPress={() => go(next)}
-            hitSlop={10}
+            style={styles.arrowTarget}
           >
             <Text style={[styles.arrow, shown >= last && styles.arrowOff]}>›</Text>
           </Pressable>
@@ -151,6 +152,8 @@ export function HistoryCalendar(props: {
 }
 
 const ring = { width: 12, height: 16, borderRadius: '50%' as const };
+/** The month arrows' glyph size, and line height. */
+const ARROW_SIZE = 22;
 
 const glyphs = StyleSheet.create({
   yes: { ...ring, borderWidth: 3, borderColor: colors.amber, boxShadow: `0 0 6px ${colors.amber}99` },
@@ -163,8 +166,17 @@ const glyphs = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  nav: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  arrow: { fontFamily: fonts.bodyBold, fontSize: 22, lineHeight: 22, color: colors.fg, paddingHorizontal: 4 },
+  // The arrows' targets space them from the month, and take back their extra height so the
+  // heading's row keeps its size.
+  nav: { flexDirection: 'row', alignItems: 'center' },
+  arrowTarget: {
+    minWidth: MIN_TARGET,
+    minHeight: MIN_TARGET,
+    marginVertical: targetInset(ARROW_SIZE),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  arrow: { fontFamily: fonts.bodyBold, fontSize: ARROW_SIZE, lineHeight: ARROW_SIZE, color: colors.fg },
   arrowOff: { color: colors.line },
   month: { fontFamily: fonts.monoSemiBold, fontSize: 12, letterSpacing: 0.6, color: colors.fg, minWidth: 120, textAlign: 'center' },
   grid: {

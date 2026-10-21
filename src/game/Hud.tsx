@@ -11,6 +11,7 @@ import type { ModeId } from '@/engine';
 import { colors, fonts, fontScale, radii, type, withAlpha } from '@/theme/tokens';
 import { MODE_COPY } from '@/ui/copy/modes';
 import { feedback } from '@/ui/feedback';
+import { MIN_TARGET } from '@/ui/target';
 
 /**
  * The hint stays this long, then fades over HINT_FADE_MS, even under reduce motion: Reanimated
@@ -187,7 +188,11 @@ const styles = StyleSheet.create({
   tabular: { fontVariant: ['tabular-nums'] },
   day: { marginTop: 4 },
   topButtons: { flexDirection: 'row', gap: 8 },
+  // At least MIN_TARGET each way: inside HUD_TOP and HUD_BOTTOM, the bands the round keeps clear.
   button: {
+    minWidth: MIN_TARGET,
+    minHeight: MIN_TARGET,
+    justifyContent: 'center',
     backgroundColor: withAlpha(colors.panel, 0.85),
     borderWidth: 1,
     borderColor: colors.line,
@@ -198,7 +203,7 @@ const styles = StyleSheet.create({
   pressed: { transform: [{ translateY: 1 }], opacity: 0.85 },
   disabled: { opacity: 0.35 },
   buttonText: { fontFamily: fonts.monoSemiBold, fontSize: 12, letterSpacing: 0.72, color: colors.fg },
-  quit: { paddingHorizontal: 11 },
+  quit: { paddingHorizontal: 11, alignItems: 'center' },
   quitText: { color: colors.muted },
   bottom: {
     position: 'absolute',

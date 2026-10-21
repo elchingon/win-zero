@@ -5,8 +5,8 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { DEFAULT_CHECK_IN_TIME, DEFAULT_MORNING_TIME, EVERY_DAY, type Weekday } from '@/engine';
 import { appStore, canAddGoal, useApp } from '@/store';
-import { space, type } from '@/theme/tokens';
-import { Card, Chip, Field, Lede, TextField } from '@/ui/bits';
+import { type } from '@/theme/tokens';
+import { Card, Chip, Field, Lede, shared, TextField } from '@/ui/bits';
 import { TopBar } from '@/ui/Brand';
 import { Button, LinkButton } from '@/ui/Button';
 import { GOAL_MAX_LENGTH, SUGGESTIONS } from '@/ui/copy/rules';
@@ -61,7 +61,7 @@ export function AddGoal() {
                 autoCapitalize="sentences"
                 accessibilityLabel={ADD_GOAL_COPY.field}
               />
-              <View style={styles.chips}>
+              <View style={shared.chips}>
                 {SUGGESTIONS.map((s) => (
                   <Chip key={s} label={s} selected={goal.trim() === s} onPress={() => setGoal(s)} />
                 ))}
@@ -102,5 +102,4 @@ export function AddGoal() {
 
 const styles = StyleSheet.create({
   form: { gap: 18 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
 });

@@ -8,7 +8,7 @@ import { formatClockTime } from '@/lib/format';
 import { requestReminderPermission } from '@/notifications/permissions';
 import { appStore, useApp } from '@/store';
 import { colors, fonts, space, type } from '@/theme/tokens';
-import { Chip, Em, Eyebrow, Field, Fine, Lede, TextField } from '@/ui/bits';
+import { Chip, Em, Eyebrow, Field, Fine, Lede, shared, TextField } from '@/ui/bits';
 import { TopBar } from '@/ui/Brand';
 import { Button, LinkButton } from '@/ui/Button';
 import { GOAL_MAX_LENGTH, reminderWhen, rules, SUGGESTIONS } from '@/ui/copy/rules';
@@ -120,7 +120,7 @@ export default function Setup() {
             autoCapitalize="sentences"
             accessibilityLabel="Your daily goal"
           />
-          <View style={styles.chips}>
+          <View style={shared.chips}>
             {SUGGESTIONS.map((s) => (
               <Chip key={s} label={s} selected={goal.trim() === s} onPress={() => setGoal(s)} />
             ))}
@@ -159,5 +159,4 @@ const styles = StyleSheet.create({
   ruleMark: { width: 52, fontFamily: fonts.display, fontSize: 15, letterSpacing: 0.3, color: colors.amber },
   ruleText: { flex: 1 },
   form: { gap: 18 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
 });

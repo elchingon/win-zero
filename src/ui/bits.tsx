@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Switch, Text, TextInput, View, type StyleProp, t
 import { colors, fonts, radii, space, type } from '@/theme/tokens';
 
 import { feedback } from './feedback';
+import { MIN_TARGET, targetInset } from './target';
 
 /** A small uppercase label. `header` makes it a heading, for screen readers' heading navigation. */
 export function Eyebrow({ children, color, header }: { children: ReactNode; color?: string; header?: boolean }) {
@@ -28,6 +29,7 @@ export function Em({ children, color = colors.amber }: { children: ReactNode; co
   return <Text style={{ color }}>{children}</Text>;
 }
 
+/** A pill to pick, in a touch target of MIN_TARGET. Lay several out in `shared.chips`. */
 export function Chip(props: { label: string; selected: boolean; onPress: () => void }) {
   return (
     <Pressable
@@ -37,16 +39,17 @@ export function Chip(props: { label: string; selected: boolean; onPress: () => v
         feedback.tick();
         props.onPress();
       }}
-      style={({ pressed }) => [styles.chip, props.selected && styles.chipOn, pressed && { opacity: 0.7 }]}
+      style={({ pressed }) => [shared.chipTarget, pressed && { opacity: 0.7 }]}
     >
-      <Text style={[styles.chipLabel, props.selected && { color: colors.amber }]}>{props.label}</Text>
+      <View style={[shared.chip, props.selected && shared.chipOn]}>
+        <Text style={[shared.chipLabel, props.selected && { color: colors.amber }]}>{props.label}</Text>
+      </View>
     </Pressable>
   );
 }
 
-/** The hint button: a small "i" in a ring, with a touch target of 44 points. */
+/** The hint button: a small "i" in a ring, in a touch target of MIN_TARGET. */
 const HINT_SIZE = 22;
-const HINT_SLOP = (44 - HINT_SIZE) / 2;
 /** How far a hint sits in from a tile's top-right corner. */
 const HINT_INSET = 8;
 
@@ -56,16 +59,17 @@ export function HintButton(props: { label: string; onPress: () => void; style?: 
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={props.label}
-      hitSlop={HINT_SLOP}
       onPress={() => {
         feedback.press();
         props.onPress();
       }}
-      style={({ pressed }) => [styles.hint, pressed && { opacity: 0.6 }, props.style]}
+      style={({ pressed }) => [styles.hintTarget, pressed && { opacity: 0.6 }, props.style]}
     >
-      <Text style={styles.hintGlyph} maxFontSizeMultiplier={1} importantForAccessibility="no">
-        i
-      </Text>
+      <View style={styles.hint}>
+        <Text style={styles.hintGlyph} maxFontSizeMultiplier={1} importantForAccessibility="no">
+          i
+        </Text>
+      </View>
     </Pressable>
   );
 }
@@ -203,10 +207,9 @@ export const shared = StyleSheet.create({
   section: { gap: space.md },
   list: { borderTopWidth: 1, borderTopColor: colors.line },
   sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 },
-});
-
-const styles = StyleSheet.create({
-  lede: { maxWidth: 420 },
+  /** A wrapping row of chips. Their targets space the rows, so only the columns have a gap. */
+  chips: { flexDirection: 'row', flexWrap: 'wrap', columnGap: space.sm },
+  chipTarget: { minHeight: MIN_TARGET, minWidth: MIN_TARGET, justifyContent: 'center' },
   chip: {
     borderWidth: 1,
     borderColor: colors.line,
@@ -216,6 +219,10 @@ const styles = StyleSheet.create({
   },
   chipOn: { borderColor: colors.amber },
   chipLabel: { fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.fg },
+});
+
+const styles = StyleSheet.create({
+  lede: { maxWidth: 420 },
   stat: {
     flex: 1,
     minWidth: 0,
@@ -231,6 +238,13 @@ const styles = StyleSheet.create({
   statFill: { flex: 0, flexGrow: 1 },
   statLabelClear: { paddingRight: HINT_SIZE + space.xs },
   statHint: { position: 'absolute', top: HINT_INSET, right: HINT_INSET },
+  hintTarget: {
+    width: MIN_TARGET,
+    height: MIN_TARGET,
+    margin: targetInset(HINT_SIZE),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   hint: {
     width: HINT_SIZE,
     height: HINT_SIZE,
