@@ -6,7 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { Stack } from 'expo-router';
 import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
-import { Linking } from 'react-native';
+import { AccessibilityInfo, Linking } from 'react-native';
 
 import HowItWorksScreen from '@/app/how-it-works';
 import HomeScreen from '@/app/index';
@@ -322,6 +322,17 @@ describe('Notice', () => {
 });
 
 describe('Settings', () => {
+  it('saves new wording for the goal, and says so to a screen reader', async () => {
+    const say = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
+    say.mockClear();
+    await open('/settings', { goal: twoDays() });
+    await fireEvent.changeText(screen.getByLabelText('Daily goal'), 'Walk after dinner');
+    await fireEvent.press(screen.getByRole('button', { name: 'Save goal' }));
+    expect(primaryGoal(appStore.getState())?.goal).toBe('Walk after dinner');
+    expect(screen.getByText('Saved. Your streak and history stay the same.')).toBeOnTheScreen();
+    expect(say).toHaveBeenCalledWith('Saved. Your streak and history stay the same.');
+  });
+
   it('names the app as a heading in the top bar', async () => {
     await open('/settings', { goal: twoDays() });
     expect(screen.getByRole('header', { name: APP_NAME })).toBeOnTheScreen();

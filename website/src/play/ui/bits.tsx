@@ -98,7 +98,8 @@ export function Field(props: { label: string; hint?: string; error?: string | nu
       </label>
       {props.children(id, note ? noteId : undefined)}
       {note ? (
-        <p id={noteId} className={`fine${props.error ? ' tone-flare' : ''}`}>
+        // An error is an alert, so a screen reader says it as it appears.
+        <p id={noteId} className={`fine${props.error ? ' tone-flare' : ''}`} role={props.error ? 'alert' : undefined}>
           {note}
         </p>
       ) : null}

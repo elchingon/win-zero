@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { Stack } from 'expo-router';
 import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
+import { AccessibilityInfo } from 'react-native';
 
 import AddGoalScreen from '@/app/add-goal';
 import GoalScreen from '@/app/goal';
@@ -208,9 +209,12 @@ describe('several goals in Settings', () => {
   });
 
   it("changes a goal's wording, days and lock-screen name on its screen", async () => {
+    const say = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
+    say.mockClear();
     await open('/goal?id=g2', two());
     await fireEvent.changeText(screen.getByLabelText('Goal'), 'Run 5k');
     await fireEvent.press(screen.getByRole('button', { name: 'Save goal' }));
+    expect(say).toHaveBeenCalledWith('Saved. Your streak and history stay the same.');
     await fireEvent.press(day('Saturday'));
     await fireEvent.press(screen.getByRole('button', { name: 'Save days' }));
     const run = () => appStore.getState().goals[1]!.goal;
@@ -223,6 +227,8 @@ describe('several goals in Settings', () => {
     await fireEvent.press(screen.getByRole('button', { name: 'Save name' }));
     expect(run().alias).toBe('Legs');
     expect(screen.getByText(/^Saved\. With Goal in reminders off/)).toBeOnTheScreen();
+    // Save name goes away once saved, so a screen reader hears it instead.
+    expect(say).toHaveBeenLastCalledWith(expect.stringMatching(/^Saved\. With Goal in reminders off/));
     await fireEvent.changeText(name, '');
     await fireEvent.press(screen.getByRole('button', { name: 'Clear name' }));
     expect(run()).not.toHaveProperty('alias');

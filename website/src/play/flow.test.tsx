@@ -108,7 +108,8 @@ describe('the app on the web', () => {
     await setUp('Read 20 minutes');
     fireEvent.click(screen.getByRole('button', { name: 'Play a bonus round' }));
     fireEvent.change(screen.getByLabelText('Zeros'), { target: { value: '0' } });
-    expect(screen.getByText('A whole number from 1 to 100,000, please.')).toBeTruthy();
+    // An alert, so a screen reader says it as it appears.
+    expect(screen.getByRole('alert').textContent).toBe('A whole number from 1 to 100,000, please.');
     expect((screen.getByRole('button', { name: 'Start' }) as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(screen.getByRole('button', { name: 'Play a bonus round' })).toBeTruthy();
@@ -137,6 +138,16 @@ describe('the app on the web', () => {
     // With no round to play, a practice link goes back to base.
     await router.navigate('/round?practice=60');
     await waitFor(() => expect(router.state.location.pathname).toBe('/'));
+  });
+
+  it('saves new wording for the goal, and says so to a screen reader', async () => {
+    await setUp('Exercise more');
+    cleanup();
+    open('/settings');
+    fireEvent.change(await screen.findByLabelText('Daily goal'), { target: { value: 'Walk after dinner' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save goal' }));
+    expect(primaryGoal(appStore.getState())?.goal).toBe('Walk after dinner');
+    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('Saved. Your streak and history stay the same.'));
   });
 
   it('keeps Settings and How it works free of notification talk', async () => {

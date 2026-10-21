@@ -1,7 +1,7 @@
 // A goal's lock-screen name (SPEC 9): with "Goal in reminders" off and several goals, reminders call
 // the goal by it instead of its place ("your second goal"), which is what it shows until one is set.
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { AccessibilityInfo, StyleSheet, View } from 'react-native';
 
 import { GOAL_ALIAS_MAX_LENGTH, type GoalState } from '@/engine';
 import { goalLabel } from '@/notifications/schedule';
@@ -27,6 +27,7 @@ export function AliasField({ goal }: { goal: GoalState }) {
     if (!appStore.getState().setGoalAlias(goal.goalId, draft).ok) return;
     setDraft(draft.trim().slice(0, GOAL_ALIAS_MAX_LENGTH).trim());
     setSaved(true);
+    AccessibilityInfo.announceForAccessibility(GOAL_COPY.aliasSaved);
   };
 
   return (

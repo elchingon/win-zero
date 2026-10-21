@@ -11,6 +11,7 @@ import { SUPPORT_EMAIL, SUPPORT_LINE } from '@/ui/copy/support';
 
 import { DemoControls } from '../demo/DemoControls';
 import { ROUTES } from '../nav';
+import { announce } from '../platform/announce';
 import { deviceCalendar } from '../platform/calendar';
 import { appStore, useApp } from '../store';
 import { Card, Eyebrow, Field, Fine, LinkRow, ToggleRow } from '../ui/bits';
@@ -18,6 +19,9 @@ import { Button, TextLink } from '../ui/Button';
 import { Screen } from '../ui/Screen';
 import { TimeField } from '../ui/TimeField';
 import { TopBar } from '../ui/TopBar';
+
+const KEPT_HINT = 'Your streak and history stay the same.';
+const SAVED_HINT = `Saved. ${KEPT_HINT}`;
 
 export function Settings() {
   const navigate = useNavigate();
@@ -42,6 +46,8 @@ export function Settings() {
     if (store.setGoalText(goal.goalId, draft).ok) {
       setDraft(draft.trim());
       setSaved(true);
+      // Save goal goes away once saved, so say so.
+      announce(SAVED_HINT);
     }
   };
 
@@ -62,7 +68,7 @@ export function Settings() {
           if (goalChanged) saveGoal();
         }}
       >
-        <Field label="Daily goal" hint={saved ? 'Saved. Your streak and history stay the same.' : 'Your streak and history stay the same.'}>
+        <Field label="Daily goal" hint={saved ? SAVED_HINT : KEPT_HINT}>
           {(id, describedBy) => (
             <input
               id={id}

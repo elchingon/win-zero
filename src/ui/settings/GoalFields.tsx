@@ -2,7 +2,7 @@
 // respected. Win Zero's Settings shows its goal's; Win Zero Plus shows each goal's on its own screen
 // once there are several (SPEC 9).
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { AccessibilityInfo, StyleSheet, View } from 'react-native';
 
 import { currentCheckInTime, firstUpcomingDay, opensAt, pendingWindow, type ClockTime, type GoalState } from '@/engine';
 import { formatUntil, formatWhen } from '@/lib/format';
@@ -13,6 +13,9 @@ import { goalFieldLabel } from '@/ui/copy/goals';
 import { GOAL_MAX_LENGTH } from '@/ui/copy/rules';
 import { TimeField } from '@/ui/TimeField';
 import { useDeviceCalendar } from '@/ui/useDevice';
+
+const KEPT_HINT = 'Your streak and history stay the same.';
+const SAVED_HINT = `Saved. ${KEPT_HINT}`;
 
 /** Key it by the goal's id: the wording being typed belongs to one goal. */
 export function GoalFields({ goal }: { goal: GoalState }) {
@@ -33,6 +36,8 @@ export function GoalFields({ goal }: { goal: GoalState }) {
     if (store.setGoalText(goal.goalId, draft).ok) {
       setDraft(draft.trim());
       setSaved(true);
+      // Save goal goes away once saved, so say so: focus has nowhere to land.
+      AccessibilityInfo.announceForAccessibility(SAVED_HINT);
     }
   };
 
@@ -42,7 +47,7 @@ export function GoalFields({ goal }: { goal: GoalState }) {
   return (
     <>
       <View style={shared.section}>
-        <Field label={label} hint={saved ? 'Saved. Your streak and history stay the same.' : 'Your streak and history stay the same.'}>
+        <Field label={label} hint={saved ? SAVED_HINT : KEPT_HINT}>
           <TextField
             value={draft}
             onChangeText={(t) => {

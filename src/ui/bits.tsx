@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Switch, Text, TextInput, View, type StyleProp, t
 
 import { colors, fonts, radii, space, type } from '@/theme/tokens';
 
+import { useAnnounce } from './announce';
 import { feedback } from './feedback';
 import { MIN_TARGET, targetInset } from './target';
 
@@ -131,6 +132,7 @@ export function Card({ children, style }: { children: ReactNode; style?: StylePr
 }
 
 export function Field(props: { label: string; children: ReactNode; hint?: string; error?: string | null }) {
+  useAnnounce(props.error);
   return (
     <View style={styles.field}>
       <Eyebrow>{props.label}</Eyebrow>
