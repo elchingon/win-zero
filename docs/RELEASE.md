@@ -1,7 +1,48 @@
 # Releasing Win Zero
 
 The path from this branch to both stores, and the device QA to pass first. The store copy and form
-answers are in `docs/store/`.
+answers are in `docs/store/`: `listing.md`, `answers.md` and `screenshots.md` for Win Zero, and the
+`-plus` ones for Win Zero Plus.
+
+## Release run sheet
+
+Nothing is in either store yet. **Win Zero Plus 1.1.5 goes first, then Win Zero 1.2.0** once Plus is
+live in both stores, because Win Zero 1.2.0 offers the move to Plus (see "Release order for the
+move"). Both are built on this Mac ("Store builds on this Mac", in section 3). Row numbers are the
+QA matrix's, at the end.
+
+1. **Now, on development builds.** Plus: rows 22–25, 27–30, 33, 35–42, 52, 53, 55 and 65, and 3, 4,
+   13 and 50 on a Plus test install. Win Zero: 34 and 43.
+2. **By Saturday, October 31: row 1,** the US clock change on Sunday, November 1. Put release builds
+   of both apps on your phones (`npm run build:android && npm run install:android`, then the
+   `:plus` pair; on iPhone, a Release run from Xcode, as in row 54) and keep them there through
+   Sunday evening. The next chance is March.
+3. **Win Zero Plus's records and money** (Win Zero Plus, below): the App Store Connect record, the
+   Paid Apps Agreement with tax and banking, the Small Business Program, the price; Play's
+   payments profile and the app created as **Paid**; the App Group; Plus's upload key.
+4. **Plus 1.1.5 store builds:** `.env` with the privacy and support pages and Plus's own store
+   pages, `npm run check:release:ios:plus`, then archive and upload to TestFlight; `npm run
+   build:android:plus:upload -- --version-code 1`, then upload to Play's internal testing track.
+5. **Plus's gate rows** on those builds: 2, 5, 7–12, 14, 31, 32, 44–47, 49, 54, 56–64 and 66–68,
+   and 26 on a local perf build (`EXPO_PUBLIC_PERF_BUILD=1 npm run build:android:plus`; for row 6,
+   the same without `:plus`). The move's arriving side too, rows 15–21 and 30, with Win Zero's development build (its
+   `.env` from `.env.example`, so it offers the move): Plus 1.1.5 has to read every move Win Zero
+   1.2.0 will send.
+6. **The website:** merge to `main`, so winzero.app's `/support` and `/privacy` describe Plus before
+   App Review reads them. Then row 48 and 51 on the live site.
+7. **Submit Plus:** listing, screenshots and forms from the `-plus` docs; App Review notes from
+   `answers-plus.md`. Choose **Manually release this version** on iOS, and managed publishing on
+   Play, then release both once both are approved. Check that both store pages load.
+8. **Win Zero 1.2.0 store builds:** version 1.2.0 in `app.json` (and `package.json`); `.env` with
+   Plus's live store pages; `npm run check:release:ios` (it should say Win Zero offers the move),
+   then archive and upload; `npm run build:android:upload -- --version-code 1`.
+9. **Win Zero's gate rows:** 1–14 (row 1 if it wasn't run on Win Zero), 15–21 again with both store
+   builds (row 17 now opens Plus's live page), 34, 43, 44–47, 49, 56–64, Win Zero's half of 65, 66
+   and 67.
+10. **Submit Win Zero 1.2.0,** with the App Review notes from `answers.md` (Plus's Apple ID filled
+    in), and release.
+11. **The website's store links:** `website/partials/stores.html` (see "When the apps are live").
+12. **The first week:** App Store Connect crashes and Play vitals, for both apps.
 
 ## 1. Before the first build
 
@@ -51,6 +92,29 @@ answers are in `docs/store/`.
 - [ ] Run the QA matrix below on TestFlight and internal-track builds. A `preview` build works
   too.
 
+### Store builds on this Mac
+The EAS steps above are one way. The other, used for the first releases, builds both apps here.
+
+- **Check what the build will carry.** A local release bundles the `EXPO_PUBLIC_*` values Expo reads
+  from `.env`, not `eas.json`, and only EAS builds run `check-release.mjs` on their own. So:
+  - `npm run check:release:ios` (Win Zero) or `check:release:ios:plus` before an archive. It stops
+    unless the privacy and support pages are https, and unless any Plus store page is Plus's real
+    one (`.env.example`'s stand-in `https://winzero.app/` isn't). It also says whether Win Zero will
+    offer Move to Win Zero Plus.
+  - `npm run open:ios[:plus]` prints the same, as a warning.
+  - `build:android[:plus]:upload` runs it first and stops on a problem; a test build only warns.
+- **iOS:** `npm run open:ios` (or `open:ios:plus`). In Xcode, set the **build number** in the
+  General tab (each upload of a version needs a new one), pick **Any iOS Device**, then **Product
+  → Archive**, and in the Organizer **Distribute App → App Store Connect → Upload**. It reaches
+  TestFlight after processing.
+- **Android:** `npm run build:android:upload -- --version-code <N>` (or `build:android:plus:upload`).
+  Play takes an upload only if its version code is above every earlier one for that app (Play
+  Console → Test and release → App bundle explorer), so start at 1 and count up. The script
+  prints the version and code it built, and the key that signed it. Upload `build/win-zero.aab`
+  (or `win-zero-plus.aab`) in Play Console → Test and release → Testing → Internal testing →
+  Create new release. The first upload enrolls the app in Play App Signing, with the key that
+  signed it as the upload key.
+
 ## 4. Listings and forms
 
 - [ ] **Listing copy:** paste from `docs/store/listing.md`, with the URLs filled in.
@@ -61,7 +125,7 @@ answers are in `docs/store/`.
 - [ ] **Forms:** App Privacy, Data safety, Health apps, content rating, target audience, ads and
   app access, all from `docs/store/answers.md`.
 - [ ] **Accessibility claims:** the descriptions name VoiceOver/TalkBack, larger text and reduced
-  motion. Keep those lines only if they pass the QA below (rows 7–9, 24 and 56–64).
+  motion. Keep those lines only if they pass the QA below (rows 7–9, 24 and 56–64, and 66).
 
 ## 5. Release
 
@@ -84,16 +148,51 @@ variant disagree. `npm run check:variants` (also in CI) checks both apps' config
 - [ ] **Dev client:** `eas build --profile development-plus --platform ios|android`, then
   `npm run start:plus`. A dev client runs whichever app the dev server was started for, so start
   it with `start:plus` for the Plus dev client.
-- [ ] **Store records:**
+- [ ] **Store records:** create both early. A record holds the name, and "Win Zero Plus" could be
+  taken by someone else meanwhile.
   - App Store Connect → New App: **Win Zero Plus**, bundle ID `com.e7systems.winzeroplus`. Copy its
-    Apple ID into `eas.json` under `submit.production-plus.ios.ascAppId`.
-  - Play Console → Create app: **Win Zero Plus**, App, **Paid**.
+    Apple ID into `eas.json` under `submit.production-plus.ios.ascAppId` (for EAS submit), and into
+    the Win Zero review notes in `answers.md`.
+  - Play Console → Create app: **Win Zero Plus**, App, **Paid**. Google Play never lets an app that
+    has been free become paid, so choose Paid now, and never publish it as free on any track.
+- [ ] **Getting paid (Apple):** App Store Connect → Business: the **Paid Apps Agreement** must be
+  Active, with tax forms and a bank account, before a paid app can be sold. The Account Holder
+  signs it. Then enroll in the **App Store Small Business Program**, which takes 15% rather than
+  30% under $1M a year. It isn't automatic.
+- [ ] **Getting paid (Google):** Play Console → Setup → **Payments profile**, linked to the developer
+  account; a price can't be set without it. Play takes 15% of the first $1M a year on its own.
+- [ ] **Price:** **$4.99** (USD) in both stores: App Store Connect → Pricing and Availability (the
+  United States as the base country), and Play Console → Monetize → App pricing. Let each store set
+  the other countries'. The same countries as Win Zero.
+- [ ] **Testing a paid app on Play:** the **internal testing** track installs it free for its
+  testers. Closed and open tracks make testers buy it. If the developer account is a personal one
+  made after November 13, 2023, Play asks for a closed test with at least 12 testers for 14 days
+  before production; give those testers **promo codes** (Monetize → Promo codes) rather than asking
+  them to pay. Check Play's current rules first: they change.
+- [ ] **Listing and forms:** `docs/store/listing-plus.md` (copy, $4.99, graphics from
+  `assets/brand-plus/`), `answers-plus.md` (App Privacy, Data safety, ratings, and the App Review
+  notes), `screenshots-plus.md`.
+- [ ] **If App Review rejects Plus under 4.3(a)** (several apps that are the same app): reply in the
+  Resolution Center with what Plus does that Win Zero doesn't (`answers-plus.md` has it), and point
+  to the different name, icon, screenshots and price. If Apple holds to it, the fallback is to sell
+  Plus's features inside Win Zero as an unlock, which is a large change: in-app purchases, a
+  Restore flow, and new store answers.
+- [ ] **Home-screen name (plan decision 14):** "Win Zero Plus" fits under the icon in full on the
+  smallest iPhones iOS 26 runs on, the iPhone SE (3rd generation) and the 13 mini, even at the
+  largest text size, where iOS tightens the letters (simulators, iOS 26.5, October 21, 2026). So it
+  stays "Win Zero Plus" everywhere. Row 68 checks Android launchers.
 - [ ] **Builds:** `eas build --profile production-plus --platform all --auto-submit-with-profile
   production-plus`, or `eas submit --profile production-plus --id <build id>`. Never `--latest`:
   it can pick the other app's build.
 - [ ] **Local builds:**
-  - Android: `npm run build:android:plus`, or `build:android:plus:upload` with Plus's own upload
-    key in `.env.signing.plus`. Install with `npm run install:android:plus`.
+  - Android: `npm run build:android:plus`, or `build:android:plus:upload -- --version-code <N>`
+    with Plus's own upload key in `.env.signing.plus` (gitignored). Install with `npm run
+    install:android:plus`.
+  - **Plus's upload key:** make one for Plus alone, not Win Zero's, so each app's Play App Signing
+    has its own: `keytool -genkeypair -v -storetype JKS -keyalg RSA -keysize 2048 -validity 10000
+    -keystore <somewhere outside the repo>/win-zero-plus-upload.jks -alias win-zero-plus-upload`.
+    Then `.env.signing.plus` takes the same four `ANDROID_UPLOAD_*` names as `.env.signing`. Back up
+    the keystore and its passwords; Play can reset an upload key, but slowly.
   - Android regenerates `android/` from clean when it was last generated for the other app
     (`scripts/prebuild.mjs`). `npm run android` (`expo run`) doesn't check: after building the
     other app, run `npx expo prebuild --platform android --clean` first.
@@ -135,12 +234,16 @@ variant disagree. `npm run check:variants` (also in CI) checks both apps' config
   opens the page. Plus opens its own page for "Update Win Zero Plus".
   - The `preview` profile (and `preview-plus`) sets the Play page and a stand-in iOS page
     (`https://winzero.app/`) for QA. Local runs take them from `.env` (see `.env.example`).
-  - For release, set both in the `production` profile's env (`production-plus` inherits them):
-    `https://apps.apple.com/app/id<Plus's Apple ID>` and
-    `https://play.google.com/store/apps/details?id=com.e7systems.winzeroplus`.
-- [ ] **Release order for the move:** release **Plus 1.0 first** and wait until it's live in both
-  stores. Then release **free 1.2**, with the Plus store URLs set. A free build with the URLs set
-  before Plus is live would offer a move to an app nobody can install.
+  - For release, set both: `https://apps.apple.com/app/id<Plus's Apple ID>` and
+    `https://play.google.com/store/apps/details?id=com.e7systems.winzeroplus`. EAS builds take them
+    from the `production` profile's env (`production-plus` inherits them); local builds from
+    `.env`. `npm run check:release:ios[:plus]` and `build:android[:plus]:upload` refuse the
+    stand-in, and say whether Win Zero will offer the move.
+  - Plus 1.1.5 can carry them from its first build (for its own "Update Win Zero Plus" button). Win
+    Zero carries them from 1.2.0, which waits for Plus to be live.
+- [ ] **Release order for the move:** release **Plus 1.1.5 first** and wait until it's live in both
+  stores. Then release **Win Zero 1.2.0**, with the Plus store URLs set. A Win Zero build with the
+  URLs set before Plus is live would offer a move to an app nobody can install.
 - [ ] **App icons (SPEC 9):** Plus has its own icon and one per theme (`PLUS_ICONS` in
   `app.config.ts`, art in `assets/brand-plus/icons/`). The local module `modules/app-icons` switches
   between them, not a library. `expo-alternate-app-icons` 8.0.0 and `@howincodes/expo-dynamic-app-icon`
@@ -214,7 +317,21 @@ Cloudflare settings are in `website/README.md`.
 - [ ] **Each change:** CI's `website` job passes (build, verify, typecheck, lint, tests). Check the
   pull request's preview link on a phone: set up, check in, play a round, and the demo controls.
 - [ ] **When the apps are live:** put the App Store and Google Play links in
-  `website/partials/stores.html`.
+  `website/partials/stores.html`, which says "coming soon" until then. A start, with each app's
+  Apple ID filled in:
+  ```html
+  <p>
+    Win Zero is free on <a href="https://apps.apple.com/app/id6823793298">the App Store</a> and
+    <a href="https://play.google.com/store/apps/details?id=com.e7systems.winzero">Google Play</a>,
+    with a gentle reminder at your check-in time.
+  </p>
+  <p>
+    Want more than one goal, check-in days or more games?
+    <a href="https://apps.apple.com/app/id<Plus's Apple ID>">Win Zero Plus</a> (also on
+    <a href="https://play.google.com/store/apps/details?id=com.e7systems.winzeroplus">Google Play</a>)
+    is our paid edition, and moves your progress over from Win Zero.
+  </p>
+  ```
 - [ ] **Policy or support changes:** edit `docs/store/*.md` and update the policy's effective date.
   The website picks them up on its next deploy.
 
@@ -283,13 +400,16 @@ and its debug tools. The others use a TestFlight, internal or `preview` build.
 | 56 | **The notice at the largest text** | At row 9's largest text sizes, tap **Not today** on a check-in, in both apps. On a test phone, reach a Reset and a Shielded notice too (row 3). | Each notice scrolls when it's taller than the screen, so **Got it**, **Check in now**, **Undo Not today** and the support line can all be reached. At normal sizes it sits centered and doesn't scroll. |
 | 57 | **Flashes** | At `practice=60` (9 bombs), tap the bomb button as fast as possible, then clear the board with a bomb. Again with OS Reduce Motion on, and with **Reduce effects** on (row 61). | However fast the bombs go, the screen flashes at most about 3 times a second. A bomb that clears the board flashes once, as brightly as the final. With Reduce Motion or Reduce effects, each flash is a faint wash. |
 | 58 | **Touch targets** | Run Android's Accessibility Scanner on Setup, Home (Plus with 2 goals too, both tabs), Settings, Add a goal, a goal's screen, Pick your game and a round's HUD. Then read Play's pre-launch report. | No touch-target suggestions, except the weekday toggles on a phone narrower than about 376 dp (see Known and accepted). Chips, small buttons, links, the "i" hints, the calendar arrows and the HUD buttons all take a tap anywhere on their 44 pt / 48 dp area. |
-| 59 | **Edges and the Shielded mark** | Look at Setup, Settings and Add a goal: ghost buttons, chips, the goal field, time fields, weekday toggles, Home's tabs and the game picker's rows. Then a history calendar with Yes and Shielded days, in grayscale too (iOS: Color Filters). | Every control's edge stands out from its background. A Shielded day is a teal ring with a dot inside; a Yes is a ring alone; the legend matches. In grayscale the two are still told apart. |
+| 59 | **Edges and the Shielded mark** | Look at Setup, Settings and Add a goal: ghost buttons, chips, the goal field, time fields, weekday toggles, Home's tabs and the game picker's rows. Then a history calendar with Yes and Shielded days, in grayscale too (iOS: Color Filters). Then Home's arsenal, with weapons still locked. | Every control's edge stands out from its background. A Shielded day is a teal ring with a dot inside; a Yes is a ring alone; the legend matches. In grayscale the two are still told apart. Locked arsenal rows are dimmed by color, not faded, and read as easily as the rest (on the website too). |
 | 60 | **Headings** | With VoiceOver, open Settings and use the rotor's Headings. | The app's name in the top bar is the first heading, then Settings, then each section in order: in Plus, Goals, Games, Themes and App icon; then Accessibility and About. |
 | 61 | **Reduce effects** | OS Reduce Motion off. Settings › Accessibility › **Reduce effects** on. Look at Home, tap **Yes, I did**, play the round with a bomb, then tap **Not today** on another day. Then turn it off. | Home's background holds still, the Yes plays only its chime and haptic, the round shakes little with fewer particles and faint flashes, the notice's zero holds still, and popups appear without zooming. Off: everything moves again. |
 | 62 | **Auto-fire** | Settings › Accessibility › **Auto-fire** on. Play a Shooter round: tap once and lift, tap elsewhere, then drag. In Plus, play Orbit, Breaker with the Laser Paddle switched on (row 23's links, `practice=1000`), Catch and Slice. Then turn it off. | The hint says "Tap to aim · firing keeps going". Firing starts at the first tap and keeps going toward the last tap or drag, and stops with the last zero. Breaker's Laser Paddle fires all the time; Catch and Slice play as before. Off: the hint says "Tap to shoot · hold to keep firing", and lifting stops firing. |
 | 63 | **Finish round button** | With no screen reader, Settings › Accessibility › **Finish round button** on. Start a round, and tap **FINISH ROUND**. Then turn it off and start another. | The button shows in every round, in every game. It clears the board with the celebration, and the round counts as played. Off: it's gone, unless VoiceOver / TalkBack is on. |
 | 64 | **Bold text** | Settings › Accessibility › **Bold text** on. Close and reopen the app, and look through Home, Settings, a round and its result sheet, also at the largest text size. Turn it off and reopen. On iPhone, turn on iOS Bold Text (Display & Text Size) with the switch off, and reopen. | Until the reopen, the row says "Close and reopen … to see it". Then all text but Bungee's is a weight heavier, and nothing clips or overlaps, even at the largest size. Off and reopened: the usual weights. With iOS Bold Text, the app's text is heavier with the switch off. |
 | 65 | **Words for chosen days (Plus)** | In Plus's Setup, untick Saturday and Sunday. Add a goal on Mon, Wed and Fri and wait for its check-in, beside a daily goal's. Then play a Catch round on a Yes that unlocks a power-up, and tap **Share this milestone**. | Setup's rules say "On each check-in day…" and "The first 7 in a row cost nothing", and the field says "Your goal". The Mon/Wed/Fri goal's check-in is titled "Check-in time", the daily one "Daily check-in". The share text says "I unlocked a new catcher, …". Win Zero's Setup says "Every day at your check-in time" and "Nothing's lost for a week". |
+| 66 | **Errors and "Saved." read aloud** | With VoiceOver, then TalkBack: in Settings, change the goal's wording and tap **Save goal**. In Plus, a goal's screen → **Lock-screen name** → **Save name**. With a Game credit, **Play a bonus round** and type 0 in Zeros, then 12. Then the same on winzero.app/play with the computer's screen reader. | Each save says "Saved. …" though its button goes away. "A whole number from 1 to 100,000, please." is read once as it appears, without moving focus, and isn't read again until it comes back. |
+| 67 | **What a store build carries** | Before each store build, `npm run check:release:ios` (or `:plus`), or read the summary `build:android:upload` prints. Install the build and open Settings → About. | The check passes, and its note says whether Win Zero offers the move. About has the privacy and support links and the version. Win Zero 1.2.0 shows **Move to Win Zero Plus**, which opens Plus's store page when Plus isn't installed; a Win Zero build without the store pages doesn't show it. With `.env.example`'s stand-in iOS page, the check stops. |
+| 68 | **The home-screen name (Plus)** | Install Plus on the smallest phones at hand (an iPhone SE or mini, a narrow Android) with the largest text size. Look at the home screen, the app drawer, the share sheet and a notification. | "Win Zero Plus" in full, or as each launcher shortens long names. On iPhone it fits in full even at the largest size. |
 
 ### Known and accepted
 - **A move can't prove it came from Win Zero on Android.** Any app can open Plus's import link
