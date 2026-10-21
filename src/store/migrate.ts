@@ -33,7 +33,16 @@ import {
   type RoundRewards,
 } from './types';
 
-export const DEFAULT_PREFS: Prefs = { sound: true, haptics: true, reengage: true, goalInReminders: false };
+export const DEFAULT_PREFS: Prefs = {
+  sound: true,
+  haptics: true,
+  reengage: true,
+  goalInReminders: false,
+  reduceEffects: false,
+  autoFire: false,
+  finishButton: false,
+  boldText: false,
+};
 
 export const DEFAULT_PERSISTED: PersistedState = {
   goals: [],
@@ -264,6 +273,10 @@ export function normalizePersisted(raw: unknown): PersistedState {
       haptics: bool(prefs.haptics, DEFAULT_PREFS.haptics),
       reengage: bool(prefs.reengage, DEFAULT_PREFS.reengage),
       goalInReminders: bool(prefs.goalInReminders, DEFAULT_PREFS.goalInReminders),
+      reduceEffects: bool(prefs.reduceEffects, DEFAULT_PREFS.reduceEffects),
+      autoFire: bool(prefs.autoFire, DEFAULT_PREFS.autoFire),
+      finishButton: bool(prefs.finishButton, DEFAULT_PREFS.finishButton),
+      boldText: bool(prefs.boldText, DEFAULT_PREFS.boldText),
     },
     credits: normalizeWallet(r.credits),
     bonus: normalizeBonus(r.bonus),

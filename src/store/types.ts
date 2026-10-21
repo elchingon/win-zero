@@ -29,6 +29,16 @@ export interface Prefs {
   reengage: boolean;
   /** Reminders name the goal ("Did you stick to “Stop drinking” today?"). Off keeps it private. */
   goalInReminders: boolean;
+  // Accessibility (Settings › Accessibility). Each changes the app for everyone who turns it on,
+  // so all are off by default.
+  /** Less shake, dimmer flashes, fewer particles and still backgrounds, as under the OS's Reduce Motion. */
+  reduceEffects: boolean;
+  /** In a round, firing keeps going after the first touch; touches only aim. */
+  autoFire: boolean;
+  /** Finish round in every round, as with a screen reader on. */
+  finishButton: boolean;
+  /** Heavier text, from the next launch (fonts load once, at launch). */
+  boldText: boolean;
 }
 
 /** A Yes's rewards, stored by weapon id so they survive a restart. */

@@ -31,7 +31,7 @@ import {
   type AppStore,
 } from '../createAppStore';
 import { startLifecycle } from '../lifecycle';
-import { DEFAULT_PERSISTED } from '../migrate';
+import { DEFAULT_PERSISTED, DEFAULT_PREFS } from '../migrate';
 import { STORE_BACKUP_KEY, STORE_KEY, STORE_VERSION } from '../types';
 import { fakeAppState, flush, gid, harness, noticeOf, oneGoal, putGoal, ready, withGoal } from './harness';
 import { PLUS_LIMITS } from '../limits';
@@ -970,6 +970,8 @@ describe('persistence', () => {
     a.store.getState().setPref('sound', false);
     a.store.getState().setPref('reengage', false);
     a.store.getState().setPref('goalInReminders', true);
+    a.store.getState().setPref('autoFire', true);
+    a.store.getState().setPref('boldText', true);
     a.store.getState().selectWeapon('pea');
     expect(a.store.getState().setGameMode('shooter')).toBe(true);
     expect(a.store.getState().setTheme('classic')).toBe(true);
@@ -1003,7 +1005,14 @@ describe('persistence', () => {
     expect(b.store.getState().gameMode).toBe('shooter');
     expect(b.store.getState().theme).toBe('classic');
     expect(b.store.getState().reminderCardHiddenUntil).not.toBeNull();
-    expect(b.store.getState().prefs).toEqual({ sound: false, haptics: true, reengage: false, goalInReminders: true });
+    expect(b.store.getState().prefs).toEqual({
+      ...DEFAULT_PREFS,
+      sound: false,
+      reengage: false,
+      goalInReminders: true,
+      autoFire: true,
+      boldText: true,
+    });
     expect(primaryRound(b.store.getState())).toMatchObject({ n: 1, played: false });
     expect(noticeOf(b.store)).toBeNull(); // not persisted
 
@@ -1078,7 +1087,17 @@ describe('persistence', () => {
     await ready(store);
     expect(primaryGoal(store.getState())).toMatchObject({ goalId: 'g1', streak: 3, slide: 0, paused: false });
     expect(primaryGoal(store.getState())?.history).toHaveLength(3);
-    expect(store.getState().prefs).toEqual({ sound: false, haptics: true, reengage: true, goalInReminders: false });
+    // Settings added since (the accessibility switches) take their defaults: off.
+    expect(store.getState().prefs).toEqual({
+      sound: false,
+      haptics: true,
+      reengage: true,
+      goalInReminders: false,
+      reduceEffects: false,
+      autoFire: false,
+      finishButton: false,
+      boldText: false,
+    });
     expect(store.getState().weapon).toBeNull();
     expect(primaryRound(store.getState())).toBeNull();
     expect(store.getState().credits).toEqual({ balance: { game: 1, weapon: 0 }, claimed: ['goal-set'] });
