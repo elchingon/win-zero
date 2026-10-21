@@ -4,7 +4,7 @@
 // canvas; only its buttons take touches, so a finger anywhere else plays.
 import { useEffect, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type TextProps, type ViewStyle } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
+import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { ModeId } from '@/engine';
@@ -12,7 +12,10 @@ import { colors, fonts, fontScale, radii, type, withAlpha } from '@/theme/tokens
 import { MODE_COPY } from '@/ui/copy/modes';
 import { feedback } from '@/ui/feedback';
 
-/** The hint stays this long, then fades over HINT_FADE_MS. */
+/**
+ * The hint stays this long, then fades over HINT_FADE_MS, even under reduce motion: Reanimated
+ * would otherwise skip the delay there, and the hint would be gone on the first frame.
+ */
 const HINT_SHOW_MS = 2600;
 const HINT_FADE_MS = 600;
 /** The prototype's .hud-top / .hud-bottom padding. */
@@ -27,7 +30,7 @@ function HudText(props: TextProps) {
 function Hint({ text }: { text: string }) {
   const opacity = useSharedValue(1);
   useEffect(() => {
-    opacity.set(withDelay(HINT_SHOW_MS, withTiming(0, { duration: HINT_FADE_MS })));
+    opacity.set(withDelay(HINT_SHOW_MS, withTiming(0, { duration: HINT_FADE_MS }), ReduceMotion.Never));
   }, [opacity]);
   const style = useAnimatedStyle(() => ({ opacity: opacity.get() }));
   return (
