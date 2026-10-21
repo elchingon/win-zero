@@ -148,7 +148,7 @@ On the website, practice rounds (any size, every weapon) run only in demo mode, 
 
 ## 7. Visual identity (from the prototype)
 
-- Palette: ink `#0D1130`, ink-2 `#151A44`, panel `#1B2150`, panel-2 `#252C68`, line `#353D80`, fg `#F5F0E6`, muted `#AAB0D8`, amber `#FFB52E` (primary), amber-deep `#B9770A`, flare `#FF4F6D` (danger/bombs), teal `#3FDCCB` (weapons/success).
+- Palette: ink `#0D1130`, ink-2 `#151A44`, panel `#1B2150`, panel-2 `#252C68`, line `#353D80` (dividers), edge `#7078BC` (control edges and marks that carry meaning, 3:1 or more on every surface), fg `#F5F0E6`, muted `#AAB0D8`, amber `#FFB52E` (primary), amber-deep `#B9770A`, flare `#FF4F6D` (danger/bombs), teal `#3FDCCB` (weapons/success).
 - Type: **Bungee** (display, zeros, buttons), **Barlow** (body), **JetBrains Mono** (labels, HUD numbers).
 - Dark-only app. Zeros are oval rings in a rotating amber / flare / teal / fg palette with glow.
 - Game feel: screen shake, hit flash, particle bursts, shockwave rings, haptics on every kill (light) and on the final explosion (heavy, and long: two heavy taps on iPhone, a quarter-second hit on Android), synthesized-style pop and boom sounds. On Android, the round's haptics and the Yes play as media vibration, so they follow the phone's Media vibration setting; plain taps and ticks follow Touch feedback.

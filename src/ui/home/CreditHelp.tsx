@@ -40,7 +40,7 @@ const styles = StyleSheet.create({
   ways: { gap: space.sm },
   way: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   // A tiny zero by each way: muted until it's been earned, then teal.
-  ring: { width: 9, height: 12, borderWidth: 2, borderColor: colors.line, borderRadius: 6 },
+  ring: { width: 9, height: 12, borderWidth: 2, borderColor: colors.edge, borderRadius: 6 },
   ringEarned: { borderColor: colors.teal },
   label: { flex: 1 },
   earned: {

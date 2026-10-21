@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: withAlpha(colors.panel, 0.85),
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.edge,
     borderRadius: radii.md,
     paddingVertical: 9,
     paddingHorizontal: 12,

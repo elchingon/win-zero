@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
     padding: space.md,
     borderRadius: radii.md,
     borderWidth: 2,
-    borderColor: colors.line,
+    borderColor: colors.edge,
     backgroundColor: colors.panel2,
   },
   last: { borderColor: colors.amber },

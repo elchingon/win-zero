@@ -6,7 +6,8 @@ export const colors = {
   ink2: '#151A44',
   panel: '#1B2150',
   panel2: '#252C68',
-  line: '#353D80',
+  line: '#353D80', // dividers and containers
+  edge: '#7078BC', // edges of controls, and marks that carry meaning: 3:1 or more on every surface
   fg: '#F5F0E6',
   muted: '#AAB0D8',
   amber: '#FFB52E', // primary

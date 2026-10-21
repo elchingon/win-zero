@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
   small: { minHeight: MIN_TARGET, paddingVertical: 9, paddingHorizontal: 12, borderRadius: radii.sm },
   smallLabel: { fontSize: 13 },
   primary: { backgroundColor: colors.amber, boxShadow: `0 4px 0 ${colors.amberDeep}` },
-  ghost: { borderWidth: 1, borderColor: colors.line },
+  ghost: { borderWidth: 1, borderColor: colors.edge },
   danger: { borderWidth: 1, borderColor: colors.flare },
   disabled: { opacity: 0.4 },
   link: { minHeight: MIN_TARGET, justifyContent: 'center', alignSelf: 'flex-start' },

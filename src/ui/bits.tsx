@@ -212,7 +212,7 @@ export const shared = StyleSheet.create({
   chipTarget: { minHeight: MIN_TARGET, minWidth: MIN_TARGET, justifyContent: 'center' },
   chip: {
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.edge,
     borderRadius: radii.pill,
     paddingVertical: 7,
     paddingHorizontal: 12,
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: colors.panel,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.edge,
     borderRadius: radii.md,
     padding: 14,
     fontFamily: fonts.bodySemiBold,

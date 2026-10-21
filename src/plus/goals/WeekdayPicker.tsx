@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.edge,
     alignItems: 'center',
     justifyContent: 'center',
   },

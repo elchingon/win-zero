@@ -160,9 +160,9 @@ const glyphs = StyleSheet.create({
   no: { ...ring, borderWidth: 2, borderColor: colors.flare },
   shielded: { ...ring, borderWidth: 3, borderColor: colors.teal, boxShadow: `0 0 6px ${colors.teal}99` },
   missed: { width: 8, height: 8, borderRadius: 4, borderWidth: 1.5, borderColor: colors.flare },
-  paused: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.line },
+  paused: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.edge },
   pending: { ...ring, borderWidth: 1.5, borderColor: colors.amber, opacity: 0.6 },
-  rest: { width: 8, height: 2, borderRadius: 1, backgroundColor: colors.line },
+  rest: { width: 8, height: 2, borderRadius: 1, backgroundColor: colors.edge },
 });
 
 const styles = StyleSheet.create({

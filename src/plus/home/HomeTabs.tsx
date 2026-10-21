@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
   tabs: {
     flexDirection: 'row',
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.edge,
     borderRadius: radii.pill,
     padding: space.xxs,
     gap: space.xxs,

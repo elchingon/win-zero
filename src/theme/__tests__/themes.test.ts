@@ -7,24 +7,10 @@ import { BULLET_LOOKS } from '@/game/look';
 
 import { THEME_LOOKS } from '../themes';
 import { colors, zeroPalette } from '../tokens';
+import { contrast, luminance } from './contrast';
 
 /** WCAG AA for text, stricter than the 3:1 that graphics need. */
 const MIN_CONTRAST = 4.5;
-
-/** WCAG relative luminance of a #RRGGBB color. */
-function luminance(hex: string): number {
-  const n = Number.parseInt(hex.slice(1), 16);
-  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((c) => {
-    const s = c / 255;
-    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
-  });
-  return 0.2126 * (r ?? 0) + 0.7152 * (g ?? 0) + 0.0722 * (b ?? 0);
-}
-
-function contrast(a: string, b: string): number {
-  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
-  return ((hi ?? 0) + 0.05) / ((lo ?? 0) + 0.05);
-}
 
 describe('theme looks (SPEC 9)', () => {
   it('has a look for every theme and nothing else', () => {
