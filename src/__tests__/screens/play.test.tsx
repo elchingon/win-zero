@@ -188,6 +188,14 @@ describe('accessibility switches', () => {
     expect(mockRounds.at(-1)?.reduceMotion).toBe(true);
   });
 
+  it('offers Finish round with the switch on, and no screen reader', async () => {
+    appStore.setState({ goals: [{ goal, round: dayRound(), seenThrough: null }], credits: wallet(0) });
+    await open('/play');
+    expect(screen.queryByRole('button', { name: 'Finish round' })).not.toBeOnTheScreen();
+    await act(async () => appStore.getState().setPref('finishButton', true));
+    expect(screen.getByRole('button', { name: 'Finish round' })).toBeOnTheScreen();
+  });
+
   it('plays with auto-fire on, and its hint says touches aim', async () => {
     appStore.setState({ goals: [{ goal, round: dayRound(), seenThrough: null }], credits: wallet(0) });
     appStore.getState().setPref('autoFire', true);

@@ -345,6 +345,8 @@ describe('Settings', () => {
     expect(appStore.getState().prefs.reduceEffects).toBe(true);
     await fireEvent(screen.getByRole('switch', { name: 'Auto-fire' }), 'valueChange', true);
     expect(appStore.getState().prefs.autoFire).toBe(true);
+    await fireEvent(screen.getByRole('switch', { name: 'Finish round button' }), 'valueChange', true);
+    expect(appStore.getState().prefs.finishButton).toBe(true);
   });
 
   it('opens How it works', async () => {

@@ -246,6 +246,8 @@ function Round(props: {
   const insets = useSafeAreaInsets();
   const reduceMotion = useReduceEffects();
   const screenReader = useScreenReader();
+  // Finish round: always with a screen reader, since the game is visual, or when asked for.
+  const finishButton = useApp((s) => s.prefs.finishButton) || screenReader;
   const sound = useApp((s) => s.prefs.sound);
   // A goal's round has that goal's bombs; a bonus round gets as many as every goal has banked.
   const bankedBombs = useApp((s) => (goalId ? (slotById(s, goalId)?.goal.bombs ?? 0) : totalBombs(s)));
@@ -408,7 +410,7 @@ function Round(props: {
           onQuit={toBase}
           controls={!over}
           hintKey={seed}
-          onFinish={screenReader ? finish : undefined}
+          onFinish={finishButton ? finish : undefined}
           extra={
             mode === 'practice' ? (
               <Text style={styles.meter}>

@@ -150,6 +150,12 @@ export default function Settings() {
             value={prefs.autoFire}
             onChange={(v) => store.setPref('autoFire', v)}
           />
+          <ToggleRow
+            label="Finish round button"
+            detail="A button in every round that clears all the zeros at once. Always there with a screen reader on."
+            value={prefs.finishButton}
+            onChange={(v) => store.setPref('finishButton', v)}
+          />
         </View>
       </View>
 
