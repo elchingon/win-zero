@@ -74,13 +74,100 @@ QA matrix's, at the end.
     language.
   - Copy the app's **Apple ID** (a number) into `eas.json` under
     `submit.production.ios.ascAppId`.
-- [ ] **Play Console (organization account) → Create app.**
-  - Fields: **Win Zero**, App, Free, and the declarations.
-- [ ] **Play service account.**
-  1. Create it in Google Cloud.
-  2. Invite it in Play Console → Users and permissions, with release rights for this app.
-  3. Upload its JSON key to EAS: `eas credentials` → Android → Google Service Account.
-  4. Don't commit the key.
+- [ ] **Play Console → Create app.** Sign in at
+  [play.google.com/console](https://play.google.com/console) with the organization developer
+  account, open **Home** and select **Create app**. The form:
+  - **App name:** `Win Zero`. Google Play shows it, and it can change later.
+  - **Default language:** English (United States) – en-US.
+  - **App or game:** App.
+  - **Free or paid:** Free. Play never lets a free app become paid, so this choice is final. Plus is
+    created as Paid (Win Zero Plus, below).
+  - **Contact email:** `e7urgent@gmail.com`, as in `listing.md`. Google Play users see it.
+  - **Declarations:** tick **Developer Program Policies** and **US export laws**, and accept the
+    **Play App Signing Terms of Service**.
+  - Select **Create app**. It doesn't ask for the package name: the first AAB uploaded sets it to
+    `com.e7systems.winzero`, and it can't change after that. The app's **Dashboard** then lists the
+    setup tasks, and section 4 has the answers.
+- [ ] **Play service account:** only needed for `eas submit` ("Play service account", below).
+  Skip it while you build on this Mac and upload in Play Console, as the release run sheet does.
+
+### Play service account
+
+`eas submit` uploads Android builds to Play through Google's API. It signs in as a Google Cloud
+*service account*: a robot user with its own email, and a JSON key file instead of a password.
+Builds you upload in Play Console yourself don't need one. One account and one key cover both apps.
+
+1. **Make the account in Google Cloud.** Sign in at
+   [console.cloud.google.com](https://console.cloud.google.com) with the Google account you use for
+   Play Console.
+   1. In the project picker (top bar), choose **New project**, name it `win-zero-play` for example,
+      select **Create**, then select the new project in the picker.
+   2. Under **APIs & Services → Library**, search for **Google Play Android Developer API** and
+      select **Enable**. Without it, uploads fail even when the permissions are right.
+   3. Under **IAM & Admin → Service accounts**, select **Create service account**. Name it
+      `eas-submit` and finish (**Create and close**, or **Done**) without adding Cloud roles:
+      Play Console grants its access in step 3.
+   4. Copy the account's email from the list. It looks like
+      `eas-submit@win-zero-play.iam.gserviceaccount.com`.
+2. **Make its key.** Open the account, then **Keys → Add key → Create new key → JSON →
+   Create**. A `.json` file downloads.
+   - Move it out of Downloads into a folder outside the repo, such as `~/Secrets/`. Anyone with
+     the file can release your apps. Never commit it: `.gitignore` only catches names containing
+     `service-account`.
+   - If Google says "Service account key creation is disabled", the Cloud organization enforces
+     the policy `iam.disableServiceAccountKeyCreation`. Someone with the Organization Policy
+     Administrator role turns it off for this project (**IAM & Admin → Organization policies**).
+     Then try again.
+3. **Let it into Play Console.** In Play Console's left menu (outside any app), open **Users and
+   permissions**, then **Invite new users**:
+   - **Email address:** the service account's email.
+   - On the **App permissions** tab, select **Add app**, tick **Win Zero** and **Win Zero Plus**,
+     then **Apply**. The run sheet creates Plus's record first, so both exist by now. An app made
+     later is added the same way, from the account's row in Users and permissions.
+   - Tick these permissions and leave the rest off (no Admin, financial data, orders or review
+     replies). Play ticks a few related ones itself; leave those on.
+     - View app information (read-only)
+     - Edit and delete draft apps
+     - Release to production, exclude devices, and use Play App Signing
+     - Release apps to testing tracks
+     - Manage testing tracks and edit tester lists
+     - Manage store presence
+   - Select **Apply**, then **Invite user**. A service account doesn't confirm by email, but Play
+     can take some hours, up to a day, to let it in.
+4. **Give the key to EAS,** once for each app. Run this from the repo root, signed in to Expo
+   (`eas whoami` shows the account; `eas login` if it doesn't):
+
+   ```
+   eas credentials --platform android
+   ```
+
+   Then answer the prompts:
+   1. **Which build profile do you want to configure?** Choose `production` for Win Zero, or
+      `production-plus` for Plus. The profile decides which app you're setting up. EAS then prints
+      that app's credentials, headed by **Application Identifier**. Carry on only if it reads
+      `com.e7systems.winzero` (or `com.e7systems.winzeroplus`).
+   2. **What do you want to do?** Choose **Google Service Account**.
+   3. **What do you want to do?** Choose **Manage your Google Service Account Key for Play Store
+      Submissions**.
+   4. **What do you want to do?** Choose **Set up a Google Service Account Key for Play Store
+      Submissions**.
+   5. The first app asks **Path to Google Service Account file:**. Delete the sample name it
+      fills in, and type the key's full path, such as `/Users/<you>/Secrets/win-zero-play-1a2b.json`
+      (`~` doesn't work here). EAS checks the file and stores it in the Expo account.
+      The second app asks **Select the Google Service Account Key to use for your project:**.
+      Choose **[Choose an existing key]**, then the same key.
+   6. The key now shows under **Submissions: Google Service Account Key for Play Store
+      Submissions**. Choose **Exit**.
+
+   Nothing goes into `eas.json` or the repo: `eas submit` looks the key up by the app. Keep the
+   downloaded file as a backup, or delete it: step 2 can make a new key at any time.
+5. **If the first `eas submit` fails:**
+   - "The caller does not have permission": Play hasn't let the account in yet. Wait a few hours
+     after step 3 and try again.
+   - "Only releases with status draft may be created on draft app": the app has never had a
+     release. Make the first one by hand in Play Console ("Store builds on this Mac", in section 3).
+     Or add `"releaseStatus": "draft"` to the submit profile's `android` in `eas.json`, and finish
+     the release in Play Console.
 
 ## 3. Build and test
 
@@ -153,8 +240,10 @@ variant disagree. `npm run check:variants` (also in CI) checks both apps' config
   - App Store Connect → New App: **Win Zero Plus**, bundle ID `com.e7systems.winzeroplus`. Copy its
     Apple ID into `eas.json` under `submit.production-plus.ios.ascAppId` (for EAS submit), and into
     the Win Zero review notes in `answers.md`.
-  - Play Console → Create app: **Win Zero Plus**, App, **Paid**. Google Play never lets an app that
-    has been free become paid, so choose Paid now, and never publish it as free on any track.
+  - Play Console → Create app: the same form as Win Zero's (section 2), with the name **Win Zero
+    Plus** and **Paid**. Google Play never lets an app that has been free become paid, so choose
+    Paid now, and never publish it as free on any track. Its first AAB sets the package name to
+    `com.e7systems.winzeroplus`.
 - [ ] **Getting paid (Apple):** App Store Connect → Business: the **Paid Apps Agreement** must be
   Active, with tax forms and a bank account, before a paid app can be sold. The Account Holder
   signs it. Then enroll in the **App Store Small Business Program**, which takes 15% rather than
