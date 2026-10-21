@@ -1,8 +1,9 @@
 'worklet';
 // The turret's trigger, as in the prototype: touch-down aims at the finger and fires, dragging
-// aims, and holding keeps firing at the fire rate. The Shooter, and any mode with a turret or a
-// gun of its own, pull it through these. A leaf file, so modes can use it without importing
-// input.ts, which imports them.
+// aims, and holding keeps firing at the fire rate. With auto-fire, the first touch starts it and
+// lifting doesn't stop it, so touches only aim. The Shooter, and any mode with a turret or a gun
+// of its own, pull it through these. A leaf file, so modes can use it without importing input.ts,
+// which imports them.
 import { FIRE_INTERVAL, MIN_TAP_INTERVAL, TIME_EPSILON } from './constants';
 import { fireShot } from './fire';
 import type { GameState } from './types';
@@ -24,8 +25,9 @@ export function moveAim(s: GameState, x: number, y: number): void {
   aimAt(s, x, y);
 }
 
+/** Lift: firing stops, unless auto-fire keeps it going until the round is won. */
 export function releaseFire(s: GameState): void {
-  s.firing = false;
+  if (!s.autoFire) s.firing = false;
 }
 
 /** Holding fires every FIRE_INTERVAL, carrying the remainder so slow frames keep the rate. */

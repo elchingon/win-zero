@@ -355,11 +355,12 @@ export function stepBreaker(s: GameState, dt: number): void {
   const target = Math.max(bs.half, Math.min(s.width - bs.half, bs.targetX));
   const most = PADDLE_SPEED * s.width * dt;
   bs.paddleX += Math.max(-most, Math.min(most, target - bs.paddleX));
-  // The Laser Paddle fires the Rail Laser straight up from the paddle at the fire rate.
+  // The Laser Paddle fires the Rail Laser straight up from the paddle at the fire rate, while a
+  // finger is down, or all the time with auto-fire.
   s.muzzleX = bs.paddleX;
   s.muzzleY = s.bottom;
   s.aim = -Math.PI / 2;
-  s.firing = bs.laser && s.pointer.down && s.phase === 'play';
+  s.firing = bs.laser && (s.pointer.down || s.autoFire) && s.phase === 'play';
   updateFiring(s);
   for (let i = 0; i < s.zeros.length; i++) {
     const z = s.zeros[i];

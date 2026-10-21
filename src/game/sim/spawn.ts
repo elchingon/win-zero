@@ -252,6 +252,7 @@ export function buildGame(cfg: GameConfig, mode: ModeId): GameState {
     pointer: { down: false, x: 0, y: 0 },
     aim: -Math.PI / 2,
     firing: false,
+    autoFire: cfg.autoFire ?? false,
     sinceShot: Infinity,
     sinceDamage: 0,
 

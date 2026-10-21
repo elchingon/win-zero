@@ -7,7 +7,8 @@ import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } fr
 
 import { modeTier, type ModeDef, type ModeId, type WeaponId } from '@/engine';
 import { colors, fonts, fontScale, radii, space } from '@/theme/tokens';
-import { MODE_COPY } from '@/ui/copy/modes';
+import { useApp } from '@/store';
+import { MODE_COPY, modeHint } from '@/ui/copy/modes';
 import { feedback } from '@/ui/feedback';
 import { Popup } from '@/ui/Popup';
 
@@ -28,6 +29,7 @@ export function ModePicker(props: {
   // A screen reader moves to the question as the card lands.
   const title = useRef<Text>(null);
   const { height } = useWindowDimensions();
+  const autoFire = useApp((s) => s.prefs.autoFire);
 
   return (
     <Popup onDismiss={() => onPick(current)} focus={title}>
@@ -45,7 +47,7 @@ export function ModePicker(props: {
             <Pressable
               key={m.id}
               accessibilityRole="button"
-              accessibilityLabel={MODE_PICKER.option(m.name, MODE_COPY[m.id].hint, tier, last)}
+              accessibilityLabel={MODE_PICKER.option(m.name, modeHint(m.id, autoFire), tier, last)}
               accessibilityHint={MODE_PICKER.optionHint}
               onPress={() => {
                 feedback.press();
@@ -57,7 +59,7 @@ export function ModePicker(props: {
                 <Text style={styles.name}>{m.name}</Text>
                 {last ? <Text style={styles.tag}>{MODE_PICKER.current}</Text> : null}
               </View>
-              <Text style={styles.hint}>{MODE_COPY[m.id].hint}</Text>
+              <Text style={styles.hint}>{modeHint(m.id, autoFire)}</Text>
               <Text style={styles.tier}>{tier}</Text>
             </Pressable>
           );

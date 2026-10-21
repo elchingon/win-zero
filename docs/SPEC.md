@@ -99,7 +99,7 @@ The HUD counter always shows **zero value remaining**, not object count.
 | 60 | Rail Laser | 2 dmg to every zero on the line |
 | 100 | Zero Nuke | 6 dmg direct, 3 dmg splash, chain to 6 |
 
-Hold to fire at about 6 shots/sec.
+A tap shoots, and holding keeps firing at about 6 shots/sec (the hint: "Tap to shoot · hold to keep firing"). With **Auto-fire** on (Settings › Accessibility), the first touch starts firing and lifting doesn't stop it, so touches only aim; it applies wherever the finger fires (the Shooter, Orbit, Breaker's Laser Paddle).
 
 **Bombs:** +1 every time `streak` hits a multiple of 5. Banked and never lost. Using one deals 8 dmg to every zero within 42% of the screen's longest side.
 

@@ -18,7 +18,7 @@ import { WEAPON_PROMPT } from '@/ui/copy/credits';
 jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock'));
 jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
-const mockRounds: { n: number; mode?: string; look: ThemeLook; reduceMotion: boolean }[] = [];
+const mockRounds: { n: number; mode?: string; autoFire?: boolean; look: ThemeLook; reduceMotion: boolean }[] = [];
 /** Clears the round on the canvas: its last zero goes, and the fill lands. */
 const mockCanvas: { clear: () => void } = { clear: () => {} };
 jest.mock('@/game/GameCanvas', () => {
@@ -27,7 +27,7 @@ jest.mock('@/game/GameCanvas', () => {
   return {
     GameCanvas: (props: {
       weapon: { name: string };
-      round: { n: number; mode?: string; seed: number };
+      round: { n: number; mode?: string; autoFire?: boolean; seed: number };
       look: ThemeLook;
       reduceMotion: boolean;
       onReport: (r: object) => void;
@@ -187,6 +187,14 @@ describe('accessibility switches', () => {
     await act(async () => appStore.getState().setPref('reduceEffects', true));
     expect(mockRounds.at(-1)?.reduceMotion).toBe(true);
   });
+
+  it('plays with auto-fire on, and its hint says touches aim', async () => {
+    appStore.setState({ goals: [{ goal, round: dayRound(), seenThrough: null }], credits: wallet(0) });
+    appStore.getState().setPref('autoFire', true);
+    await open('/play');
+    expect(mockRounds.at(-1)).toMatchObject({ autoFire: true });
+    expect(screen.getByText('Tap to aim · firing keeps going', { includeHiddenElements: true })).toBeOnTheScreen();
+  });
 });
 
 describe('the game mode (SPEC 9)', () => {
@@ -195,7 +203,7 @@ describe('the game mode (SPEC 9)', () => {
     await open('/play');
     expect(screen.queryByRole('header', { name: 'Pick your game' })).not.toBeOnTheScreen();
     expect(mockRounds.at(-1)?.mode).toBe('shooter');
-    expect(screen.getByText('Hold anywhere to fire', { includeHiddenElements: true })).toBeOnTheScreen();
+    expect(screen.getByText('Tap to shoot · hold to keep firing', { includeHiddenElements: true })).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Weapon: Twin Barrel' })).toBeOnTheScreen();
     expect(screen.getByText('WEAPON · TAP TO SWITCH')).toBeOnTheScreen();
   });

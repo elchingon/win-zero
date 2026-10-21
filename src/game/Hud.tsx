@@ -9,7 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { ModeId } from '@/engine';
 import { colors, fonts, fontScale, radii, type, withAlpha } from '@/theme/tokens';
-import { MODE_COPY } from '@/ui/copy/modes';
+import { MODE_COPY, modeHint } from '@/ui/copy/modes';
 import { feedback } from '@/ui/feedback';
 import { MIN_TARGET } from '@/ui/target';
 
@@ -80,6 +80,8 @@ export function Hud(props: {
   label: string;
   /** The game mode: its hint, and what it calls the power-up. */
   mode: ModeId;
+  /** Auto-fire is on: the hint says touches aim. */
+  autoFire?: boolean;
   /** The power-up equipped, in the mode's words: "Rocket" in the Shooter. */
   tierName: string;
   /** The round has more than one power-up. */
@@ -132,7 +134,7 @@ export function Hud(props: {
         </View>
       </View>
 
-      <Hint key={p.hintKey} text={copy.hint} />
+      <Hint key={p.hintKey} text={modeHint(p.mode, !!p.autoFire)} />
 
       {p.controls ? (
         <View style={[styles.bottom, { bottom: insets.bottom + EDGE }]} pointerEvents="box-none">

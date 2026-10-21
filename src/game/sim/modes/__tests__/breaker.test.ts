@@ -239,6 +239,17 @@ describe('power-ups', () => {
     run(s, 1);
     expect(s.firing).toBe(false);
   });
+
+  it('Laser Paddle with auto-fire: keeps firing after the finger lifts', () => {
+    const s = modeGame('breaker', 60, { weapon: 'laser', autoFire: true });
+    popIn(s);
+    pointerDown(s, s.width / 2, 400);
+    step(s, DT);
+    pointerUp(s);
+    run(s, 1);
+    expect(s.firing).toBe(true);
+    expect(s.beams.count).toBeGreaterThan(0);
+  });
 });
 
 describe('the late-round assist', () => {

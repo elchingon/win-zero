@@ -27,7 +27,7 @@ describe('game picker (SPEC 9)', () => {
     expect(
       screen.getByRole('button', { name: 'Catch, your last pick. Slide anywhere to catch the zeros. Catcher: Twin Cups.' }),
     ).toBeOnTheScreen();
-    expect(screen.getByRole('button', { name: 'Shooter. Hold anywhere to fire. Weapon: Twin Barrel.' })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Shooter. Tap to shoot · hold to keep firing. Weapon: Twin Barrel.' })).toBeOnTheScreen();
     expect(screen.getByText('Last pick')).toBeOnTheScreen();
   });
 

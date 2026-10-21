@@ -343,6 +343,8 @@ describe('Settings', () => {
     expect(reduce.props.value).toBe(false);
     await fireEvent(reduce, 'valueChange', true);
     expect(appStore.getState().prefs.reduceEffects).toBe(true);
+    await fireEvent(screen.getByRole('switch', { name: 'Auto-fire' }), 'valueChange', true);
+    expect(appStore.getState().prefs.autoFire).toBe(true);
   });
 
   it('opens How it works', async () => {

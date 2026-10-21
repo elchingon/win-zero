@@ -4,7 +4,7 @@ import { describe, expect, it } from '@jest/globals';
 
 import { modeById, WEAPONS, type ModeId } from '@/engine';
 
-import { MODE_COPY, powerUp } from '../modes';
+import { MODE_COPY, modeHint, powerUp } from '../modes';
 
 /** Modes whose lines are final: the Shooter, and each mode as its round lands. */
 const FINAL: readonly ModeId[] = ['shooter', 'catch', 'orbit', 'slice', 'breaker'];
@@ -12,17 +12,27 @@ const FINAL: readonly ModeId[] = ['shooter', 'catch', 'orbit', 'slice', 'breaker
 const MAX_HINT = 40;
 
 describe('MODE_COPY', () => {
-  it('keeps the Shooter’s words exactly as they shipped', () => {
+  it('gives the Shooter the prototype’s hint: a tap shoots, and holding keeps firing', () => {
     expect(MODE_COPY.shooter).toEqual({
-      hint: 'Hold anywhere to fire',
+      hint: 'Tap to shoot · hold to keep firing',
+      autoFireHint: 'Tap to aim · firing keeps going',
       tier: 'Weapon',
       switchHint: 'Switches to your next weapon',
     });
   });
 
+  it('says touches aim with auto-fire on, in the modes where the finger fires', () => {
+    expect(modeHint('shooter', true)).toBe('Tap to aim · firing keeps going');
+    expect(modeHint('orbit', true)).toBe('Tap to aim · firing keeps going');
+    expect(modeHint('shooter', false)).toBe(MODE_COPY.shooter.hint);
+    // Catch, Slice and Breaker are played by sliding and swiping, with auto-fire or without.
+    for (const mode of ['catch', 'slice', 'breaker'] as const) expect(modeHint(mode, true)).toBe(MODE_COPY[mode].hint);
+  });
+
   it.each(FINAL)('%s: a short, plain hint, and a switch that says what it does', (mode) => {
     const copy = MODE_COPY[mode];
     expect(copy.hint.length).toBeLessThanOrEqual(MAX_HINT);
+    expect((copy.autoFireHint ?? '').length).toBeLessThanOrEqual(MAX_HINT);
     expect(copy.hint).not.toMatch(/[!?]/);
     expect(copy.switchHint).toMatch(/^Switches to your next /);
   });

@@ -273,6 +273,8 @@ export interface GameConfig {
   reduceMotion: boolean;
   /** The game mode. Unset, or a mode whose round isn't built, plays the Shooter. */
   mode?: ModeId;
+  /** Auto-fire (Settings › Accessibility): after the first touch, firing keeps going. Off when unset. */
+  autoFire?: boolean;
 }
 
 /** What happened since the last report, sent to the JS thread at most once a frame. */
@@ -342,6 +344,8 @@ export interface GameState {
   /** Aim angle from the muzzle, radians; straight up is -π/2. */
   aim: number;
   firing: boolean;
+  /** Auto-fire: lifting the finger doesn't stop firing, so touches only aim. */
+  autoFire: boolean;
   /** Seconds since the last shot. */
   sinceShot: number;
   /** Seconds since a zero last took damage, so a mode can help with the last few. */

@@ -6,6 +6,8 @@ import { modeTier, type ModeId, type WeaponDef } from '@/engine';
 export interface ModeCopy {
   /** Shown over the board as the round starts, then fades. */
   hint: string;
+  /** The hint with auto-fire on (Settings › Accessibility), in modes where the finger fires. */
+  autoFireHint?: string;
   /** What the switch button calls the power-up: "Weapon: Rocket". */
   tier: string;
   /** Read out on the switch button. */
@@ -13,12 +15,28 @@ export interface ModeCopy {
 }
 
 export const MODE_COPY: Record<ModeId, ModeCopy> = {
-  shooter: { hint: 'Hold anywhere to fire', tier: 'Weapon', switchHint: 'Switches to your next weapon' },
+  shooter: {
+    hint: 'Tap to shoot · hold to keep firing',
+    autoFireHint: 'Tap to aim · firing keeps going',
+    tier: 'Weapon',
+    switchHint: 'Switches to your next weapon',
+  },
   catch: { hint: 'Slide anywhere to catch the zeros', tier: 'Catcher', switchHint: 'Switches to your next catcher' },
-  orbit: { hint: 'Hold anywhere to fire all round', tier: 'Weapon', switchHint: 'Switches to your next weapon' },
+  orbit: {
+    hint: 'Tap or hold to fire all round',
+    autoFireHint: 'Tap to aim · firing keeps going',
+    tier: 'Weapon',
+    switchHint: 'Switches to your next weapon',
+  },
   slice: { hint: 'Swipe across the zeros to slice them', tier: 'Power-up', switchHint: 'Switches to your next power-up' },
   breaker: { hint: 'Slide anywhere to move the paddle', tier: 'Power-up', switchHint: 'Switches to your next power-up' },
 };
+
+/** The hint as a round starts in `mode`, with auto-fire on or off. */
+export function modeHint(mode: ModeId, autoFire: boolean): string {
+  const copy = MODE_COPY[mode];
+  return (autoFire && copy.autoFireHint) || copy.hint;
+}
 
 export interface PowerUp {
   /** What the mode calls it: 'Twin Cups' for the Twin Barrel's tier in Catch. */

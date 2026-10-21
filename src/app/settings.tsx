@@ -144,6 +144,12 @@ export default function Settings() {
             value={prefs.reduceEffects}
             onChange={(v) => store.setPref('reduceEffects', v)}
           />
+          <ToggleRow
+            label="Auto-fire"
+            detail="Once you touch the screen in a round, firing keeps going on its own. Tap or drag to aim."
+            value={prefs.autoFire}
+            onChange={(v) => store.setPref('autoFire', v)}
+          />
         </View>
       </View>
 

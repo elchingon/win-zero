@@ -260,13 +260,15 @@ function Round(props: {
   // Read once: replays keep the round's mode and theme.
   const [gameMode] = useState(() => linkMode ?? gameModeOf(appStore.getState()));
   const [look] = useState(() => THEME_LOOKS[theme ?? themeOf(appStore.getState())]);
+  // Settings › Accessibility, which can't change mid-round.
+  const [autoFire] = useState(() => appStore.getState().prefs.autoFire);
 
   const groups = useMemo(() => composeRound(n).groups, [n]);
   const fill = useMemo(() => fillPlan(n), [n]);
   const [seed, setSeed] = useState(newSeed);
   const round = useMemo<RoundSetup>(
-    () => ({ n, groups, fill, width, height, insetTop: insets.top, insetBottom: insets.bottom, seed, mode: gameMode }),
-    [n, groups, fill, width, height, insets.top, insets.bottom, seed, gameMode],
+    () => ({ n, groups, fill, width, height, insetTop: insets.top, insetBottom: insets.bottom, seed, mode: gameMode, autoFire }),
+    [n, groups, fill, width, height, insets.top, insets.bottom, seed, gameMode, autoFire],
   );
 
   const game = useRef<GameHandle>(null);
@@ -394,6 +396,7 @@ function Round(props: {
           total={n}
           label={hudLabel(mode, n)}
           mode={gameMode}
+          autoFire={autoFire}
           tierName={modeTier(gameMode, weapon.id)}
           canSwitch={weapons.length > 1}
           onSwitchWeapon={switchWeapon}

@@ -7,7 +7,7 @@ import { type WeaponId } from '@/engine';
 
 import { dropBomb } from '../bomb';
 import { MAX_BOLTS, MAX_BULLETS, MAX_PARTICLES, MAX_RINGS } from '../constants';
-import { moveAim, pressFire } from '../input';
+import { moveAim, pressFire, releaseFire } from '../input';
 import { resetReport } from '../report';
 import { step } from '../step';
 import type { GameState } from '../types';
@@ -17,6 +17,8 @@ import { game } from './fixtures';
 const FPS = 60;
 /** Give up on a round after this long. */
 const LIMIT_S = 240;
+/** With auto-fire, the bot only taps to aim, this many frames apart (twice a second). */
+const TAP_FRAMES = FPS / 2;
 
 interface Played {
   seconds: number;
@@ -27,8 +29,12 @@ interface Played {
   state: GameState;
 }
 
-function play(n: number, weapon: WeaponId, opts: { bombs?: number; seed?: number; reduceMotion?: boolean } = {}): Played {
-  const s = game(n, { weapon, seed: opts.seed ?? n, reduceMotion: opts.reduceMotion ?? false });
+function play(
+  n: number,
+  weapon: WeaponId,
+  opts: { bombs?: number; seed?: number; reduceMotion?: boolean; autoFire?: boolean } = {},
+): Played {
+  const s = game(n, { weapon, seed: opts.seed ?? n, reduceMotion: opts.reduceMotion ?? false, autoFire: opts.autoFire });
   let peakParticles = 0;
   let bombs = opts.bombs ?? 0;
   let finals = 0;
@@ -40,7 +46,12 @@ function play(n: number, weapon: WeaponId, opts: { bombs?: number; seed?: number
     const z = target(s);
     if (z && s.phase === 'play') {
       const aim = lead(s, z);
-      if (held) moveAim(s, aim.x, aim.y);
+      if (opts.autoFire) {
+        if (frame % TAP_FRAMES === 0) {
+          pressFire(s, aim.x, aim.y);
+          releaseFire(s);
+        }
+      } else if (held) moveAim(s, aim.x, aim.y);
       else pressFire(s, aim.x, aim.y);
       held = true;
     }
@@ -97,6 +108,12 @@ describe('a whole round', () => {
     const plain = play(60, 'pea');
     const bombed = play(60, 'pea', { bombs: 1 });
     expect(bombed.seconds).toBeLessThan(plain.seconds);
+  });
+
+  it('plays an auto-fire round through on taps alone, twice a second', () => {
+    const tapped = play(30, 'rocket', { autoFire: true });
+    expect(tapped.state.phase).toBe('done');
+    expect([tapped.finals, tapped.results]).toEqual([1, 1]);
   });
 
   it('plays a reduce-motion round through, with far fewer particles', () => {
