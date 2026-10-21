@@ -23,16 +23,16 @@ Win Zero
 One goal. One daily check-in.
 ```
 
-### Promotional text (170 max): 141
+### Promotional text (170 max): 161
 ```
-Pick one goal and check in each evening. Every Yes adds a zero to your next round, and shooting them down is the fun part. No account needed.
+Pick one goal and check in once a day, at a time you choose. Every Yes adds a zero to your next round, and shooting them down is the fun part. No account needed.
 ```
 
 ### Description (4000 max)
 ```
 Win Zero is a daily habit tracker with a small arcade game built in.
 
-Pick one goal: moving more, reading every night, cutting back on drinking, or anything else you want to stick to. Each evening, Win Zero asks one question: did you stick to it today?
+Pick one goal: moving more, reading every night, cutting back on drinking, or anything else you want to stick to. Every day, at a time you choose, Win Zero asks one question: did you stick to it today?
 
 Say Yes, and you play a quick shooting round. Your streak is the number of zeros on screen, so day 1 is one zero and day 30 is thirty. Clear the last one for the big finish, and watch the screen fill with every day you've earned.
 
@@ -92,7 +92,7 @@ One goal, one check-in a day. Every Yes adds a zero to shoot down. No account.
 ```
 Win Zero is a daily habit tracker with a small arcade game built in.
 
-Pick one goal: moving more, reading every night, cutting back on drinking, or anything else you want to stick to. Each evening, Win Zero asks one question: did you stick to it today?
+Pick one goal: moving more, reading every night, cutting back on drinking, or anything else you want to stick to. Every day, at a time you choose, Win Zero asks one question: did you stick to it today?
 
 Say Yes, and you play a quick shooting round. Your streak is the number of zeros on screen, so day 1 is one zero and day 30 is thirty. Clear the last one for the big finish, and watch the screen fill with every day you've earned.
 
