@@ -62,6 +62,7 @@ website/            winzero.app: Vite + React, deployed by Cloudflare Pages (see
 - `npm run gen:brand`: re-render the icons, splash and store art into assets/brand/ (from scripts/gen-brand.mjs); `gen:brand:plus` renders Plus's into assets/brand-plus/
 - Win Zero Plus: `npm run start:plus`, `eas build --profile development-plus`, `npm run check:variants` (both apps' configs); see docs/RELEASE.md
 - `eas build --profile development --platform ios|android`: build dev clients
-- `npm run build:android`: build a release APK and AAB locally into build/ (no dev server needed), debug-signed; `npm run build:android:upload` signs with the upload key named in .env.signing; `npm run install:android` puts the APK on a plugged-in phone
+- `npm run check:release:ios` (or `:plus`): before archiving in Xcode, check the links and Plus store page a release build takes from .env (EAS builds and Android upload builds check on their own)
+- `npm run build:android`: build a release APK and AAB locally into build/ (no dev server needed), debug-signed; `npm run build:android:upload -- --version-code N` signs with the upload key named in .env.signing, for Play; `npm run install:android` puts the APK on a plugged-in phone
 - `npm run open:ios`: put Win Zero's Xcode project in ios/ (parking Plus's in .ios-parked/), refresh it from app.json and open it in Xcode, for building there; `open:ios:plus` does the same for Plus
 - Website, from `website/`: `npm run dev`, `npm run build && npm run verify`, `npm run typecheck`, `npm run lint`, `npm test` (Vitest)
