@@ -55,6 +55,8 @@ describe('howItWorks', () => {
       .join(' ');
     expect(plus).toContain('Win Zero Plus asks one question');
     expect(RULES[0]?.text).toContain('Win Zero asks');
+    // Check-in time is the user's to pick, so Setup never says when in the day it comes.
+    expect(RULES[0]?.text).toBe('Every day at your check-in time, Win Zero asks one question: did you do it today?');
     expect(rules('Win Zero Plus')[0]?.text).toContain('Win Zero Plus asks');
   });
 

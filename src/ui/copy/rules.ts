@@ -35,7 +35,7 @@ export interface Rule {
 /** Setup's rules, beside their marks, for the app named `appName`. */
 export function rules(appName: string = FREE_APP_NAME): Rule[] {
   return [
-    { mark: '?', text: `Each evening at your check-in time, ${appName} asks one question: did you do it today?` },
+    { mark: '?', text: `Every day at your check-in time, ${appName} asks one question: did you do it today?` },
     { mark: '000', text: 'Yes adds a zero. Shoot every one of them. The last zero goes out with a huge explosion.' },
     {
       mark: '−1',

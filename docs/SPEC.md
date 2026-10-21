@@ -2,7 +2,7 @@
 
 Version 0.6 · October 18, 2026 · Owner: e7sal
 
-Win Zero is a daily habit app for iOS and Android. The user sets one daily goal (for example "Stop drinking" or "Exercise more"); Win Zero Plus allows up to three (section 9). Every evening the app asks whether they did it. Each "yes" adds a zero to a shooting round. The streak is the number of zeros on screen.
+Win Zero is a daily habit app for iOS and Android. The user sets one daily goal (for example "Stop drinking" or "Exercise more"); Win Zero Plus allows up to three (section 9). Every day, at a check-in time the user picks, the app asks whether they did it. Each "yes" adds a zero to a shooting round. The streak is the number of zeros on screen.
 
 The playable web prototype at `docs/prototype/win-zero.html` sets the **look, feel, and game juice**: palette, fonts, explosions, the final-zero celebration, and the screen filling with zeros. Open it in a browser. **Where the prototype's rules differ from this spec, this spec wins.** The prototype predates sections 3–6.
 
