@@ -16,6 +16,7 @@
       },
       "supportsTablet": false,
       "bundleIdentifier": "com.e7systems.winzero",
+      "appleTeamId": "UPCQA84MG4",
       "entitlements": {
         "com.apple.security.application-groups": [
           "group.com.e7systems.winzero"

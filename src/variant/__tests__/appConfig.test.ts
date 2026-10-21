@@ -90,6 +90,9 @@ describe('Win Zero Plus', () => {
     // The folder a move from Win Zero waits in (SPEC 9): both apps must be in the group.
     expect(plus.ios?.entitlements).toEqual(base.ios?.entitlements);
     expect(plus.ios?.entitlements?.['com.apple.security.application-groups']).toEqual(['group.com.e7systems.winzero']);
+    // One developer team signs both, so Xcode never asks for it again after a prebuild.
+    expect(plus.ios?.appleTeamId).toBe(base.ios?.appleTeamId);
+    expect(base.ios?.appleTeamId).toMatch(/^[A-Z0-9]{10}$/);
     expect(plus.extra).toEqual(base.extra);
     expect(plus.ios?.privacyManifests).toEqual(base.ios?.privacyManifests);
     expect(plus.android?.permissions).toEqual(base.android?.permissions);
