@@ -15,4 +15,9 @@ const publicEnv = Object.keys(process.env)
   .join('\n');
 config.cacheVersion = crypto.createHash('sha256').update(publicEnv).digest('hex').slice(0, 16);
 
+// The other app's Xcode project waits in .ios-parked/ (scripts/prebuild.mjs), Pods and all. Expo
+// leaves out ios/Pods the same way. Matches the folder as the crawler names it (relative to the
+// project) and every path in it as the watcher sees them (absolute).
+config.resolver.blockList = [...[config.resolver.blockList ?? []].flat(), /(?:^|[\\/])\.ios-parked(?:[\\/]|$)/];
+
 module.exports = config;

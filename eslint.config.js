@@ -5,8 +5,8 @@ const expoConfig = require('eslint-config-expo/flat');
 module.exports = defineConfig([
   expoConfig,
   {
-    // website/ has its own lint config.
-    ignores: ['dist/*', 'docs/*', '.expo/*', 'website/*'],
+    // website/ has its own lint config. .ios-parked/ is the other app's Xcode project.
+    ignores: ['dist/*', 'docs/*', '.expo/*', 'website/*', '.ios-parked/'],
   },
   {
     // Win Zero Plus's own code (src/plus) is required only where it's gated on the variant, with

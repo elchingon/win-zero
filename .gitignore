@@ -50,6 +50,8 @@ credentials/
 # generated native folders
 /ios
 /android
+# the other app's Xcode project, waiting for the next switch (scripts/prebuild.mjs)
+/.ios-parked
 
 # local release builds (npm run build:android)
 /build
