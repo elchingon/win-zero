@@ -33,7 +33,8 @@ import { useDeviceCalendar } from '@/ui/useDevice';
 import { useReminderPermission } from '@/ui/useReminderPermission';
 import { FEATURES } from '@/variant';
 
-import { HOME_COPY } from '../copy';
+import { GOAL_COPY, HOME_COPY } from '../copy';
+import { CallButton } from '../ui/CallButton';
 import { GoalPicker } from './GoalPicker';
 import { HomeTabs, type HomeTab } from './HomeTabs';
 import { homeCards } from './order';
@@ -150,7 +151,14 @@ export function MultiGoalHome() {
 
           <View style={styles.goal}>
             <Eyebrow>{goalEyebrow(shown.goal, firstWeekday)}</Eyebrow>
-            <Text style={type.goal}>{shown.goal.goal}</Text>
+            <View style={styles.title}>
+              <Text style={[type.goal, styles.titleText]}>{shown.goal.goal}</Text>
+              <CallButton
+                label={GOAL_COPY.edit}
+                accessibilityHint={GOAL_COPY.rowHint}
+                onPress={() => router.push({ pathname: '/goal', params: { id: shown.goal.goalId } })}
+              />
+            </View>
           </View>
 
           <Stats goal={shown.goal} today={today} />
@@ -180,5 +188,8 @@ export function MultiGoalHome() {
 const styles = StyleSheet.create({
   checkIn: { gap: space.xxl },
   goal: { gap: space.xs },
+  // Edit sits on the title's first line, however many it wraps to.
+  title: { flexDirection: 'row', alignItems: 'baseline', gap: space.md },
+  titleText: { flex: 1 },
   cardTitle: { fontFamily: fonts.bodyBold, fontSize: 17, color: colors.fg },
 });

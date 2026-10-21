@@ -35,6 +35,8 @@ const ROUTES = {
   notice: () => null,
   settings: () => null,
   setup: () => null,
+  goal: () => null,
+  'add-goal': () => null,
 };
 
 const tz = () => appStore.getState().timeZone();
@@ -47,7 +49,7 @@ async function open(goals: GoalSlot[], opts: { day?: string; time?: string } = {
   appStore.setState({ goals });
   const app = renderRouter(ROUTES, { initialUrl: '/' });
   await app;
-  return { pathname: () => app.getPathname() };
+  return { pathname: () => app.getPathname(), params: () => app.getSearchParams() };
 }
 
 /** Answered Yes on 10-13 and 10-14, so 10-15's check-in is open at 21:00 on 10-15. */
@@ -148,6 +150,7 @@ describe('Home with one goal in Win Zero Plus', () => {
     expect(screen.queryByRole('radio')).not.toBeOnTheScreen();
     expect(screen.queryByText(/caught up|Up next/)).not.toBeOnTheScreen();
     expect(screen.queryByRole('tab')).not.toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeOnTheScreen();
   });
 
   it('names the days of a goal that skips some, and asks about reminders without "each day"', async () => {
@@ -221,6 +224,21 @@ describe('Home with several goals', () => {
     await fireEvent.press(tab('Goals'));
     expect(screen.getByRole('radio', { name: 'Stop drinking' })).toBeOnTheScreen();
     expect(screen.queryByRole('header', { name: 'Arsenal' })).not.toBeOnTheScreen();
+  });
+
+  it('edits the goal picked, from beside its name', async () => {
+    const app = await open(two());
+    await fireEvent.press(screen.getByRole('button', { name: 'Edit' }));
+    expect(app.pathname()).toBe('/goal');
+    expect(app.params()).toMatchObject({ id: 'g1' });
+  });
+
+  it('edits the other goal once it is picked', async () => {
+    const app = await open(two());
+    await fireEvent.press(screen.getByRole('radio', { name: 'Run' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Edit' }));
+    expect(app.pathname()).toBe('/goal');
+    expect(app.params()).toMatchObject({ id: 'g2' });
   });
 
   it('says which goals have paused reminders', async () => {
