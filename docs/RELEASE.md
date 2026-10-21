@@ -94,10 +94,27 @@ variant disagree. `npm run check:variants` (also in CI) checks both apps' config
 - [ ] **Local builds:**
   - Android: `npm run build:android:plus`, or `build:android:plus:upload` with Plus's own upload
     key in `.env.signing.plus`. Install with `npm run install:android:plus`.
-  - iOS: `npm run open:ios:plus`.
-  - These regenerate `android/` or `ios/` from clean when it was last generated for the other app
-    (`scripts/prebuild.mjs`). `npm run android|ios` (`expo run`) doesn't check: after building the
-    other app, run `npx expo prebuild --clean` first.
+  - Android regenerates `android/` from clean when it was last generated for the other app
+    (`scripts/prebuild.mjs`). `npm run android` (`expo run`) doesn't check: after building the
+    other app, run `npx expo prebuild --platform android --clean` first.
+  - iOS: `npm run open:ios` for Win Zero, `npm run open:ios:plus` for Plus. Each app keeps its own
+    Xcode project, so a switch keeps its signing, build number and Pods:
+    - Both build in `ios/`, which holds one app at a time. `pod install` writes absolute paths into
+      the folder, so a project only builds where it was installed.
+    - A switch moves the other app's project, untouched, to `.ios-parked/free/` or `.ios-parked/plus/`,
+      and brings this app's back (with a `pod install`). Close the other app's workspace in Xcode
+      first. Never open or build a parked project.
+    - Plus's project sets `EXPO_PUBLIC_APP_VARIANT=plus` in `ios/.xcode.env`
+      (`plugins/xcode-variant.js`). A build started in Xcode doesn't have your shell's environment,
+      and without the pin it bundled Win Zero's JavaScript into Plus.
+    - The team comes from `ios.appleTeamId` in `app.json`, so signing is set after every prebuild.
+    - The version comes from `app.json` (Win Zero) or `PLUS.version` in `app.config.ts` (Plus), and
+      Xcode's General tab shows it; a version typed there is replaced on the next prebuild. Set the
+      **build number** in the General tab: it carries over. EAS builds keep their own (remote) build
+      numbers.
+    - `npm run ios` (`expo run:ios`) builds whatever `ios/` holds: run `node scripts/prebuild.mjs
+      ios` (or with `EXPO_PUBLIC_APP_VARIANT=plus`) first. Never `npx expo prebuild --clean` for iOS:
+      it throws away the project in `ios/` with its build number.
 - [ ] **Store versions:** Plus is never on an older `STORE_VERSION` (`src/store/types.ts`) than the
   free app, so a move from the free app can always be read. When a release raises it, release Plus
   first, then the free app.
@@ -261,6 +278,7 @@ and its debug tools. The others use a TestFlight, internal or `preview` build.
 | 51 | **Website: the Game credit popup** | On winzero.app/play in demo mode, **Jump to day 7** and play the round to the end. Press Escape on the popup; on another run, click outside it. | The same popup after the cheer, with the chime. Nice! has focus, so Enter or Escape moves on to the result sheet. |
 | 52 | **Pick your game (Plus)** | Tap **Yes, I did** on a goal's check-in. Pick Catch. Then start a bonus round, and tap outside the picker. With a Weapon credit held, start another bonus round. Then **Replay** a round, and leave a round not yet played and come back to it. Also at the largest text size and with VoiceOver / TalkBack. | "Pick your game" comes up before the round, as the Yes celebration's hole opens, with every game, its hint and power-up, and the last pick marked. Catch plays Catch, and Settings › Games now shows Catch. Tapping outside or Android back plays the last pick. The Weapon credit question comes after the pick, worded for that game. Replay doesn't ask; coming back to a round not yet played asks again. At the largest text the list scrolls. Win Zero never asks. |
 | 53 | **Home's secret (Plus)** | On Home, tap the Game credits count three times quickly, then again. Tap it three times slowly (about a second apart). Tap the "i". Then read the end of Settings › Games. Repeat the quick taps in Win Zero. | Each quick triple tap adds a Game credit, with a "+1 Free Game credit!" popup ("You found the secret stash."), the Yes chime and its buzz; **Sweet!** closes it. Slow taps do nothing. The "i" still opens the hint. Settings › Games ends with "Psst. Somewhere on Home, a little box hands out free games…". Win Zero does nothing. |
+| 54 | **Xcode Release builds of both apps** | `npm run open:ios:plus`, then a Release run on an iPhone from Xcode. Then `npm run open:ios` and a Release run of Win Zero. Set a build number in each app's General tab, switch twice, and look again. | Plus is Plus: "Pick your game" before a round, and Settings shows Goals, Games, Themes and App icon. Win Zero shows none of these, and both apps stay installed side by side. Signing needs no team picked. Each General tab shows its own version (Win Zero's from `app.json`, Plus's `PLUS.version`) and keeps the build number set there. |
 
 ### Known and accepted
 - **A move can't prove it came from Win Zero on Android.** Any app can open Plus's import link

@@ -35,6 +35,7 @@ src/ui/copy/        notice, rules and support copy, shared with the website
 src/dev/            demo tools: seedRun.ts and demo.ts are shared with the website
 src/variant/        which app this build is (Win Zero or Win Zero Plus) and its name; app code only
 modules/            local Expo modules: app-icons (Plus's icon switch), haptics (Android's haptics as media)
+plugins/            local config plugins: xcode-variant (Plus's Xcode project bundles Plus)
 app.config.ts       app.json for Win Zero; EXPO_PUBLIC_APP_VARIANT=plus gives Plus its own ids, scheme and art (assets/brand-plus/)
 website/            winzero.app: Vite + React, deployed by Cloudflare Pages (see website/README.md)
   src/play/         the browser app under /play; draws the round with src/game/draw via a Canvas 2D adapter
@@ -62,5 +63,5 @@ website/            winzero.app: Vite + React, deployed by Cloudflare Pages (see
 - Win Zero Plus: `npm run start:plus`, `eas build --profile development-plus`, `npm run check:variants` (both apps' configs); see docs/RELEASE.md
 - `eas build --profile development --platform ios|android`: build dev clients
 - `npm run build:android`: build a release APK and AAB locally into build/ (no dev server needed), debug-signed; `npm run build:android:upload` signs with the upload key named in .env.signing; `npm run install:android` puts the APK on a plugged-in phone
-- `npm run open:ios`: refresh ios/ from app.json and open it in Xcode, for building there
+- `npm run open:ios`: put Win Zero's Xcode project in ios/ (parking Plus's in .ios-parked/), refresh it from app.json and open it in Xcode, for building there; `open:ios:plus` does the same for Plus
 - Website, from `website/`: `npm run dev`, `npm run build && npm run verify`, `npm run typecheck`, `npm run lint`, `npm test` (Vitest)
