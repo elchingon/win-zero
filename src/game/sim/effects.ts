@@ -1,10 +1,12 @@
 'worklet';
 // Juice: particles, shockwave rings, screen shake and flash, ported from the prototype's
 // explode() and update(). Every effect draws from a fixed pool; when a pool is full the extra
-// pieces are simply skipped. Reduce motion means fewer particles and much less shake.
+// pieces are simply skipped. Reduce motion means fewer particles, much less shake and dimmer
+// flashes; full-screen flashes are spaced out for everyone.
 import {
   ARMOR_BURST_SCALE,
   FLASH_DECAY,
+  FLASH_GAP,
   HIT_SPARKS,
   FRAGMENT,
   KILL_FRAGMENTS,
@@ -16,6 +18,7 @@ import {
   KILL_SPARKS_BUSY,
   MUZZLE_DECAY,
   PARTICLE_DRAG,
+  REDUCED_FLASH,
   REDUCED_PARTICLES,
   REDUCED_SHAKE,
   SHAKE_DECAY,
@@ -41,8 +44,14 @@ export function addShake(s: GameState, amount: number): void {
   s.shake = Math.max(s.shake, amount * (s.reduceMotion ? REDUCED_SHAKE : 1));
 }
 
+/**
+ * A full-screen flash. One within FLASH_GAP of the last is skipped, unless it's in the same frame
+ * (a bomb that clears the last zero), where the two are one flash at the brighter level.
+ */
 export function addFlash(s: GameState, amount: number): void {
-  s.flash = Math.max(s.flash, amount);
+  if (s.sinceFlash > 0 && s.sinceFlash < FLASH_GAP) return;
+  s.flash = Math.max(s.flash, amount * (s.reduceMotion ? REDUCED_FLASH : 1));
+  s.sinceFlash = 0;
 }
 
 /** A fresh particle at (x, y), or null when the pool is full. The caller sets its motion and size. */

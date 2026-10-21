@@ -352,6 +352,8 @@ export interface GameState {
   shakeX: number;
   shakeY: number;
   flash: number;
+  /** Seconds since a full-screen flash started; flashes within one frame merge. */
+  sinceFlash: number;
   muzzle: number;
 
   rng: Rng;

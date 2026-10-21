@@ -152,7 +152,7 @@ On the website, practice rounds (any size, every weapon) run only in demo mode, 
 - Type: **Bungee** (display, zeros, buttons), **Barlow** (body), **JetBrains Mono** (labels, HUD numbers).
 - Dark-only app. Zeros are oval rings in a rotating amber / flare / teal / fg palette with glow.
 - Game feel: screen shake, hit flash, particle bursts, shockwave rings, haptics on every kill (light) and on the final explosion (heavy, and long: two heavy taps on iPhone, a quarter-second hit on Android), synthesized-style pop and boom sounds. On Android, the round's haptics and the Yes play as media vibration, so they follow the phone's Media vibration setting; plain taps and ticks follow Touch feedback.
-- Respect the OS reduce-motion setting: less shake, fewer particles.
+- Respect the OS reduce-motion setting: less shake, fewer particles, much dimmer full-screen flashes. For everyone, full-screen flashes (a bomb, the final zero) come at most about 3 a second, however fast bombs go; a bomb that clears the last zero is one flash.
 
 ## 8. Out of scope for v1
 Accounts and cloud sync, leaderboards, IAP. Multiple goals, weekday schedules, game modes and themes are Win Zero Plus (section 9). Credit packs would grant into the credit wallet (section 5); the store answers (`docs/store/answers.md`) say rewards come only from check-ins (and Plus's free secret credit) and there are no digital purchases, so they'd change with it, as would the privacy policy for a payment provider. Keep the data model ready for a later FastAPI + Postgres sync backend (stable IDs, ISO dates, append-only history).

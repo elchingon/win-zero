@@ -3,7 +3,7 @@ import { describe, expect, it } from '@jest/globals';
 
 import { BOMB_DAMAGE } from '@/engine';
 
-import { AMBER, BOMB_MARGIN, FLARE, FLASH_BOMB, TEAL } from '../constants';
+import { AMBER, BOMB_MARGIN, FLARE, FLASH_BOMB, FLASH_FINAL, TEAL } from '../constants';
 import { bombRadius, dropBomb } from '../bomb';
 import { resetReport } from '../report';
 import { alive, finalRings, game, isolate, popIn } from './fixtures';
@@ -75,6 +75,15 @@ describe('bombs', () => {
     Object.assign(z, { ...center(s), delay: 0.5, age: 0.1 });
     dropBomb(s);
     expect(z.alive).toBe(false);
+  });
+
+  it('flash as brightly as the final when they clear the last zero', () => {
+    const s = game(8);
+    popIn(s);
+    for (const z of s.zeros) Object.assign(z, center(s));
+    dropBomb(s);
+    expect(s.phase).toBe('celebrate');
+    expect(s.flash).toBe(FLASH_FINAL);
   });
 
   it('do nothing once the round is won', () => {

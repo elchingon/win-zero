@@ -259,6 +259,7 @@ export function buildGame(cfg: GameConfig, mode: ModeId): GameState {
     shakeX: 0,
     shakeY: 0,
     flash: 0,
+    sinceFlash: Infinity,
     muzzle: 0,
 
     rng: makeRng(cfg.seed),

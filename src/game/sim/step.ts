@@ -57,4 +57,6 @@ export function step(state: GameState, dt: number): void {
   }
   updateEffects(state, d);
   updatePhase(state, d);
+  // Last, so a flash between frames (a bomb) and one in this step (the final) count as one.
+  state.sinceFlash += d;
 }
