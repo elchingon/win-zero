@@ -61,11 +61,11 @@ afterEach(() => {
 });
 
 describe('Settings in Win Zero Plus', () => {
-  it('puts Goals under the goal, and Games, Themes and App icon between the toggles and About', async () => {
+  it('puts Goals under the goal, and Games, Themes and App icon between the toggles and Accessibility', async () => {
     await open();
     // The top bar's name first, then the screen's own headings.
     const headers = screen.getAllByRole('header').map((h) => h.props.accessibilityLabel ?? h.props.children);
-    expect(headers).toEqual(['Win Zero Plus', 'Settings', 'Goals', 'Accessibility', 'Games', 'Themes', 'App icon', 'About']);
+    expect(headers).toEqual(['Win Zero Plus', 'Settings', 'Goals', 'Games', 'Themes', 'App icon', 'Accessibility', 'About']);
   });
 
   it('plays every round in the game picked, and names its power-up now', async () => {

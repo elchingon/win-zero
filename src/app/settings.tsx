@@ -145,6 +145,8 @@ export default function Settings() {
         />
       </View>
 
+      {PlusSettings ? <PlusSettings.PlusSections /> : null}
+
       <View style={shared.section}>
         <Eyebrow header>Accessibility</Eyebrow>
         <View style={shared.list}>
@@ -169,8 +171,6 @@ export default function Settings() {
           <ToggleRow label="Bold text" detail={boldDetail} value={prefs.boldText} onChange={(v) => store.setPref('boldText', v)} />
         </View>
       </View>
-
-      {PlusSettings ? <PlusSettings.PlusSections /> : null}
 
       <View style={shared.section}>
         <Eyebrow header>About</Eyebrow>
