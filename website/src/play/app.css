@@ -799,8 +799,12 @@ a {
 }
 
 .weapon-row.locked {
-  opacity: 0.5;
   cursor: default;
+}
+
+/* Locked rows step down to muted text instead of fading, which left them about 3:1. */
+.weapon-row.locked .weapon-name {
+  color: var(--muted);
 }
 
 .weapon-row[aria-pressed='true'] {

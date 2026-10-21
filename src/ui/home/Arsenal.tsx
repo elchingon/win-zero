@@ -66,11 +66,11 @@ export function Arsenal(props: {
                 isEquipped ? 'Equipped.' : unlocked ? 'Ready.' : `Unlocks in ${plural(daysToGo, 'day')}.`
               }`}
               accessibilityHint={unlocked && !isEquipped ? 'Equips it for your rounds' : undefined}
-              style={({ pressed }) => [styles.row, !unlocked && styles.locked, pressed && !isEquipped && { opacity: 0.7 }]}
+              style={({ pressed }) => [styles.row, pressed && !isEquipped && { opacity: 0.7 }]}
             >
               <Text style={[styles.day, unlocked && { color: colors.amber }]}>DAY {weapon.unlockAt}</Text>
               <View style={styles.text}>
-                <Text style={styles.name}>{name}</Text>
+                <Text style={[styles.name, !unlocked && styles.locked]}>{name}</Text>
                 {description ? <Text style={styles.desc}>{description}</Text> : null}
               </View>
               <Text style={[styles.status, isEquipped && styles.equipped]}>{status}</Text>
@@ -97,7 +97,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.line,
   },
-  locked: { opacity: 0.5 },
+  // A locked name steps down to muted, as its day and status are, rather than fading the row:
+  // faded, the row's text fell to about 3:1, under the 4.5:1 that text needs.
+  locked: { color: colors.muted },
   day: { minWidth: 62, fontFamily: fonts.monoSemiBold, fontSize: 11, letterSpacing: 0.88, color: colors.muted },
   text: { flex: 1, gap: 2 },
   name: { fontFamily: fonts.bodyBold, fontSize: 16, color: colors.fg },
