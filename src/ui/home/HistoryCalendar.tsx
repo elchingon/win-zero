@@ -33,8 +33,9 @@ const MARK_WORDS: Record<Mark, string> = {
 
 const LEGEND: Mark[] = ['yes', 'no', 'shielded', 'missed', 'paused'];
 
+/** A day's mark. Shielded has a dot inside its ring, so it isn't told from Yes by color alone. */
 export function MarkGlyph({ mark }: { mark: Mark }) {
-  return <View style={glyphs[mark]} />;
+  return <View style={glyphs[mark]}>{mark === 'shielded' ? <View style={glyphs.shieldDot} /> : null}</View>;
 }
 
 export function HistoryCalendar(props: {
@@ -158,7 +159,15 @@ const ARROW_SIZE = 22;
 const glyphs = StyleSheet.create({
   yes: { ...ring, borderWidth: 3, borderColor: colors.amber, boxShadow: `0 0 6px ${colors.amber}99` },
   no: { ...ring, borderWidth: 2, borderColor: colors.flare },
-  shielded: { ...ring, borderWidth: 3, borderColor: colors.teal, boxShadow: `0 0 6px ${colors.teal}99` },
+  shielded: {
+    ...ring,
+    borderWidth: 3,
+    borderColor: colors.teal,
+    boxShadow: `0 0 6px ${colors.teal}99`,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shieldDot: { width: 4, height: 6, borderRadius: '50%', backgroundColor: colors.teal },
   missed: { width: 8, height: 8, borderRadius: 4, borderWidth: 1.5, borderColor: colors.flare },
   paused: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.edge },
   pending: { ...ring, borderWidth: 1.5, borderColor: colors.amber, opacity: 0.6 },

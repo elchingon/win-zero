@@ -1,11 +1,12 @@
-// The history calendar's rest-day mark (SPEC 9): only where goals check in on chosen days.
+// The history calendar's marks: Shielded's shape, and the rest-day mark (SPEC 9), only where
+// goals check in on chosen days.
 import { describe, expect, it } from '@jest/globals';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import type { GoalState } from '@/engine';
 import { answerDay, NEW_YORK, newGoal, yesDays } from '@/engine/__tests__/fixtures';
 
-import { HistoryCalendar } from '../HistoryCalendar';
+import { HistoryCalendar, MarkGlyph } from '../HistoryCalendar';
 
 /** expo-localization's numbering: 1 = Sunday. */
 const SUNDAY_FIRST = 1;
@@ -59,5 +60,16 @@ describe('rest days on the history calendar', () => {
     expect(screen.queryByLabelText(/Rest day/)).toBeNull();
     expect(screen.getByLabelText('Nov 1')).toBeTruthy();
     expect(legend('Rest day')).toBeNull();
+  });
+});
+
+describe('the Shielded mark', () => {
+  it("has a dot inside its ring, so it isn't told from Yes by color alone", async () => {
+    const parts = async (mark: 'yes' | 'shielded') => {
+      const { toJSON } = await render(<MarkGlyph mark={mark} />);
+      return (toJSON() as { children: unknown[] | null }).children?.length ?? 0;
+    };
+    expect(await parts('yes')).toBe(0);
+    expect(await parts('shielded')).toBe(1);
   });
 });

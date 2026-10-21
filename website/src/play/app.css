@@ -961,6 +961,8 @@ a {
 .glyph-shielded {
   border: 3px solid var(--teal);
   box-shadow: 0 0 6px rgb(63 220 203 / 0.6);
+  /* A dot inside the ring, so Shielded isn't told from Yes by color alone. */
+  background: radial-gradient(closest-side, var(--teal) 66%, transparent 72%);
 }
 
 .glyph-missed {
@@ -972,7 +974,7 @@ a {
 .glyph-paused {
   width: 6px;
   height: 6px;
-  background: var(--line);
+  background: var(--edge);
 }
 
 .glyph-pending {
