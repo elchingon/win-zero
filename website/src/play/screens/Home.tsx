@@ -1,5 +1,6 @@
 // Home: the goal, the numbers, today's check-in (or when the next one comes), credits and the
-// bonus round, the arsenal, the history calendar, and the demo controls, folded away.
+// bonus round, the arsenal, the history calendar, and the demo controls, folded away. After the
+// first round, a tip.
 import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router';
 
@@ -14,6 +15,7 @@ import { DemoControls } from '../demo/DemoControls';
 import { Arsenal } from '../home/Arsenal';
 import { CheckInCard } from '../home/CheckInCard';
 import { CreditsCard } from '../home/CreditsCard';
+import { FirstRoundTip } from '../home/FirstRoundTip';
 import { HistoryCalendar } from '../home/HistoryCalendar';
 import { Stats } from '../home/Stats';
 import { BONUS_ROUND, pathForAnswer, roundFor, ROUTES } from '../nav';
@@ -177,6 +179,8 @@ function HomeScreen({ goal }: { goal: GoalState }) {
       <HistoryCalendar goal={goal} today={today} pendingDay={pending?.day ?? null} firstWeekday={firstWeekday} />
 
       <DemoControls />
+
+      <FirstRoundTip />
     </Screen>
   );
 }

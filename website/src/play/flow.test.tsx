@@ -66,6 +66,25 @@ describe('the app on the web', () => {
     expect(await screen.findByText('Your Day 1 round is ready.')).toBeTruthy();
   });
 
+  it("reveals the first Yes's Game credit, then opens a tip back on Home, once", async () => {
+    const router = await setUp('Read 20 minutes');
+    fireEvent.click(screen.getByRole('button', { name: 'Yes, I did' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/round'), { timeout: ROUND_OPENS_MS });
+    const round = primaryRound(appStore.getState());
+    expect(round?.rewards.credits).toEqual([{ kind: 'game', amount: 1, key: 'first-yes' }]);
+    // The canvas is stubbed out, so the round is finished for it.
+    act(() => appStore.getState().finishRound(primaryGoal(appStore.getState())?.goalId ?? '', round?.day ?? ''));
+    await act(() => router.navigate('/'));
+
+    const tip = await screen.findByRole('dialog', { name: 'Day one, done.' });
+    expect(tip.textContent).toContain('“A journey of a thousand miles begins with a single step.” You just took it.');
+    expect(tip.textContent).toContain('your next round has 2 to shoot.');
+    expect(tip.textContent).toContain('You earned a Game credit for starting.');
+    fireEvent.click(screen.getByRole('button', { name: "Let's go" }));
+    expect(screen.queryByRole('dialog', { name: 'Day one, done.' })).toBeNull();
+    expect(appStore.getState().tipsSeen).toEqual(['first-round']);
+  });
+
   it('explains each credit behind its hint, with the ways already earned marked', async () => {
     await setUp('Read 20 minutes');
     fireEvent.click(screen.getByRole('button', { name: 'About Game credits' }));
