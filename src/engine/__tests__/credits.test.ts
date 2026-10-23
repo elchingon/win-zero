@@ -194,17 +194,23 @@ describe('credit rewards (SPEC 5)', () => {
     expect(creditRewardClaimed(every, ['yes-every-7', 'yes-every-7@g1:2026-10-19'])).toBe(false);
   });
 
-  it('pays a Game credit for setting the goal, once ever', () => {
-    const first = claimCredits(EMPTY_WALLET, { type: 'goal', goal: newGoal() });
-    expect(first.granted).toEqual([{ kind: 'game', amount: 1, key: 'goal-set' }]);
+  it('pays a Game credit for the first Yes, once ever', () => {
+    const first = claimYes(newGoal(), EMPTY_WALLET, DAY0);
+    expect(first.keys).toEqual(['first-yes']);
     expect(first.wallet.balance).toEqual({ game: 1, weapon: 0 });
-    const second = claimCredits(first.wallet, { type: 'goal', goal: newGoal({ day: '2026-11-20' }) });
-    expect(second.granted).toEqual([]);
+    // Another goal's first Yes (Win Zero Plus) pays nothing more.
+    expect(claimYes({ ...newGoal(), goalId: 'g2' }, first.wallet, DAY0).keys).toEqual([]);
   });
 
-  it('pays only for the moment it is checked at', () => {
-    expect(creditsEarned({ type: 'goal', goal: yesDays(newGoal(), DAY0, 30) }, []).map((g) => g.key)).toEqual(['goal-set']);
-    expect(creditsEarned({ type: 'yes', goal: yesDays(newGoal(), DAY0, 1) }, [])).toEqual([]);
+  it('pays nothing for setting a goal, however far along it is', () => {
+    expect(creditsEarned({ type: 'goal', goal: newGoal() }, [])).toEqual([]);
+    expect(creditsEarned({ type: 'goal', goal: yesDays(newGoal(), DAY0, 30) }, [])).toEqual([]);
+  });
+
+  it("doesn't pay the first Yes's credit to a player paid for setting the goal, which it took over from", () => {
+    const paid = { balance: { game: 1, weapon: 0 }, claimed: ['goal-set'] };
+    expect(claimYes(newGoal(), paid, DAY0).keys).toEqual([]);
+    expect(creditReason('goal-set')).toBe('for setting your goal');
   });
 
   it('pays Game credits for 3 zeros and every 7 in a row, and Weapon credits at 3, 14 and every 30 in a row, across the fall-back', () => {
@@ -215,6 +221,7 @@ describe('credit rewards (SPEC 5)', () => {
     // DAY0 is two weeks before the US fall-back on Nov 1.
     const { wallet, log, keys } = yesRun(newGoal(), EMPTY_WALLET, DAY0, 35);
     expect(log).toEqual([
+      '2026-10-13 first-yes',
       '2026-10-15 zeros-3',
       '2026-10-15 yes-run-3',
       '2026-10-19 yes-every-7',
@@ -234,7 +241,7 @@ describe('credit rewards (SPEC 5)', () => {
       'yes-every-30@g1:2026-11-11',
       'yes-every-7@g1:2026-11-16',
     ]);
-    expect(wallet.balance).toEqual({ game: 6, weapon: 3 });
+    expect(wallet.balance).toEqual({ game: 7, weapon: 3 });
   });
 
   it('keeps paying a Weapon credit every 30 in a row, and nothing in between', () => {
@@ -247,6 +254,7 @@ describe('credit rewards (SPEC 5)', () => {
     const start = '2026-09-01'; // Chile springs forward at midnight starting Sep 6
     const { log } = yesRun(newGoal({ tz: SANTIAGO, day: start }), EMPTY_WALLET, start, 14, SANTIAGO);
     expect(log).toEqual([
+      '2026-09-01 first-yes',
       '2026-09-03 zeros-3',
       '2026-09-03 yes-run-3',
       '2026-09-07 yes-every-7',
@@ -269,7 +277,7 @@ describe('credit rewards (SPEC 5)', () => {
     expect(a.keys).toContain('yes-every-7@g1:2026-10-19');
     // The second goal's one-time rewards were paid by the first; its run of 7 pays again.
     expect(b.keys).toEqual(['yes-every-7@g2:2026-10-19']);
-    expect(b.wallet.balance.game).toBe(3);
+    expect(b.wallet.balance.game).toBe(4);
   });
 
   it('pays every 7 in a row again in a new run', () => {
@@ -305,7 +313,7 @@ describe('credit rewards (SPEC 5)', () => {
 
   it('starts "in a row" over after a Not today, which is not a missed day', () => {
     let { state, wallet, log } = yesRun(newGoal(), EMPTY_WALLET, DAY0, 6); // through 10-18
-    expect(log).toEqual(['2026-10-15 zeros-3', '2026-10-15 yes-run-3']);
+    expect(log).toEqual(['2026-10-13 first-yes', '2026-10-15 zeros-3', '2026-10-15 yes-run-3']);
     state = answerDay(state, '2026-10-19', 'not-today').state;
     ({ state, wallet, log } = yesRun(state, wallet, '2026-10-20', 7));
     // No comeback for the Yes after a Not today; seven more Yeses make 7 in a row.
@@ -335,8 +343,8 @@ describe('credit rewards (SPEC 5)', () => {
   it('lets a player from before credits collect what they already qualify for on their next Yes', () => {
     const s = yesDays(newGoal(), DAY0, 19); // through 10-31
     const r = claimYes(s, EMPTY_WALLET, '2026-11-01');
-    expect(r.keys).toEqual(['zeros-3', 'yes-run-3', 'yes-run-14']);
-    expect(r.wallet.balance).toEqual({ game: 1, weapon: 2 });
+    expect(r.keys).toEqual(['first-yes', 'zeros-3', 'yes-run-3', 'yes-run-14']);
+    expect(r.wallet.balance).toEqual({ game: 2, weapon: 2 });
   });
 
   it('pays a repeating reward only for the Yes that reaches it, not for marks already passed', () => {
@@ -392,7 +400,7 @@ describe('credit rewards while traveling', () => {
     state = answerDay(state, '2026-10-15', 'yes', { tz: TOKYO }).state;
     expect(state.history.map((e) => e.result)).toEqual(['yes', 'yes', 'yes']);
     expect(yesInRow(state)).toBe(3);
-    expect(creditsEarned({ type: 'yes', goal: state }, []).map((g) => g.key)).toEqual(['zeros-3', 'yes-run-3']);
+    expect(creditsEarned({ type: 'yes', goal: state }, []).map((g) => g.key)).toEqual(['first-yes', 'zeros-3', 'yes-run-3']);
   });
 
   it('makes the first Yes after a day left unanswered on a trip a comeback', () => {
@@ -400,6 +408,6 @@ describe('credit rewards while traveling', () => {
     const r = answer(s, { answer: 'yes' }, at('2026-10-17', '21:00', TOKYO), TOKYO);
     if (!r.ok) throw new Error(r.reason);
     expect(r.state.history.at(-2)).toMatchObject({ day: '2026-10-15', result: 'missed' });
-    expect(creditsEarned({ type: 'yes', goal: r.state }, ['zeros-2']).map((g) => g.key)).toEqual(['comeback']);
+    expect(creditsEarned({ type: 'yes', goal: r.state }, ['first-yes', 'zeros-2']).map((g) => g.key)).toEqual(['comeback']);
   });
 });

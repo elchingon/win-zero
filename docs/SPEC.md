@@ -1,6 +1,6 @@
 # Win Zero: Product & Game Spec
 
-Version 0.6 · October 18, 2026 · Owner: e7sal
+Version 0.7 · October 23, 2026 · Owner: e7sal
 
 Win Zero is a daily habit app for iOS and Android. The user sets one daily goal (for example "Stop drinking" or "Exercise more"); Win Zero Plus allows up to three (section 9). Every day, at a check-in time the user picks, the app asks whether they did it. Each "yes" adds a zero to a shooting round. The streak is the number of zeros on screen.
 
@@ -112,11 +112,11 @@ Two banked currencies, spent only when the player chooses. They live in a wallet
 - **Game credit:** plays a **bonus round** of any number of zeros from 1 to 100,000, chosen on Home. The credit is spent when the round is started; the round then waits on Home until played, so a closed app never loses it, and only one waits at a time. A bonus round changes nothing: no streak effect, no rewards, and free bombs as many as are banked, like a replay. Replay keeps it a bonus round. The HUD reads **BONUS**.
 - **Weapon credit:** lends one weapon not yet unlocked for one round and its replays, a daily round or a bonus round. Before a round not yet played, a player holding a Weapon credit, with a weapon still locked, is asked **Use a Weapon credit?**, with each locked weapon listed like the arsenal, or **Not this time** (tapping outside, Escape and Android back too; on the web the keyboard starts there). The borrowed weapon starts equipped, the HUD switch cycles it with the unlocked ones, and it never becomes the saved pick. The borrow is saved on the round, so coming back to it doesn't ask again, and a round that goes unplayed takes its borrow with it. One per round. With every weapon unlocked there's nothing to ask, and credits wait for new weapons.
 
-**Earning.** A one-time reward pays once per install, keyed by its id. It tests whether its mark has been reached, so a player already past it collects it the next time it's checked: a save from before credits gets the goal's credit when it's upgraded, and the rest on the next Yes. A repeating reward (**every**) pays at the Yes that reaches each of its marks, keyed by its id, the goal and the day, so each mark pays once and each goal's runs pay their own (section 9). A mark already passed isn't paid later.
+**Earning.** A one-time reward pays once per install, keyed by its id. It tests whether its mark has been reached, so a player already past it collects it the next time it's checked: a save from before credits collects what it has reached on its next Yes. A repeating reward (**every**) pays at the Yes that reaches each of its marks, keyed by its id, the goal and the day, so each mark pays once and each goal's runs pay their own (section 9). A mark already passed isn't paid later.
 
 | Reward | Credit |
 |---|---|
-| Setting the goal | +1 Game |
+| The first Yes | +1 Game |
 | The Yes that makes 3 zeros (`streak` ≥ 3) | +1 Game |
 | Every 7 Yeses in a row (7, 14, 21, …) | +1 Game |
 | The first Yes after an unanswered day (a Not today doesn't count) | +1 Weapon |
@@ -126,7 +126,7 @@ Two banked currencies, spent only when the player chooses. They live in a wallet
 
 **In a row** counts consecutive check-ins answered Yes, apart from the sliding `streak`: any other day (a Not today, a shielded day, a missed day) starts it over, even one of the free missed days. A new run pays its every-7 and every-30 marks again.
 
-The 3-zero credit took over from a 2-zero one, and every 30 in a row from a one-time 30: a player already paid the 2-zero credit isn't paid the 3-zero one, and a round saved with an old reward still says why it paid.
+The 3-zero credit took over from a 2-zero one, every 30 in a row from a one-time 30, and the first Yes's credit from one paid at setup (before v0.7), which left day 1's round nothing to reveal: a player already paid the old one isn't paid the new one, and a round saved with an old reward still says why it paid.
 
 **Revealing a Game credit.** Credits are banked at the Yes, so a closed app never loses one. A Game credit the Yes earned is revealed after its round is first played to the end: once the encouragement is dismissed, a popup shows a big **+1**, "Game credit earned!", why, and how many there are now, with the Yes chime and a success haptic. **Nice!**, tapping outside, Escape or Android back dismisses it, and the result sheet rises, listing it with the rest. Replays, bonus rounds and practice show none. After a notification's Yes, Home's count shows the credit while the round waits.
 
@@ -182,7 +182,7 @@ Guardrails for both apps:
 ### Multiple goals
 - Up to 3 goals. Each has its own wording, check-in and reminder times, days, streak, best run, bombs, shields, history, round and notices.
 - **Shared arsenal.** Weapons (and mode power-ups) unlock from the best streak any goal has reached (`arsenalBest`, which never decreases). Adding or archiving a goal never takes a weapon away, and a Yes announces a weapon only when it raises that shared best.
-- **One credit wallet**, as in section 5. Each one-time reward still pays once per install, so "Setting your first goal" pays once however many goals are added. The repeating ones (every 7 and every 30 Yeses in a row) pay for each goal's own runs.
+- **One credit wallet**, as in section 5. Each one-time reward still pays once per install, so "Your first Yes" pays once however many goals there are. The repeating ones (every 7 and every 30 Yeses in a row) pay for each goal's own runs.
 - **Home's secret.** Three quick taps on Home's Game credits count give a free Game credit, as often as they're found, with a popup ("You found the secret stash.") and the Yes chime and haptic. The count looks and reads as in the free app, and its hint still opens on the "i". Settings › Games ends with a playful nudge toward it. It's free, like everything else in Plus: nothing is for sale.
 - A bonus round's free bombs are the total banked across goals.
 - **Archiving.** Removing a goal archives it: read-only history under Settings › Past goals, no reminders, and its slot is free. **Delete for good** is offered only from the archive.

@@ -106,7 +106,8 @@ const GOAL_UPGRADES: Readonly<Record<number, Upgrade>> = {};
  * shape: bump STORE_VERSION, add the step from the old version here, and test it.
  */
 const STORE_UPGRADES: Readonly<Record<number, Upgrade>> = {
-  // 1 → 2, credits (SPEC v0.5): a goal set up before them earns its Game credit now.
+  // 1 → 2, credits (SPEC v0.5): a wallet, paid what setting the goal earns (since v0.7, nothing:
+  // the first Yes's credit comes on the next Yes, like any one-time reward already reached).
   1: (v) => {
     const goal = normalizeGoal(v.goal);
     return { ...v, credits: goal ? claimCredits(EMPTY_WALLET, { type: 'goal', goal }).wallet : EMPTY_WALLET, bonus: null };

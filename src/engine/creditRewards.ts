@@ -23,7 +23,7 @@ export interface CreditReward {
   id: string;
   kind: CreditKind;
   amount: number;
-  /** Why, in plain words, to follow "Game credit earned": "for setting your goal". */
+  /** Why, in plain words, to follow "Game credit earned": "for your first Yes". */
   reason: string;
   /** Pays at every mark, not once (`earned` is then true only at the moment a mark is reached). */
   repeats?: true;
@@ -45,11 +45,13 @@ function yesRunReaches(goal: GoalState, every: number): boolean {
 
 export const CREDIT_REWARDS: readonly CreditReward[] = [
   {
-    id: 'goal-set',
+    // Paid at setup until SPEC v0.7, when there was no round to reveal it on.
+    id: 'first-yes',
     kind: 'game',
     amount: 1,
-    reason: 'for setting your goal',
-    earned: (m) => m.type === 'goal',
+    reason: 'for your first Yes',
+    supersedes: 'goal-set',
+    earned: (m) => m.type === 'yes',
   },
   {
     id: `zeros-${GAME_CREDIT_ZEROS}`,
@@ -95,6 +97,7 @@ export const CREDIT_REWARDS: readonly CreditReward[] = [
 
 /** Rewards that have since changed, by id, so a round saved with one still says why it paid. */
 export const RETIRED_CREDIT_REASONS: Readonly<Record<string, string>> = {
+  'goal-set': 'for setting your goal',
   'zeros-2': 'for reaching 2 zeros',
   'yes-run-30': 'for 30 Yeses in a row',
 };

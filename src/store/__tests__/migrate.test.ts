@@ -221,12 +221,12 @@ describe('migratePersisted', () => {
     expect(migratePersisted('not a blob', 0)).toBe('not a blob');
   });
 
-  it('pays a goal set up before credits its Game credit, once', () => {
+  it('gives a goal set up before credits an empty wallet: what it has reached is paid on its next Yes', () => {
     const goal = yesDays(newGoal(), DAY0, 3);
-    const earned = { balance: { game: 1, weapon: 0 }, claimed: ['goal-set'] };
-    expect(migratePersisted({ goal }, 1)).toEqual({ goal, credits: earned, bonus: null, ...slots(goal) });
-    expect(migratePersisted({ goal }, 0)).toMatchObject({ credits: earned });
+    expect(migratePersisted({ goal }, 1)).toEqual({ goal, credits: EMPTY_WALLET, bonus: null, ...slots(goal) });
+    expect(migratePersisted({ goal }, 0)).toMatchObject({ credits: EMPTY_WALLET });
     // Already at version 2: credits don't run again.
+    const earned = { balance: { game: 1, weapon: 0 }, claimed: ['goal-set'] };
     const v2 = { goal, credits: earned, bonus: null };
     expect(migratePersisted(v2, 2)).toEqual({ ...v2, ...slots(goal) });
   });

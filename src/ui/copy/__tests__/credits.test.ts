@@ -25,7 +25,7 @@ describe('credit copy', () => {
   });
 
   it("says what a credit was earned for, from the engine's reward", () => {
-    expect(creditEarned({ kind: 'game', amount: 1, key: 'goal-set' })).toBe('Game credit earned for setting your goal.');
+    expect(creditEarned({ kind: 'game', amount: 1, key: 'first-yes' })).toBe('Game credit earned for your first Yes.');
     expect(creditEarned({ kind: 'weapon', amount: 1, key: 'comeback' })).toBe(
       'Weapon credit earned for checking in again after a missed day.',
     );
@@ -35,6 +35,7 @@ describe('credit copy', () => {
     );
     // A round saved before the rewards changed still says why.
     expect(creditEarned({ kind: 'game', amount: 1, key: 'zeros-2' })).toBe('Game credit earned for reaching 2 zeros.');
+    expect(creditEarned({ kind: 'game', amount: 1, key: 'goal-set' })).toBe('Game credit earned for setting your goal.');
   });
 
   it('reveals a Game credit after the round: what came in, why, and how many there are now', () => {
@@ -64,7 +65,7 @@ describe('credit copy', () => {
 
   it('lists every way to earn each credit', () => {
     expect(creditsEarnedBy('game')).toBe(
-      'You earn a Game credit for setting your goal, for reaching 3 zeros and for every 7 Yeses in a row.',
+      'You earn a Game credit for your first Yes, for reaching 3 zeros and for every 7 Yeses in a row.',
     );
     expect(creditsEarnedBy('weapon')).toBe(
       'You earn a Weapon credit for checking in again after a missed day, for 3 Yeses in a row, for 14 Yeses in a row and for every 30 Yeses in a row.',
@@ -88,15 +89,16 @@ describe('credit copy', () => {
     expect(help.lines).toEqual([CREDIT_USES.game, CREDITS_HELP.gameSpend]);
     expect(help.lines.join(' ')).toContain('as many zeros as you like');
     expect(help.status).toBeNull();
-    // Every way to earn one, from the engine; the ones already earned are marked, not hidden.
+    // Every way to earn one, from the engine; the ones already earned are marked, not hidden. The
+    // credit for setting the goal, which the first Yes's took over from, counts.
     expect(help.ways).toEqual([
-      { label: 'Setting your goal', earned: true },
+      { label: 'Your first Yes', earned: true },
       { label: 'Reaching 3 zeros', earned: false },
       { label: 'Every 7 Yeses in a row', earned: false },
     ]);
     // The 2-zero credit it replaced counts; a repeating way is never done.
     expect(creditHelp('game', wallet(0, 0, ['zeros-2', 'yes-every-7@g1:2026-10-19']), 3, false).ways).toEqual([
-      { label: 'Setting your goal', earned: false },
+      { label: 'Your first Yes', earned: false },
       { label: 'Reaching 3 zeros', earned: true },
       { label: 'Every 7 Yeses in a row', earned: false },
     ]);

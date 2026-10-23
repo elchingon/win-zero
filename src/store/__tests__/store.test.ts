@@ -549,6 +549,7 @@ describe('weapons and rounds', () => {
         weapons: [],
         // The wallet started empty, so this Yes collects the credits the run already reached.
         credits: [
+          { kind: 'game', amount: 1, key: 'first-yes' },
           { kind: 'game', amount: 1, key: 'zeros-3' },
           { kind: 'weapon', amount: 1, key: 'yes-run-3' },
         ],
@@ -581,25 +582,33 @@ describe('weapons and rounds', () => {
 describe('credits (SPEC 5)', () => {
   const holding = (game: number, weapon: number): CreditWallet => ({ balance: { game, weapon }, claimed: [] });
 
-  it('pays the goal its Game credit at setup, once until everything is erased', async () => {
+  it("pays the first Yes a Game credit, on its round, not the setup, once until everything is erased", async () => {
     const h = harness();
     await ready(h.store);
-    const setup = () => h.store.getState().addGoal({ goal: 'Exercise more', checkInTime: '19:00', morningTime: '08:00' });
-    setup();
-    expect(h.store.getState().credits).toEqual({ balance: { game: 1, weapon: 0 }, claimed: ['goal-set'] });
-    setup();
-    expect(h.store.getState().credits.balance.game).toBe(1);
+    const firstDay = () => {
+      h.setTime(DAY0, '12:00');
+      h.store.getState().addGoal({ goal: 'Exercise more', checkInTime: '19:00', morningTime: '08:00' });
+      expect(h.store.getState().credits).toEqual(EMPTY_WALLET);
+      h.setTime(DAY0, '21:00');
+      h.store.getState().answer(gid(h.store), 'yes');
+    };
+    firstDay();
+    // On the round, so its first play reveals it.
+    expect(primaryRound(h.store.getState())?.rewards.credits).toEqual([{ kind: 'game', amount: 1, key: 'first-yes' }]);
+    expect(h.store.getState().credits).toEqual({ balance: { game: 1, weapon: 0 }, claimed: ['first-yes'] });
     h.store.getState().erase();
-    setup();
+    firstDay();
     expect(h.store.getState().credits.balance.game).toBe(1);
   });
 
   it('pays what a Yes earned into the wallet, and records it on the round', async () => {
     const h = await withGoal(yesDays(newGoal(), DAY0, 1)); // through 10-13
+    const paid = { balance: { game: 1, weapon: 0 }, claimed: ['first-yes'] }; // by 10-13's Yes
+    h.store.setState({ credits: paid });
     h.setTime('2026-10-14', '21:00');
-    h.store.getState().answer(gid(h.store), 'yes'); // 2 zeros: nothing yet
+    h.store.getState().answer(gid(h.store), 'yes'); // 2 zeros: nothing new
     expect(primaryRound(h.store.getState())?.rewards.credits).toEqual([]);
-    expect(h.store.getState().credits).toEqual(EMPTY_WALLET);
+    expect(h.store.getState().credits).toEqual(paid);
 
     h.setTime('2026-10-15', '21:00');
     h.store.getState().answer(gid(h.store), 'yes', '2026-10-15', 'notification'); // 3 zeros, 3 in a row, from a notification
@@ -610,7 +619,7 @@ describe('credits (SPEC 5)', () => {
         { kind: 'weapon', amount: 1, key: 'yes-run-3' },
       ],
     });
-    expect(h.store.getState().credits).toEqual({ balance: { game: 1, weapon: 1 }, claimed: ['zeros-3', 'yes-run-3'] });
+    expect(h.store.getState().credits).toEqual({ balance: { game: 2, weapon: 1 }, claimed: ['first-yes', 'zeros-3', 'yes-run-3'] });
 
     h.setTime('2026-10-16', '21:00');
     h.store.getState().answer(gid(h.store), 'yes');
@@ -619,7 +628,7 @@ describe('credits (SPEC 5)', () => {
 
   it('pays a Game credit for every 7 Yeses in a row, keyed by the goal and the day', async () => {
     const h = await withGoal(yesDays(newGoal(), DAY0, 13)); // through 10-25
-    h.store.setState({ credits: { balance: { game: 0, weapon: 0 }, claimed: ['zeros-3', 'yes-run-3'] } });
+    h.store.setState({ credits: { balance: { game: 0, weapon: 0 }, claimed: ['first-yes', 'zeros-3', 'yes-run-3'] } });
     h.setTime('2026-10-26', '21:00');
     h.store.getState().answer(gid(h.store), 'yes'); // the 14th in a row
     expect(primaryRound(h.store.getState())?.rewards.credits).toEqual([
@@ -726,12 +735,13 @@ describe('credits (SPEC 5)', () => {
     h.store.getState().devJumpToDay(gid(h.store), 30);
     // One Yes after the rebuilt run: what it has reached, and the every-30 mark it lands on.
     expect(primaryRound(h.store.getState())?.rewards.credits.map((g) => g.key.split('@')[0])).toEqual([
+      'first-yes',
       'zeros-3',
       'yes-run-3',
       'yes-run-14',
       'yes-every-30',
     ]);
-    expect(h.store.getState().credits.balance).toEqual({ game: 1, weapon: 3 });
+    expect(h.store.getState().credits.balance).toEqual({ game: 2, weapon: 3 });
     h.store.getState().devResetCredits();
     expect(h.store.getState().credits).toEqual(EMPTY_WALLET);
 
@@ -1100,7 +1110,7 @@ describe('persistence', () => {
     });
     expect(store.getState().weapon).toBeNull();
     expect(primaryRound(store.getState())).toBeNull();
-    expect(store.getState().credits).toEqual({ balance: { game: 1, weapon: 0 }, claimed: ['goal-set'] });
+    expect(store.getState().credits).toEqual(EMPTY_WALLET);
 
     await flush();
     const raw = JSON.parse((await AsyncStorage.getItem(STORE_KEY)) ?? '{}');
@@ -1108,13 +1118,13 @@ describe('persistence', () => {
     expect(raw.state.goal.slide).toBe(0);
   });
 
-  it('upgrades a save from before credits: the goal earns its Game credit, and the round reads as before', async () => {
+  it("upgrades a save from before credits: its credits wait for the next Yes, and the round reads as before", async () => {
     const goal = yesDays(newGoal(), DAY0, 5); // through 10-17
     const round = { day: '2026-10-17', n: 5, rewards: { bomb: true, shield: false, shieldCapped: false, weapons: [] }, played: false };
     await AsyncStorage.setItem(STORE_KEY, JSON.stringify({ version: 1, state: { goal, round, weapon: 'twin' } }));
     const { store } = harness();
     await ready(store);
-    expect(store.getState().credits).toEqual({ balance: { game: 1, weapon: 0 }, claimed: ['goal-set'] });
+    expect(store.getState().credits).toEqual(EMPTY_WALLET);
     expect(store.getState().bonus).toBeNull();
     expect(primaryRound(store.getState())).toEqual({ ...round, rewards: { ...round.rewards, credits: [] }, borrowed: [] });
     expect(store.getState().weapon).toBe('twin');
@@ -1122,7 +1132,7 @@ describe('persistence', () => {
     await flush();
     const raw = JSON.parse((await AsyncStorage.getItem(STORE_KEY)) ?? '{}');
     expect(raw.version).toBe(STORE_VERSION);
-    expect(raw.state.credits.claimed).toEqual(['goal-set']);
+    expect(raw.state.credits).toEqual(EMPTY_WALLET);
   });
 
   it('starts fresh from a corrupt blob instead of hanging', async () => {
@@ -1365,8 +1375,8 @@ describe('several goals (SPEC 9)', () => {
     store.getState().addGoal({ goal, checkInTime, morningTime: '09:00', days });
   const idOf = (store: AppStore, i: number) => store.getState().goals[i]!.goal.goalId;
 
-  it('keeps up to three in Plus, and pays the first goal its Game credit only', async () => {
-    const { store } = harness({ limits: PLUS_LIMITS });
+  it("keeps up to three in Plus, and pays the first Yes's Game credit once, whichever goal it's for", async () => {
+    const { store, setTime } = harness({ limits: PLUS_LIMITS });
     await ready(store);
     expect(add(store, 'Stop drinking')).toEqual({ ok: true, goalId: 'goal-1' });
     expect(add(store, 'Run', '07:00')).toEqual({ ok: true, goalId: 'goal-2' });
@@ -1374,8 +1384,15 @@ describe('several goals (SPEC 9)', () => {
     expect(add(store, 'Stretch')).toEqual({ ok: false, reason: 'full' });
     expect(store.getState().goals.map((s) => s.goal.goal)).toEqual(['Stop drinking', 'Run', 'Read']);
     expect(store.getState().goals[2]?.goal.checkInSchedule[0]?.days).toEqual([1, 3, 5]);
-    expect(store.getState().credits).toEqual({ balance: { game: 1, weapon: 0 }, claimed: ['goal-set'] });
     expect(canAddGoal(store.getState())).toBe(false);
+    expect(store.getState().credits).toEqual(EMPTY_WALLET);
+    store.getState().answer('goal-2', 'yes'); // set up after 07:00, so today counts
+    const paid = { balance: { game: 1, weapon: 0 }, claimed: ['first-yes'] };
+    expect(store.getState().credits).toEqual(paid);
+    setTime(DAY0, '21:00');
+    store.getState().answer('goal-1', 'yes');
+    expect(store.getState().goals[0]?.round?.rewards.credits).toEqual([]);
+    expect(store.getState().credits).toEqual(paid);
   });
 
   it('offers check-in days only where the app does', async () => {

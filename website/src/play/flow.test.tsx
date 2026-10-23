@@ -2,7 +2,7 @@
 // The screens on the shared store, in a browser-like page with the game's canvas stubbed out:
 // setting up, checking in Yes (to the round), Not today (to the notice, with Undo), and credits:
 // their hints, a bonus round, and the Weapon credit question before a round.
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
@@ -33,6 +33,9 @@ function open(path = '/') {
   render(<RouterProvider router={router} />);
   return router;
 }
+
+/** A Game credit to spend, as the first Yes pays. */
+const holdGameCredit = () => act(() => appStore.setState({ credits: { balance: { game: 1, weapon: 0 }, claimed: ['first-yes'] } }));
 
 /** Set up a goal whose check-in opened at midnight, so today's is open now. */
 async function setUp(goal: string) {
@@ -68,8 +71,8 @@ describe('the app on the web', () => {
     fireEvent.click(screen.getByRole('button', { name: 'About Game credits' }));
     const dialog = await screen.findByRole('dialog', { name: 'Game credits' });
     expect(dialog.textContent).toContain('as many zeros as you like');
-    // Setting the goal earned one.
-    expect(screen.getByText('Setting your goal').closest('li')?.className).toContain('earned');
+    // None earned yet: the first Yes earns one.
+    expect(screen.getByText('Your first Yes').closest('li')?.className).not.toContain('earned');
     expect(screen.getByText('Reaching 3 zeros').closest('li')?.className).not.toContain('earned');
     expect(screen.getByText('Every 7 Yeses in a row')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Got it' }));
@@ -89,8 +92,10 @@ describe('the app on the web', () => {
     expect(primaryGoal(appStore.getState())?.history).toHaveLength(0);
   });
 
-  it('earns a Game credit at setup, and spends it on a bonus round of the size chosen', async () => {
+  it('spends a Game credit on a bonus round of the size chosen', async () => {
     const router = await setUp('Read 20 minutes');
+    expect(screen.getByRole('group', { name: '0 Game credits' })).toBeTruthy(); // setting up pays none
+    holdGameCredit();
     expect(screen.getByRole('group', { name: '1 Game credit' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Play a bonus round' }));
     fireEvent.click(screen.getByRole('button', { name: '1,000' }));
@@ -106,6 +111,7 @@ describe('the app on the web', () => {
 
   it("won't start a bonus round of a size out of range", async () => {
     await setUp('Read 20 minutes');
+    holdGameCredit();
     fireEvent.click(screen.getByRole('button', { name: 'Play a bonus round' }));
     fireEvent.change(screen.getByLabelText('Zeros'), { target: { value: '0' } });
     // An alert, so a screen reader says it as it appears.

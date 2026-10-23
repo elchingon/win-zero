@@ -120,7 +120,7 @@ export interface CreditHelp {
   ways: CreditWay[];
 }
 
-/** A reward's reason as a list item: 'for setting your goal' is 'Setting your goal'. */
+/** A reward's reason as a list item: 'for your first Yes' is 'Your first Yes'. */
 function wayLabel(reason: string): string {
   const what = reason.replace(/^for /, '');
   return what.charAt(0).toUpperCase() + what.slice(1);

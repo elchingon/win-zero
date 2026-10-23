@@ -147,6 +147,27 @@ describe('the end of the round', () => {
     expect(screen.queryByRole('button', { name: 'Got it' })).not.toBeOnTheScreen();
   });
 
+  it("reveals day 1's Game credit, for the first Yes", async () => {
+    const firstYes: CreditGrant = { kind: 'game', amount: 1, key: 'first-yes' };
+    const round: RoundRecord = {
+      day: DAY0,
+      n: 1,
+      rewards: { bomb: false, shield: false, shieldCapped: false, weapons: [], credits: [firstYes] },
+      borrowed: [],
+      played: false,
+    };
+    appStore.setState({
+      goals: [{ goal: yesDays(newGoal(), DAY0, 1), round, seenThrough: null }],
+      credits: { balance: { game: 1, weapon: 0 }, claimed: ['first-yes'] },
+    });
+    await open('/play');
+    await clear();
+    await fireEvent.press(screen.getByRole('button', { name: 'Got it' }));
+    expect(screen.getByRole('header', { name: /Game credit earned!/ })).toBeOnTheScreen();
+    expect(screen.getByText('Earned for your first Yes.')).toBeOnTheScreen();
+    expect(screen.getByText(/^You now have 1 Game credit\./)).toBeOnTheScreen();
+  });
+
   it('reveals nothing when the Yes earned only a Weapon credit, or on a replay', async () => {
     appStore.setState({ goals: [{ goal, round: dayRound([], false, [comeback]), seenThrough: null }] });
     await open('/play');
