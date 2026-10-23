@@ -89,6 +89,10 @@ export interface GoalSlot {
   seenThrough: DayKey | null;
 }
 
+/** A one-time tip on Home (SPEC 6). `first-round`: after the first Yes's round, how the app works. */
+export type TipId = 'first-round';
+export const TIP_IDS: readonly TipId[] = ['first-round'];
+
 /** A goal set aside (SPEC 9): its history kept to read, with no reminders, and its slot free. */
 export interface ArchivedGoal {
   goal: GoalState;
@@ -139,6 +143,8 @@ export interface PersistedState {
   bonus: BonusRound | null;
   /** "Not now" on Home's reminders-off card hides it until then. */
   reminderCardHiddenUntil: IsoInstant | null;
+  /** The tips on Home already shown and closed, each shown once. */
+  tipsSeen: TipId[];
   /** Development builds only: simulated time travel. Production builds ignore it. */
   devClockOffsetMs: number;
   /** Win Zero: its move to Win Zero Plus, from the first try until it's cancelled or the user stays. */

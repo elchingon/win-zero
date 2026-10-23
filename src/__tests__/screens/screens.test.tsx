@@ -4,7 +4,7 @@
 // src/app, where expo-router would load test files as routes.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 import { AccessibilityInfo, Linking } from 'react-native';
 
@@ -16,7 +16,7 @@ import SetupScreen from '@/app/setup';
 import type { GoalState } from '@/engine';
 import { at, DAY0, newGoal, yesDays } from '@/engine/__tests__/fixtures';
 import { YES_ROUTE_MS } from '@/game/yes';
-import { appStore, primaryGoal } from '@/store';
+import { appStore, primaryGoal, type RoundRecord } from '@/store';
 import { DEFAULT_PERSISTED } from '@/store/migrate';
 import { yesCelebration } from '@/ui/celebrate';
 import { APP_LINKS, SUPPORT_LINE } from '@/ui/support';
@@ -108,6 +108,56 @@ describe('Setup', () => {
     await fireEvent.press(screen.getByText('Not now'));
     expect(await screen.findByText("You're all set.")).toBeOnTheScreen();
     expect(screen.queryByText(/Today counts/)).not.toBeOnTheScreen();
+  });
+});
+
+describe("Home's first-round tip", () => {
+  const TIP = { name: 'Day one, done.' };
+  /** The first Yes, on DAY0, and its round, which earned the first Game credit. */
+  function firstYes(played: boolean) {
+    const goal = yesDays(newGoal({ tz: tz() }), DAY0, 1, tz());
+    const round: RoundRecord = {
+      day: DAY0,
+      n: 1,
+      rewards: { bomb: false, shield: false, shieldCapped: false, weapons: [], credits: [{ kind: 'game', amount: 1, key: 'first-yes' }] },
+      borrowed: [],
+      played,
+    };
+    appStore.setState({ goals: [{ goal, round, seenThrough: null }], credits: { balance: { game: 1, weapon: 0 }, claimed: ['first-yes'] } });
+    return goal;
+  }
+
+  it('opens once Home is back in front after the first round, not over the round', async () => {
+    const goal = firstYes(false);
+    const app = await open('/', { day: DAY0, time: '22:00' });
+    expect(screen.queryByRole('header', TIP)).not.toBeOnTheScreen(); // not played yet
+    await fireEvent.press(screen.getByRole('button', { name: 'Play now' }));
+    expect(app.pathname()).toBe('/play');
+    await act(async () => appStore.getState().finishRound(goal.goalId, DAY0));
+    expect(screen.queryByRole('header', TIP)).not.toBeOnTheScreen();
+
+    await act(async () => router.dismissTo('/'));
+    expect(app.pathname()).toBe('/');
+    expect(screen.getByRole('header', TIP)).toBeOnTheScreen();
+  });
+
+  it('says how the app works and when to come back, and stays closed once closed', async () => {
+    firstYes(true);
+    await open('/', { day: DAY0, time: '22:00' });
+    expect(screen.getByRole('header', TIP)).toBeOnTheScreen();
+    expect(screen.getByText(/^“A journey of a thousand miles begins with a single step\.” You just took it\.$/)).toBeOnTheScreen();
+    expect(screen.getByText(/^How it works: stick to your goal each day, then check in\..* your next round has 2 to shoot\.$/)).toBeOnTheScreen();
+    expect(screen.getByText(/^You earned a Game credit for starting\./)).toBeOnTheScreen();
+    // The tip's line, and Home's card under it (a 24-hour clock here).
+    expect(screen.getAllByText('Your next check-in is tomorrow at 20:00.')).toHaveLength(2);
+    await fireEvent.press(screen.getByRole('button', { name: "Let's go" }));
+    expect(screen.queryByRole('header', TIP)).not.toBeOnTheScreen();
+    expect(appStore.getState().tipsSeen).toEqual(['first-round']);
+  });
+
+  it('shows nothing to someone past their first Yes', async () => {
+    await open('/', { goal: twoDays() });
+    expect(screen.queryByRole('header', TIP)).not.toBeOnTheScreen();
   });
 });
 

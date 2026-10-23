@@ -46,4 +46,5 @@ export type {
   Prefs,
   Rejection,
   RoundRecord,
+  TipId,
 } from './types';

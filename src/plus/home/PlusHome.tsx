@@ -1,7 +1,7 @@
 // Win Zero Plus's Home (SPEC 9), with one goal or several: rounds ready to play, then the open
 // check-ins (the one that opened first, first), then when the others check in next. Below them,
 // two tabs: Goals, where a picker chooses whose numbers and history calendar show, and Game, with
-// the shared credits and arsenal.
+// the shared credits and arsenal. After the first round, a tip.
 import { router } from 'expo-router';
 import { useState, type ComponentType } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -20,6 +20,7 @@ import { feedback } from '@/ui/feedback';
 import { Arsenal } from '@/ui/home/Arsenal';
 import { CheckInCard } from '@/ui/home/CheckInCard';
 import { CreditsCard } from '@/ui/home/CreditsCard';
+import { FirstRoundTip } from '@/ui/home/FirstRoundTip';
 import { HistoryCalendar } from '@/ui/home/HistoryCalendar';
 import { ReadyRoundCard } from '@/ui/home/ReadyRoundCard';
 import { RejectionBanner } from '@/ui/home/RejectionBanner';
@@ -187,6 +188,8 @@ export function PlusHome() {
       )}
 
       {DemoControls ? <DemoControls /> : null}
+
+      <FirstRoundTip />
     </Screen>
   );
 }

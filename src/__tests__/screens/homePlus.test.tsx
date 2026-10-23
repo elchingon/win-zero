@@ -301,3 +301,23 @@ describe('Home with several goals', () => {
     expect(screen.queryByRole('button', { name: 'Yes, I did' })).not.toBeOnTheScreen();
   });
 });
+
+describe("Home's first-round tip", () => {
+  it('opens after the first Yes of any goal has its round played, and stays closed once closed', async () => {
+    const first = yesDays(newGoal({ tz: tz() }), DAY0, 1, tz());
+    const round: RoundRecord = {
+      day: DAY0,
+      n: 1,
+      rewards: { bomb: false, shield: false, shieldCapped: false, weapons: [], credits: [{ kind: 'game', amount: 1, key: 'first-yes' }] },
+      borrowed: [],
+      played: true,
+    };
+    const other = { ...newGoal({ tz: tz() }), goalId: 'g2', goal: 'Read' };
+    await open([slot(other), { ...slot(first), round }], { day: DAY0, time: '22:00' });
+    expect(screen.getByRole('header', { name: 'Day one, done.' })).toBeOnTheScreen();
+    expect(screen.getByText(/^You earned a Game credit for starting\./)).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: "Let's go" }));
+    expect(screen.queryByRole('header', { name: 'Day one, done.' })).not.toBeOnTheScreen();
+    expect(appStore.getState().tipsSeen).toEqual(['first-round']);
+  });
+});

@@ -63,6 +63,7 @@ import {
   type Prefs,
   type Rejection,
   type RoundRecord,
+  type TipId,
   type UndoNotToday,
 } from './types';
 
@@ -179,6 +180,8 @@ export interface AppState extends PersistedState {
   setPref: <K extends keyof Prefs>(key: K, value: Prefs[K]) => void;
   /** "Not now" on Home's reminders-off card: hide it for REMINDER_CARD_HIDE_MS. */
   hideReminderCard: () => void;
+  /** A tip on Home was closed: it isn't shown again. */
+  seeTip: (id: TipId) => void;
   /**
    * The next one-time screen, without marking it shown: an answer's notice first (`preferGoalId`'s,
    * then any), then the Slipping / Reset / Shielded news for missed days not yet shown, goal by goal.
@@ -259,6 +262,7 @@ function persisted(s: AppState): PersistedState & LegacyCopy {
     credits: s.credits,
     bonus: s.bonus,
     reminderCardHiddenUntil: s.reminderCardHiddenUntil,
+    tipsSeen: s.tipsSeen,
     devClockOffsetMs: s.devClockOffsetMs,
     moveOut: s.moveOut,
     imports: s.imports,
@@ -605,6 +609,11 @@ export function createAppStore(deps: StoreDeps) {
 
           hideReminderCard: () => {
             set({ reminderCardHiddenUntil: new Date(now().getTime() + REMINDER_CARD_HIDE_MS).toISOString() });
+          },
+
+          seeTip: (id) => {
+            const { tipsSeen } = get();
+            if (!tipsSeen.includes(id)) set({ tipsSeen: [...tipsSeen, id] });
           },
 
           nextNotice: (preferGoalId) => {

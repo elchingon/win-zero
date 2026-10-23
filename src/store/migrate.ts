@@ -22,6 +22,7 @@ import {
 import {
   MOVE_ID_PATTERN,
   STORE_VERSION,
+  TIP_IDS,
   type ArchivedGoal,
   type BonusRound,
   type GoalSlot,
@@ -31,6 +32,7 @@ import {
   type Prefs,
   type RoundRecord,
   type RoundRewards,
+  type TipId,
 } from './types';
 
 export const DEFAULT_PREFS: Prefs = {
@@ -55,6 +57,7 @@ export const DEFAULT_PERSISTED: PersistedState = {
   credits: EMPTY_WALLET,
   bonus: null,
   reminderCardHiddenUntil: null,
+  tipsSeen: [],
   devClockOffsetMs: 0,
   moveOut: null,
   imports: {},
@@ -72,6 +75,9 @@ const themeIds = (v: unknown): ThemeId[] => (Array.isArray(v) ? [...new Set(v.fi
 const isCreditKind = (v: unknown): v is CreditKind => CREDIT_KINDS.some((k) => k === v);
 const dayOrNull = (v: unknown) => (typeof v === 'string' && isValidDayKey(v) ? v : null);
 const instantOrNull = (v: unknown) => (typeof v === 'string' && !Number.isNaN(Date.parse(v)) ? v : null);
+const isTipId = (v: unknown): v is TipId => TIP_IDS.some((id) => id === v);
+/** Known tip ids, each once. */
+const tipIds = (v: unknown): TipId[] => (Array.isArray(v) ? [...new Set(v.filter(isTipId))] : []);
 
 /** One step up: turns data saved at version k into the shape of version k + 1. */
 export type Upgrade = (value: Rec) => Rec;
@@ -282,6 +288,7 @@ export function normalizePersisted(raw: unknown): PersistedState {
     credits: normalizeWallet(r.credits),
     bonus: normalizeBonus(r.bonus),
     reminderCardHiddenUntil: instantOrNull(r.reminderCardHiddenUntil),
+    tipsSeen: tipIds(r.tipsSeen),
     devClockOffsetMs: typeof offset === 'number' && Number.isFinite(offset) ? offset : 0,
     moveOut: normalizeMoveOut(r.moveOut),
     imports: normalizeImports(r.imports),

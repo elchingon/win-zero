@@ -38,6 +38,7 @@ import { PLUS_LIMITS } from '../limits';
 import {
   arsenalBestOf,
   canAddGoal,
+  firstRoundTipSlot,
   gameModeOf,
   isMovedOut,
   primaryGoal,
@@ -517,6 +518,53 @@ describe("Home's reminders-off card", () => {
   });
 });
 
+describe("Home's first-round tip (SPEC 6)", () => {
+  it("follows the first Yes's round once it's played, until it's closed or everything is erased", async () => {
+    const h = await withGoal(newGoal());
+    h.setTime(DAY0, '21:00');
+    h.store.getState().answer(gid(h.store), 'yes');
+    expect(firstRoundTipSlot(h.store.getState())).toBeNull(); // the round hasn't been played
+    h.store.getState().finishRound(gid(h.store), DAY0);
+    expect(firstRoundTipSlot(h.store.getState())).toBe(h.store.getState().goals[0]);
+    h.store.getState().seeTip('first-round');
+    h.store.getState().seeTip('first-round');
+    expect(h.store.getState().tipsSeen).toEqual(['first-round']);
+    expect(firstRoundTipSlot(h.store.getState())).toBeNull();
+    h.store.getState().erase();
+    expect(h.store.getState().tipsSeen).toEqual([]);
+  });
+
+  it('shows nobody past their first Yes: not after a second, nor after one on an archived goal', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 1)); // through 10-13
+    h.setTime('2026-10-14', '21:00');
+    h.store.getState().answer(gid(h.store), 'yes');
+    h.store.getState().finishRound(gid(h.store), '2026-10-14');
+    expect(firstRoundTipSlot(h.store.getState())).toBeNull();
+
+    const plus = await withGoal(newGoal(), { limits: PLUS_LIMITS });
+    plus.store.setState({ archived: [{ goal: yesDays(newGoal(), DAY0, 1), archivedAt: at(DAY0, '22:00').toISOString() }] });
+    plus.setTime(DAY0, '21:00');
+    plus.store.getState().answer(gid(plus.store), 'yes');
+    plus.store.getState().finishRound(gid(plus.store), DAY0);
+    expect(firstRoundTipSlot(plus.store.getState())).toBeNull();
+  });
+
+  it('reads the tips seen as the known ones, each once', async () => {
+    await AsyncStorage.setItem(
+      STORE_KEY,
+      JSON.stringify({ version: STORE_VERSION, state: { goal: newGoal(), tipsSeen: ['first-round', 'later', 3, 'first-round'] } }),
+    );
+    const a = harness();
+    await ready(a.store);
+    expect(a.store.getState().tipsSeen).toEqual(['first-round']);
+
+    await AsyncStorage.setItem(STORE_KEY, JSON.stringify({ version: STORE_VERSION, state: { goal: newGoal(), tipsSeen: 'all' } }));
+    const b = harness();
+    await ready(b.store);
+    expect(b.store.getState().tipsSeen).toEqual([]);
+  });
+});
+
 describe('weapons and rounds', () => {
   it("equips a newly unlocked weapon, and otherwise keeps the player's pick", async () => {
     const h = await withGoal(yesDays(newGoal(), DAY0, 2)); // best 2, through 10-14
@@ -986,6 +1034,7 @@ describe('persistence', () => {
     expect(a.store.getState().setGameMode('shooter')).toBe(true);
     expect(a.store.getState().setTheme('classic')).toBe(true);
     a.store.getState().hideReminderCard();
+    a.store.getState().seeTip('first-round');
     a.store.getState().startMoveOut();
     a.store.setState({
       notices: { [gid(a.store)]: { kind: 'noted' } },
@@ -1006,11 +1055,13 @@ describe('persistence', () => {
       credits: s.credits,
       bonus: s.bonus,
       reminderCardHiddenUntil: s.reminderCardHiddenUntil,
+      tipsSeen: s.tipsSeen,
       devClockOffsetMs: s.devClockOffsetMs,
       moveOut: s.moveOut,
       imports: s.imports,
     });
     expect(pick(b.store.getState())).toEqual(pick(a.store.getState()));
+    expect(b.store.getState().tipsSeen).toEqual(['first-round']);
     expect(b.store.getState().moveOut).toMatchObject({ status: 'sent' });
     expect(b.store.getState().gameMode).toBe('shooter');
     expect(b.store.getState().theme).toBe('classic');
@@ -1042,6 +1093,7 @@ describe('persistence', () => {
         'prefs',
         'reminderCardHiddenUntil',
         'theme',
+        'tipsSeen',
         'weapon',
         // Version 2's fields, copied from the first goal for a build still on it.
         'goal',

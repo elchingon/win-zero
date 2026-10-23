@@ -1,5 +1,5 @@
 // Home: the goal, the numbers, today's check-in (or when the next one comes), credits and the
-// bonus round, the arsenal, and the history calendar. Once Win Zero has moved to Win Zero Plus
+// bonus round, the arsenal, and the history calendar, with a tip after the first round. Once Win Zero has moved to Win Zero Plus
 // (SPEC 9), only where the goals went. Win Zero Plus has its own Home (src/plus/home), with one
 // goal or several.
 import { Redirect, router } from 'expo-router';
@@ -30,6 +30,7 @@ import { feedback } from '@/ui/feedback';
 import { Arsenal } from '@/ui/home/Arsenal';
 import { CheckInCard } from '@/ui/home/CheckInCard';
 import { CreditsCard } from '@/ui/home/CreditsCard';
+import { FirstRoundTip } from '@/ui/home/FirstRoundTip';
 import { HistoryCalendar } from '@/ui/home/HistoryCalendar';
 import { moveCardFor, moveCheckAt } from '@/ui/home/moved';
 import { MoveCheckCard, MovedCard } from '@/ui/home/MovedCard';
@@ -215,6 +216,8 @@ function HomeScreen({ goal }: { goal: GoalState }) {
       />
 
       {DemoControls ? <DemoControls /> : null}
+
+      <FirstRoundTip />
     </Screen>
   );
 }

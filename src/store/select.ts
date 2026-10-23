@@ -43,3 +43,17 @@ export const canAddGoal = (s: Goals & { limits: Limits }): boolean => s.goals.le
 
 /** Win Zero has moved to Win Zero Plus: no reminders here, and Home says where the goals went. */
 export const isMovedOut = (s: Pick<PersistedState, 'moveOut'>): boolean => s.moveOut?.status === 'moved';
+
+/**
+ * The goal Home's first-round tip follows (SPEC 6): the one with the install's only Yes, once its
+ * round has been played, until the tip is closed. A second Yes, on any goal, here or archived,
+ * means the first day has passed.
+ */
+export function firstRoundTipSlot(s: Pick<PersistedState, 'goals' | 'archived' | 'tipsSeen'>): GoalSlot | null {
+  if (s.tipsSeen.includes('first-round')) return null;
+  let yeses = 0;
+  for (const goal of [...s.goals.map((slot) => slot.goal), ...s.archived.map((a) => a.goal)]) {
+    for (const entry of goal.history) if (entry.result === 'yes' && ++yeses > 1) return null;
+  }
+  return yeses === 1 ? (s.goals.find((slot) => slot.round?.played) ?? null) : null;
+}
