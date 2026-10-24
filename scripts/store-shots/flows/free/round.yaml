@@ -1,0 +1,7 @@
+# Shot 2's round: Day 50, Chain Zapper. The driver bursts captures during common/fire.yaml.
+appId: ${APP_ID}
+---
+- runFlow:
+    file: ../common/jump.yaml
+    env:
+      DAY: 50

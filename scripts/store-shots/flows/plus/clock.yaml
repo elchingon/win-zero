@@ -1,0 +1,25 @@
+# Plus's goals keep the default 8:00 PM check-in, and Walk after dinner checks in on weekdays: move
+# the app's clock to the evening of a weekday (DAYS more days after the next check-in opens).
+appId: ${APP_ID}
+---
+- runFlow: ../common/next.yaml
+- runFlow: ../common/settings.yaml
+- scrollUntilVisible:
+    element: "\\+1 day"
+    timeout: 120000
+    waitToSettleTimeoutMs: 500
+- repeat:
+    times: ${DAYS}
+    commands:
+      - tapOn:
+          text: "\\+1 day"
+          waitToSettleTimeoutMs: 500
+- runFlow: ../common/top.yaml
+- tapOn:
+    text: "Done"
+    waitToSettleTimeoutMs: 500
+- runFlow:
+    when:
+      visible: "Got it"
+    commands:
+      - tapOn: "Got it"

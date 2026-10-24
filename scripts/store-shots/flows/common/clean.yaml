@@ -1,0 +1,18 @@
+# Nudge the page down until the dev-only debug section and Demo controls link are out of frame (a
+# tall tablet screen can reach them from shots framed higher up).
+appId: ${APP_ID}
+---
+- repeat:
+    while:
+      visible: "(?i)debug clock|demo controls|hide demo controls"
+    times: 12
+    commands:
+      - swipe:
+          start: "50%,40%"
+          end: "50%,48%"
+          duration: 2000
+      - runFlow:
+          file: wait.yaml
+          env:
+            MS: 600
+- assertNotVisible: "(?i)debug clock|demo controls|hide demo controls"

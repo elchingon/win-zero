@@ -1,0 +1,20 @@
+# Scroll the screen back to the top (on iOS, a tap on the status bar does it at once), and let the
+# scroll come to rest: on iOS a tap during a coasting scroll only stops it.
+appId: ${APP_ID}
+---
+- runFlow: logbox.yaml
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          point: "50%,1%"
+- scrollUntilVisible:
+    element: "Done|Settings"
+    direction: UP
+    timeout: 90000
+    waitToSettleTimeoutMs: 500
+- runFlow:
+    file: wait.yaml
+    env:
+      MS: 800

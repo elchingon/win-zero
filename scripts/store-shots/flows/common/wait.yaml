@@ -1,0 +1,7 @@
+# Wait MS milliseconds (Maestro has no sleep: wait for text that never shows).
+appId: ${APP_ID}
+---
+- extendedWaitUntil:
+    visible: "__store_shots_never__"
+    timeout: ${MS}
+    optional: true

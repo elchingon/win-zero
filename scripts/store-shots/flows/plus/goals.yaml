@@ -1,0 +1,10 @@
+# Shot: Home with three goals: Read 20 minutes's Day 30 round ready, Walk after dinner's check-in
+# open, Stretch up next. Plays the round's picker choice, then leaves it unplayed.
+appId: ${APP_ID}
+---
+- runFlow:
+    file: pick.yaml
+    env:
+      GAME: "Shooter"
+- runFlow: ../common/leave.yaml
+- runFlow: ../common/top.yaml

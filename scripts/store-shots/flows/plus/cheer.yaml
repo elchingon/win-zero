@@ -1,0 +1,24 @@
+# Shot: the cheer over the Catch fill. Turns on the Finish round button, replays the Day 60
+# round in Catch and finishes it until the cheer shows CHEER.
+appId: ${APP_ID}
+---
+- tapOn:
+    text: "Leave the round"
+    waitToSettleTimeoutMs: 500
+- runFlow:
+    file: ../common/toggle.yaml
+    env:
+      LABEL: "Finish round button"
+      ON: 1
+- runFlow: ../common/top.yaml
+- tapOn:
+    text: "Done"
+    waitToSettleTimeoutMs: 500
+- tapOn:
+    text: "(?i)play now"
+    waitToSettleTimeoutMs: 500
+- runFlow:
+    file: pick.yaml
+    env:
+      GAME: "Catch"
+- runFlow: ../common/cheer.yaml

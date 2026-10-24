@@ -1,0 +1,15 @@
+# Open Settings from Home, or scroll Settings back to its top bar when it's already open.
+appId: ${APP_ID}
+---
+- runFlow: logbox.yaml
+- runFlow: top.yaml
+- runFlow:
+    when:
+      notVisible: "Done"
+    commands:
+      - tapOn:
+          text: "Settings"
+          waitToSettleTimeoutMs: 500
+      - extendedWaitUntil:
+          visible: "Done"
+          timeout: 10000

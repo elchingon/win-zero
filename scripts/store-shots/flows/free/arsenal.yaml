@@ -1,0 +1,18 @@
+# Shot: back to base, scrolled until the last arsenal row shows, with the credits above it.
+appId: ${APP_ID}
+---
+- runFlow: ../common/base.yaml
+- runFlow: ../common/top.yaml
+# From Settings (a rerun), back to Home.
+- runFlow:
+    when:
+      visible: "Done"
+    commands:
+      - tapOn:
+          text: "Done"
+          waitToSettleTimeoutMs: 500
+- scrollUntilVisible:
+    element: ".*Zero Nuke.*"
+    timeout: 120000
+    waitToSettleTimeoutMs: 500
+- runFlow: ../common/clean.yaml

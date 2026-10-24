@@ -1,0 +1,27 @@
+# Shot 6: Day 14 (two shields), then seven Not todays in a row; the seventh is shielded. Waits for
+# Undo Not today to go before the capture.
+appId: ${APP_ID}
+---
+- runFlow:
+    when:
+      visible: "Back to base"
+    commands:
+      - tapOn: "Back to base"
+- runFlow: ../common/top.yaml
+- runFlow:
+    file: ../common/jump.yaml
+    env:
+      DAY: 14
+- runFlow: ../common/leave.yaml
+- repeat:
+    times: 6
+    commands:
+      - runFlow: ../common/not-today.yaml
+      - tapOn:
+          text: "Got it|Play your round|Check in now"
+          waitToSettleTimeoutMs: 500
+- runFlow: ../common/not-today.yaml
+- assertVisible: "Your shield held."
+- extendedWaitUntil:
+    notVisible: "Undo Not today"
+    timeout: 40000

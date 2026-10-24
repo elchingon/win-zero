@@ -1,0 +1,17 @@
+# Shot: Settings › Themes and App icon, at a best streak of 60.
+appId: ${APP_ID}
+---
+- runFlow: ../common/base.yaml
+- runFlow: ../common/settings.yaml
+# Gold Year's row in the middle of the screen puts the Themes heading just under the top bar,
+# with App icon below, and keeps the Games section and its hint above out of frame.
+- scrollUntilVisible:
+    element: "(?i)gold year.*streak.*"
+    timeout: 120000
+    centerElement: true
+    waitToSettleTimeoutMs: 500
+- runFlow:
+    file: ../common/wait.yaml
+    env:
+      MS: 800
+- runFlow: ../common/clean.yaml

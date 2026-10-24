@@ -55,3 +55,6 @@ credentials/
 
 # local release builds (npm run build:android)
 /build
+
+# store screenshots: raw captures and exports (npm run capture:store-shots, gen:store-shots)
+/store-shots

@@ -1,0 +1,19 @@
+# Leave the open round for Home (turning down a Weapon credit first, if asked).
+appId: ${APP_ID}
+---
+- extendedWaitUntil:
+    visible: "Not this time|Leave the round"
+    timeout: 30000
+- runFlow:
+    when:
+      visible: "Not this time"
+    commands:
+      - tapOn:
+          text: "Not this time"
+          waitToSettleTimeoutMs: 500
+- tapOn:
+    text: "Leave the round"
+    waitToSettleTimeoutMs: 500
+- extendedWaitUntil:
+    visible: "Settings"
+    timeout: 15000

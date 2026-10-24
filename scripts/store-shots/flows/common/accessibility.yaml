@@ -1,0 +1,39 @@
+# Shot: Auto-fire and the Finish round button on, with the Accessibility heading near the top:
+# scroll past the section and back up until its heading shows. On iOS the heading still sits under
+# the status bar then: nudge it down with a slow drag, which also takes the debug section out of
+# frame.
+appId: ${APP_ID}
+---
+- runFlow: base.yaml
+- runFlow:
+    file: toggle.yaml
+    env:
+      LABEL: "Finish round button"
+      ON: 1
+- runFlow:
+    file: toggle.yaml
+    env:
+      LABEL: "Auto-fire"
+      ON: 1
+- scrollUntilVisible:
+    element: "Erase all data"
+    timeout: 120000
+    waitToSettleTimeoutMs: 500
+- scrollUntilVisible:
+    element: "(?i)accessibility"
+    direction: UP
+    timeout: 120000
+    waitToSettleTimeoutMs: 500
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - swipe:
+          start: "50%,40%"
+          end: "50%,56%"
+          duration: 3000
+- runFlow:
+    file: wait.yaml
+    env:
+      MS: 800
+- runFlow: clean.yaml

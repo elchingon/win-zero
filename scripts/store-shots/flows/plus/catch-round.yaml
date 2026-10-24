@@ -1,0 +1,15 @@
+# Neon Arcade, then Read 20 minutes's Day 60 round in Catch.
+appId: ${APP_ID}
+---
+- runFlow:
+    file: theme.yaml
+    env:
+      THEME: "Neon Arcade"
+- runFlow:
+    file: jump-picker.yaml
+    env:
+      DAY: 60
+- runFlow:
+    file: pick.yaml
+    env:
+      GAME: "Catch"

@@ -1,0 +1,20 @@
+# Pick GAME (Shooter, Catch, Orbit, Slice or Breaker) in Pick your game, and turn down a Weapon
+# credit if asked.
+appId: ${APP_ID}
+---
+- extendedWaitUntil:
+    visible: "Pick your game"
+    timeout: 20000
+- tapOn:
+    text: "${GAME}.*"
+    waitToSettleTimeoutMs: 500
+- extendedWaitUntil:
+    visible: "Not this time|Leave the round"
+    timeout: 20000
+- runFlow:
+    when:
+      visible: "Not this time"
+    commands:
+      - tapOn:
+          text: "Not this time"
+          waitToSettleTimeoutMs: 500

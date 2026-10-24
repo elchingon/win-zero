@@ -1,0 +1,41 @@
+# Settings › debug section › Jump to day DAY, for the goal named GOAL when given (Plus with
+# several goals). It answers Yes and opens the round; a Weapon credit question is turned down.
+appId: ${APP_ID}
+---
+- runFlow: logbox.yaml
+- runFlow: settings.yaml
+- runFlow:
+    when:
+      true: ${typeof GOAL !== 'undefined' && GOAL !== ''}
+    commands:
+      # The day field sits below the goal chips: scrolling to it brings the chips into view.
+      - scrollUntilVisible:
+          element: "Day to jump to"
+          timeout: 120000
+          waitToSettleTimeoutMs: 500
+      - tapOn:
+          text: ${GOAL}
+          below: "(?i)jump to day"
+          waitToSettleTimeoutMs: 500
+- scrollUntilVisible:
+    element: "Day to jump to"
+    timeout: 120000
+    waitToSettleTimeoutMs: 500
+- tapOn:
+    text: "Day to jump to"
+    waitToSettleTimeoutMs: 500
+- eraseText: 6
+- inputText: ${DAY}
+- tapOn:
+    text: "Go"
+    waitToSettleTimeoutMs: 500
+- extendedWaitUntil:
+    visible: "Not this time|Leave the round|Pick your game"
+    timeout: 30000
+- runFlow:
+    when:
+      visible: "Not this time"
+    commands:
+      - tapOn:
+          text: "Not this time"
+          waitToSettleTimeoutMs: 500

@@ -1,0 +1,44 @@
+# From any state: erase saved data if a goal exists, then set up "Read 20 minutes" with the
+# default 8:00 PM check-in and reminders on.
+appId: ${APP_ID}
+---
+- runFlow: ready.yaml
+# A goal exists when Home (with its Settings link) is up.
+- runFlow:
+    when:
+      visible: "Settings"
+    commands:
+      - runFlow: settings.yaml
+      - scrollUntilVisible:
+          element: "Erase all data"
+          timeout: 120000
+          waitToSettleTimeoutMs: 500
+      - tapOn:
+          text: "Erase all data"
+          waitToSettleTimeoutMs: 500
+      - tapOn:
+          text: "Erase everything"
+          waitToSettleTimeoutMs: 500
+      - extendedWaitUntil:
+          visible: "Read 20 minutes"
+          timeout: 15000
+- tapOn:
+    text: "Read 20 minutes"
+    waitToSettleTimeoutMs: 500
+- scrollUntilVisible:
+    element: "Start my streak"
+    waitToSettleTimeoutMs: 500
+- tapOn:
+    text: "Start my streak"
+    waitToSettleTimeoutMs: 500
+- tapOn:
+    text: "(?i)turn on reminders"
+    waitToSettleTimeoutMs: 500
+- runFlow:
+    when:
+      visible: "Allow"
+    commands:
+      - tapOn: "Allow"
+- extendedWaitUntil:
+    visible: "Settings"
+    timeout: 15000

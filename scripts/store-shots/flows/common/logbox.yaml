@@ -1,0 +1,15 @@
+# Development builds show React Native's LogBox for console errors, as a toast along the bottom or
+# opened over the app: open the toast, then dismiss it.
+appId: ${APP_ID}
+---
+- runFlow:
+    when:
+      visible: ".*React state update.*|.*Warning:.*|.*Error:.*"
+      notVisible: "Console Error|Console Warning"
+    commands:
+      - tapOn: ".*React state update.*|.*Warning:.*|.*Error:.*"
+- runFlow:
+    when:
+      visible: "Console Error|Console Warning|Log \\d+ of \\d+"
+    commands:
+      - tapOn: "Dismiss"
