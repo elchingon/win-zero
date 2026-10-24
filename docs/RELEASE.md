@@ -6,7 +6,7 @@ answers are in `docs/store/`: `listing.md`, `answers.md` and `screenshots.md` fo
 
 ## Release run sheet
 
-Nothing is in either store yet. **Win Zero Plus 1.1.5 goes first, then Win Zero 1.2.0** once Plus is
+Nothing is in either store yet. **Win Zero Plus 1.2.0 goes first, then Win Zero 1.2.0** once Plus is
 live in both stores, because Win Zero 1.2.0 offers the move to Plus (see "Release order for the
 move"). Both are built on this Mac ("Store builds on this Mac", in section 3). Row numbers are the
 QA matrix's, at the end.
@@ -20,19 +20,23 @@ QA matrix's, at the end.
 3. **Win Zero Plus's records and money** (Win Zero Plus, below): the App Store Connect record, the
    Paid Apps Agreement with tax and banking, the Small Business Program, the price; Play's
    payments profile and the app created as **Paid**; the App Group; Plus's upload key.
-4. **Plus 1.1.5 store builds:** `.env` with the privacy and support pages and Plus's own store
+4. **Plus 1.2.0 store builds:** `.env` with the privacy and support pages and Plus's own store
    pages, `npm run check:release:ios:plus`, then archive and upload to TestFlight; `npm run
    build:android:plus:upload -- --version-code 1`, then upload to Play's internal testing track.
 5. **Plus's gate rows** on those builds: 2, 5, 7–12, 14, 31, 32, 44–47, 49, 54, 56–64 and 66–68,
    and 26 on a local perf build (`EXPO_PUBLIC_PERF_BUILD=1 npm run build:android:plus`; for row 6,
    the same without `:plus`). The move's arriving side too, rows 15–21 and 30, with Win Zero's development build (its
-   `.env` from `.env.example`, so it offers the move): Plus 1.1.5 has to read every move Win Zero
+   `.env` from `.env.example`, so it offers the move): Plus 1.2.0 has to read every move Win Zero
    1.2.0 will send.
 6. **The website:** merge to `main`, so winzero.app's `/support` and `/privacy` describe Plus before
    App Review reads them. Then row 48 and 51 on the live site.
 7. **Submit Plus:** listing, screenshots and forms from the `-plus` docs; App Review notes from
-   `answers-plus.md`. Choose **Manually release this version** on iOS, and managed publishing on
-   Play, then release both once both are approved. Check that both store pages load.
+   `answers-plus.md`. Choose **Manually release this version** on iOS. For Play, verify managed
+   publishing is available before relying on a held launch: it cannot control an app's first-ever
+   publication; Google recommends publishing to closed testing first. If it isn't available, allow
+   for the first release to publish after approval. Release iOS once Play is ready, and check both
+   store pages before submitting Win Zero's Move build. See
+   [Google's publishing controls](https://support.google.com/googleplay/android-developer/answer/9859654).
 8. **Win Zero 1.2.0 store builds:** version 1.2.0 in `app.json` (and `package.json`); `.env` with
    Plus's live store pages; `npm run check:release:ios` (it should say Win Zero offers the move),
    then archive and upload; `npm run build:android:upload -- --version-code 1`.
@@ -70,14 +74,14 @@ QA matrix's, at the end.
 ## 2. Store records and credentials
 
 - [ ] **App Store Connect → Apps → New App.**
-  - Fields: iOS, name **Win Zero**, bundle ID `com.e7systems.winzero`, any SKU, and a primary
+  - Fields: iOS, name **Win Zero Goal Tracker Game**, bundle ID `com.e7systems.winzero`, any SKU, and a primary
     language.
   - Copy the app's **Apple ID** (a number) into `eas.json` under
     `submit.production.ios.ascAppId`.
 - [ ] **Play Console → Create app.** Sign in at
   [play.google.com/console](https://play.google.com/console) with the organization developer
   account, open **Home** and select **Create app**. The form:
-  - **App name:** `Win Zero`. Google Play shows it, and it can change later.
+  - **App name:** `Win Zero Goal Tracker Game`. Google Play shows it, and it can change later.
   - **Default language:** English (United States) – en-US.
   - **App or game:** App.
   - **Free or paid:** Free. Play never lets a free app become paid, so this choice is final. Plus is
@@ -204,7 +208,14 @@ The EAS steps above are one way. The other, used for the first releases, builds 
 
 ## 4. Listings and forms
 
+- [ ] **Store review gates:** work through [the October 24 review](store/review.md), especially
+  pending iOS transfer deletion, the live pages still missing Plus, final screenshot exports,
+  questionnaire updates and the separate-app review risk. The source drafts alone do not clear
+  those gates.
+
 - [ ] **Listing copy:** paste from `docs/store/listing.md`, with the URLs filled in.
+- [ ] **Audience tags:** use [the tag plan](store/tags.md) for both apps. Confirm actual Play
+  labels, review Apple's generated tags, and save the final selections with this release.
 - [ ] **Graphics:**
   - Icon: `assets/brand/google-play-icon.png`
   - Feature graphic: `assets/brand/play-feature-graphic.png`
@@ -217,8 +228,9 @@ The EAS steps above are one way. The other, used for the first releases, builds 
 ## 5. Release
 
 - [ ] **iOS:** submit for review, with the App Review notes from `answers.md`.
-- [ ] **Android:** promote internal → production. A staged rollout (for example 20%) is a gentle
-  start.
+- [ ] **Android:** complete production-access requirements, then promote the tested build to
+  production. Percentage-based staged rollouts are for updates; do not plan a 20% first launch.
+  See [Google's release instructions](https://support.google.com/googleplay/android-developer/answer/9859348?hl=en).
 - [ ] **After launch:** watch App Store Connect crashes and Play vitals for the first week. There's
   no crash SDK in v1.
 
@@ -249,7 +261,9 @@ variant disagree. `npm run check:variants` (also in CI) checks both apps' config
   signs it. Then enroll in the **App Store Small Business Program**, which takes 15% rather than
   30% under $1M a year. It isn't automatic.
 - [ ] **Getting paid (Google):** Play Console → Setup → **Payments profile**, linked to the developer
-  account; a price can't be set without it. Play takes 15% of the first $1M a year on its own.
+  account; a price can't be set without it. Enroll in Google's **15% service fee tier** and
+  complete its Account Group requirements; the reduced tier is not automatic. See
+  [Google's enrollment guidance](https://support.google.com/googleplay/android-developer/answer/10632485?hl=en).
 - [ ] **Price:** **$4.99** (USD) in both stores: App Store Connect → Pricing and Availability (the
   United States as the base country), and Play Console → Monetize → App pricing. Let each store set
   the other countries'. The same countries as Win Zero.
@@ -328,9 +342,9 @@ variant disagree. `npm run check:variants` (also in CI) checks both apps' config
     from the `production` profile's env (`production-plus` inherits them); local builds from
     `.env`. `npm run check:release:ios[:plus]` and `build:android[:plus]:upload` refuse the
     stand-in, and say whether Win Zero will offer the move.
-  - Plus 1.1.5 can carry them from its first build (for its own "Update Win Zero Plus" button). Win
+  - Plus 1.2.0 can carry them from its first build (for its own "Update Win Zero Plus" button). Win
     Zero carries them from 1.2.0, which waits for Plus to be live.
-- [ ] **Release order for the move:** release **Plus 1.1.5 first** and wait until it's live in both
+- [ ] **Release order for the move:** release **Plus 1.2.0 first** and wait until it's live in both
   stores. Then release **Win Zero 1.2.0**, with the Plus store URLs set. A Win Zero build with the
   URLs set before Plus is live would offer a move to an app nobody can install.
 - [ ] **App icons (SPEC 9):** Plus has its own icon and one per theme (`PLUS_ICONS` in
