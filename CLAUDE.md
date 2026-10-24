@@ -60,6 +60,7 @@ website/            winzero.app: Vite + React, deployed by Cloudflare Pages (see
 - `npx tsc --noEmit`: type check
 - `npm run gen:sfx`: re-render the game's sound effects into assets/sfx/ (from scripts/gen-sfx.mjs)
 - `npm run gen:brand`: re-render the icons, splash and store art into assets/brand/ (from scripts/gen-brand.mjs); `gen:brand:plus` renders Plus's into assets/brand-plus/
+- `npm run capture:store-shots -- --app free|plus --device <id>`: stage and capture raw store screenshots on a simulator or emulator with Maestro and the dev build; `npm run gen:store-shots` composes the captioned store sizes (docs/store/screenshots.md)
 - Win Zero Plus: `npm run start:plus`, `eas build --profile development-plus`, `npm run check:variants` (both apps' configs); see docs/RELEASE.md
 - `eas build --profile development --platform ios|android`: build dev clients
 - `npm run check:release:ios` (or `:plus`): before archiving in Xcode, check the links and Plus store page a release build takes from .env (EAS builds and Android upload builds check on their own)
