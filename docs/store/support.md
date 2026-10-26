@@ -23,11 +23,12 @@ is free, confidential and open 24/7 in the US: **1-800-662-4357**. The number is
 ## Yes, Not today, and missed days
 
 - **Yes** adds a zero to your streak, and you play a round with that many zeros.
-- **Not today** costs one zero, not your whole run. Tapped it by mistake? **Undo Not today** shows
-  for a few seconds afterwards.
-- **Missed days:** the first 7 in a row cost nothing. After that, each missed day costs a zero.
-- **The seventh slip:** after 7 slips since your last Yes, your streak starts over, unless a shield
-  steps in to save it.
+- **Not today** usually costs one zero; the seventh-slip rule below can reset the remaining
+  streak. Tapped it by mistake? **Undo Not today** shows for a few seconds afterwards.
+- **Missed days:** the first 7 in a row cost nothing. Later misses count as slips too.
+- **The seventh slip:** each Yes clears the slip count. After 7 slips, your streak starts over
+  unless a shield saves it; a shield also clears that count. A streak can also reach zero through
+  ordinary one-zero losses.
 - Your best run, your weapons and your bombs are never taken away.
 
 ## Weapons, bombs and shields
@@ -35,9 +36,10 @@ is free, confidential and open 24/7 in the US: **1-800-662-4357**. The number is
 - **Weapons** unlock as your best run grows: Twin Barrel at 3 days, Scatter Gun at 7, Rocket at
   14, Chain Zapper at 30, Rail Laser at 60 and Zero Nuke at 100. Tap the weapon button during a
   round to switch.
-- **Bombs:** you earn one each time your streak reaches a multiple of 5. Use them in a round to
-  clear a crowd of zeros.
-- **Shields:** you earn one each time your streak reaches a multiple of 7, and can hold up to 3.
+- **Bombs:** earn one at each new streak milestone of 5, 10, 15 and beyond within a run. Use them
+  in a round to clear a crowd of zeros.
+- **Shields:** earn one at each new streak milestone of 7, 14, 21 and beyond within a run, up to 3.
+- Slipping and climbing back to the same milestone does not earn that reward twice in the same run.
 
 ## Game and Weapon credits
 
@@ -78,8 +80,9 @@ follows your phone's text size and Reduce Motion settings.
 
 ## Privacy
 
-Everything stays on your phone. There's no account, and neither app collects any data. Read the
-[privacy policy](https://winzero.app/privacy).
+Your goals and check-ins are stored on your phone, with no app account or cloud sync. Neither
+app uploads them to E7 Systems. System backups, website visits and emails you choose to send
+are covered in the [privacy policy](https://winzero.app/privacy).
 
 ## Playing on the web
 
@@ -88,16 +91,17 @@ You can also play Win Zero in your browser at [winzero.app/play](https://winzero
 - **Your progress stays in that browser.** It doesn't sync with the app or with other browsers.
 - **The website can't send reminders.** Open it at your check-in time, or use the app for
   reminders.
-- **Clearing your browser's data for winzero.app erases your progress.** Safari can also clear it
-  after 7 days without a visit. Adding Win Zero to your Home Screen keeps it.
+- **Clearing your browser's data for winzero.app erases your progress.** Your browser can also
+  remove stored data under its own storage rules. Adding a Home Screen shortcut is not a backup.
 - **Demo mode** (under Demo controls on Home) lets you move the clock, jump to any day and play
   practice rounds on a copy of your progress. Your real streak isn't touched, and leaving demo
   mode takes you back to it.
 
 ## Starting over
 
-**Settings → Erase all data** deletes your goals, history and rewards from your phone. This can't be
-undone.
+**Settings → Erase all data** deletes this app's saved goals, history and rewards. This can't be
+undone. If you moved progress to the other Win Zero app, erase that copy separately. Manage system
+backups through your phone or backup provider.
 
 ---
 

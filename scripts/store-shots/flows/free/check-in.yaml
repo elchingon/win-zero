@@ -1,0 +1,5 @@
+# Shot 1: move the clock to the next check-in and show it open on Home.
+appId: ${APP_ID}
+---
+- runFlow: ../common/next.yaml
+- runFlow: ../common/top.yaml

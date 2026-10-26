@@ -17,3 +17,7 @@
 # Keep the pages.dev addresses (production alias and previews) out of search results.
 https://:project.pages.dev/*
   X-Robots-Tag: noindex
+
+# The site in Markdown, for AI assistants (built by plugins/marketing.ts).
+/llms.txt
+  Content-Type: text/plain; charset=utf-8

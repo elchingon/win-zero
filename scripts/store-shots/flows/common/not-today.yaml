@@ -1,0 +1,11 @@
+# Next check-in, answered Not today from Home's card. Leaves the notice up.
+appId: ${APP_ID}
+---
+- runFlow: next.yaml
+- tapOn:
+    text: "Not today"
+    index: 0
+    waitToSettleTimeoutMs: 500
+- extendedWaitUntil:
+    visible: "Got it|Play your round|Check in now"
+    timeout: 15000

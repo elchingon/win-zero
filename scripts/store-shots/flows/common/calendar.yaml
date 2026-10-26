@@ -1,0 +1,13 @@
+# Home scrolled to the history calendar: to the bottom, then back up slowly until the dev-only
+# Demo controls link below the calendar is out of frame.
+appId: ${APP_ID}
+---
+- scrollUntilVisible:
+    element: "Demo controls"
+    timeout: 120000
+    waitToSettleTimeoutMs: 500
+- swipe:
+    start: "50%,50%"
+    end: "50%,60%"
+    duration: 2000
+- runFlow: clean.yaml

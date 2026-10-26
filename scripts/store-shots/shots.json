@@ -1,0 +1,46 @@
+{
+  "targets": {
+    "app-store-6.9": { "store": "apple", "device": "ios-6.9", "size": [1320, 2868] },
+    "play-phone": { "store": "play", "device": "android-phone", "size": [1080, 1920] },
+    "play-tablet-7": { "store": "play", "device": "android-tablet-7", "size": [1080, 1920] },
+    "play-tablet-10": { "store": "play", "device": "android-tablet-10", "size": [1620, 2880] }
+  },
+  "apps": {
+    "free": {
+      "name": "Win Zero",
+      "shots": [
+        { "slug": "check-in", "caption": "One question a day.", "sub": "At a time you choose." },
+        { "slug": "round", "caption": "Every Yes is a zero\nto shoot.", "sub": "Day 50 · Chain Zapper, earned at day 30" },
+        { "slug": "cheer", "caption": "Every round ends with a cheer.", "sub": "Encouragement, never shame." },
+        { "slug": "notification", "caption": "Answer straight from the notification." },
+        { "slug": "arsenal", "caption": "Seven weapons\nto earn.", "sub": "Yours for good as your best run grows." },
+        { "slug": "shield", "caption": "Gentle streak rules.", "sub": "A shield can save your streak." },
+        { "slug": "accessibility", "caption": "Play your way.", "sub": "Auto-fire, a Finish round button, softer effects and bold text." },
+        { "slug": "privacy", "caption": "No account. No ads.", "sub": "Reminders keep your goal off the lock screen." },
+        { "slug": "finish", "caption": "Clear the last one for the big finish.", "sub": "Zero Nuke, earned through check-ins" },
+        { "slug": "calendar", "caption": "Your month\nat a glance." }
+      ],
+      "order": {
+        "apple": ["check-in", "round", "cheer", "notification", "accessibility", "arsenal", "shield", "privacy", "finish", "calendar"],
+        "play": ["check-in", "round", "cheer", "notification", "accessibility", "arsenal"]
+      }
+    },
+    "plus": {
+      "name": "Win Zero Plus",
+      "shots": [
+        { "slug": "goals", "caption": "Up to three goals,\none place.", "sub": "Each with its own check-ins and streak." },
+        { "slug": "days", "caption": "Check in on the days that count.", "sub": "Every day, weekdays, or any mix." },
+        { "slug": "pick-game", "caption": "Pick your game before every round.", "sub": "Shooter, Catch, Orbit, Slice or Breaker" },
+        { "slug": "catch", "caption": "Five games,\none streak.", "sub": "Catch in Neon Arcade · Day 60" },
+        { "slug": "cheer", "caption": "Every round ends with a cheer.", "sub": "Encouragement, never shame." },
+        { "slug": "notification", "caption": "Answer straight from the notification." },
+        { "slug": "themes", "caption": "Themes and icons\nto earn.", "sub": "Four themes included, three more as your best run grows, each with its own app icon." },
+        { "slug": "accessibility", "caption": "Play your way.", "sub": "Auto-fire, a Finish round button, softer effects and bold text." }
+      ],
+      "order": {
+        "apple": ["goals", "pick-game", "catch", "cheer", "notification", "accessibility", "days", "themes"],
+        "play": ["goals", "pick-game", "catch", "cheer", "notification", "accessibility"]
+      }
+    }
+  }
+}

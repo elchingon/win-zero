@@ -1,0 +1,50 @@
+# Set a Settings switch, found by its row label (LABEL), to ON ("1" or "0"). The first match is
+# the row's text, the second the Switch itself, which carries the same accessibility label. iOS
+# reads a switch's value as its text (1/0); Android marks it checked.
+appId: ${APP_ID}
+---
+- runFlow: settings.yaml
+- scrollUntilVisible:
+    element: ${LABEL}
+    timeout: 120000
+    centerElement: true
+    waitToSettleTimeoutMs: 500
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - copyTextFrom:
+          text: ${LABEL}
+          index: 1
+      - runFlow:
+          when:
+            true: ${(String(maestro.copiedText).trim() === '1') !== (String(ON) === '1')}
+          commands:
+            - tapOn:
+                text: ${LABEL}
+                index: 1
+                waitToSettleTimeoutMs: 500
+- runFlow:
+    when:
+      platform: Android
+      true: ${String(ON) === '1'}
+      notVisible:
+        text: ${LABEL}
+        checked: true
+    commands:
+      - tapOn:
+          text: ${LABEL}
+          index: 1
+          waitToSettleTimeoutMs: 500
+- runFlow:
+    when:
+      platform: Android
+      true: ${String(ON) !== '1'}
+      visible:
+        text: ${LABEL}
+        checked: true
+    commands:
+      - tapOn:
+          text: ${LABEL}
+          checked: true
+          waitToSettleTimeoutMs: 500

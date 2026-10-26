@@ -82,7 +82,8 @@
     },
     "production-plus": {
       "ios": {
-        "bundleIdentifier": "com.e7systems.winzeroplus"
+        "bundleIdentifier": "com.e7systems.winzeroplus",
+        "ascAppId": "6826679382"
       },
       "android": {
         "track": "internal",

@@ -1,0 +1,9 @@
+# Shot 8: the top of Settings, with Goal in reminders off.
+appId: ${APP_ID}
+---
+- runFlow:
+    file: ../common/toggle.yaml
+    env:
+      LABEL: "Goal in reminders"
+      ON: 0
+- runFlow: ../common/settings.yaml

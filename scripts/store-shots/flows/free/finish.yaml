@@ -1,0 +1,24 @@
+# Shot 9 (App Store only): the Day 100 round finished, its result sheet over the fill.
+appId: ${APP_ID}
+---
+- runFlow:
+    file: ../common/jump.yaml
+    env:
+      DAY: 100
+- tapOn:
+    text: "Finish round"
+    waitToSettleTimeoutMs: 500
+- extendedWaitUntil:
+    visible: "Got it"
+    timeout: 30000
+- tapOn:
+    text: "Got it"
+    waitToSettleTimeoutMs: 500
+- runFlow:
+    when:
+      visible: "Nice!"
+    commands:
+      - tapOn: "Nice!"
+- extendedWaitUntil:
+    visible: "Back to base"
+    timeout: 10000

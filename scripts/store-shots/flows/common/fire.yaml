@@ -1,0 +1,19 @@
+# A few single shots once the round's hint has faded, spread over the upper field.
+appId: ${APP_ID}
+---
+- runFlow:
+    file: wait.yaml
+    env:
+      MS: 3500
+- tapOn:
+    point: "50%,30%"
+    waitToSettleTimeoutMs: 100
+- tapOn:
+    point: "35%,38%"
+    waitToSettleTimeoutMs: 100
+- tapOn:
+    point: "65%,26%"
+    waitToSettleTimeoutMs: 100
+- tapOn:
+    point: "45%,45%"
+    waitToSettleTimeoutMs: 100

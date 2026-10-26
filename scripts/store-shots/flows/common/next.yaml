@@ -1,0 +1,23 @@
+# Settings › Next check-in, then back to Home.
+appId: ${APP_ID}
+---
+- runFlow: settings.yaml
+- scrollUntilVisible:
+    element: "Next check-in"
+    timeout: 120000
+    waitToSettleTimeoutMs: 500
+- tapOn:
+    text: "Next check-in"
+    waitToSettleTimeoutMs: 500
+- runFlow: top.yaml
+- tapOn:
+    text: "Done"
+    waitToSettleTimeoutMs: 500
+- runFlow:
+    when:
+      visible: "Got it"
+    commands:
+      - tapOn: "Got it"
+- extendedWaitUntil:
+    visible: "Yes, I did"
+    timeout: 15000

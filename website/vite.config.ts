@@ -1,19 +1,33 @@
 /// <reference types="vitest/config" />
-// The website: static pages (landing, privacy, support, 404) plus the playable app under /play.
+// The website: static pages (landing, Plus, privacy, support, 404) plus the playable app under /play.
 // It shares the app's pure code from ../src through the `@/` alias; see plugins/shared-guard.ts.
 import { fileURLToPath } from 'node:url';
 
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
+import type * as Engine from '../src/engine/index.ts';
+import type * as LimitsModule from '../src/store/limits.ts';
+
 import { brand } from './plugins/brand.ts';
-import { loadEngine, unlocksHtml } from './plugins/landing.ts';
+import { loadShared, shareWhileLoading, unlocksHtml } from './plugins/landing.ts';
+import { llmsTxt, marketingPartials, type Facts } from './plugins/marketing.ts';
 import { pages } from './plugins/pages.ts';
 import { sharedGuard } from './plugins/shared-guard.ts';
 
 const here = (relative: string) => fileURLToPath(new URL(relative, import.meta.url));
 
 const appSrc = here('../src');
+
+/** The engine and the apps' limits, loaded once for all of a page's partials. */
+const loadFacts = shareWhileLoading<Facts>(async () => {
+  const tsconfig = here('./tsconfig.json');
+  const [engine, limits] = await Promise.all([
+    loadShared<typeof Engine>(here('../src/engine/index.ts'), tsconfig),
+    loadShared<typeof LimitsModule>(here('../src/store/limits.ts'), tsconfig),
+  ]);
+  return { engine, limits };
+});
 
 export default defineConfig({
   appType: 'mpa',
@@ -25,9 +39,13 @@ export default defineConfig({
     pages({
       partials: here('./partials'),
       markdown: here('../docs/store'),
-      generated: { unlocks: async () => unlocksHtml(await loadEngine(here('../src/engine/index.ts'), here('./tsconfig.json'))) },
+      generated: {
+        unlocks: async () => unlocksHtml((await loadFacts()).engine),
+        ...marketingPartials(loadFacts, here('./src/site/shots/shots.json')),
+      },
+      files: { 'llms.txt': async () => llmsTxt(await loadFacts()) },
     }),
-    brand(here('../assets/brand')),
+    brand(here('../assets')),
     react(),
   ],
   resolve: {
@@ -52,6 +70,7 @@ export default defineConfig({
         index: here('./index.html'),
         privacy: here('./privacy.html'),
         support: here('./support.html'),
+        plus: here('./plus.html'),
         play: here('./play.html'),
         404: here('./404.html'),
       },

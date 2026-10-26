@@ -1,0 +1,31 @@
+# Wait for the app to load from Metro. On Android, a fresh dev build first shows the dev menu:
+# finish its onboarding and turn off its floating Tools button, which would show in every shot.
+appId: ${APP_ID}
+---
+# On iOS a dev client that hasn't connected yet lists Metro: tap it.
+- extendedWaitUntil:
+    visible: "Settings|Read 20 minutes|Continue|.*localhost:${PORT}.*"
+    timeout: 120000
+- runFlow:
+    when:
+      visible: ".*localhost:${PORT}.*"
+    commands:
+      - tapOn: ".*localhost:${PORT}.*"
+      - extendedWaitUntil:
+          visible: "Settings|Read 20 minutes|Continue"
+          timeout: 120000
+- runFlow:
+    when:
+      visible: "Continue"
+    commands:
+      - tapOn: "Continue"
+      - scrollUntilVisible:
+          element: "Tools button"
+          waitToSettleTimeoutMs: 500
+      - tapOn:
+          text: "Tools button"
+          waitToSettleTimeoutMs: 500
+      - tapOn: "Close"
+      - extendedWaitUntil:
+          visible: "Settings|Read 20 minutes"
+          timeout: 30000

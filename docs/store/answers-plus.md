@@ -1,10 +1,11 @@
 # Store form answers: Win Zero Plus
 
-Answers for Win Zero Plus's privacy, safety and rating questionnaires in App Store Connect and the
-Play Console. Win Zero's are in `answers.md`; most answers are the same, because Plus is built from
-the same code. The facts below are true of the code on this branch: no network calls of our own, no
-analytics or crash SDKs, local notifications only, data in on-device storage, and no in-app
-purchases (Plus is paid for once, through the store).
+Draft answers, reviewed October 24, 2026, for Win Zero Plus's privacy, safety and rating
+questionnaires in App Store Connect and the Play Console. Win Zero's are in `answers.md`; most
+answers are the same, because Plus is built from the same code. Source inspection supports local
+progress storage and notifications, no app analytics or crash SDKs, and no in-app purchases (Plus
+is paid for once through the store). Confirm the final binary and bundled SDK behavior before
+submitting. See [review.md](review.md).
 
 Re-check these if anything is added that sends data off the phone, or sells anything inside the
 app.
@@ -16,9 +17,9 @@ app.
 ### App Privacy ("nutrition label")
 - **Data collection:** choose **"No, we do not collect data from this app."** The label then reads
   **Data Not Collected**.
-- **Why:** Apple counts data as collected only when it leaves the device and is stored where you
-  or a third party can reach it. Win Zero Plus never sends anything off the phone. The purchase is
-  Apple's, not the app's, and isn't data the app collects.
+- **Why:** goals and check-ins stay in local storage. Use Apple's collection definition and the
+  release-artifact checks in `answers.md`; the store handles the upfront purchase. Separate
+  backups, external website requests and voluntary support emails are covered by the policy.
 - **The move from Win Zero** doesn't change this: it goes from one app to the other on the phone,
   through an App Group, and never reaches a server.
 
@@ -27,37 +28,34 @@ The same as Win Zero's: `app.config.ts` gives Plus the `ios.privacyManifests` fr
 - No tracking, no tracking domains, no collected data types.
 - The required-reason APIs that React Native and the Expo modules use.
 
-If Apple emails about a missing reason after an upload, add it in `app.json`, which covers both
-apps.
+Inspect the archive's combined manifests and upload validation before submission. Required reasons
+must match actual API use. `app.json` alone does not verify the bundled SDKs.
 
 ### Export compliance
 `ITSAppUsesNonExemptEncryption` is `false` (`ios.config.usesNonExemptEncryption` in `app.json`,
 shared by both apps), so App Store Connect won't ask. If it does ask, answer: the app uses no
 encryption beyond what the OS provides.
 
-### Age rating
-Answer as for Win Zero (`answers.md`). The four extra games are the same abstract zeros caught,
-sliced, bounced and broken, with no characters and no injury.
+### Age rating and other declarations
 
-- **Alcohol, tobacco or drug use or references:** **Infrequent / Mild**, for the goal suggestions
-  ("Stop drinking", "Quit vaping") and any goal typed in.
-- **Medical or treatment information:** **None**. The support line link describes no treatment.
-- **Cartoon or fantasy violence:** **None** (or **Infrequent / Mild** to be cautious).
-- **The rest:**
-  - Unrestricted web access: **No**.
-  - User-generated content shared with others: **No**. Goals never leave the phone.
-  - Gambling, contests and loot boxes: **No**. Rewards come only from check-ins, plus a free
-    hidden credit on Home (see the review notes). Nothing is random, and nothing is sold.
+Use the current questionnaire and proposed answers in `answers.md`, including **Health or Wellness
+Topics**, **Guns or Other Weapons**, medical-device status and Accessibility Nutrition Labels.
+Inspect all five games before confirming the content frequency. Extra games use abstract zeros,
+with no human or animal injury, but still contain weapon names and cutting/shooting effects.
+
+The hidden Game credit is deterministic, free and unlimited, disclosed in the review notes. It
+is not a purchased random reward, wager or competition.
 
 ### In-app purchases
-**None.** Every feature comes with the app.
+**None.** All features are included in the upfront purchase; some power-ups, themes and icons
+still require streak progress. There is no additional paid unlock.
 
 ### App Review notes (paste into "Notes")
-These are the main defense against guideline 4.3(a) ("multiple Bundle IDs of the same app"): they
-say plainly what Plus does that Win Zero doesn't, and how the two relate. They also disclose Home's
-secret, since guideline 2.3.1 rules out hidden features App Review doesn't know about.
+These explain the functional differences and disclose Home's secret. They do not guarantee
+acceptance under Apple's guideline 4.3(a), which prohibits multiple Bundle IDs of the same app.
+Google also has a repetitive-content policy. See `review.md` before committing to the release date.
 ```
-Win Zero Plus needs no account, and the purchase unlocks everything: there are no in-app purchases.
+Win Zero Plus needs no account. One upfront purchase includes all features, with no in-app purchases. All five games are playable from the start. Power-ups unlock with best streak; four themes are available immediately, with Ember at 30, Aurora at 180 and Gold Year at 365. Matching theme icons unlock at the same milestones.
 
 How it relates to Win Zero: Win Zero (Apple ID 6823793298) is our free daily check-in app with a small arcade round. It is complete on its own: one goal, checked in every day, and one game. Win Zero Plus is a separate, paid edition with features Win Zero doesn't have:
 - up to 3 goals, each with its own reminders, streak and history, and Past goals for archived ones
@@ -75,7 +73,7 @@ To see Plus quickly:
 
 One playful extra, disclosed here: on Home, under the Game tab, tapping the Game credits count three times quickly gives a free Game credit, which plays a bonus round. It is free and unlimited, never sold, and hinted at the end of Settings > Games.
 
-All data stays on the device. Notifications are scheduled locally; there is no server.
+Goals and check-ins are stored locally. Notifications are scheduled locally; no app server is required. System backups are managed by the OS. Privacy and support links open our website in the browser.
 ```
 
 ---
@@ -91,16 +89,20 @@ All data stays on the device. Notifications are scheduled locally; there is no s
 ### Data safety
 - **Does your app collect or share any of the required user data types?** **No.**
   - Google doesn't count data that's only processed on the device and never sent off it.
-  - The move from Win Zero is handed from app to app on the phone, by package name.
+  - The move is an explicit user action between two apps published by E7 Systems. Google also
+    covers on-device transfers in its sharing definition; locality alone does not exempt them.
+    Confirm first-party ownership and the user-initiated flow against the current guidance in
+    `answers.md`.
 - The listing then reads **"No data collected"** and **"No data shared with third parties"**.
 - **Is all user data encrypted in transit?** Not applicable, since nothing is transmitted.
 - **Do you provide a way for users to request that their data be deleted?** Data is on-device
   only. **Settings → Erase all data** deletes it.
 
 ### Health apps declaration
-As for Win Zero: choose the option closest to **habit tracking / behavior change**, or the general
-wellness one. Win Zero Plus doesn't measure the body, give medical advice, or connect to Health
-Connect. Don't select anything about medical devices, treatment, or clinical use.
+
+Use the scope and live-form review in `answers.md`, including the health disclaimer already in
+`listing-plus.md`. Do not select an invented habit-tracking category or declare "no health
+features" simply because no sensors are used. Save the actual selected options with the release.
 
 ### Content rating (IARC questionnaire)
 - **Category:** **"All other app types"** (a habit tracker with mini-games), as for Win Zero.
@@ -114,19 +116,19 @@ Connect. Don't select anything about medical devices, treatment, or clinical use
   - Digital purchases: **No**. The app is paid for on Google Play, and sells nothing inside.
 
 ### Target audience and content
-- **Target age:** 18+, or 13+ if you want, as for Win Zero. Choosing ages under 13 brings in the
-  Families policies.
+- **Target age:** confirm the intended audience as in `answers.md`, using the actual age bands
+  offered by Play. Keep both apps, the policy and the screenshots consistent.
 - **Appeals to children:** **No**.
 
 ### Ads
 **No**, the app contains no ads.
 
 ### App access
-**All functionality is available without special access.** There's no login, and the purchase
-unlocks everything.
+**All functionality is available without special access.** There's no login or extra purchase.
+Earned power-ups/themes/icons still require progress; disclose this to reviewers as above.
 
 ### Permissions
-The same as Win Zero's: nothing at install, and it declares
+Expected to match Win Zero; inspect the final merged manifest and Play permission report:
 - notifications (asked at runtime, Android 13+)
 - vibrate (haptics)
 - receive boot completed (to keep scheduled reminders after a restart)

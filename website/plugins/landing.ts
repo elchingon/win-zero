@@ -5,11 +5,20 @@ import { runnerImport } from 'vite';
 
 import type * as Engine from '../../src/engine/index.ts';
 
-const escape = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+export const escape = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-/** `tsconfig`: the website's, as in vite.config.ts (the app's extends a package not installed here). */
-export function loadEngine(entry: string, tsconfig: string): Promise<typeof Engine> {
-  return runnerImport<typeof Engine>(entry, { configFile: false, logLevel: 'silent', tsconfig }).then((r) => r.module);
+/** A shared module under ../src. `tsconfig`: the website's, as in vite.config.ts (the app's extends a package not installed here). */
+export function loadShared<T>(entry: string, tsconfig: string): Promise<T> {
+  return runnerImport<T>(entry, { configFile: false, logLevel: 'silent', tsconfig }).then((r) => r.module);
+}
+
+/** `load`, run at most once at a time: calls while it runs share its result, and later calls load afresh. */
+export function shareWhileLoading<T>(load: () => Promise<T>): () => Promise<T> {
+  let running: Promise<T> | null = null;
+  return () =>
+    (running ??= load().finally(() => {
+      running = null;
+    }));
 }
 
 export function unlocksHtml(engine: typeof Engine): string {

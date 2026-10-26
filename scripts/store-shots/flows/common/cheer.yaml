@@ -1,0 +1,45 @@
+# End the open round with the Finish round button, then replay until the cheer popup shows the
+# line matching CHEER (each replay deals the next line). Leaves the cheer up for the capture.
+appId: ${APP_ID}
+---
+- tapOn:
+    text: "Finish round"
+    waitToSettleTimeoutMs: 500
+- extendedWaitUntil:
+    visible: "Got it"
+    timeout: 30000
+- repeat:
+    while:
+      notVisible: ${CHEER}
+    times: 25
+    commands:
+      - tapOn:
+          text: "Got it"
+          waitToSettleTimeoutMs: 500
+      - runFlow:
+          when:
+            visible: "Nice!"
+          commands:
+            - tapOn:
+                text: "Nice!"
+                waitToSettleTimeoutMs: 500
+      - extendedWaitUntil:
+          visible: "Replay"
+          timeout: 10000
+      - tapOn:
+          text: "Replay"
+          waitToSettleTimeoutMs: 500
+      - extendedWaitUntil:
+          visible: "Finish round"
+          timeout: 15000
+      - tapOn:
+          text: "Finish round"
+          waitToSettleTimeoutMs: 500
+      - extendedWaitUntil:
+          visible: "Got it"
+          timeout: 30000
+- assertVisible: ${CHEER}
+- runFlow:
+    file: wait.yaml
+    env:
+      MS: 1000

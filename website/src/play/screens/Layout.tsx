@@ -1,5 +1,5 @@
-// Every screen's frame: the drifting backdrop, the demo-mode and storage banners, the Yes
-// celebration over everything, and the
+// Every screen's frame: the drifting backdrop, the site bar (over the round too), the demo-mode
+// and storage banners, the Yes celebration over everything, and the
 // catch-up work the phone app does at its root: settle closed windows once storage is read and
 // whenever the tab comes back, and pick up changes made in another tab.
 import { useEffect } from 'react';
@@ -12,6 +12,7 @@ import { pageVisibility } from '../platform/lifecycle';
 import { leaveDemo } from '../platform/mode';
 import { onOtherTabChange } from '../platform/storage';
 import { appStore, demoMode, storagePersistent, storeKey, useApp } from '../store';
+import { SiteBar } from '../ui/SiteBar';
 import { YesCelebration } from '../ui/YesCelebration';
 import { ZeroField } from '../ui/ZeroField';
 
@@ -26,6 +27,7 @@ export function Layout() {
     <>
       <ZeroField hidden={pathname === ROUTES.round} />
       <div className="app-root">
+        <SiteBar />
         {demoMode ? (
           <div className="banner demo-banner" role="note">
             <span>

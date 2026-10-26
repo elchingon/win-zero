@@ -1,0 +1,11 @@
+# Jump Read 20 minutes to DAY and wait on Pick your game.
+appId: ${APP_ID}
+---
+- runFlow:
+    file: ../common/jump.yaml
+    env:
+      DAY: ${DAY}
+      GOAL: "Read 20 minutes"
+- extendedWaitUntil:
+    visible: "Pick your game"
+    timeout: 20000

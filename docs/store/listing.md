@@ -2,7 +2,8 @@
 
 Copy for App Store Connect and the Google Play Console. Every field with a limit lists its
 character count, checked against that limit. The tone matches the app: supportive and plain. No
-medical claims, and no promises about outcomes.
+medical claims, and no promises about outcomes. See [review.md](review.md) for the release gates
+and the reasoning behind the discovery changes.
 
 The privacy policy and support pages are on the website (`website/`, built from
 `privacy-policy.md` and `support.md`):
@@ -13,46 +14,50 @@ The privacy policy and support pages are on the website (`website/`, built from
 
 ## App Store
 
-### Name (30 max): 8
+### Name (30 max): 26
 ```
-Win Zero
+Win Zero Goal Tracker Game
 ```
 
 ### Subtitle (30 max): 29
 ```
-One goal. One daily check-in.
+Daily habits. Arcade rewards.
 ```
 
-### Promotional text (170 max): 161
+### Promotional text (170 max): 141
 ```
-Pick one goal and check in once a day, at a time you choose. Every Yes adds a zero to your next round, and shooting them down is the fun part. No account needed.
+One goal, a daily check-in, and an arcade round built from your streak. Earn weapons and rewards as you go. No ads, subscriptions or account.
 ```
 
-### Description (4000 max)
+### Description (4000 max): 2381
 ```
-Win Zero is a daily habit tracker with a small arcade game built in.
+Win Zero is a daily habit tracker that turns your check-ins into arcade rounds. Track one goal, build your streak, and give yourself something to play for.
 
 Pick one goal: moving more, reading every night, cutting back on drinking, or anything else you want to stick to. Every day, at a time you choose, Win Zero asks one question: did you stick to it today?
 
-Say Yes, and you play a quick shooting round. Your streak is the number of zeros on screen, so day 1 is one zero and day 30 is thirty. Clear the last one for the big finish, and watch the screen fill with every day you've earned.
+Every Yes adds one to your streak and gets a shooting round ready. A streak of 1 gives you one zero to clear; a streak of 30 gives you thirty. Play when you like, and clear the last zero for the big finish. Your check-in counts even if you leave the round for later.
 
 HOW IT WORKS
-• One check-in a day, at a time you choose. A morning reminder follows if you didn't get to it.
+• One check-in a day, with a check-in time and follow-up reminder time you choose.
 • Answer from the notification or in the app.
 • Every Yes adds a zero to your streak and to your next round.
-• Not today is an honest answer, not a failure. It costs one zero, not your whole run.
-• Missed a few days? The first week of missed check-ins is free. After that, each one costs a zero.
+• Not today usually costs one zero. On every seventh slip without a Yes, a shield protects your remaining streak or it resets.
+• The first 7 missed check-ins in a row cost nothing. Later misses count as slips too. Your best run and unlocked weapons stay yours after a reset.
 
 EARN YOUR ARSENAL
-• Unlock seven weapons as your best run grows, from the Pea Shooter to the Zero Nuke. They're yours for good.
-• Earn a bomb every 5 days in a row, to clear a crowd of zeros at once.
-• Earn a shield every 7 days, and hold up to 3. A shield steps in when a slide would otherwise reset your streak.
+• Start with the Pea Shooter and unlock six more weapons as your best run grows, up to the Zero Nuke. They're yours for good.
+• Earn bombs at new streak milestones of 5, 10, 15 and beyond within a run. Use them to clear a crowd of zeros.
+• Earn shields at new streak milestones of 7, 14, 21 and beyond within a run, up to 3 at a time. They protect against the seventh slip.
+
+PLAY A LITTLE MORE
+• Earn Game credits for bonus rounds and Weapon credits to try a locked weapon for one round. Credits are earned by checking in, never bought.
+• Check in and play offline.
 
 PRIVATE BY DESIGN
-• No account, no sign-in, no ads.
-• Everything stays on your phone. Win Zero has no servers and collects no data.
+• Free to use, with no ads, subscriptions or in-app purchases. No account or sign-in.
+• Goals and check-ins are stored on your phone, with no app account or cloud sync. Win Zero has no analytics or advertising SDKs.
 • Reminders keep your goal off the lock screen unless you choose to show it.
-• Erase everything at any time from Settings.
+• Erase saved progress from Settings. Your phone's system backups are managed separately.
 
 BUILT WITH CARE
 If your goal is a hard one, Win Zero is meant to be on your side. The copy is never shaming, a reset is framed as a fresh start, and Settings includes a link to a free, confidential support line (US).
@@ -62,12 +67,23 @@ Win Zero works with VoiceOver, larger text sizes and Reduce Motion.
 
 ### Keywords (100 max): 95
 ```
-habit,streak,daily,check-in,goal,tracker,sober,quit,routine,motivation,game,arcade,self-control
+streak,routine,reminder,motivation,discipline,offline,self care,quit,check-in,calendar,progress
+```
+
+### Copyright
+```
+2026 E7 Systems
 ```
 
 ### Categories
 - Primary: **Health & Fitness**
 - Secondary: **Lifestyle**
+
+### App Store tags
+Review Apple's assigned tags in **App Information → App Store Tags**. Retain accurate habit,
+routine, goal/motivation and arcade-related tags.
+Apple generates these from metadata rather than accepting a free-text tag list. Follow the
+[platform-specific tag plan](tags.md), which distinguishes assigned tags from Keywords.
 
 ### URLs
 - Privacy policy: `https://winzero.app/privacy`
@@ -78,51 +94,60 @@ habit,streak,daily,check-in,goal,tracker,sober,quit,routine,motivation,game,arca
 
 ## Google Play
 
-### App name (30 max): 28
+### App name (30 max): 26
 ```
-Win Zero: Daily Habit Streak
-```
-
-### Short description (80 max): 78
-```
-One goal, one check-in a day. Every Yes adds a zero to shoot down. No account.
+Win Zero Goal Tracker Game
 ```
 
-### Full description (4000 max)
+### Short description (80 max): 77
 ```
-Win Zero is a daily habit tracker with a small arcade game built in.
+Track one habit with daily reminders, gentle streak rules and arcade rewards.
+```
+
+### Full description (4000 max): 2575
+```
+Win Zero is a daily habit tracker that turns your check-ins into arcade rounds. Track one goal, build your streak, and give yourself something to play for.
 
 Pick one goal: moving more, reading every night, cutting back on drinking, or anything else you want to stick to. Every day, at a time you choose, Win Zero asks one question: did you stick to it today?
 
-Say Yes, and you play a quick shooting round. Your streak is the number of zeros on screen, so day 1 is one zero and day 30 is thirty. Clear the last one for the big finish, and watch the screen fill with every day you've earned.
+Every Yes adds one to your streak and gets a shooting round ready. A streak of 1 gives you one zero to clear; a streak of 30 gives you thirty. Play when you like, and clear the last zero for the big finish. Your check-in counts even if you leave the round for later.
 
 HOW IT WORKS
-• One check-in a day, at a time you choose. A morning reminder follows if you didn't get to it.
+• One check-in a day, with a check-in time and follow-up reminder time you choose.
 • Answer straight from the notification, or in the app.
 • Every Yes adds a zero to your streak and to your next round.
-• Not today is an honest answer, not a failure. It costs one zero, not your whole run.
-• Missed a few days? The first week of missed check-ins is free. After that, each one costs a zero.
+• Not today usually costs one zero. On every seventh slip without a Yes, a shield protects your remaining streak or it resets.
+• The first 7 missed check-ins in a row cost nothing. Later misses count as slips too. Your best run and unlocked weapons stay yours after a reset.
 
 EARN YOUR ARSENAL
-• Unlock seven weapons as your best run grows, from the Pea Shooter to the Zero Nuke. They're yours for good.
-• Earn a bomb every 5 days in a row, to clear a crowd of zeros at once.
-• Earn a shield every 7 days, and hold up to 3. A shield steps in when a slide would otherwise reset your streak.
+• Start with the Pea Shooter and unlock six more weapons as your best run grows, up to the Zero Nuke. They're yours for good.
+• Earn bombs at new streak milestones of 5, 10, 15 and beyond within a run. Use them to clear a crowd of zeros.
+• Earn shields at new streak milestones of 7, 14, 21 and beyond within a run, up to 3 at a time. They protect against the seventh slip.
+
+PLAY A LITTLE MORE
+• Earn Game credits for bonus rounds and Weapon credits to try a locked weapon for one round. Credits are earned by checking in, never bought.
+• Check in and play offline.
 
 PRIVATE BY DESIGN
-• No account, no sign-in, no ads.
-• Everything stays on your phone. Win Zero has no servers and collects no data.
+• Free to use, with no ads, subscriptions or in-app purchases. No account or sign-in.
+• Goals and check-ins are stored on your phone, with no app account or cloud sync. Win Zero has no analytics or advertising SDKs.
 • Reminders keep your goal off the lock screen unless you choose to show it.
-• Erase everything at any time from Settings.
+• Erase saved progress from Settings. Your phone's system backups are managed separately.
 
 BUILT WITH CARE
 If your goal is a hard one, Win Zero is meant to be on your side. The copy is never shaming, a reset is framed as a fresh start, and Settings includes a link to a free, confidential support line (US).
 
 Win Zero works with TalkBack, larger text sizes and Remove animations.
+
+Win Zero is not a medical device and does not diagnose, treat, cure or prevent any medical condition. Consult a healthcare professional for medical advice, diagnosis or treatment.
 ```
 
 ### Category and tags
 - Category: **Health & Fitness**
-- Tags: pick the closest offered, such as Habit tracker and Motivation.
+- Recommended Play tag shortlist: **Self-help**, **Productivity**, **Lifestyle**,
+  **Health & fitness**; **Entertainment** is the optional fifth if its live definition fits.
+- Select the available matching labels in Manage tags; these are not free-text keywords. See
+  [tags.md](tags.md) for audience priorities, catalog limitations and replacements.
 
 ### Contact details
 - Email: `e7urgent@gmail.com`
@@ -133,3 +158,15 @@ Win Zero works with TalkBack, larger text sizes and Remove animations.
 - App icon (512 × 512): `assets/brand/google-play-icon.png`
 - Feature graphic (1024 × 500): `assets/brand/play-feature-graphic.png`
 - Phone screenshots: see `screenshots.md`
+
+
+## Before pasting
+
+- Keep the accessibility sentence only after the device QA in `docs/RELEASE.md` passes. A Finish
+  round alternative supports screen readers; it does not mean the visual arcade is playable
+  through sound alone.
+- Keywords are relevant search hypotheses, not measured search-volume or ranking claims. Keep
+  title/subtitle words out of the keyword field. Do not add competitor names or outcome promises.
+- Use only tags actually offered by Play Console and relevant to the main habit-tracking use.
+- For a first release, leave What's New empty if the console permits. For later releases, write
+  notes about changes actually included in that build.

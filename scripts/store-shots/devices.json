@@ -1,0 +1,31 @@
+{
+  "ios-6.9": {
+    "platform": "ios",
+    "name": "iPhone 17 Pro Max",
+    "udid": "00D74786-F066-42E8-AFF6-1118EEAF292D",
+    "size": [1320, 2868],
+    "corner": 0.125
+  },
+  "android-phone": {
+    "platform": "android",
+    "avd": "ofr_pixel7_api35",
+    "port": 5554,
+    "size": [1080, 2400],
+    "corner": 0.08
+  },
+  "android-tablet-7": {
+    "platform": "android",
+    "avd": "ofr_tablet7_api35",
+    "port": 5556,
+    "size": [1200, 1920],
+    "corner": 0.035
+  },
+  "android-tablet-10": {
+    "platform": "android",
+    "avd": "ofr_tablet10_api35",
+    "port": 5558,
+    "size": [1600, 2560],
+    "corner": 0.035,
+    "honorOrientation": true
+  }
+}

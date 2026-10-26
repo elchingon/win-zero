@@ -14,7 +14,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json && tsc --noEmit -p tsconfig.node.json",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "gen:shots": "node scripts/gen-shots.mjs"
   },
   "dependencies": {
     "@fontsource/barlow": "^5.3.0",

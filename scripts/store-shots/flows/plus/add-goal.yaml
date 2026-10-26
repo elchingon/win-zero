@@ -1,0 +1,74 @@
+# Settings › Add a goal: GOAL, with the days in OFF (comma-separated day names) turned off. With
+# SHOT set, stops before Add goal so the driver can capture the screen; add.yaml finishes it.
+appId: ${APP_ID}
+---
+- runFlow: ../common/settings.yaml
+- scrollUntilVisible:
+    element: "Add a goal.*"
+    timeout: 120000
+    waitToSettleTimeoutMs: 500
+- tapOn:
+    text: "Add a goal.*"
+    waitToSettleTimeoutMs: 500
+- tapOn:
+    text: "Your goal"
+    index: 1
+    waitToSettleTimeoutMs: 500
+- inputText: ${GOAL}
+# Android's keyboard can autocorrect or drop a letter: retype until the field reads right.
+- repeat:
+    while:
+      notVisible: ${GOAL}
+    times: 4
+    commands:
+      - eraseText: 40
+      - inputText: ${GOAL}
+- assertVisible: ${GOAL}
+- tapOn:
+    text: "Add a goal"
+    waitToSettleTimeoutMs: 500
+- scrollUntilVisible:
+    element: "Saturday"
+    timeout: 30000
+    waitToSettleTimeoutMs: 500
+- evalScript: ${output.off = OFF.split(',')}
+- runFlow:
+    when:
+      true: ${output.off.includes('Sunday')}
+    commands:
+      - tapOn: "Sunday"
+- runFlow:
+    when:
+      true: ${output.off.includes('Monday')}
+    commands:
+      - tapOn: "Monday"
+- runFlow:
+    when:
+      true: ${output.off.includes('Tuesday')}
+    commands:
+      - tapOn: "Tuesday"
+- runFlow:
+    when:
+      true: ${output.off.includes('Wednesday')}
+    commands:
+      - tapOn: "Wednesday"
+- runFlow:
+    when:
+      true: ${output.off.includes('Thursday')}
+    commands:
+      - tapOn: "Thursday"
+- runFlow:
+    when:
+      true: ${output.off.includes('Friday')}
+    commands:
+      - tapOn: "Friday"
+- runFlow:
+    when:
+      true: ${output.off.includes('Saturday')}
+    commands:
+      - tapOn: "Saturday"
+- runFlow:
+    when:
+      true: ${typeof SHOT === 'undefined' || SHOT === ''}
+    commands:
+      - runFlow: add.yaml

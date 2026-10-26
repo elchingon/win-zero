@@ -1,0 +1,19 @@
+# Slide the cups back and forth under the falling zeros (the driver bursts captures meanwhile).
+appId: ${APP_ID}
+---
+- runFlow:
+    file: ../common/wait.yaml
+    env:
+      MS: 3000
+- swipe:
+    start: "20%,85%"
+    end: "80%,85%"
+    duration: 1500
+- swipe:
+    start: "80%,85%"
+    end: "30%,85%"
+    duration: 1500
+- swipe:
+    start: "30%,85%"
+    end: "70%,85%"
+    duration: 1500

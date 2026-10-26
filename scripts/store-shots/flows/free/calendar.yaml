@@ -1,0 +1,54 @@
+# Shot 10 (App Store only): a month of mostly Yes, with one Not today and one missed day.
+appId: ${APP_ID}
+---
+- tapOn:
+    text: "Back to base"
+    waitToSettleTimeoutMs: 500
+- runFlow:
+    file: ../common/jump.yaml
+    env:
+      DAY: 20
+- runFlow: ../common/leave.yaml
+- runFlow: ../common/not-today.yaml
+- tapOn:
+    text: "Got it|Play your round|Check in now"
+    waitToSettleTimeoutMs: 500
+- runFlow: ../common/next.yaml
+- tapOn:
+    text: "Yes, I did"
+    waitToSettleTimeoutMs: 500
+- runFlow: ../common/leave.yaml
+- runFlow: ../common/settings.yaml
+- scrollUntilVisible:
+    element: "\\+1 day"
+    timeout: 120000
+    waitToSettleTimeoutMs: 500
+- repeat:
+    times: 2
+    commands:
+      - tapOn:
+          text: "\\+1 day"
+          waitToSettleTimeoutMs: 500
+- repeat:
+    times: 4
+    commands:
+      - tapOn:
+          text: "\\+1 hour"
+          waitToSettleTimeoutMs: 500
+- runFlow: ../common/top.yaml
+- tapOn:
+    text: "Done"
+    waitToSettleTimeoutMs: 500
+- runFlow:
+    when:
+      visible: "Got it"
+    commands:
+      - tapOn: "Got it"
+- extendedWaitUntil:
+    visible: "Yes, I did"
+    timeout: 15000
+- tapOn:
+    text: "Yes, I did"
+    waitToSettleTimeoutMs: 500
+- runFlow: ../common/leave.yaml
+- runFlow: ../common/calendar.yaml

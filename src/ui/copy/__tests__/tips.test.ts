@@ -10,6 +10,7 @@ describe('tip copy', () => {
         '“A journey of a thousand miles begins with a single step.” You just took it.',
         'How it works: stick to your goal each day, then check in. Every Yes adds a zero, so your next round has 2 to shoot.',
         'A Not today costs one zero, and your next Yes gets you climbing again.',
+        'Miss a check-in? Don\'t worry. Life gets busy, but that doesn\'t mean you have to give up on your goals. There is a 7-day grace period to check in, and you can always start a new round.',
         'You earned a Game credit for starting. Spend it on a bonus round any time.',
         'Your next check-in is tomorrow at 8:00 PM.',
       ],

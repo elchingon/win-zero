@@ -25,6 +25,8 @@
     "gen:sfx": "node scripts/gen-sfx.mjs",
     "gen:brand": "node scripts/gen-brand.mjs",
     "gen:brand:plus": "node scripts/gen-brand.mjs --variant plus",
+    "gen:store-shots": "node scripts/gen-store-shots.mjs",
+    "capture:store-shots": "node scripts/store-shots/capture.mjs",
     "eas-build-pre-install": "node scripts/check-release.mjs"
   },
   "dependencies": {

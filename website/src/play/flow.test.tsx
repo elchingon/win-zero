@@ -60,6 +60,10 @@ describe('the app on the web', () => {
     expect(primaryRound(appStore.getState())).toMatchObject({ n: 1, played: false });
     expect(primaryGoal(appStore.getState())?.streak).toBe(1);
     expect(await screen.findByRole('button', { name: 'Leave the round' })).toBeTruthy();
+    // The site's links stay up over the round.
+    const site = screen.getByRole('navigation', { name: 'Site' });
+    expect(site.querySelector('a[href="/#get-the-app"]')?.textContent).toBe('Get the app');
+    expect(site.querySelector('a[href="/plus"]')?.textContent).toBe('Win Zero Plus');
 
     // Back on Home, the unplayed round waits there.
     await router.navigate('/');

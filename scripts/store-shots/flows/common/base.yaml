@@ -1,0 +1,26 @@
+# Close what's left over the round (the cheer, a credit popup, the result sheet) and go back to
+# base. Nothing to do when Home or Settings is already up.
+appId: ${APP_ID}
+---
+- runFlow: logbox.yaml
+- runFlow:
+    when:
+      visible: "Got it"
+    commands:
+      - tapOn:
+          text: "Got it"
+          waitToSettleTimeoutMs: 500
+- runFlow:
+    when:
+      visible: "Nice!"
+    commands:
+      - tapOn:
+          text: "Nice!"
+          waitToSettleTimeoutMs: 500
+- runFlow:
+    when:
+      visible: "Back to base"
+    commands:
+      - tapOn:
+          text: "Back to base"
+          waitToSettleTimeoutMs: 500

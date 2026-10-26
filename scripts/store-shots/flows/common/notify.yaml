@@ -1,0 +1,40 @@
+# Show the goal in reminders, send the test check-in, and go back to the top of Settings. On iOS,
+# long-press the banner once it lands (about 6 s later, for about 7 s), which shows its Yes, I
+# did / Not today actions; Maestro can't see banners, so this goes by time and place. Android's
+# shade is opened by the driver. Never tap the actions: they answer for real.
+appId: ${APP_ID}
+---
+- runFlow:
+    file: toggle.yaml
+    env:
+      LABEL: "Goal in reminders"
+      ON: 1
+- scrollUntilVisible:
+    element: "Send test check-in in 10 s"
+    timeout: 120000
+    waitToSettleTimeoutMs: 500
+- tapOn:
+    text: "Send test check-in in 10 s"
+    waitToSettleTimeoutMs: 500
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      # The status bar scrolls to the top at once.
+      - tapOn:
+          point: "50%,1%"
+      - runFlow:
+          file: wait.yaml
+          env:
+            MS: 3500
+      - longPressOn:
+          point: "50%,11%"
+      - runFlow:
+          file: wait.yaml
+          env:
+            MS: 1000
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - runFlow: top.yaml
