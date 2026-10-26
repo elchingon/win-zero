@@ -3,40 +3,51 @@
   <head>
     <meta charset="utf-8" />
     <!-- include:head -->
-    <title>Win Zero: one goal, one check-in a day</title>
+    <title>Win Zero: goal and habit tracker with an arcade reward</title>
     <meta
       name="description"
-      content="A daily check-in for one goal. Every yes adds a zero to your streak, and you blast them all in a quick arcade round. Free, no account, and your progress stays on your device."
+      content="Check in on one goal a day, and every yes adds a zero to blast in a quick arcade round. Free for iPhone and Android, with no account or ads. Play it in your browser too."
     />
+    <meta name="robots" content="max-image-preview:large" />
     <link rel="canonical" href="https://winzero.app/" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Win Zero" />
     <meta property="og:title" content="Win Zero: every yes adds a zero" />
-    <meta property="og:description" content="A daily check-in for one goal, with an arcade round as the reward." />
+    <meta property="og:description" content="A daily check-in for one goal, with an arcade round as the reward. Free for iPhone and Android." />
     <meta property="og:url" content="https://winzero.app/" />
     <meta property="og:image" content="https://winzero.app/og.png" />
     <meta property="og:image:width" content="1024" />
     <meta property="og:image:height" content="500" />
     <meta property="og:image:alt" content="Rows of colorful zeros around the words Win Zero" />
     <meta name="twitter:card" content="summary_large_image" />
+    <!-- include:banner-free -->
+    <!-- include:ld-home -->
   </head>
-  <body>
+  <body class="wide">
     <!-- include:header -->
     <main id="main" class="landing">
-      <section class="hero">
+      <section class="hero" aria-labelledby="hero-title">
         <div class="zero-row" aria-hidden="true">
           <span>0</span><span>0</span><span>0</span><span>0</span><span>0</span><span>0</span><span>0</span>
         </div>
-        <h1>Every yes adds a zero.</h1>
+        <h1 id="hero-title">Every yes adds a zero.</h1>
         <p class="lede">
-          Pick one goal. Every day, at a time you choose, Win Zero asks whether you stuck to it today. Say yes
-          and your streak grows by a zero, then blast every zero you've earned in a quick arcade round.
+          Win Zero is a daily habit tracker with an arcade reward. Pick one goal. Every day, at a time you choose, it asks
+          whether you stuck to it today. Say yes and your streak grows by a zero, then blast every zero you've earned in a
+          quick arcade round.
         </p>
+        <!-- include:stores-free -->
         <div class="actions">
           <a class="button primary" href="/play">Play in your browser</a>
           <a class="button" href="/support">How it works</a>
         </div>
-        <p class="fine">Free. No account. Your progress stays on your device.</p>
+        <p class="fine">Free for iPhone and Android. No account, no ads. Your progress stays on your device.</p>
+      </section>
+
+      <section class="showcase" aria-labelledby="look-title">
+        <p class="eyebrow">A look inside</p>
+        <h2 id="look-title">A check-in a day, a round for every yes</h2>
+        <!-- include:gallery-free -->
       </section>
 
       <section class="panel" aria-labelledby="kind-title">
@@ -55,10 +66,46 @@
         <!-- include:unlocks -->
       </section>
 
-      <section class="panel" aria-labelledby="apps-title">
+      <section class="panel promo" aria-labelledby="plus-title">
+        <div class="promo-text">
+          <p class="eyebrow app-eyebrow">
+            <img class="app-icon" src="/src/site/shots/icons/plus.webp" width="48" height="48" alt="" />
+            Win Zero Plus
+          </p>
+          <h2 id="plus-title">Want more goals and more games?</h2>
+          <p class="promo-lede">
+            Win Zero Plus is our paid edition, for when one goal isn't enough. Pay <!-- include:plus-price --> once: no
+            subscription, no ads, no account.
+          </p>
+          <!-- include:plus-points -->
+          <!-- include:stores-plus -->
+          <p><a class="button" href="/plus">See everything in Plus</a></p>
+        </div>
+        <!-- include:gallery-promo -->
+      </section>
+
+      <section class="panel" aria-labelledby="compare-title">
+        <p class="eyebrow">Two apps</p>
+        <h2 id="compare-title">Win Zero or Win Zero Plus?</h2>
+        <p class="note">Both have the same kind streak rules, rewards and privacy. Win Zero is complete on its own and free for good.</p>
+        <!-- include:compare -->
+      </section>
+
+      <section class="panel" id="get-the-app" aria-labelledby="get-title">
         <p class="eyebrow">On your phone</p>
-        <h2 id="apps-title">Reminders live in the app</h2>
-        <!-- include:stores -->
+        <h2 id="get-title">Get the app</h2>
+        <p>
+          Reminders live in the app: a gentle nudge at your check-in time, and Yes or Not today right from the
+          notification.
+        </p>
+        <!-- include:app-cards -->
+        <p class="note">No phone handy? <a href="/play">Play in your browser</a>. It has everything but the reminders.</p>
+      </section>
+
+      <section class="panel" aria-labelledby="faq-title">
+        <p class="eyebrow">Questions</p>
+        <h2 id="faq-title">Questions and answers</h2>
+        <!-- include:faq-home -->
       </section>
     </main>
     <!-- include:footer -->

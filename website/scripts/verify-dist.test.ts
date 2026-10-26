@@ -16,6 +16,11 @@ describe('htmlProblems', () => {
     expect(htmlProblems(html)).toEqual([]);
   });
 
+  it('allows structured data, as long as it parses', () => {
+    expect(htmlProblems('<script type="application/ld+json">{"@type":"WebSite"}</script>')).toEqual([]);
+    expect(htmlProblems('<script type="application/ld+json">{nope</script>')).toEqual(['structured data that is not JSON']);
+  });
+
   it('catches everything the content security policy would block', () => {
     const problems = htmlProblems(`
       <script>alert(1)</script>

@@ -1,3 +1,5 @@
+# Every page is open to search engines and AI assistants. /play/... paths are screens of the one
+# app at /play, which names /play as its canonical URL. /llms.txt sums the site up in Markdown.
 User-agent: *
 Allow: /
 

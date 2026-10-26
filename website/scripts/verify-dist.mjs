@@ -1,8 +1,9 @@
 // Checks the built site (dist/) before it ships. The content security policy in _headers allows
 // scripts, styles, fonts and images from this origin only, with no inline code, so the build
 // must hold no inline <script>, <style> or style="" attributes, no inline event handlers, no
-// data: URIs and nothing loaded from another origin. It also catches unfilled store-copy
-// placeholders and missing Cloudflare Pages files.
+// data: URIs and nothing loaded from another origin. The one inline script allowed is structured
+// data (application/ld+json), which browsers never run; it must parse. It also catches unfilled
+// store-copy placeholders and missing Cloudflare Pages files.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,13 +13,16 @@ export const REQUIRED = [
   '_redirects',
   '404.html',
   'index.html',
+  'plus.html',
   'privacy.html',
   'support.html',
   'play.html',
   'robots.txt',
   'favicon.png',
   'og.png',
+  'og-plus.png',
   'manifest.webmanifest',
+  'llms.txt',
 ];
 
 const OWN_ORIGIN = 'https://winzero.app/';
@@ -44,7 +48,14 @@ export function htmlProblems(html) {
   /** @type {string[]} */
   const problems = [];
   for (const [tag] of html.matchAll(/<script\b[^>]*>/gi)) {
-    if (!/\bsrc=/i.test(tag)) problems.push(`inline script: ${tag}`);
+    if (!/\bsrc=/i.test(tag) && !/\btype=["']application\/ld\+json["']/i.test(tag)) problems.push(`inline script: ${tag}`);
+  }
+  for (const [, json] of html.matchAll(/<script\b[^>]*\btype=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)) {
+    try {
+      JSON.parse(json ?? '');
+    } catch {
+      problems.push('structured data that is not JSON');
+    }
   }
   if (/<style\b/i.test(html)) problems.push('inline <style> element');
   if (/\sstyle\s*=/i.test(html)) problems.push('style="" attribute');

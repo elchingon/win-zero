@@ -419,22 +419,13 @@ Cloudflare settings are in `website/README.md`.
   security headers, a 404 for unknown paths).
 - [ ] **Each change:** CI's `website` job passes (build, verify, typecheck, lint, tests). Check the
   pull request's preview link on a phone: set up, check in, play a round, and the demo controls.
-- [ ] **When the apps are live:** put the App Store and Google Play links in
-  `website/partials/stores.html`, which says "coming soon" until then. A start, with each app's
-  Apple ID filled in:
-  ```html
-  <p>
-    Win Zero is free on <a href="https://apps.apple.com/app/id6823793298">the App Store</a> and
-    <a href="https://play.google.com/store/apps/details?id=com.e7systems.winzero">Google Play</a>,
-    with a gentle reminder at your check-in time.
-  </p>
-  <p>
-    Want more than one goal, check-in days or more games?
-    <a href="https://apps.apple.com/app/id<Plus's Apple ID>">Win Zero Plus</a> (also on
-    <a href="https://play.google.com/store/apps/details?id=com.e7systems.winzeroplus">Google Play</a>)
-    is our paid edition, and moves your progress over from Win Zero.
-  </p>
-  ```
+- [ ] **When each listing is live:** in `website/plugins/marketing.ts`, set that store link's
+  `live: true` in `APPS` (Win Zero and Win Zero Plus, App Store and Google Play, one at a time
+  as each opens). Until then the site says "coming soon" there. Check the link opens the listing,
+  then push: the store buttons on `/` and `/plus`, the structured data, `/llms.txt` and Safari's
+  Smart App Banner pick it up.
+- [ ] **New store screenshots:** after `npm run gen:store-shots`, run `npm run gen:shots` in
+  `website/` and commit `website/src/site/shots/`.
 - [ ] **Policy or support changes:** edit `docs/store/*.md` and update the policy's effective date.
   The website picks them up on its next deploy.
 

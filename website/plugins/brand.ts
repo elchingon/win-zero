@@ -1,17 +1,20 @@
-// Icons and share images come straight from the app's brand set (assets/brand, rendered by
-// `npm run gen:brand` at the repo root), published under fixed names so pages and the
-// manifest can link them without hashes.
+// Icons and share images come straight from the apps' brand sets (assets/brand and
+// assets/brand-plus, rendered by `npm run gen:brand` and `gen:brand:plus` at the repo root),
+// published under fixed names so pages, the manifest and structured data can link them without
+// hashes.
 import fs from 'node:fs';
 import path from 'node:path';
 
 import type { Plugin } from 'vite';
 
-/** Published name → file in assets/brand. */
+/** Published name → file in assets/. */
 export const BRAND_FILES = {
-  'favicon.png': 'favicon.png',
-  'apple-touch-icon.png': 'google-play-icon.png',
-  'icon-512.png': 'google-play-icon.png',
-  'og.png': 'play-feature-graphic.png',
+  'favicon.png': 'brand/favicon.png',
+  'apple-touch-icon.png': 'brand/google-play-icon.png',
+  'icon-512.png': 'brand/google-play-icon.png',
+  'og.png': 'brand/play-feature-graphic.png',
+  'icon-plus-512.png': 'brand-plus/google-play-icon.png',
+  'og-plus.png': 'brand-plus/play-feature-graphic.png',
 } as const;
 
 export function brand(dir: string): Plugin {

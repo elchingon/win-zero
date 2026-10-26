@@ -39,7 +39,8 @@ plugins/            local config plugins: xcode-variant (Plus's Xcode project bu
 app.config.ts       app.json for Win Zero; EXPO_PUBLIC_APP_VARIANT=plus gives Plus its own ids, scheme and art (assets/brand-plus/)
 website/            winzero.app: Vite + React, deployed by Cloudflare Pages (see website/README.md)
   src/play/         the browser app under /play; draws the round with src/game/draw via a Canvas 2D adapter
-  plugins/          shared-code guard, pages from docs/store/*.md, brand assets
+  plugins/          shared-code guard, pages from docs/store/*.md, brand assets, store links and
+                    the landing/Plus pages' sections built from the engine (marketing.ts)
 ```
 
 ## Rules for working in this repo

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { entryFor, PLACEHOLDER, renderMarkdown } from './pages';
+import { entryFor, markCurrent, pathFor, PLACEHOLDER, renderMarkdown } from './pages';
 import { isNativeOnly, isShared } from './shared-guard';
 
 describe('shared-guard', () => {
@@ -45,8 +45,19 @@ describe('pages', () => {
     expect(entryFor('/support?x=1')).toBe('/support.html');
     expect(entryFor('/play')).toBe('/play.html');
     expect(entryFor('/play/settings')).toBe('/play.html');
+    expect(entryFor('/plus')).toBe('/plus.html');
+    expect(entryFor('/plus/x')).toBeNull();
     expect(entryFor('/playground')).toBeNull();
     expect(entryFor('/')).toBeNull();
+  });
+
+  it("marks the site nav's link to the page being built", () => {
+    expect(pathFor('/site/index.html')).toBe('/');
+    expect(pathFor('/site/plus.html')).toBe('/plus');
+    const html = '<nav class="site-nav"><a href="/">Home</a><a href="/plus">Plus</a></nav><a href="/plus">Plus</a>';
+    expect(markCurrent(html, '/plus')).toBe(
+      '<nav class="site-nav"><a href="/">Home</a><a href="/plus" aria-current="page">Plus</a></nav><a href="/plus">Plus</a>',
+    );
   });
 
   it('finds unfilled store placeholders, not ordinary brackets', () => {
