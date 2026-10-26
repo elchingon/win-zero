@@ -1,0 +1,77 @@
+{
+  "size": {
+    "width": 1320,
+    "height": 2868
+  },
+  "widths": [
+    360,
+    720
+  ],
+  "iconWidth": 192,
+  "apps": {
+    "free": [
+      {
+        "slug": "round",
+        "caption": "Every Yes is a zero to shoot.",
+        "sub": "Day 50 · Chain Zapper, earned at day 30"
+      },
+      {
+        "slug": "shield",
+        "caption": "Gentle streak rules.",
+        "sub": "A shield can save your streak."
+      },
+      {
+        "slug": "cheer",
+        "caption": "Every round ends with a cheer.",
+        "sub": "Encouragement, never shame."
+      },
+      {
+        "slug": "finish",
+        "caption": "Clear the last one for the big finish.",
+        "sub": "Zero Nuke, earned through check-ins"
+      }
+    ],
+    "plus": [
+      {
+        "slug": "goals",
+        "caption": "Up to three goals, one place.",
+        "sub": "Each with its own check-ins and streak."
+      },
+      {
+        "slug": "pick-game",
+        "caption": "Pick your game before every round.",
+        "sub": "Shooter, Catch, Orbit, Slice or Breaker"
+      },
+      {
+        "slug": "catch",
+        "caption": "Five games, one streak.",
+        "sub": "Catch in Neon Arcade · Day 60"
+      },
+      {
+        "slug": "cheer",
+        "caption": "Every round ends with a cheer.",
+        "sub": "Encouragement, never shame."
+      },
+      {
+        "slug": "notification",
+        "caption": "Answer straight from the notification.",
+        "sub": null
+      },
+      {
+        "slug": "accessibility",
+        "caption": "Play your way.",
+        "sub": "Auto-fire, a Finish round button, softer effects and bold text."
+      },
+      {
+        "slug": "days",
+        "caption": "Check in on the days that count.",
+        "sub": "Every day, weekdays, or any mix."
+      },
+      {
+        "slug": "themes",
+        "caption": "Themes and icons to earn.",
+        "sub": "Four themes included, three more as your best run grows, each with its own app icon."
+      }
+    ]
+  }
+}
