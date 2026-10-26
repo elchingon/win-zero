@@ -1,5 +1,6 @@
 // Settings: goal wording, check-in time (through the engine, so an open window is respected),
-// sound, how it works, support, about (privacy policy, help, email), erase, and the demo controls.
+// sound, how it works, support, about (the apps, privacy policy, help, email), erase, and the demo
+// controls.
 import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router';
 
@@ -118,6 +119,8 @@ export function Settings() {
           <span id="about-title">About</span>
         </Eyebrow>
         <div className="list">
+          <LinkRow label="Get the app" detail="Win Zero for iPhone and Android, with a reminder at your check-in time." action="Open" href="/#get-the-app" />
+          <LinkRow label="Win Zero Plus" detail="Up to three goals, five games and themes to earn. Pay once." action="Open" href="/plus" />
           <LinkRow label="Privacy policy" detail="Your goal and history stay in this browser." action="Open" href="/privacy" />
           <LinkRow label="Help and support" detail="How Win Zero works, and fixes for common questions." action="Open" href="/support" />
           <LinkRow

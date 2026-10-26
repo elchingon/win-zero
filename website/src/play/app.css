@@ -91,6 +91,154 @@ a {
   border: 0;
 }
 
+/* The site bar: the website's links over every screen, the round too. It covers the notch, so
+   the screens and the round below it start under it. */
+:root {
+  --sitebar-height: 48px;
+  --below-sitebar: calc(var(--sitebar-height) + env(safe-area-inset-top));
+}
+
+.sitebar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: var(--below-sitebar);
+  padding: env(safe-area-inset-top) max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
+  border-bottom: 1px solid var(--line);
+  background: rgb(13 17 48 / 0.96);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sitebar a,
+.sitebar-toggle {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.sitebar a:hover,
+.sitebar-toggle:hover {
+  color: var(--fg);
+}
+
+.sitebar-home {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  white-space: nowrap;
+}
+
+/* The app's mark, small. */
+.sitebar-mark {
+  width: 11px;
+  height: 15px;
+  border: 3px solid var(--amber);
+  border-radius: 50%;
+}
+
+.sitebar-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sitebar-cta {
+  padding: 6px 10px;
+  border: 1px solid var(--amber-deep);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+.sitebar .sitebar-cta {
+  color: var(--amber);
+}
+
+.sitebar-toggle {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.sitebar-toggle[aria-expanded='true'] {
+  color: var(--fg);
+}
+
+/* Narrow windows: the links drop down under Menu. */
+.sitebar-links {
+  position: absolute;
+  top: 100%;
+  right: max(8px, env(safe-area-inset-right));
+  display: none;
+  flex-direction: column;
+  min-width: 200px;
+  margin: 6px 0 0;
+  padding: 6px;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.45);
+}
+
+.sitebar-links.open {
+  display: flex;
+}
+
+.sitebar-links a {
+  display: block;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+}
+
+.sitebar-links a:hover {
+  background: var(--panel-2);
+}
+
+@media (min-width: 760px) {
+  .sitebar-toggle {
+    display: none;
+  }
+
+  .sitebar-links {
+    position: static;
+    display: flex;
+    flex-direction: row;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .sitebar-links a {
+    padding: 12px 8px;
+  }
+
+  .sitebar-links a:hover {
+    background: none;
+  }
+
+  .sitebar-cta {
+    order: 1;
+    margin-left: 6px;
+  }
+}
+
 /* Screen: the 480px column, 20px gutter, 22px section gap. */
 .screen {
   display: flex;
@@ -107,6 +255,15 @@ a {
   min-height: 100vh;
   min-height: 100dvh;
   justify-content: center;
+}
+
+.sitebar ~ .screen {
+  padding-top: 20px;
+}
+
+.sitebar ~ .screen.centered {
+  min-height: calc(100vh - var(--below-sitebar));
+  min-height: calc(100dvh - var(--below-sitebar));
 }
 
 .block,
@@ -1194,10 +1351,10 @@ a {
   touch-action: none;
 }
 
-/* The round: the canvas full screen, the HUD and the result sheet over it. */
+/* The round: the canvas filling the window under the site bar, the HUD and the result sheet over it. */
 .round {
   position: fixed;
-  inset: 0;
+  inset: var(--below-sitebar) 0 0;
   z-index: 10;
   background: var(--ink);
   touch-action: none;
@@ -1224,7 +1381,6 @@ a {
 .safe-area-probe {
   position: fixed;
   visibility: hidden;
-  padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
 }
 
@@ -1252,7 +1408,7 @@ a {
 .hud-top {
   top: 0;
   align-items: flex-start;
-  padding-top: calc(env(safe-area-inset-top) + 14px);
+  padding-top: 14px;
 }
 
 .hud-bottom {
@@ -1462,10 +1618,10 @@ a {
   text-align: center;
 }
 
-/* Pinned over the window, for a hint on a scrolling screen. */
+/* Pinned over the window, the site bar too, for a hint on a scrolling screen. */
 .popup-backdrop.fixed {
   position: fixed;
-  z-index: 3;
+  z-index: 30;
 }
 
 /* A credit count's hint: what it is, how it's used, and every way to earn one. */

@@ -68,13 +68,16 @@ interface Size {
   height: number;
 }
 
-/** The safe-area insets (a phone's notch and home bar), read through CSS env(). */
+/**
+ * The safe-area insets (a phone's notch and home bar), read through CSS env(). The round starts
+ * below the site bar, which sits over the notch, so only the bottom one reaches the play area.
+ */
 function safeArea(): { top: number; bottom: number } {
   const probe = document.createElement('div');
   probe.className = 'safe-area-probe';
   document.body.appendChild(probe);
   const style = getComputedStyle(probe);
-  const insets = { top: parseFloat(style.paddingTop) || 0, bottom: parseFloat(style.paddingBottom) || 0 };
+  const insets = { top: 0, bottom: parseFloat(style.paddingBottom) || 0 };
   probe.remove();
   return insets;
 }
