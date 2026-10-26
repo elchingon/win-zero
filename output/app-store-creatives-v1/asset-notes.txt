@@ -1,0 +1,35 @@
+WIN ZERO — APP STORE CREATIVE ASSETS — V1
+Created October 24, 2026 for the free Win Zero app.
+
+UPLOAD FILES
+win-zero-header-3840x1646.png — Product page header, 3840 × 1646.
+win-zero-search-results-1920x1280.png — Search results, 1920 × 1280.
+Both exports are opaque RGB PNGs with no alpha channel.
+
+CREATIVE DIRECTION
+Header: MAKE EVERY YES COUNT.
+Search: DAILY HABITS. ARCADE REWARDS.
+Midnight navy, warm ivory, amber, teal and coral follow src/theme/tokens.ts.
+Block display lettering and oval zeros follow the existing app identity.
+The header emphasizes daily wins; search connects the goal tracker with arcade play.
+UI panels are artistic reproductions of the actual check-in and gameplay captures.
+
+PRODUCTION
+Generated with the built-in image_gen tool using the existing feature graphic and
+store-shots/raw/free/ios-6.9/{check-in,round}.png as references. The search creative
+also uses the generated header as its campaign reference. Full prompts are in prompts.txt.
+Original generated artwork is preserved in source/. Header source: 1916 × 821;
+search source: 1536 × 1024. Final files were resampled with macOS sips to the exact
+supported upload dimensions; they are not native-resolution generations.
+
+APPLE GUIDANCE CHECKED
+https://developer.apple.com/app-store/asset-best-practices/
+https://developer.apple.com/help/app-store-connect/reference/app-information/creative-assets-specifications/
+Use App Store Connect Preview to inspect actual device and orientation crops before
+submitting. Artwork has not been uploaded, submitted, or approved by Apple.
+
+PROJECT CHECKS
+npm run typecheck: passed.
+npm run lint: existing error in scripts/gen-store-shots.mjs:145,
+'Buffer' is not defined (no-undef). That unrelated script was left unchanged.
+No app code or existing store assets were modified.
