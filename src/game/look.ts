@@ -52,13 +52,21 @@ export const ARMOR_SHEEN = [0.7, 0, 0.35, 0];
 export const ARMOR_SHEEN_STOPS = [0, 0.4, 0.7, 1];
 export const ARMOR_EDGE_WIDTH = 0.1;
 export const ARMOR_EDGE_ALPHA = 0.55;
-/** Bullet streaks, in points: the prototype's tail length, line width and head radius. */
+export interface BulletLook {
+  color: string;
+  tail: number;
+  width: number;
+  head: number;
+}
+/**
+ * Bullet streaks, in points: the prototype's tail length, line width and head radius: the usual
+ * shot, the chain shot and the big shot. The colors are Classic's; a theme in the app swaps them.
+ */
 export const BULLET_LOOKS = [
   { color: colors.amber, tail: 18, width: 4, head: 3 },
   { color: colors.teal, tail: 18, width: 4, head: 3 },
   { color: colors.flare, tail: 26, width: 8, head: 5 },
-] as const;
-export type BulletLook = (typeof BULLET_LOOKS)[number];
+] as const satisfies readonly BulletLook[];
 export const BULLET_TAIL_ALPHA = 0.55;
 /**
  * White effect shapes, in points, tinted per particle when drawn: a square dot, a 2:1 confetti
@@ -80,7 +88,7 @@ export const GLYPH_MAX_PX = 1024;
 /** Fills of up to this many glyphs glow, as in the prototype; the glow's blur is this × the size. */
 export const GLYPH_GLOW_MAX = 40;
 export const GLYPH_GLOW = 0.06;
-/** The fill's glow: amber at this opacity in the middle, out to this × the longer side. */
+/** The fill's glow: its middle color (amber in Classic) at this opacity, out to this × the longer side. */
 export const FILL_GLOW_ALPHA = 0.22;
 export const FILL_GLOW_RADIUS = 0.7;
 /** The overlaid number: up to this share of the width, this share of the height, outlined this thick (× size). */

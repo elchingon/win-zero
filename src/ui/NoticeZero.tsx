@@ -13,7 +13,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { useReduceMotion } from './a11y';
+import { useReduceEffects } from './a11y';
 import type { NoticeMotion } from './copy/notice';
 
 export { noticeColors, type NoticeMotion } from './copy/notice';
@@ -23,7 +23,7 @@ const ZERO_H = 112;
 const RING = 22;
 
 export function NoticeZero({ color, motion }: { color: string; motion: NoticeMotion }) {
-  const reduce = useReduceMotion();
+  const reduce = useReduceEffects();
   const still = reduce || motion === 'none';
   const scale = useSharedValue(still ? 1 : 0.6);
   const pulse = useSharedValue(0);

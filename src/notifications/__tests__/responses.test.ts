@@ -6,7 +6,8 @@ import { DEFAULT_ACTION_IDENTIFIER } from 'expo-notifications';
 
 import type { GoalState } from '@/engine';
 import { DAY0, newGoal, yesDays } from '@/engine/__tests__/fixtures';
-import { flush, harness, ready, withGoal } from '@/store/__tests__/harness';
+import { flush, harness, oneGoal, ready, withGoal } from '@/store/__tests__/harness';
+import { primaryGoal, primaryRound } from '@/store/select';
 
 import { decideResponse, startResponses, type ResponseLike } from '../responses';
 import { shouldGoHome } from '../route';
@@ -30,20 +31,32 @@ async function running(goal: GoalState, day: string, time: `${number}:${number}`
 describe('decideResponse', () => {
   it('answers only from the buttons on a check-in or morning reminder for this goal', () => {
     const day = '2026-10-15';
-    expect(decideResponse(response(ACTION_YES, { day }), 'g1')).toEqual({ kind: 'answer', answer: 'yes', day });
-    expect(decideResponse(response(ACTION_NOT_TODAY, { day, kind: 'morning' }), 'g1')).toEqual({
+    expect(decideResponse(response(ACTION_YES, { day }), ['g1'])).toEqual({ kind: 'answer', goalId: 'g1', answer: 'yes', day });
+    expect(decideResponse(response(ACTION_NOT_TODAY, { day, kind: 'morning' }), ['g1'])).toEqual({
       kind: 'answer',
+      goalId: 'g1',
       answer: 'not-today',
       day,
     });
-    expect(decideResponse(response(ACTION_YES, { day, test: true }), 'g1')).toMatchObject({ kind: 'answer' });
+    expect(decideResponse(response(ACTION_YES, { day, test: true }), ['g1'])).toMatchObject({ kind: 'answer' });
 
-    expect(decideResponse(response(DEFAULT_ACTION_IDENTIFIER, { day }), 'g1')).toEqual({ kind: 'open' });
-    expect(decideResponse(response(ACTION_YES, { day, kind: 'reengage' }), 'g1')).toEqual({ kind: 'open' });
-    expect(decideResponse(response(ACTION_YES, { day, goalId: 'g0' }), 'g1')).toEqual({ kind: 'open' });
-    expect(decideResponse(response('snooze', { day }), 'g1')).toEqual({ kind: 'open' });
+    expect(decideResponse(response(DEFAULT_ACTION_IDENTIFIER, { day }), ['g1'])).toEqual({ kind: 'open' });
+    expect(decideResponse(response(ACTION_YES, { day, kind: 'reengage' }), ['g1'])).toEqual({ kind: 'open' });
+    expect(decideResponse(response(ACTION_YES, { day, goalId: 'g0' }), ['g1'])).toEqual({ kind: 'open' });
+    expect(decideResponse(response('snooze', { day }), ['g1'])).toEqual({ kind: 'open' });
     const junk: ResponseLike = { actionIdentifier: ACTION_YES, notification: { date: 1, request: { identifier: 'x', content: {} } } };
-    expect(decideResponse(junk, 'g1')).toEqual({ kind: 'open' });
+    expect(decideResponse(junk, ['g1'])).toEqual({ kind: 'open' });
+  });
+
+  it('answers for whichever of the goals the notification is about (SPEC 9)', () => {
+    const day = '2026-10-15';
+    expect(decideResponse(response(ACTION_YES, { day, goalId: 'b' }), ['a', 'b'])).toEqual({
+      kind: 'answer',
+      goalId: 'b',
+      answer: 'yes',
+      day,
+    });
+    expect(decideResponse(response(ACTION_YES, { day, goalId: 'c' }), ['a', 'b'])).toEqual({ kind: 'open' }); // archived
   });
 });
 
@@ -62,7 +75,7 @@ describe('startResponses', () => {
   it('cold start: a Yes that launched the app is answered once storage is read, before Home shows', async () => {
     const first = harness();
     await ready(first.store);
-    first.store.setState({ goal: yesDays(newGoal(), DAY0, 2) }); // through 10-14, saved
+    first.store.setState(oneGoal(yesDays(newGoal(), DAY0, 2))); // through 10-14, saved
     await flush();
 
     const h = harness();
@@ -72,12 +85,12 @@ describe('startResponses', () => {
     fake.tap(response(ACTION_YES, { day: '2026-10-15' })); // Android reports it to the listener too
     const nav = { toHome: jest.fn() };
     startResponses(h.store, fake.api, nav);
-    expect(h.store.getState().goal).toBeNull(); // not read yet: nothing happens
+    expect(primaryGoal(h.store.getState())).toBeNull(); // not read yet: nothing happens
 
     await ready(h.store);
     const s = h.store.getState();
-    expect(s.goal).toMatchObject({ streak: 3, lastSettledDay: '2026-10-15' });
-    expect(s.round).toMatchObject({ day: '2026-10-15', n: 3, played: false });
+    expect(primaryGoal(s)).toMatchObject({ streak: 3, lastSettledDay: '2026-10-15' });
+    expect(primaryRound(s)).toMatchObject({ day: '2026-10-15', n: 3, played: false });
     expect(s.route).toBeNull(); // Home shows the round, ready to play whenever they like
     expect(s.rejection).toBeNull(); // answered once, not "already answered"
     expect(fake.dismissed).toEqual(['checkin-2026-10-15']);
@@ -88,16 +101,16 @@ describe('startResponses', () => {
   it('a Not today while the app runs opens its notice', async () => {
     const r = await running(yesDays(newGoal(), DAY0, 2), '2026-10-15', '21:00');
     r.fake.tap(response(ACTION_NOT_TODAY, { day: '2026-10-15' }));
-    expect(r.s().goal).toMatchObject({ streak: 1, lastSettledDay: '2026-10-15' });
-    expect(r.s().notice).toMatchObject({ kind: 'slipping', cause: 'answer', lost: 1 });
-    expect(r.s().route).toBe('/notice');
+    expect(primaryGoal(r.s())).toMatchObject({ streak: 1, lastSettledDay: '2026-10-15' });
+    expect(r.s().notices.g1).toMatchObject({ kind: 'slipping', cause: 'answer', lost: 1 });
+    expect(r.s().route?.path).toBe('/notice');
     expect(r.nav.toHome).toHaveBeenCalledTimes(1);
   });
 
   it("answers yesterday's window from the morning reminder", async () => {
     const r = await running(yesDays(newGoal(), DAY0, 2), '2026-10-16', '09:05');
     r.fake.tap(response(ACTION_YES, { day: '2026-10-15', kind: 'morning' }));
-    expect(r.s().round).toMatchObject({ day: '2026-10-15', n: 3, played: false });
+    expect(primaryRound(r.s())).toMatchObject({ day: '2026-10-15', n: 3, played: false });
     expect(r.s().route).toBeNull();
     expect(r.nav.toHome).toHaveBeenCalledTimes(1);
     expect(r.fake.dismissed).toEqual(['morning-2026-10-15']);
@@ -106,14 +119,15 @@ describe('startResponses', () => {
   it("shows Home's banner when the check-in has closed, was answered, or hasn't opened", async () => {
     const r = await running(yesDays(newGoal(), DAY0, 2), '2026-10-17', '00:30'); // 10-15 closed at midnight
     r.fake.tap(response(ACTION_YES, { day: '2026-10-15' }));
-    expect(r.s()).toMatchObject({ rejection: 'expired', route: null, round: null });
-    expect(r.s().goal?.lastSettledDay).toBe('2026-10-15'); // caught up all the same
+    expect(r.s()).toMatchObject({ rejection: { reason: 'expired', goalId: 'g1' }, route: null });
+    expect(primaryRound(r.s())).toBeNull();
+    expect(primaryGoal(r.s())?.lastSettledDay).toBe('2026-10-15'); // caught up all the same
 
     r.fake.tap(response(ACTION_YES, { day: '2026-10-14' }));
-    expect(r.s().rejection).toBe('already-answered');
+    expect(r.s().rejection?.reason).toBe('already-answered');
 
     r.fake.tap(response(ACTION_NOT_TODAY, { day: '2026-10-17' }, 'test-1'));
-    expect(r.s().rejection).toBe('not-open');
+    expect(r.s().rejection?.reason).toBe('not-open');
     expect(r.nav.toHome).toHaveBeenCalledTimes(3);
   });
 
@@ -127,8 +141,8 @@ describe('startResponses', () => {
 
     // The other button on the same notification, still showing on Android, is a new tap.
     r.fake.tap(response(ACTION_NOT_TODAY, { day: '2026-10-15' }));
-    expect(r.s().rejection).toBe('already-answered');
-    expect(r.s().goal?.streak).toBe(3);
+    expect(r.s().rejection?.reason).toBe('already-answered');
+    expect(primaryGoal(r.s())?.streak).toBe(3);
   });
 
   it('opens Home without answering for a plain tap, a nudge, or an old goal', async () => {
@@ -137,7 +151,7 @@ describe('startResponses', () => {
     r.fake.tap(response(DEFAULT_ACTION_IDENTIFIER, { day: '2026-10-15' }));
     r.fake.tap(response(DEFAULT_ACTION_IDENTIFIER, { day: '2026-10-15', kind: 'reengage' }));
     r.fake.tap(response(ACTION_YES, { day: '2026-10-15', goalId: 'g0' }, 'old'));
-    expect(r.s().goal).toBe(goal);
+    expect(primaryGoal(r.s())).toBe(goal);
     expect(r.s()).toMatchObject({ route: null, rejection: null });
     expect(r.nav.toHome).toHaveBeenCalledTimes(3);
   });
@@ -146,9 +160,21 @@ describe('startResponses', () => {
     const r = await running(yesDays(newGoal(), DAY0, 2), '2026-10-15', '21:00');
     r.s().erase();
     r.fake.tap(response(ACTION_YES, { day: '2026-10-15' }));
-    expect(r.s().goal).toBeNull();
+    expect(primaryGoal(r.s())).toBeNull();
     expect(r.nav.toHome).not.toHaveBeenCalled();
     expect(r.fake.dismissed).toEqual(['checkin-2026-10-15']);
+  });
+
+  it('once moved to Win Zero Plus, only opens Home, and answers nothing (SPEC 9)', async () => {
+    const goal = yesDays(newGoal(), DAY0, 2);
+    const r = await running(goal, '2026-10-15', '21:00');
+    r.s().confirmMovedOut(r.s().startMoveOut()!);
+    r.fake.tap(response(ACTION_YES, { day: '2026-10-15' }));
+    r.fake.tap(response(ACTION_NOT_TODAY, { day: '2026-10-15' }, 'other'));
+    expect(primaryGoal(r.s())).toBe(goal);
+    expect(r.s()).toMatchObject({ route: null, rejection: null, notices: {} });
+    expect(r.nav.toHome).toHaveBeenCalledTimes(2);
+    expect(r.fake.dismissed).toEqual(['checkin-2026-10-15', 'other']);
   });
 
   it('stops listening on cleanup', async () => {

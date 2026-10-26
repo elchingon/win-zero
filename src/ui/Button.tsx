@@ -1,16 +1,18 @@
 // Buttons from the prototype: amber primary with the amber-deep ledge that presses down,
 // ghost outline, a flare variant for destructive actions, and an underlined text link.
-import { Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, Text, type GestureResponderEvent, type StyleProp, type ViewStyle } from 'react-native';
 
 import { colors, fonts, radii, type } from '@/theme/tokens';
 
 import { feedback } from './feedback';
+import { MIN_TARGET } from './target';
 
 type Variant = 'primary' | 'ghost' | 'danger';
 
 export function Button(props: {
   label: string;
-  onPress: () => void;
+  /** With the press, when the caller wants to know where it was. */
+  onPress: (e: GestureResponderEvent) => void;
   variant?: Variant;
   small?: boolean;
   disabled?: boolean;
@@ -27,9 +29,9 @@ export function Button(props: {
       accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled: !!disabled }}
       disabled={disabled}
-      onPress={() => {
+      onPress={(e) => {
         if (!silent) feedback.press();
-        onPress();
+        onPress(e);
       }}
       style={({ pressed }) => [
         styles.base,
@@ -69,13 +71,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  small: { paddingVertical: 9, paddingHorizontal: 12, borderRadius: radii.sm },
+  small: { minHeight: MIN_TARGET, paddingVertical: 9, paddingHorizontal: 12, borderRadius: radii.sm },
   smallLabel: { fontSize: 13 },
   primary: { backgroundColor: colors.amber, boxShadow: `0 4px 0 ${colors.amberDeep}` },
-  ghost: { borderWidth: 1, borderColor: colors.line },
+  ghost: { borderWidth: 1, borderColor: colors.edge },
   danger: { borderWidth: 1, borderColor: colors.flare },
   disabled: { opacity: 0.4 },
-  link: { paddingVertical: 6, alignSelf: 'flex-start' },
+  link: { minHeight: MIN_TARGET, justifyContent: 'center', alignSelf: 'flex-start' },
   linkLabel: {
     fontFamily: fonts.bodySemiBold,
     fontSize: 13,

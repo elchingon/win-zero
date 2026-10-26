@@ -1,23 +1,24 @@
 // The scene drawing runs inside the frame callback on the UI thread, so like the sim it must be
-// worklets all the way down. Skia comes in as types only (the kit hands over Skia objects).
+// worklets all the way down, game modes' subfolders too. Skia comes in as types only (the kit
+// hands over Skia objects).
 import { describe, expect, it } from '@jest/globals';
-import { readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
+
+import { importCycles, importGraph, nonWorklets, sourceFiles } from '../../__tests__/workletSources';
 
 const DRAW_DIR = join(__dirname, '..');
+const SIM_DIR = join(DRAW_DIR, '..', 'sim');
 
-const sources = readdirSync(DRAW_DIR)
-  .filter((f) => f.endsWith('.ts'))
-  .map((f) => ({ file: f, code: readFileSync(join(DRAW_DIR, f), 'utf8') }));
+const sources = sourceFiles(DRAW_DIR);
 
-type MaybeWorklet = { __workletHash?: number; __closure?: Record<string, unknown> };
-
-function nonWorklets(fn: unknown, name: string, seen = new Set<unknown>()): string[] {
-  if (typeof fn !== 'function' || seen.has(fn)) return [];
-  seen.add(fn);
-  const w = fn as MaybeWorklet;
-  if (!w.__workletHash) return [name];
-  return Object.entries(w.__closure ?? {}).flatMap(([k, v]) => nonWorklets(v, `${name} → ${k}`, seen));
+/** A relative import into the draw or sim folders (and out of their tests). */
+function inside(file: string, spec: string): boolean {
+  if (!spec.startsWith('./') && !spec.startsWith('../')) return false;
+  const target = resolve(dirname(join(DRAW_DIR, file)), spec);
+  return [DRAW_DIR, SIM_DIR].some((dir) => {
+    const rel = relative(dir, target);
+    return !rel.startsWith('..') && !rel.split(sep).includes('__tests__');
+  });
 }
 
 describe('draw worklets', () => {
@@ -29,17 +30,24 @@ describe('draw worklets', () => {
     expect(code.replace(/^\s*(\/\/.*\n)*/, '').startsWith("'worklet';")).toBe(true);
   });
 
-  it.each(sources)('$file imports Skia as types only, and otherwise only draw and sim modules', ({ code }) => {
-    for (const m of code.matchAll(/import\s+(type\s+)?[^'"]*from\s+['"]([^'"]+)['"]/g)) {
+  it.each(sources)('$file imports Skia as types only, and otherwise only draw and sim modules', ({ file, code }) => {
+    for (const m of code.matchAll(/(?:import|export)\s+(type\s+)?[\w*\s{},]*?from\s+['"]([^'"]+)['"]/g)) {
       const typeOnly = !!m[1];
       const spec = m[2] ?? '';
-      if (spec === '@shopify/react-native-skia') expect(typeOnly).toBe(true);
-      else expect(spec.startsWith('./') || spec.startsWith('../sim/')).toBe(true);
+      const ok = spec === '@shopify/react-native-skia' ? typeOnly : inside(file, spec);
+      expect({ spec, ok }).toEqual({ spec, ok: true });
     }
   });
 
   it.each(sources)('$file exports only worklets', ({ file }) => {
     const mod = require(join(DRAW_DIR, file)) as Record<string, unknown>;
     expect(Object.entries(mod).flatMap(([name, value]) => nonWorklets(value, name))).toEqual([]);
+  });
+
+  // As in the sim: a worklet binds its imports when its module loads, so no circles.
+  it('imports in no circles, with the sim it draws', () => {
+    const graph = importGraph([DRAW_DIR, SIM_DIR]);
+    expect([...graph.values()].flat().length).toBeGreaterThan(0);
+    expect(importCycles(graph, join(DRAW_DIR, '..'))).toEqual([]);
   });
 });

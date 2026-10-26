@@ -1,4 +1,4 @@
-// Touch-down, aim and hold-to-fire.
+// Touch-down, aim and hold-to-fire, and auto-fire (Settings › Accessibility).
 import { describe, expect, it } from '@jest/globals';
 
 import { FIRE_RATE_HZ } from '@/engine';
@@ -7,6 +7,43 @@ import { BULLET_SPEED, MIN_TAP_INTERVAL, MUZZLE_OFFSET } from '../constants';
 import { moveAim, pressFire, releaseFire } from '../input';
 import { step } from '../step';
 import { game, run } from './fixtures';
+
+describe('auto-fire', () => {
+  it('waits for the first touch', () => {
+    const s = game(60, { autoFire: true });
+    run(s, 1);
+    expect(s.report.shots).toBe(0);
+  });
+
+  it('keeps firing at the fire rate after the finger lifts, where it last aimed', () => {
+    const s = game(60, { autoFire: true });
+    pressFire(s, s.muzzleX + 100, s.muzzleY - 100);
+    releaseFire(s);
+    run(s, 2);
+    expect(Math.abs(s.report.shots - (1 + 2 * FIRE_RATE_HZ))).toBeLessThanOrEqual(1);
+    expect(s.aim).toBeCloseTo(-Math.PI / 4);
+  });
+
+  it('aims again at each touch and drag', () => {
+    const s = game(60, { autoFire: true });
+    pressFire(s, s.muzzleX + 100, s.muzzleY - 100);
+    releaseFire(s);
+    pressFire(s, s.muzzleX - 100, s.muzzleY - 100);
+    expect(s.aim).toBeCloseTo((-3 * Math.PI) / 4);
+    moveAim(s, s.muzzleX, s.muzzleY - 100);
+    expect(s.aim).toBeCloseTo(-Math.PI / 2);
+  });
+
+  it('stops once the last zero is gone', () => {
+    const s = game(60, { autoFire: true });
+    pressFire(s, s.muzzleX, 0);
+    releaseFire(s);
+    s.phase = 'celebrate';
+    const shots = s.report.shots;
+    run(s, 1);
+    expect(s.report.shots).toBe(shots);
+  });
+});
 
 describe('firing', () => {
   it('fires the first shot on touch-down, from the muzzle toward the finger', () => {

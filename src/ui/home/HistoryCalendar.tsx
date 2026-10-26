@@ -1,15 +1,25 @@
 // One month of check-ins: yes / not today / shielded / missed, with misses after a long-break
-// reset muted as "paused". Browsable from the first goal day to today.
+// reset muted as "paused", and (Win Zero Plus, SPEC 9) rest days between chosen check-in days.
+// Browsable from the first goal day to today.
 import { useMemo, useState } from 'react';
 import { AccessibilityInfo, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { calendarMark, type CalendarMark, type DayKey, type GoalState } from '@/engine';
+import {
+  calendarMark,
+  isEveryDay,
+  isRestDay,
+  settledDays,
+  type CalendarMark,
+  type DayKey,
+  type GoalState,
+} from '@/engine';
 import { addMonths, monthGrid, monthOf, monthSummary, weekdayInitials, type MonthKey } from '@/lib/calendar';
 import { formatDayShort, formatMonth } from '@/lib/format';
 import { colors, fonts, fontScale, space } from '@/theme/tokens';
 import { Eyebrow, shared } from '@/ui/bits';
+import { MIN_TARGET, targetInset } from '@/ui/target';
 
-type Mark = CalendarMark | 'pending';
+type Mark = CalendarMark | 'pending' | 'rest';
 
 const MARK_WORDS: Record<Mark, string> = {
   yes: 'Yes',
@@ -18,16 +28,25 @@ const MARK_WORDS: Record<Mark, string> = {
   missed: 'Missed',
   paused: 'Paused',
   pending: 'Waiting for your answer',
+  rest: 'Rest day',
 };
 
 const LEGEND: Mark[] = ['yes', 'no', 'shielded', 'missed', 'paused'];
 
+/** A day's mark. Shielded has a dot inside its ring, so it isn't told from Yes by color alone. */
 export function MarkGlyph({ mark }: { mark: Mark }) {
-  return <View style={glyphs[mark]} />;
+  return <View style={glyphs[mark]}>{mark === 'shielded' ? <View style={glyphs.shieldDot} /> : null}</View>;
 }
 
-export function HistoryCalendar(props: { goal: GoalState; today: DayKey; pendingDay: DayKey | null; firstWeekday: number }) {
-  const { goal, today, pendingDay, firstWeekday } = props;
+export function HistoryCalendar(props: {
+  goal: GoalState;
+  today: DayKey;
+  pendingDay: DayKey | null;
+  firstWeekday: number;
+  /** Mark rest days (SPEC 9): only where goals can check in on chosen days. */
+  restDays?: boolean;
+}) {
+  const { goal, today, pendingDay, firstWeekday, restDays = false } = props;
   const first = monthOf(goal.firstDay);
   const last = monthOf(today);
   const [month, setMonth] = useState(last);
@@ -36,7 +55,15 @@ export function HistoryCalendar(props: { goal: GoalState; today: DayKey; pending
   const marks = useMemo(() => new Map(goal.history.map((e) => [e.day, calendarMark(e)])), [goal.history]);
   const weeks = useMemo(() => monthGrid(shown, firstWeekday), [shown, firstWeekday]);
 
-  const markOf = (day: DayKey): Mark | null => marks.get(day) ?? (day === pendingDay ? 'pending' : null);
+  // History decides up to the last settled day: a day there with no entry was a rest day.
+  const settled = useMemo(() => (restDays ? settledDays(goal) : null), [restDays, goal]);
+  const legend = restDays && !isEveryDay(goal) ? [...LEGEND, 'rest' as const] : LEGEND;
+
+  /** A day before the goal began, or after today, shows no mark of its own. */
+  const isOutside = (day: DayKey) => day < goal.firstDay || day > today;
+  const markOf = (day: DayKey): Mark | null =>
+    marks.get(day) ??
+    (day === pendingDay ? 'pending' : settled && !isOutside(day) && isRestDay(goal, day, settled) ? 'rest' : null);
 
   /** Show another month, and tell a screen reader what's in it. */
   const go = (to: MonthKey) => {
@@ -57,7 +84,7 @@ export function HistoryCalendar(props: { goal: GoalState; today: DayKey; pending
             accessibilityState={{ disabled: shown <= first }}
             disabled={shown <= first}
             onPress={() => go(prev)}
-            hitSlop={10}
+            style={styles.arrowTarget}
           >
             <Text style={[styles.arrow, shown <= first && styles.arrowOff]}>‹</Text>
           </Pressable>
@@ -70,7 +97,7 @@ export function HistoryCalendar(props: { goal: GoalState; today: DayKey; pending
             accessibilityState={{ disabled: shown >= last }}
             disabled={shown >= last}
             onPress={() => go(next)}
-            hitSlop={10}
+            style={styles.arrowTarget}
           >
             <Text style={[styles.arrow, shown >= last && styles.arrowOff]}>›</Text>
           </Pressable>
@@ -91,7 +118,7 @@ export function HistoryCalendar(props: { goal: GoalState; today: DayKey; pending
             {week.map((day, i) => {
               if (!day) return <View key={i} style={styles.cell} />;
               const mark = markOf(day);
-              const outside = day < goal.firstDay || day > today;
+              const outside = isOutside(day);
               return (
                 <View
                   key={day}
@@ -114,7 +141,7 @@ export function HistoryCalendar(props: { goal: GoalState; today: DayKey; pending
 
       {/* Each day says its own mark, so screen readers skip the key. */}
       <View style={styles.legend} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-        {LEGEND.map((m) => (
+        {legend.map((m) => (
           <View key={m} style={styles.legendItem}>
             <MarkGlyph mark={m} />
             <Text style={styles.legendText}>{MARK_WORDS[m]}</Text>
@@ -126,19 +153,39 @@ export function HistoryCalendar(props: { goal: GoalState; today: DayKey; pending
 }
 
 const ring = { width: 12, height: 16, borderRadius: '50%' as const };
+/** The month arrows' glyph size, and line height. */
+const ARROW_SIZE = 22;
 
 const glyphs = StyleSheet.create({
   yes: { ...ring, borderWidth: 3, borderColor: colors.amber, boxShadow: `0 0 6px ${colors.amber}99` },
   no: { ...ring, borderWidth: 2, borderColor: colors.flare },
-  shielded: { ...ring, borderWidth: 3, borderColor: colors.teal, boxShadow: `0 0 6px ${colors.teal}99` },
+  shielded: {
+    ...ring,
+    borderWidth: 3,
+    borderColor: colors.teal,
+    boxShadow: `0 0 6px ${colors.teal}99`,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shieldDot: { width: 4, height: 6, borderRadius: '50%', backgroundColor: colors.teal },
   missed: { width: 8, height: 8, borderRadius: 4, borderWidth: 1.5, borderColor: colors.flare },
-  paused: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.line },
+  paused: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.edge },
   pending: { ...ring, borderWidth: 1.5, borderColor: colors.amber, opacity: 0.6 },
+  rest: { width: 8, height: 2, borderRadius: 1, backgroundColor: colors.edge },
 });
 
 const styles = StyleSheet.create({
-  nav: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  arrow: { fontFamily: fonts.bodyBold, fontSize: 22, lineHeight: 22, color: colors.fg, paddingHorizontal: 4 },
+  // The arrows' targets space them from the month, and take back their extra height so the
+  // heading's row keeps its size.
+  nav: { flexDirection: 'row', alignItems: 'center' },
+  arrowTarget: {
+    minWidth: MIN_TARGET,
+    minHeight: MIN_TARGET,
+    marginVertical: targetInset(ARROW_SIZE),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  arrow: { fontFamily: fonts.bodyBold, fontSize: ARROW_SIZE, lineHeight: ARROW_SIZE, color: colors.fg },
   arrowOff: { color: colors.line },
   month: { fontFamily: fonts.monoSemiBold, fontSize: 12, letterSpacing: 0.6, color: colors.fg, minWidth: 120, textAlign: 'center' },
   grid: {

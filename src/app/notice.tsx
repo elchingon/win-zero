@@ -1,11 +1,11 @@
 // Reset / Shielded / Slipping: what a Not today, or a run of missed days, did to the streak.
 // Shown once. The copy is supportive and plain: some people here are working on sobriety.
-import { Redirect, router } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
 
-import { pendingWindow } from '@/engine';
-import { appStore, UNDO_MS, UNDO_MS_SCREEN_READER, useApp } from '@/store';
+import { isEveryDay, pendingWindow } from '@/engine';
+import { appStore, slotById, UNDO_MS, UNDO_MS_SCREEN_READER, useApp } from '@/store';
 import { colors, space, type } from '@/theme/tokens';
 import { useScreenReader } from '@/ui/a11y';
 import { Em, Eyebrow, Lede } from '@/ui/bits';
@@ -17,8 +17,12 @@ import { callSupportLine, SUPPORT_LINE } from '@/ui/support';
 
 export default function NoticeScreen() {
   // Snapshot it, and mark it shown: it appears once, and the store may move on while it's up.
-  const [pending] = useState(() => appStore.getState().nextNotice());
-  const goal = useApp((s) => s.goal);
+  // The link names the goal it's for; anything else waiting comes after.
+  const { goal: goalId } = useLocalSearchParams<{ goal?: string }>();
+  const [pending] = useState(() => appStore.getState().nextNotice(goalId));
+  const goal = useApp((s) => (pending ? (slotById(s, pending.goalId)?.goal ?? null) : null));
+  // With more than one goal (Win Zero Plus), the notice says whose news it is.
+  const several = useApp((s) => s.goals.length > 1);
   const route = useApp((s) => s.route);
   const undo = useApp((s) => s.undo);
   const screenReader = useScreenReader();
@@ -41,11 +45,11 @@ export default function NoticeScreen() {
   if (!pending || !goal) return <Redirect href="/" />;
 
   const { notice } = pending;
-  const copy = copyFor(notice);
+  const copy = copyFor(notice, { everyDay: isEveryDay(goal) });
   const color = noticeColors[notice.kind];
   // An answer can land while this is up (a notification's buttons), so the way on is read live.
   const canAnswer = pendingWindow(goal, appStore.getState().now()) !== null;
-  const next = route === '/play' ? 'Play your round' : canAnswer && notice.kind !== 'noted' ? 'Check in now' : 'Got it';
+  const next = route?.path === '/play' ? 'Play your round' : canAnswer && notice.kind !== 'noted' ? 'Check in now' : 'Got it';
   const close = () => router.dismissTo('/');
   const takeBack = () => {
     // Turned down (the check-in just closed, say): the button goes, as the store drops the undo.
@@ -58,7 +62,7 @@ export default function NoticeScreen() {
     <Screen centered>
       <NoticeZero color={color} motion={copy.motion} />
       <View style={styles.block}>
-        <Eyebrow>{copy.eyebrow}</Eyebrow>
+        <Eyebrow>{several ? `${copy.eyebrow} · ${goal.goal}` : copy.eyebrow}</Eyebrow>
         <Text style={type.h2} accessibilityRole="header">
           {copy.title[0]}
           <Em color={notice.kind === 'shielded' ? colors.teal : colors.amber}>{copy.title[1]}</Em>

@@ -6,7 +6,7 @@ import { StyleSheet, View } from 'react-native';
 import { BONUS_MAX_N } from '@/engine';
 import { formatCount, parseCount } from '@/lib/format';
 import { space } from '@/theme/tokens';
-import { Chip, Field, TextField } from '@/ui/bits';
+import { Chip, Field, shared, TextField } from '@/ui/bits';
 import { BottomSheet } from '@/ui/BottomSheet';
 import { Button } from '@/ui/Button';
 import { BONUS_DEFAULT_N, BONUS_PRESETS, BONUS_SHEET } from '@/ui/copy/credits';
@@ -35,7 +35,7 @@ function SizeChooser({ onStart, onCancel }: { onStart: (n: number) => void; onCa
           accessibilityLabel={BONUS_SHEET.field}
         />
       </Field>
-      <View style={styles.chips}>
+      <View style={shared.chips}>
         {BONUS_PRESETS.map((p) => (
           <Chip key={p} label={formatCount(p)} selected={n === p} onPress={() => setText(String(p))} />
         ))}
@@ -57,7 +57,6 @@ function SizeChooser({ onStart, onCancel }: { onStart: (n: number) => void; onCa
 }
 
 const styles = StyleSheet.create({
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   actions: { flexDirection: 'row', gap: space.md, paddingBottom: space.lg },
   action: { flex: 1 },
 });

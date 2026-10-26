@@ -1,26 +1,28 @@
 // Settings: goal wording, times (through the engine, so an open window is respected),
-// sound / haptics / weekly nudge, reminder permission, how it works, support, about (privacy
-// policy, help, email, version), and erase.
+// sound / haptics / weekly nudge, reminder permission, how it works, support, accessibility
+// switches that change the app for whoever turns them on, about (privacy policy, help, email, the
+// move to Win Zero Plus once it's on the store, version), and erase.
+// Win Zero Plus adds check-in days and more goals, each with its own screen once there are
+// several, and its games, themes and app icons (SPEC 9).
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { useState, type ComponentType } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 
-import { currentCheckInTime, firstUpcomingDay, opensAt, pendingWindow, type ClockTime } from '@/engine';
-import { formatUntil, formatWhen } from '@/lib/format';
 import type { ReminderPermission } from '@/notifications/permissions';
-import { appStore, useApp } from '@/store';
+import { appStore, isMovedOut, primaryGoal, useApp } from '@/store';
 import { colors, space, type } from '@/theme/tokens';
-import { Card, Eyebrow, Field, Fine, Row, shared, TextField, ToggleRow } from '@/ui/bits';
+import { Card, Eyebrow, Fine, Row, shared, ToggleRow } from '@/ui/bits';
+import { useSystemBoldText } from '@/ui/a11y';
 import { TopBar } from '@/ui/Brand';
 import { Button, LinkButton } from '@/ui/Button';
-import { GOAL_MAX_LENGTH } from '@/ui/copy/rules';
 import { feedback } from '@/ui/feedback';
 import { Screen } from '@/ui/Screen';
+import { GoalFields } from '@/ui/settings/GoalFields';
 import { APP_LINKS, callSupportLine, emailSupport, openPage, SUPPORT_LINE } from '@/ui/support';
-import { TimeField } from '@/ui/TimeField';
-import { useDeviceCalendar } from '@/ui/useDevice';
+import { boldAtLaunch } from '@/ui/useAppFonts';
 import { useReminderPermission } from '@/ui/useReminderPermission';
+import { APP_NAME, FEATURES, PLUS_STORE_URL } from '@/variant';
 
 // Development builds only: Metro folds __DEV__ to false in production and drops the require.
 const DebugSection: ComponentType | null = __DEV__
@@ -28,12 +30,21 @@ const DebugSection: ComponentType | null = __DEV__
     require('@/dev/DebugSection').DebugSection
   : null;
 
-/** The app version from app.json, as built. */
+// Win Zero Plus only: the literal comparison folds per file, so Win Zero's bundle leaves it out.
+const PlusSettings: typeof import('@/plus/settings') | null =
+  process.env.EXPO_PUBLIC_APP_VARIANT === 'plus'
+    ? // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require('@/plus/settings')
+    : null;
+
+/** The app version from the app's config, as built. */
 const APP_VERSION = Constants.expoConfig?.version;
-const APP_NAME = APP_VERSION ? `Win Zero ${APP_VERSION}` : 'Win Zero';
+const APP_LABEL = APP_VERSION ? `${APP_NAME} ${APP_VERSION}` : APP_NAME;
 /** From the environment; a build without them leaves their rows out (see APP_LINKS). */
 const PRIVACY_URL = APP_LINKS.privacy;
 const SUPPORT_URL = APP_LINKS.support;
+/** Win Zero offers the move once Win Zero Plus is on the store for this platform (SPEC 9). */
+const MOVE_OFFERED = FEATURES.moveOut && PLUS_STORE_URL !== null;
 
 const PERMISSION_WORDS: Record<ReminderPermission, string> = {
   granted: 'On',
@@ -42,34 +53,28 @@ const PERMISSION_WORDS: Record<ReminderPermission, string> = {
 };
 
 export default function Settings() {
-  const goal = useApp((s) => s.goal);
+  const goal = useApp(primaryGoal);
   const prefs = useApp((s) => s.prefs);
-  useApp((s) => s.devClockOffsetMs); // the "next check-in" line follows the debug clock
-  const { h24 } = useDeviceCalendar();
-  const [draft, setDraft] = useState(goal?.goal ?? '');
-  const [saved, setSaved] = useState(false);
+  const moved = useApp(isMovedOut);
+  // Win Zero Plus with several goals lists them, each with its own screen (SPEC 9). Below,
+  // PlusSettings comes first in each condition, so Win Zero's build folds the branch away.
+  const several = useApp((s) => s.goals.length > 1);
+  const pastGoals = useApp((s) => s.archived.length > 0);
   const { permission, turnOn } = useReminderPermission();
+  const systemBold = useSystemBoldText();
   const [eraseArmed, setEraseArmed] = useState(false);
 
   // Erasing empties the goal on the way out; render nothing while the screen leaves.
   if (!goal) return null;
 
   const store = appStore.getState();
-  const now = store.now();
-  const tz = store.timeZone();
-  const pending = pendingWindow(goal, now);
-  const upcoming = opensAt(goal, firstUpcomingDay(goal, now));
-  const goalChanged = draft.trim() !== goal.goal && draft.trim().length > 0;
-
-  const saveGoal = () => {
-    if (store.setGoalText(draft).ok) {
-      setDraft(draft.trim());
-      setSaved(true);
-    }
-  };
-
-  const changeCheckIn = (time: ClockTime) => store.setCheckInTime(time);
-  const changeMorning = (time: ClockTime) => store.setMorningTime(time);
+  // Fonts load at launch, so a change to Bold text shows from the next one.
+  const launchedBold = boldAtLaunch();
+  const boldDetail = [
+    `Heavier text across the app, from the next time you open ${APP_NAME}.`,
+    ...(Platform.OS === 'ios' ? ["Always on while Bold Text is on in your iPhone's settings."] : []),
+    ...(launchedBold !== null && launchedBold !== (prefs.boldText || systemBold) ? [`Close and reopen ${APP_NAME} to see it.`] : []),
+  ].join(' ');
 
   const erase = () => {
     feedback.press();
@@ -84,42 +89,18 @@ export default function Settings() {
         Settings
       </Text>
 
-      <View style={shared.section}>
-        <Field label="Daily goal" hint={saved ? 'Saved. Your streak and history stay the same.' : 'Your streak and history stay the same.'}>
-          <TextField
-            value={draft}
-            onChangeText={(t) => {
-              setDraft(t);
-              setSaved(false);
-            }}
-            maxLength={GOAL_MAX_LENGTH}
-            returnKeyType="done"
-            onSubmitEditing={() => goalChanged && saveGoal()}
-            accessibilityLabel="Daily goal"
-          />
-        </Field>
-        {goalChanged ? <Button small label="Save goal" onPress={saveGoal} style={styles.start} /> : null}
-      </View>
-
-      <View style={shared.section}>
-        <TimeField
-          label="Check-in time"
-          value={currentCheckInTime(goal)}
-          onChange={changeCheckIn}
-          h24={h24}
-          hint={`${pending ? `A check-in is open until ${formatUntil(pending.closesAt, now, tz, h24)}. ` : ''}Next check-in: ${formatWhen(upcoming, now, tz, h24)}.`}
-        />
-        <TimeField
-          label="Reminder"
-          value={goal.morningTime}
-          onChange={changeMorning}
-          h24={h24}
-          hint="Only if you haven't answered by then: the next morning, or later the same day if it's after check-in time. Set it to check-in time to get one notification a day."
-        />
-      </View>
+      {PlusSettings && several ? (
+        <PlusSettings.GoalsList />
+      ) : (
+        <>
+          <GoalFields key={goal.goalId} goal={goal} />
+          {PlusSettings ? <PlusSettings.DaysField key={`${goal.goalId}-days`} goal={goal} /> : null}
+          {PlusSettings ? <PlusSettings.GoalsGroup /> : null}
+        </>
+      )}
 
       <View style={shared.list}>
-        <ToggleRow label="Sound" detail="Pops and booms in the round." value={prefs.sound} onChange={(v) => store.setPref('sound', v)} />
+        <ToggleRow label="Sound" detail="A chime for each Yes, and pops and booms in the round." value={prefs.sound} onChange={(v) => store.setPref('sound', v)} />
         <ToggleRow label="Haptics" detail="Taps and buzzes." value={prefs.haptics} onChange={(v) => store.setPref('haptics', v)} />
         <ToggleRow
           label="Weekly nudge"
@@ -129,7 +110,11 @@ export default function Settings() {
         />
         <ToggleRow
           label="Goal in reminders"
-          detail="Off keeps your goal private on the lock screen. Reminders just say “your goal”."
+          detail={
+            PlusSettings && several
+              ? PlusSettings.SETTINGS_COPY.goalInReminders
+              : 'Off keeps your goal private on the lock screen. Reminders just say “your goal”.'
+          }
           value={prefs.goalInReminders}
           onChange={(v) => store.setPref('goalInReminders', v)}
         />
@@ -160,6 +145,33 @@ export default function Settings() {
         />
       </View>
 
+      {PlusSettings ? <PlusSettings.PlusSections /> : null}
+
+      <View style={shared.section}>
+        <Eyebrow header>Accessibility</Eyebrow>
+        <View style={shared.list}>
+          <ToggleRow
+            label="Reduce effects"
+            detail="Less shake, softer flashes and fewer particles, and a still background. Always on while your phone's Reduce Motion is on."
+            value={prefs.reduceEffects}
+            onChange={(v) => store.setPref('reduceEffects', v)}
+          />
+          <ToggleRow
+            label="Auto-fire"
+            detail="Once you touch the screen in a round, firing keeps going on its own. Tap or drag to aim."
+            value={prefs.autoFire}
+            onChange={(v) => store.setPref('autoFire', v)}
+          />
+          <ToggleRow
+            label="Finish round button"
+            detail="A button in every round that clears all the zeros at once. Always there with a screen reader on."
+            value={prefs.finishButton}
+            onChange={(v) => store.setPref('finishButton', v)}
+          />
+          <ToggleRow label="Bold text" detail={boldDetail} value={prefs.boldText} onChange={(v) => store.setPref('boldText', v)} />
+        </View>
+      </View>
+
       <View style={shared.section}>
         <Eyebrow header>About</Eyebrow>
         <View style={shared.list}>
@@ -175,7 +187,7 @@ export default function Settings() {
           {SUPPORT_URL ? (
             <Row
               label="Help and support"
-              detail="How Win Zero works, and fixes for common questions."
+              detail={`How ${APP_NAME} works, and fixes for common questions.`}
               right={<Text style={styles.call}>Open</Text>}
               hint="Opens the support page in your browser"
               onPress={() => openPage(SUPPORT_URL)}
@@ -185,17 +197,30 @@ export default function Settings() {
             label="Email us"
             detail={APP_LINKS.email}
             right={<Text style={styles.call}>Email</Text>}
-            hint="Starts an email to Win Zero support"
-            onPress={() => emailSupport(APP_NAME)}
+            hint={`Starts an email to ${APP_NAME} support`}
+            onPress={() => emailSupport(APP_LABEL)}
           />
+          {MOVE_OFFERED && !moved ? (
+            <Row
+              label="Move to Win Zero Plus"
+              detail="Bring your goal, history and rewards to the Plus app on this phone."
+              right={<Text style={styles.call}>Read</Text>}
+              hint="Explains what moves, before anything happens"
+              onPress={() => router.push('/move')}
+            />
+          ) : null}
         </View>
-        <Fine>{APP_NAME} · © 2026 E7 Systems</Fine>
+        <Fine>{APP_LABEL} · © 2026 E7 Systems</Fine>
       </View>
 
       {eraseArmed ? (
         <Card style={styles.erase}>
           <Text style={styles.eraseTitle}>Erase everything?</Text>
-          <Fine>This deletes your goal, streak, history and rewards from this phone. It can&apos;t be undone.</Fine>
+          <Fine>
+            {PlusSettings && (several || pastGoals)
+              ? PlusSettings.SETTINGS_COPY.erase
+              : "This deletes your goal, streak, history and rewards from this phone. It can't be undone."}
+          </Fine>
           <View style={styles.eraseRow}>
             <Button variant="danger" label="Erase everything" onPress={erase} silent style={styles.flex} />
             <Button variant="ghost" label="Keep my data" onPress={() => setEraseArmed(false)} style={styles.flex} />
@@ -211,7 +236,6 @@ export default function Settings() {
 }
 
 const styles = StyleSheet.create({
-  start: { alignSelf: 'flex-start' },
   call: { ...type.eyebrow, color: colors.amber },
   erase: { borderColor: colors.flare, gap: space.md },
   eraseTitle: { ...type.question },

@@ -1,10 +1,26 @@
-import type { CreditGrant, CreditWallet, DayKey, GoalState, HistoryEntry, IsoInstant, WeaponId } from '@/engine';
+import type {
+  AnswerRejection,
+  CreditGrant,
+  CreditWallet,
+  DayKey,
+  GoalState,
+  HistoryEntry,
+  IsoInstant,
+  ModeId,
+  ThemeId,
+  WeaponId,
+} from '@/engine';
 
 /** Bump when PersistedState changes shape, and teach migratePersisted the old one. */
-export const STORE_VERSION = 2;
+export const STORE_VERSION = 3;
 export const STORE_KEY = 'winzero';
 /** Where stored data goes when its goal can't be read, so a later fix can bring it back. */
 export const STORE_BACKUP_KEY = `${STORE_KEY}:unreadable`;
+/**
+ * A move's id (SPEC 9: Win Zero to Win Zero Plus). It travels in a link and names the file the move
+ * is left in, so it's letters, digits and dashes only.
+ */
+export const MOVE_ID_PATTERN = /^[A-Za-z0-9-]{1,64}$/;
 
 export interface Prefs {
   sound: boolean;
@@ -13,6 +29,16 @@ export interface Prefs {
   reengage: boolean;
   /** Reminders name the goal ("Did you stick to “Stop drinking” today?"). Off keeps it private. */
   goalInReminders: boolean;
+  // Accessibility (Settings › Accessibility). Each changes the app for everyone who turns it on,
+  // so all are off by default.
+  /** Less shake, dimmer flashes, fewer particles and still backgrounds, as under the OS's Reduce Motion. */
+  reduceEffects: boolean;
+  /** In a round, firing keeps going after the first touch; touches only aim. */
+  autoFire: boolean;
+  /** Finish round in every round, as with a screen reader on. */
+  finishButton: boolean;
+  /** Heavier text, from the next launch (fonts load once, at launch). */
+  boldText: boolean;
 }
 
 /** A Yes's rewards, stored by weapon id so they survive a restart. */
@@ -37,6 +63,8 @@ export interface RoundRecord {
   /** Weapons not yet unlocked that a Weapon credit lent this round. */
   borrowed: WeaponId[];
   played: boolean;
+  /** Earned themes this Yes opened (Win Zero Plus), for the result sheet. Absent when none. */
+  unlocks?: ThemeId[];
 }
 
 /**
@@ -50,24 +78,101 @@ export interface BonusRound {
   played: boolean;
 }
 
-/** The round a Weapon credit lends to: the day's round, or the bonus round. */
-export type CreditRound = 'daily' | 'bonus';
+/** The round a Weapon credit lends to: a goal's day's round, or the bonus round. */
+export type CreditRound = { round: 'daily'; goalId: string } | { round: 'bonus' };
 
-export interface PersistedState {
-  goal: GoalState | null;
-  /** The player's weapon pick. null means the default, the highest unlocked. */
-  weapon: WeaponId | null;
-  prefs: Prefs;
+/** One goal, with what belongs to it alone: the round its latest Yes earned, and the news shown. */
+export interface GoalSlot {
+  goal: GoalState;
+  round: RoundRecord | null;
   /** Missed days through this one have been shown (Slipping / Reset / Shielded on opening). */
   seenThrough: DayKey | null;
-  round: RoundRecord | null;
+}
+
+/** A one-time tip on Home (SPEC 6). `first-round`: after the first Yes's round, how the app works. */
+export type TipId = 'first-round';
+export const TIP_IDS: readonly TipId[] = ['first-round'];
+
+/** A goal set aside (SPEC 9): its history kept to read, with no reminders, and its slot free. */
+export interface ArchivedGoal {
+  goal: GoalState;
+  archivedAt: IsoInstant;
+}
+
+/**
+ * Win Zero's move to Win Zero Plus (SPEC 9). `sent` from the first try, with one id for every
+ * try so Plus adds the credits once; `moved` once Plus confirms the move arrived. While moved,
+ * Win Zero schedules no reminders, until the user chooses to keep using it.
+ */
+export interface MoveOut {
+  id: string;
+  status: 'sent' | 'moved';
+  /** The latest try, so Win Zero can ask whether a move it never heard back about finished. */
+  sentAt: IsoInstant;
+}
+
+/** A move Win Zero Plus took in. Its credits are added once, however often it arrives. */
+export interface ImportRecord {
+  /** When Plus took it in. */
+  at: IsoInstant;
+  /** When Win Zero made it. */
+  createdAt: IsoInstant;
+  /** The credits it added. */
+  game: number;
+  weapon: number;
+}
+
+export interface PersistedState {
+  /** The goals, in the order they're shown. The free app keeps at most one (Limits). */
+  goals: GoalSlot[];
+  archived: ArchivedGoal[];
+  /**
+   * The best streak goals no longer here reached (archived or deleted), so removing a goal never
+   * takes a weapon away. The shared arsenal reaches this or any goal's bestStreak (arsenalReach).
+   */
+  arsenalBest: number;
+  /** The player's weapon pick. null means the default, the highest unlocked. */
+  weapon: WeaponId | null;
+  /** The game mode picked in Settings › Games (Win Zero Plus). null means the Shooter. */
+  gameMode: ModeId | null;
+  /** The theme picked in Settings › Themes (Win Zero Plus). null means Classic. */
+  theme: ThemeId | null;
+  prefs: Prefs;
   /** Game and Weapon credits. They outlive a goal; Erase all data clears them with everything else. */
   credits: CreditWallet;
   bonus: BonusRound | null;
   /** "Not now" on Home's reminders-off card hides it until then. */
   reminderCardHiddenUntil: IsoInstant | null;
+  /** The tips on Home already shown and closed, each shown once. */
+  tipsSeen: TipId[];
   /** Development builds only: simulated time travel. Production builds ignore it. */
   devClockOffsetMs: number;
+  /** Win Zero: its move to Win Zero Plus, from the first try until it's cancelled or the user stays. */
+  moveOut: MoveOut | null;
+  /** Win Zero Plus: the moves it took in, by id. */
+  imports: Readonly<Record<string, ImportRecord>>;
+}
+
+/** What a move's merge (src/transfer/merge.ts) gives Win Zero Plus to save. */
+export type ImportedState = Pick<
+  PersistedState,
+  'goals' | 'archived' | 'arsenalBest' | 'weapon' | 'prefs' | 'credits' | 'imports'
+>;
+
+/** A merged move, and the goals whose copy here it replaced; or why it can't be taken in. */
+export type ImportOutcome =
+  | { ok: true; state: ImportedState; replaced: readonly string[] }
+  | { ok: false; reason: 'full' };
+
+/**
+ * Version 2's single-goal fields, copied from the first goal on every save for one release: a
+ * build still on version 2 (a /play tab left open, a downgraded app) then reads that goal instead
+ * of saving an empty state over it. Version 3 reads `goals` only. Drop with version 4.
+ */
+export interface LegacyCopy {
+  goal: GoalState | null;
+  round: RoundRecord | null;
+  seenThrough: DayKey | null;
 }
 
 /**
@@ -75,6 +180,18 @@ export interface PersistedState {
  * notice. A Yes from a notification opens nothing: Home shows the round, ready when the user is.
  */
 export type AnswerRoute = '/play' | '/notice';
+
+/** Where the latest answer leads, and whose goal it answered. */
+export interface PendingRoute {
+  path: AnswerRoute;
+  goalId: string;
+}
+
+/** Why the latest answer was turned down, and whose goal it was for. */
+export interface Rejection {
+  reason: AnswerRejection;
+  goalId: string;
+}
 
 /** Where an answer came from: Home's card, or a notification's buttons. */
 export type AnswerSource = 'app' | 'notification';
@@ -97,6 +214,7 @@ export type Notice =
  * the answer, which comes back whole. Not persisted.
  */
 export interface UndoNotToday {
+  goalId: string;
   /** The day that was answered. */
   day: DayKey;
   /** When it was answered, in epoch ms on the app clock. */
@@ -105,7 +223,7 @@ export interface UndoNotToday {
   notice: Notice | null;
   /** The history entry the answer recorded. Once another day settles, it's too late. */
   entry: HistoryEntry | undefined;
-  /** The goal and round from just before (a Not today drops yesterday's round). */
+  /** The goal and its round from just before (a Not today drops yesterday's round). */
   before: { goal: GoalState; round: RoundRecord | null };
 }
 
@@ -114,5 +232,5 @@ export interface UndoNotToday {
  * missed-day news is worked out from history, and counts as seen through `through` once shown.
  */
 export type PendingNotice =
-  | { source: 'answer'; notice: Notice }
-  | { source: 'missed'; notice: Notice; through: DayKey };
+  | { source: 'answer'; goalId: string; notice: Notice }
+  | { source: 'missed'; goalId: string; notice: Notice; through: DayKey };

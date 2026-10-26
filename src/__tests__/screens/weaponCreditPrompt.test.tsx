@@ -45,3 +45,15 @@ describe('weapon credit prompt', () => {
     expect(onPick).not.toHaveBeenCalled();
   });
 });
+
+describe('weapon credit prompt in another game mode (SPEC 9)', () => {
+  it('names what it lends as the mode does', async () => {
+    const onPick = jest.fn();
+    await render(<WeaponCreditPrompt offer={lockedWeapons(13)} credits={1} mode="catch" onPick={onPick} onSkip={() => {}} />);
+    expect(screen.getByText(/Pick a catcher you haven't unlocked yet/)).toBeOnTheScreen();
+    expect(screen.getByText('Magnet')).toBeOnTheScreen();
+    expect(screen.queryByText('Rocket')).not.toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Chain Catch. Unlocks on day 30.' }));
+    expect(onPick).toHaveBeenCalledWith('chain');
+  });
+});

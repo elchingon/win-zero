@@ -4,7 +4,9 @@ import { Pressable, StyleSheet, Switch, Text, TextInput, View, type StyleProp, t
 
 import { colors, fonts, radii, space, type } from '@/theme/tokens';
 
+import { useAnnounce } from './announce';
 import { feedback } from './feedback';
+import { MIN_TARGET, targetInset } from './target';
 
 /** A small uppercase label. `header` makes it a heading, for screen readers' heading navigation. */
 export function Eyebrow({ children, color, header }: { children: ReactNode; color?: string; header?: boolean }) {
@@ -28,6 +30,7 @@ export function Em({ children, color = colors.amber }: { children: ReactNode; co
   return <Text style={{ color }}>{children}</Text>;
 }
 
+/** A pill to pick, in a touch target of MIN_TARGET. Lay several out in `shared.chips`. */
 export function Chip(props: { label: string; selected: boolean; onPress: () => void }) {
   return (
     <Pressable
@@ -37,19 +40,67 @@ export function Chip(props: { label: string; selected: boolean; onPress: () => v
         feedback.tick();
         props.onPress();
       }}
-      style={({ pressed }) => [styles.chip, props.selected && styles.chipOn, pressed && { opacity: 0.7 }]}
+      style={({ pressed }) => [shared.chipTarget, pressed && { opacity: 0.7 }]}
     >
-      <Text style={[styles.chipLabel, props.selected && { color: colors.amber }]}>{props.label}</Text>
+      <View style={[shared.chip, props.selected && shared.chipOn]}>
+        <Text style={[shared.chipLabel, props.selected && { color: colors.amber }]}>{props.label}</Text>
+      </View>
     </Pressable>
   );
 }
 
-/** A number with its label, and an optional caption under it (say, the dates it covers). */
-export function StatTile(props: { label: string; value: string; hero?: boolean; caption?: string; accessibilityLabel?: string }) {
-  const spoken = `${props.label}: ${props.value}${props.caption ? `, ${props.caption}` : ''}`;
+/** The hint button: a small "i" in a ring, in a touch target of MIN_TARGET. */
+const HINT_SIZE = 22;
+/** How far a hint sits in from a tile's top-right corner. */
+const HINT_INSET = 8;
+
+/** A small "i" in a ring that opens a hint, such as on a stat tile's corner. */
+export function HintButton(props: { label: string; onPress: () => void; style?: StyleProp<ViewStyle> }) {
   return (
-    <View style={styles.stat} accessible accessibilityLabel={props.accessibilityLabel ?? spoken}>
-      <Text style={type.statLabel} numberOfLines={2}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={props.label}
+      onPress={() => {
+        feedback.press();
+        props.onPress();
+      }}
+      style={({ pressed }) => [styles.hintTarget, pressed && { opacity: 0.6 }, props.style]}
+    >
+      <View style={styles.hint}>
+        <Text style={styles.hintGlyph} maxFontSizeMultiplier={1} importantForAccessibility="no">
+          i
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
+/**
+ * A number with its label, and an optional caption under it (say, the dates it covers). `help`
+ * adds a hint button in the top-right corner, outside the tile's one spoken group so screen
+ * readers reach it on its own. `onPress` (Win Zero Plus's secret) takes taps on the tile itself,
+ * with no look or role of a button.
+ */
+export function StatTile(props: {
+  label: string;
+  value: string;
+  hero?: boolean;
+  caption?: string;
+  accessibilityLabel?: string;
+  help?: { label: string; onPress: () => void };
+  onPress?: () => void;
+}) {
+  const { help, onPress } = props;
+  const spoken = `${props.label}: ${props.value}${props.caption ? `, ${props.caption}` : ''}`;
+  const Tile = onPress ? Pressable : View;
+  const tile = (
+    <Tile
+      style={[styles.stat, help && styles.statFill]}
+      accessible
+      accessibilityLabel={props.accessibilityLabel ?? spoken}
+      onPress={onPress}
+    >
+      <Text style={[type.statLabel, help && styles.statLabelClear]} numberOfLines={2}>
         {props.label}
       </Text>
       <Text
@@ -65,6 +116,13 @@ export function StatTile(props: { label: string; value: string; hero?: boolean; 
           {props.caption}
         </Text>
       ) : null}
+    </Tile>
+  );
+  if (!help) return tile;
+  return (
+    <View style={styles.statWrap}>
+      {tile}
+      <HintButton label={help.label} onPress={help.onPress} style={styles.statHint} />
     </View>
   );
 }
@@ -74,6 +132,7 @@ export function Card({ children, style }: { children: ReactNode; style?: StylePr
 }
 
 export function Field(props: { label: string; children: ReactNode; hint?: string; error?: string | null }) {
+  useAnnounce(props.error);
   return (
     <View style={styles.field}>
       <Eyebrow>{props.label}</Eyebrow>
@@ -150,19 +209,22 @@ export const shared = StyleSheet.create({
   section: { gap: space.md },
   list: { borderTopWidth: 1, borderTopColor: colors.line },
   sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 },
-});
-
-const styles = StyleSheet.create({
-  lede: { maxWidth: 420 },
+  /** A wrapping row of chips. Their targets space the rows, so only the columns have a gap. */
+  chips: { flexDirection: 'row', flexWrap: 'wrap', columnGap: space.sm },
+  chipTarget: { minHeight: MIN_TARGET, minWidth: MIN_TARGET, justifyContent: 'center' },
   chip: {
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.edge,
     borderRadius: radii.pill,
     paddingVertical: 7,
     paddingHorizontal: 12,
   },
   chipOn: { borderColor: colors.amber },
   chipLabel: { fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.fg },
+});
+
+const styles = StyleSheet.create({
+  lede: { maxWidth: 420 },
   stat: {
     flex: 1,
     minWidth: 0,
@@ -174,6 +236,27 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   statHero: { color: colors.amber, fontSize: 40, lineHeight: 42 },
+  statWrap: { flex: 1, minWidth: 0 },
+  statFill: { flex: 0, flexGrow: 1 },
+  statLabelClear: { paddingRight: HINT_SIZE + space.xs },
+  statHint: { position: 'absolute', top: HINT_INSET, right: HINT_INSET },
+  hintTarget: {
+    width: MIN_TARGET,
+    height: MIN_TARGET,
+    margin: targetInset(HINT_SIZE),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hint: {
+    width: HINT_SIZE,
+    height: HINT_SIZE,
+    borderRadius: HINT_SIZE / 2,
+    borderWidth: 1.5,
+    borderColor: colors.muted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hintGlyph: { fontFamily: fonts.bodyBold, fontSize: 13, lineHeight: 15, color: colors.muted },
   card: {
     backgroundColor: colors.panel,
     borderWidth: 1,
@@ -186,7 +269,7 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: colors.panel,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.edge,
     borderRadius: radii.md,
     padding: 14,
     fontFamily: fonts.bodySemiBold,

@@ -1,16 +1,22 @@
 // The round's heads-up display, from the prototype's #hud: zeros left and the day at the top
-// left, sound and quit at the top right, the weapon switch and the bomb along the bottom, and
-// a hint that fades once play starts. It sits over the canvas; only its buttons take touches,
-// so a finger anywhere else aims and fires.
+// left, sound and quit at the top right, the power-up switch (weapons, in the Shooter) and the
+// bomb along the bottom, and the mode's hint that fades once play starts. It sits over the
+// canvas; only its buttons take touches, so a finger anywhere else plays.
 import { useEffect, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type TextProps, type ViewStyle } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
+import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import type { ModeId } from '@/engine';
 import { colors, fonts, fontScale, radii, type, withAlpha } from '@/theme/tokens';
+import { MODE_COPY, modeHint } from '@/ui/copy/modes';
 import { feedback } from '@/ui/feedback';
+import { MIN_TARGET } from '@/ui/target';
 
-/** The hint stays this long, then fades over HINT_FADE_MS. */
+/**
+ * The hint stays this long, then fades over HINT_FADE_MS, even under reduce motion: Reanimated
+ * would otherwise skip the delay there, and the hint would be gone on the first frame.
+ */
 const HINT_SHOW_MS = 2600;
 const HINT_FADE_MS = 600;
 /** The prototype's .hud-top / .hud-bottom padding. */
@@ -22,10 +28,10 @@ function HudText(props: TextProps) {
   return <Text maxFontSizeMultiplier={fontScale.overlay} {...props} />;
 }
 
-function Hint() {
+function Hint({ text }: { text: string }) {
   const opacity = useSharedValue(1);
   useEffect(() => {
-    opacity.set(withDelay(HINT_SHOW_MS, withTiming(0, { duration: HINT_FADE_MS })));
+    opacity.set(withDelay(HINT_SHOW_MS, withTiming(0, { duration: HINT_FADE_MS }), ReduceMotion.Never));
   }, [opacity]);
   const style = useAnimatedStyle(() => ({ opacity: opacity.get() }));
   return (
@@ -35,7 +41,7 @@ function Hint() {
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
-      <HudText style={styles.hint}>Hold anywhere to fire</HudText>
+      <HudText style={styles.hint}>{text}</HudText>
     </Animated.View>
   );
 }
@@ -72,8 +78,13 @@ export function Hud(props: {
   total: number;
   /** "DAY 30", "BONUS" or "PRACTICE". */
   label: string;
-  weaponName: string;
-  /** The round has more than one weapon. */
+  /** The game mode: its hint, and what it calls the power-up. */
+  mode: ModeId;
+  /** Auto-fire is on: the hint says touches aim. */
+  autoFire?: boolean;
+  /** The power-up equipped, in the mode's words: "Rocket" in the Shooter. */
+  tierName: string;
+  /** The round has more than one power-up. */
   canSwitch: boolean;
   onSwitchWeapon: () => void;
   bombs: number;
@@ -93,6 +104,8 @@ export function Hud(props: {
 }) {
   const insets = useSafeAreaInsets();
   const p = props;
+  const copy = MODE_COPY[p.mode];
+  const tier = copy.tier.toUpperCase();
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
       <View style={[styles.top, { paddingTop: insets.top + EDGE }]} pointerEvents="box-none">
@@ -121,7 +134,7 @@ export function Hud(props: {
         </View>
       </View>
 
-      <Hint key={p.hintKey} />
+      <Hint key={p.hintKey} text={modeHint(p.mode, !!p.autoFire)} />
 
       {p.controls ? (
         <View style={[styles.bottom, { bottom: insets.bottom + EDGE }]} pointerEvents="box-none">
@@ -130,14 +143,14 @@ export function Hud(props: {
               feedback.tick();
               p.onSwitchWeapon();
             }}
-            label={`Weapon: ${p.weaponName}`}
-            hint={p.canSwitch ? 'Switches to your next weapon' : undefined}
+            label={`${copy.tier}: ${p.tierName}`}
+            hint={p.canSwitch ? copy.switchHint : undefined}
             disabled={!p.canSwitch}
             style={styles.weapon}
           >
-            <HudText style={styles.weaponSmall}>{p.canSwitch ? 'WEAPON · TAP TO SWITCH' : 'WEAPON'}</HudText>
+            <HudText style={styles.weaponSmall}>{p.canSwitch ? `${tier} · TAP TO SWITCH` : tier}</HudText>
             <HudText style={styles.weaponName} numberOfLines={1}>
-              {p.weaponName}
+              {p.tierName}
             </HudText>
           </HudButton>
           {p.onFinish ? (
@@ -177,10 +190,14 @@ const styles = StyleSheet.create({
   tabular: { fontVariant: ['tabular-nums'] },
   day: { marginTop: 4 },
   topButtons: { flexDirection: 'row', gap: 8 },
+  // At least MIN_TARGET each way: inside HUD_TOP and HUD_BOTTOM, the bands the round keeps clear.
   button: {
+    minWidth: MIN_TARGET,
+    minHeight: MIN_TARGET,
+    justifyContent: 'center',
     backgroundColor: withAlpha(colors.panel, 0.85),
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.edge,
     borderRadius: radii.md,
     paddingVertical: 9,
     paddingHorizontal: 12,
@@ -188,7 +205,7 @@ const styles = StyleSheet.create({
   pressed: { transform: [{ translateY: 1 }], opacity: 0.85 },
   disabled: { opacity: 0.35 },
   buttonText: { fontFamily: fonts.monoSemiBold, fontSize: 12, letterSpacing: 0.72, color: colors.fg },
-  quit: { paddingHorizontal: 11 },
+  quit: { paddingHorizontal: 11, alignItems: 'center' },
   quitText: { color: colors.muted },
   bottom: {
     position: 'absolute',

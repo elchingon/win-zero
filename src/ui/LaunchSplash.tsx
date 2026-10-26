@@ -3,6 +3,14 @@ import { useEffect, useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 
 import { colors } from '@/theme/tokens';
+import { APP_WORDMARK } from '@/variant';
+
+// Each app bundles only its own splash: release builds inline the variant, and Metro folds the
+// literal comparison and drops the other require.
+const SPLASH =
+  process.env.EXPO_PUBLIC_APP_VARIANT === 'plus'
+    ? require('../../assets/brand-plus/splash.png')
+    : require('../../assets/brand/splash.png');
 
 /** Full-screen celebration after the OS launch mark, including on Android. */
 export function LaunchSplash({ ready, onFinish }: { ready: boolean; onFinish: () => void }) {
@@ -23,9 +31,9 @@ export function LaunchSplash({ ready, onFinish }: { ready: boolean; onFinish: ()
   }, [ready, presented, onFinish]);
 
   return (
-    <View style={styles.root} onLayout={() => setLaidOut(true)} accessibilityLabel="WIN ZERO" accessibilityRole="image">
+    <View style={styles.root} onLayout={() => setLaidOut(true)} accessibilityLabel={APP_WORDMARK} accessibilityRole="image">
       <Image
-        source={require('../../assets/brand/splash.png')}
+        source={SPLASH}
         style={StyleSheet.absoluteFill}
         resizeMode="cover"
         onLoadEnd={() => setLoaded(true)}

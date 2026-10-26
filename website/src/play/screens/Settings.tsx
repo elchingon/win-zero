@@ -4,12 +4,14 @@ import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router';
 
 import { currentCheckInTime, firstUpcomingDay, opensAt, pendingWindow } from '@/engine';
+import { primaryGoal } from '@/store/select';
 import { formatUntil, formatWhen } from '@/lib/format';
 import { GOAL_MAX_LENGTH } from '@/ui/copy/rules';
 import { SUPPORT_EMAIL, SUPPORT_LINE } from '@/ui/copy/support';
 
 import { DemoControls } from '../demo/DemoControls';
 import { ROUTES } from '../nav';
+import { announce } from '../platform/announce';
 import { deviceCalendar } from '../platform/calendar';
 import { appStore, useApp } from '../store';
 import { Card, Eyebrow, Field, Fine, LinkRow, ToggleRow } from '../ui/bits';
@@ -18,9 +20,12 @@ import { Screen } from '../ui/Screen';
 import { TimeField } from '../ui/TimeField';
 import { TopBar } from '../ui/TopBar';
 
+const KEPT_HINT = 'Your streak and history stay the same.';
+const SAVED_HINT = `Saved. ${KEPT_HINT}`;
+
 export function Settings() {
   const navigate = useNavigate();
-  const goal = useApp((s) => s.goal);
+  const goal = useApp(primaryGoal);
   const prefs = useApp((s) => s.prefs);
   useApp((s) => s.devClockOffsetMs); // the "next check-in" line follows the debug clock
   const { h24 } = deviceCalendar();
@@ -38,9 +43,11 @@ export function Settings() {
   const goalChanged = draft.trim() !== goal.goal && draft.trim().length > 0;
 
   const saveGoal = () => {
-    if (store.setGoalText(draft).ok) {
+    if (store.setGoalText(goal.goalId, draft).ok) {
       setDraft(draft.trim());
       setSaved(true);
+      // Save goal goes away once saved, so say so.
+      announce(SAVED_HINT);
     }
   };
 
@@ -61,7 +68,7 @@ export function Settings() {
           if (goalChanged) saveGoal();
         }}
       >
-        <Field label="Daily goal" hint={saved ? 'Saved. Your streak and history stay the same.' : 'Your streak and history stay the same.'}>
+        <Field label="Daily goal" hint={saved ? SAVED_HINT : KEPT_HINT}>
           {(id, describedBy) => (
             <input
               id={id}
@@ -89,13 +96,13 @@ export function Settings() {
         <TimeField
           label="Check-in time"
           value={currentCheckInTime(goal)}
-          onChange={(t) => store.setCheckInTime(t)}
+          onChange={(t) => store.setCheckInTime(goal.goalId, t)}
           hint={`${pending ? `A check-in is open until ${formatUntil(pending.closesAt, now, tz, h24)}. ` : ''}Next check-in: ${formatWhen(upcoming, now, tz, h24)}.`}
         />
       </div>
 
       <div className="list">
-        <ToggleRow label="Sound" detail="Pops and booms in the round." value={prefs.sound} onChange={(v) => store.setPref('sound', v)} />
+        <ToggleRow label="Sound" detail="A chime for each Yes, and pops and booms in the round." value={prefs.sound} onChange={(v) => store.setPref('sound', v)} />
         <LinkRow label="How it works" detail="The slide, shields, missed days and rewards." action="Read" to={ROUTES.howItWorks} />
         <LinkRow
           label="Need support?"

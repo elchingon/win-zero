@@ -1,7 +1,8 @@
 // Game and Weapon credits (SPEC 5): banked, and spent only when the player chooses. A Game
 // credit plays a bonus round of any size; a Weapon credit lends one weapon not yet earned for one
 // round. The wallet sits apart from GoalState so credits outlive a goal, and every grant carries a
-// claim key so it pays once: a reward's id today (creditRewards.ts), a purchase's id later.
+// claim key so it pays once: a reward's (creditRewards.ts), or a purchase's id later. A gift (Win
+// Zero Plus's secret tap) is the one exception: nothing delivers it twice, so it has no key.
 import type { GoalState } from './types';
 import { lockedWeapons, type WeaponDef, type WeaponId } from './weapons';
 
@@ -13,6 +14,8 @@ export const CREDIT_KINDS: readonly CreditKind[] = ['game', 'weapon'];
 export const BONUS_MAX_N = 100_000;
 /** Weapon credits one round can spend. */
 export const WEAPON_CREDITS_PER_ROUND = 1;
+/** Game credits Win Zero Plus's secret triple tap on Home gives each time. */
+export const SECRET_GAME_CREDITS = 1;
 
 export interface CreditWallet {
   balance: Record<CreditKind, number>;
@@ -46,6 +49,12 @@ export function grantCredits(
   const balance = { ...wallet.balance };
   for (const g of granted) balance[g.kind] += g.amount;
   return { wallet: { balance, claimed: [...wallet.claimed, ...granted.map((g) => g.key)] }, granted };
+}
+
+/** Add `amount` credits of `kind` with no claim key: a gift, which nothing delivers twice. */
+export function giftCredits(wallet: CreditWallet, kind: CreditKind, amount: number): CreditWallet {
+  if (!Number.isInteger(amount) || amount < 1) throw new RangeError(`Bad credit amount: ${amount}`);
+  return { ...wallet, balance: { ...wallet.balance, [kind]: wallet.balance[kind] + amount } };
 }
 
 /** Spend one credit of `kind`. */

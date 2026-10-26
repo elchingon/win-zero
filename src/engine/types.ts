@@ -4,17 +4,24 @@ export type DayKey = string;
 export type ClockTime = string;
 /** IANA time zone name, e.g. 'America/Denver'. */
 export type TimeZone = string;
+/** 0 = Sunday … 6 = Saturday, as `weekdayOf` gives. */
+export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 /** ISO-8601 instant in UTC, e.g. '2026-10-14T02:00:00.000Z'. */
 export type IsoInstant = string;
 
 /**
  * Check-in time in force from `fromDay` until the next entry. A new entry is appended when
- * the user edits the time or the device changes time zone (see resolve.ts).
+ * the user edits the time or the days, or the device changes time zone (see resolve.ts).
  */
 export interface ScheduleEntry {
   fromDay: DayKey;
   time: ClockTime;
   tz: TimeZone;
+  /**
+   * The weekdays with a check-in, sorted, at least one (SPEC 9). Absent means every day, the only
+   * choice in the free app; the other days are rest days, with no window and no effect.
+   */
+  days?: Weekday[];
   /**
    * Openings in this entry are clamped so they never come before this instant, which keeps
    * an open window from closing early and keeps openings strictly increasing.
@@ -49,6 +56,11 @@ export interface GoalState {
   version: 1;
   goalId: string;
   goal: string;
+  /**
+   * A short name for the lock screen (SPEC 9): with "Goal in reminders" off and more than one goal,
+   * reminders name the goal by it instead of its wording. Optional; absent when there's none.
+   */
+  alias?: string;
   createdAt: IsoInstant;
   /** The first goal day. Days before it don't exist. */
   firstDay: DayKey;

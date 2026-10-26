@@ -1,7 +1,7 @@
 // Turning frame reports into sounds and haptics, with pops and kill buzzes throttled.
 import { describe, expect, it } from '@jest/globals';
 
-import { KILL_HAPTIC_MIN_MS, makeCues, makeGate, POP_MIN_MS } from '../cues';
+import { BOUNCE_MIN_MS, KILL_HAPTIC_MIN_MS, makeCues, makeGate, POP_MIN_MS, SWISH_MIN_MS } from '../cues';
 import { makeReport, resetReport } from '../sim/report';
 import type { Report } from '../sim/types';
 
@@ -23,6 +23,13 @@ describe('cues', () => {
     const cues = makeCues();
     expect(cues(report({ shots: 2 }), 0).shoot).toBe(true);
     expect(cues(report({}), 16).shoot).toBe(false);
+  });
+
+  it('plays the Shooter’s sounds by default, the same as asked for by name', () => {
+    const named = makeCues('shooter');
+    const plain = makeCues();
+    const reports = [report({ shots: 1 }), report({ kills: 2 }), report({ kills: 1 }), report({ bombs: 1 }), report({ final: true })];
+    expect(reports.map((r, i) => named(r, i * 10))).toEqual(reports.map((r, i) => plain(r, i * 10)));
   });
 
   it(`pops for kills at most every ${POP_MIN_MS} ms, and buzzes at most every ${KILL_HAPTIC_MIN_MS} ms`, () => {
@@ -67,5 +74,66 @@ describe('cues', () => {
       bombHaptic: false,
       boomHaptic: false,
     });
+  });
+});
+
+describe('Orbit’s cues', () => {
+  it('are the Shooter’s', () => {
+    const orbit = makeCues('orbit');
+    const shooter = makeCues('shooter');
+    const reports = [report({ shots: 1 }), report({ kills: 2 }), report({ blasts: 1 }), report({ bombs: 1 }), report({ final: true })];
+    expect(reports.map((r, i) => orbit(r, i * 10))).toEqual(reports.map((r, i) => shooter(r, i * 10)));
+  });
+});
+
+describe('Slice’s cues', () => {
+  it('swishes for a swing of the blade, at most every ' + SWISH_MIN_MS + ' ms', () => {
+    const cues = makeCues('slice');
+    expect([0, 50, 95, 120].map((t) => cues(report({ swishes: 1 }), t).swish)).toEqual([true, false, true, false]);
+    expect(cues(report({}), 400).swish).toBe(false);
+  });
+
+  it('pops for a cut that destroys, and booms for the last zero', () => {
+    expect(makeCues('slice')(report({ swishes: 1, kills: 1 }), 0)).toMatchObject({ swish: true, pop: true, shoot: false });
+    expect(makeCues('slice')(report({ kills: 1, final: true }), 0)).toMatchObject({ boom: true, pop: false });
+  });
+
+  it('never swishes in the Shooter', () => {
+    expect(makeCues('shooter')(report({ swishes: 3 }), 0).swish).toBeUndefined();
+  });
+});
+
+describe('Breaker’s cues', () => {
+  it('bounces for a ball off the paddle or a brick it doesn’t break, at most every ' + BOUNCE_MIN_MS + ' ms', () => {
+    const cues = makeCues('breaker');
+    expect([0, 20, 50].map((t) => cues(report({ bounces: 1 }), t).bounce)).toEqual([true, false, true]);
+    expect(makeCues('breaker')(report({ bounces: 1, kills: 1 }), 0)).toMatchObject({ pop: true, bounce: false });
+  });
+
+  it('fires the Laser Paddle’s shot, and booms for the last brick', () => {
+    expect(makeCues('breaker')(report({ shots: 1 }), 0).shoot).toBe(true);
+    expect(makeCues('breaker')(report({ bounces: 1, kills: 1, final: true }), 0)).toMatchObject({ boom: true, bounce: false });
+  });
+});
+
+describe('Catch’s cues', () => {
+  it('bounces for a catch that doesn’t pop its zero, at most every ' + BOUNCE_MIN_MS + ' ms', () => {
+    const cues = makeCues('catch');
+    const bounces = [0, 20, 50, 60].map((t) => cues(report({ bounces: 1 }), t).bounce);
+    expect(bounces).toEqual([true, false, true, false]);
+  });
+
+  it('pops, without the bounce, for a catch that does', () => {
+    const c = makeCues('catch')(report({ bounces: 1, kills: 1 }), 0);
+    expect(c).toMatchObject({ pop: true, bounce: false, killHaptic: true });
+  });
+
+  it('booms for a bomb and the last zero, as the Shooter does', () => {
+    expect(makeCues('catch')(report({ bounces: 1, kills: 1, final: true }), 0)).toMatchObject({ boom: true, bounce: false, pop: false });
+    expect(makeCues('catch')(report({ bombs: 1 }), 0)).toMatchObject({ boom: true, bombHaptic: true });
+  });
+
+  it('never bounces in the Shooter', () => {
+    expect(makeCues('shooter')(report({ bounces: 3 }), 0).bounce).toBeUndefined();
   });
 });

@@ -7,36 +7,60 @@ import {
   CREDIT_KINDS,
   EMPTY_WALLET,
   isBonusSize,
+  isModeId,
+  isThemeId,
   isValidDayKey,
   WEAPONS,
   type CreditGrant,
   type CreditKind,
   type CreditWallet,
   type GoalState,
+  type ThemeId,
   type WeaponId,
 } from '@/engine';
 
 import {
+  MOVE_ID_PATTERN,
   STORE_VERSION,
+  TIP_IDS,
+  type ArchivedGoal,
   type BonusRound,
+  type GoalSlot,
+  type ImportRecord,
+  type MoveOut,
   type PersistedState,
   type Prefs,
   type RoundRecord,
   type RoundRewards,
+  type TipId,
 } from './types';
 
-export const DEFAULT_PREFS: Prefs = { sound: true, haptics: true, reengage: true, goalInReminders: false };
+export const DEFAULT_PREFS: Prefs = {
+  sound: true,
+  haptics: true,
+  reengage: true,
+  goalInReminders: false,
+  reduceEffects: false,
+  autoFire: false,
+  finishButton: false,
+  boldText: false,
+};
 
 export const DEFAULT_PERSISTED: PersistedState = {
-  goal: null,
+  goals: [],
+  archived: [],
+  arsenalBest: 0,
   weapon: null,
+  gameMode: null,
+  theme: null,
   prefs: DEFAULT_PREFS,
-  seenThrough: null,
-  round: null,
   credits: EMPTY_WALLET,
   bonus: null,
   reminderCardHiddenUntil: null,
+  tipsSeen: [],
   devClockOffsetMs: 0,
+  moveOut: null,
+  imports: {},
 };
 
 type Rec = Record<string, unknown>;
@@ -46,9 +70,14 @@ const bool = (v: unknown, fallback: boolean) => (typeof v === 'boolean' ? v : fa
 const count = (v: unknown, fallback: number) => (typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : fallback);
 const isWeaponId = (v: unknown): v is WeaponId => WEAPONS.some((w) => w.id === v);
 const weaponIds = (v: unknown): WeaponId[] => (Array.isArray(v) ? v.filter(isWeaponId) : []);
+/** Known theme ids, each once. */
+const themeIds = (v: unknown): ThemeId[] => (Array.isArray(v) ? [...new Set(v.filter(isThemeId))] : []);
 const isCreditKind = (v: unknown): v is CreditKind => CREDIT_KINDS.some((k) => k === v);
 const dayOrNull = (v: unknown) => (typeof v === 'string' && isValidDayKey(v) ? v : null);
 const instantOrNull = (v: unknown) => (typeof v === 'string' && !Number.isNaN(Date.parse(v)) ? v : null);
+const isTipId = (v: unknown): v is TipId => TIP_IDS.some((id) => id === v);
+/** Known tip ids, each once. */
+const tipIds = (v: unknown): TipId[] => (Array.isArray(v) ? [...new Set(v.filter(isTipId))] : []);
 
 /** One step up: turns data saved at version k into the shape of version k + 1. */
 export type Upgrade = (value: Rec) => Rec;
@@ -67,7 +96,7 @@ export function applyUpgrades(value: Rec, from: number, to: number, steps: Reado
 }
 
 /** The GoalState shape this build writes (the engine's `version`). */
-const GOAL_VERSION: GoalState['version'] = 1;
+export const GOAL_VERSION: GoalState['version'] = 1;
 
 /**
  * Steps that bring a saved goal up to GOAL_VERSION, keyed by the version they upgrade from.
@@ -83,11 +112,20 @@ const GOAL_UPGRADES: Readonly<Record<number, Upgrade>> = {};
  * shape: bump STORE_VERSION, add the step from the old version here, and test it.
  */
 const STORE_UPGRADES: Readonly<Record<number, Upgrade>> = {
-  // 1 → 2, credits (SPEC v0.5): a goal set up before them earns its Game credit now.
+  // 1 → 2, credits (SPEC v0.5): a wallet, paid what setting the goal earns (since v0.7, nothing:
+  // the first Yes's credit comes on the next Yes, like any one-time reward already reached).
   1: (v) => {
     const goal = normalizeGoal(v.goal);
     return { ...v, credits: goal ? claimCredits(EMPTY_WALLET, { type: 'goal', goal }).wallet : EMPTY_WALLET, bonus: null };
   },
+  // 2 → 3, more than one goal (SPEC 9): the goal, its round and its seen mark become the first slot.
+  // The old fields stay as they were saved; the field-by-field read ignores them from here on.
+  2: (v) => ({
+    ...v,
+    goals: v.goal != null ? [{ goal: v.goal, round: v.round ?? null, seenThrough: v.seenThrough ?? null }] : [],
+    archived: [],
+    arsenalBest: 0,
+  }),
 };
 
 /**
@@ -109,15 +147,25 @@ function normalizeGoal(raw: unknown): GoalState | null {
   if (typeof v.goalId !== 'string' || typeof v.goal !== 'string' || typeof v.firstDay !== 'string') return null;
   if (!Array.isArray(v.checkInSchedule) || v.checkInSchedule.length === 0 || !Array.isArray(v.history)) return null;
   // Added with the slide rule (SPEC v0.3).
-  return { ...(v as unknown as GoalState), slide: count(v.slide, 0), paused: bool(v.paused, false) };
+  const goal = { ...(v as unknown as GoalState), slide: count(v.slide, 0), paused: bool(v.paused, false) };
+  // A lock-screen name (SPEC 9) that isn't a name is dropped.
+  if (goal.alias !== undefined && (typeof goal.alias !== 'string' || !goal.alias.trim())) delete goal.alias;
+  return goal;
+}
+
+/** The goals stored data holds, active and archived, as saved: before version 3, the one goal. */
+function storedGoals(r: Rec): unknown[] {
+  if (!Array.isArray(r.goals)) return r.goal != null ? [r.goal] : [];
+  const archived = Array.isArray(r.archived) ? r.archived : [];
+  return [...r.goals, ...archived].map((s) => (isRecord(s) ? s.goal : s));
 }
 
 /**
- * Stored data held a goal that can't be read. Saving the default state would lose it for good,
- * so the store backs the raw data up first (see STORE_BACKUP_KEY).
+ * Stored data held a goal that can't be read. Saving now would lose it for good, so the store
+ * backs the raw data up first (see STORE_BACKUP_KEY). The goals that can be read are kept.
  */
 export function hasUnreadableGoal(raw: unknown): boolean {
-  return isRecord(raw) && raw.goal != null && normalizeGoal(raw.goal) === null;
+  return isRecord(raw) && storedGoals(raw).some((g) => normalizeGoal(g) === null);
 }
 
 function normalizeGrant(v: unknown): CreditGrant | null {
@@ -139,7 +187,10 @@ function normalizeRound(v: unknown): RoundRecord | null {
     // Added with credits (SPEC v0.5).
     credits: Array.isArray(r.credits) ? r.credits.map(normalizeGrant).filter((g) => g !== null) : [],
   };
-  return { day, n: v.n, rewards, borrowed: weaponIds(v.borrowed), played: bool(v.played, true) };
+  const round: RoundRecord = { day, n: v.n, rewards, borrowed: weaponIds(v.borrowed), played: bool(v.played, true) };
+  // Added with Win Zero Plus's themes (SPEC 9); left off when there are none, as it's saved.
+  const unlocks = themeIds(v.unlocks);
+  return unlocks.length > 0 ? { ...round, unlocks } : round;
 }
 
 /** A paid-for bonus round. When in doubt it's still there to play: the credit was spent. */
@@ -158,25 +209,89 @@ function normalizeWallet(v: unknown): CreditWallet {
   };
 }
 
+function normalizeSlot(v: unknown): GoalSlot | null {
+  if (!isRecord(v)) return null;
+  const goal = normalizeGoal(v.goal);
+  return goal ? { goal, round: normalizeRound(v.round), seenThrough: dayOrNull(v.seenThrough) } : null;
+}
+
+function normalizeArchived(v: unknown): ArchivedGoal | null {
+  if (!isRecord(v)) return null;
+  const goal = normalizeGoal(v.goal);
+  return goal ? { goal, archivedAt: instantOrNull(v.archivedAt) ?? goal.createdAt } : null;
+}
+
+/** Stands in for a lost time on a move record, which is kept for its id. */
+const LONG_AGO = '1970-01-01T00:00:00.000Z';
+const isMoveId = (v: unknown): v is string => typeof v === 'string' && MOVE_ID_PATTERN.test(v);
+
+function normalizeMoveOut(v: unknown): MoveOut | null {
+  if (!isRecord(v) || !isMoveId(v.id) || (v.status !== 'sent' && v.status !== 'moved')) return null;
+  return { id: v.id, status: v.status, sentAt: instantOrNull(v.sentAt) ?? LONG_AGO };
+}
+
+/** Moves taken in, by id. A record whose details are lost still counts: its credits were added. */
+function normalizeImports(v: unknown): Record<string, ImportRecord> {
+  const imports: Record<string, ImportRecord> = {};
+  if (!isRecord(v)) return imports;
+  for (const [id, r] of Object.entries(v)) {
+    if (!isMoveId(id)) continue;
+    const rec = isRecord(r) ? r : {};
+    const at = instantOrNull(rec.at) ?? LONG_AGO;
+    imports[id] = { at, createdAt: instantOrNull(rec.createdAt) ?? at, game: count(rec.game, 0), weapon: count(rec.weapon, 0) };
+  }
+  return imports;
+}
+
+/** Each goal once, by id: a second copy of an id is dropped, active ones before archived. */
+function uniqueGoals<T extends { goal: GoalState }>(items: (T | null)[], seen: Set<string>): T[] {
+  const out: T[] = [];
+  for (const item of items) {
+    if (!item || seen.has(item.goal.goalId)) continue;
+    seen.add(item.goal.goalId);
+    out.push(item);
+  }
+  return out;
+}
+
 export function normalizePersisted(raw: unknown): PersistedState {
   const r = isRecord(raw) ? raw : {};
   const prefs = isRecord(r.prefs) ? r.prefs : {};
   const offset = r.devClockOffsetMs;
+  // Without `goals` (data shaped by version 2, saved under another version number), the one goal.
+  const slots = Array.isArray(r.goals)
+    ? r.goals
+    : r.goal != null
+      ? [{ goal: r.goal, round: r.round, seenThrough: r.seenThrough }]
+      : [];
+  const seen = new Set<string>();
+  const goals = uniqueGoals(slots.map(normalizeSlot), seen);
+  const archived = uniqueGoals(Array.isArray(r.archived) ? r.archived.map(normalizeArchived) : [], seen);
   return {
-    goal: normalizeGoal(r.goal),
+    goals,
+    archived,
+    // Never below what the archived goals reached.
+    arsenalBest: archived.reduce((best, a) => Math.max(best, a.goal.bestStreak), count(r.arsenalBest, 0)),
     weapon: isWeaponId(r.weapon) ? r.weapon : null,
+    gameMode: isModeId(r.gameMode) ? r.gameMode : null,
+    theme: isThemeId(r.theme) ? r.theme : null,
     prefs: {
       sound: bool(prefs.sound, DEFAULT_PREFS.sound),
       haptics: bool(prefs.haptics, DEFAULT_PREFS.haptics),
       reengage: bool(prefs.reengage, DEFAULT_PREFS.reengage),
       goalInReminders: bool(prefs.goalInReminders, DEFAULT_PREFS.goalInReminders),
+      reduceEffects: bool(prefs.reduceEffects, DEFAULT_PREFS.reduceEffects),
+      autoFire: bool(prefs.autoFire, DEFAULT_PREFS.autoFire),
+      finishButton: bool(prefs.finishButton, DEFAULT_PREFS.finishButton),
+      boldText: bool(prefs.boldText, DEFAULT_PREFS.boldText),
     },
-    seenThrough: dayOrNull(r.seenThrough),
-    round: normalizeRound(r.round),
     credits: normalizeWallet(r.credits),
     bonus: normalizeBonus(r.bonus),
     reminderCardHiddenUntil: instantOrNull(r.reminderCardHiddenUntil),
+    tipsSeen: tipIds(r.tipsSeen),
     devClockOffsetMs: typeof offset === 'number' && Number.isFinite(offset) ? offset : 0,
+    moveOut: normalizeMoveOut(r.moveOut),
+    imports: normalizeImports(r.imports),
   };
 }
 

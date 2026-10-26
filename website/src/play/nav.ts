@@ -3,7 +3,7 @@
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router';
 
-import type { AnswerRoute } from '@/store/types';
+import type { PendingRoute } from '@/store/types';
 
 export const ROUTES = {
   home: '/',
@@ -17,9 +17,15 @@ export const ROUTES = {
 /** The bonus round a Game credit paid for. */
 export const BONUS_ROUND = `${ROUTES.round}?round=bonus`;
 
-/** The screen an answer opens, as a path in the website's app. */
-export function pathForAnswer(route: AnswerRoute): string {
-  return route === '/play' ? ROUTES.round : ROUTES.notice;
+/** A goal's round. */
+export function roundFor(goalId: string): string {
+  return `${ROUTES.round}?goal=${encodeURIComponent(goalId)}`;
+}
+
+/** The screen an answer opens, for its goal, as a path in the website's app. */
+export function pathForAnswer(route: PendingRoute): string {
+  const path = route.path === '/play' ? ROUTES.round : ROUTES.notice;
+  return `${path}?goal=${encodeURIComponent(route.goalId)}`;
 }
 
 /** Back to Home, replacing the current screen (a notice, a finished round) in the history. */

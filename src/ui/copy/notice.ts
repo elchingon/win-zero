@@ -1,6 +1,7 @@
 // What the Notice screen says: Reset / Shielded / Slipping, what a Not today or a run of missed
 // days did to the streak. The copy is supportive and plain: some people here are working on
 // sobriety. Shared by the app and the website, so it reads the same on both.
+import { MISSED_GRACE_DAYS } from '@/engine';
 import { plural } from '@/lib/format';
 import type { Notice } from '@/store/types';
 import { colors } from '@/theme/tokens';
@@ -19,19 +20,24 @@ export interface NoticeCopy {
   support?: boolean;
 }
 
-export const KEEPSAKES = 'your weapons, bombs and shields are still yours';
+/** What a reset leaves. Not shields: a reset almost always comes with none left. */
+export const KEEPSAKES = 'your weapons and bombs are still yours';
 /** Read out when a Not today is taken back. */
 export const UNDONE = 'Undone. Your check-in is open again.';
 
-/** What the Notice screen says about `n`, and how its zero moves. */
-export function copyFor(n: Notice): NoticeCopy {
+/**
+ * What the Notice screen says about `n`, and how its zero moves. `everyDay`: the goal checks in
+ * every day, as every Win Zero goal does; otherwise (Win Zero Plus, SPEC 9) the free misses are
+ * counted in check-ins rather than as a week.
+ */
+export function copyFor(n: Notice, { everyDay = true }: { everyDay?: boolean } = {}): NoticeCopy {
   switch (n.kind) {
     case 'slipping': {
-      const lostLine = n.lost === 1 ? 'a zero.' : `${n.lost} zeros.`;
+      const zerosOff = n.lost === 1 ? 'One zero ' : `${n.lost} zeros `;
       if (n.cause === 'answer') {
         return {
           eyebrow: 'Not today',
-          title: ["You've lost ", lostLine],
+          title: [zerosOff, 'came off.'],
           body: [
             'Thanks for being honest.',
             n.streak > 0
@@ -44,12 +50,14 @@ export function copyFor(n: Notice): NoticeCopy {
       }
       return {
         eyebrow: 'While you were away',
-        title: ["You've lost ", lostLine],
+        title: [zerosOff, 'came off.'],
         body: [
           n.stopped
             ? `Your Yes stopped the slide. Your streak is at ${plural(n.streak, 'zero')}.`
             : `Check in to stop the slide. Your streak is at ${plural(n.streak, 'zero')}.`,
-          'Missed days are free for a week; after that, each one takes a zero.',
+          everyDay
+            ? 'Missed days are free for a week; after that, each one takes a zero.'
+            : `The first ${MISSED_GRACE_DAYS} missed check-ins in a row are free; after that, each one takes a zero.`,
         ],
         motion: 'shed',
         support: true,
@@ -63,9 +71,9 @@ export function copyFor(n: Notice): NoticeCopy {
           n.cause === 'answer'
             ? `That Not today would have started a fresh run, so a shield stepped in. Your streak stays at ${plural(n.streak, 'zero')}.`
             : n.lost > 0
-              ? `You lost ${plural(n.lost, 'zero')} while you were away, and then a shield stopped the slide. Your streak is at ${plural(n.streak, 'zero')}.`
+              ? `${plural(n.lost, 'zero')} came off while you were away, and then a shield stopped the slide. Your streak is at ${plural(n.streak, 'zero')}.`
               : `A shield kept your streak at ${plural(n.streak, 'zero')}.`,
-          `The count starts over. Shields left: ${n.shieldsLeft}.`,
+          `The slide starts over. Shields left: ${n.shieldsLeft}.`,
         ],
         motion: 'absorb',
       };
@@ -73,7 +81,7 @@ export function copyFor(n: Notice): NoticeCopy {
       return n.cause === 'answer'
         ? {
             eyebrow: 'A fresh start',
-            title: ['Back to ', 'one zero.'],
+            title: ['Back to ', 'zero.'],
             body: [
               "Thanks for being honest. Hard stretches happen, and you're still here checking in.",
               `Your next Yes starts a new run. Your best run stays on the board at ${plural(n.bestStreak, 'day')}, and ${KEEPSAKES}.`,

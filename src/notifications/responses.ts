@@ -5,6 +5,7 @@
 import type { Answer, DayKey } from '@/engine';
 import type { AppStore } from '@/store/createAppStore';
 import { whenHydrated } from '@/store/lifecycle';
+import { isMovedOut } from '@/store/select';
 
 import { ACTION_NOT_TODAY, ACTION_YES, readReminderData } from './shared';
 
@@ -27,18 +28,20 @@ export interface ResponseNavigation {
   toHome(): void;
 }
 
-export type ResponseDecision = { kind: 'answer'; answer: Answer; day: DayKey } | { kind: 'open' };
+export type ResponseDecision = { kind: 'answer'; goalId: string; answer: Answer; day: DayKey } | { kind: 'open' };
 
 /**
  * What a response asks for. Only the Yes / Not today buttons on a check-in or morning reminder
- * for the current goal answer. A plain tap (DEFAULT_ACTION_IDENTIFIER), a nudge, an old goal's
- * notification or anything unknown just opens Home.
+ * for one of `goalIds` (the goals there are now) answer, for that goal. A plain tap
+ * (DEFAULT_ACTION_IDENTIFIER), a nudge, a notification from a goal that's gone (archived, or
+ * from before erase) or anything unknown just opens Home.
  */
-export function decideResponse(response: ResponseLike, goalId: string): ResponseDecision {
+export function decideResponse(response: ResponseLike, goalIds: readonly string[]): ResponseDecision {
   const data = readReminderData(response.notification.request.content.data);
-  if (!data || data.goalId !== goalId || data.kind === 'reengage') return { kind: 'open' };
-  if (response.actionIdentifier === ACTION_YES) return { kind: 'answer', answer: 'yes', day: data.day };
-  if (response.actionIdentifier === ACTION_NOT_TODAY) return { kind: 'answer', answer: 'not-today', day: data.day };
+  if (!data || !goalIds.includes(data.goalId) || data.kind === 'reengage') return { kind: 'open' };
+  const { goalId, day } = data;
+  if (response.actionIdentifier === ACTION_YES) return { kind: 'answer', goalId, answer: 'yes', day };
+  if (response.actionIdentifier === ACTION_NOT_TODAY) return { kind: 'answer', goalId, answer: 'not-today', day };
   return { kind: 'open' };
 }
 
@@ -65,10 +68,18 @@ export function startResponses(store: AppStore, api: ResponseApi, nav: ResponseN
     // Android leaves a notification up after one of its buttons is pressed.
     api.dismissNotificationAsync(response.notification.request.identifier).catch(() => {});
 
-    const goal = store.getState().goal;
-    if (!goal) return; // erased: Setup is showing, and stays
-    const decision = decideResponse(response, goal.goalId);
-    if (decision.kind === 'answer') store.getState().answer(decision.answer, decision.day, 'notification');
+    const { goals } = store.getState();
+    if (goals.length === 0) return; // erased: Setup is showing, and stays
+    // Moved to Win Zero Plus: an answer here would go nowhere. Home says where the goals went.
+    if (isMovedOut(store.getState())) {
+      nav.toHome();
+      return;
+    }
+    const decision = decideResponse(
+      response,
+      goals.map((s) => s.goal.goalId),
+    );
+    if (decision.kind === 'answer') store.getState().answer(decision.goalId, decision.answer, decision.day, 'notification');
     nav.toHome();
   };
 

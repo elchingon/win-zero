@@ -5,8 +5,32 @@ const expoConfig = require('eslint-config-expo/flat');
 module.exports = defineConfig([
   expoConfig,
   {
-    // website/ has its own lint config.
-    ignores: ['dist/*', 'docs/*', '.expo/*', 'website/*'],
+    // website/ has its own lint config. .ios-parked/ is the other app's Xcode project.
+    ignores: ['dist/*', 'docs/*', '.expo/*', 'website/*', '.ios-parked/'],
+  },
+  {
+    // Win Zero Plus's own code (src/plus) is required only where it's gated on the variant, with
+    // the literal comparison release builds fold, so the free bundle leaves it out. A static import
+    // would pull it into both apps. The app-icons module's JavaScript goes through src/plus too.
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/plus/**', 'src/**/__tests__/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@/plus', '@/plus/*'],
+              message: "Plus-only code: require it behind process.env.EXPO_PUBLIC_APP_VARIANT === 'plus'.",
+            },
+            {
+              group: ['**/modules/app-icons', '**/modules/app-icons/*'],
+              message: 'Win Zero Plus only: use src/plus/appIcon.ts, required behind the variant.',
+            },
+          ],
+        },
+      ],
+    },
   },
   {
     // Shared with the website (the same list as website/plugins/shared-guard.ts): pure TypeScript
@@ -19,12 +43,15 @@ module.exports = defineConfig([
       'src/game/look.ts',
       'src/game/result.ts',
       'src/game/shareText.ts',
+      'src/game/yes.ts',
       'src/store/createAppStore.ts',
       'src/store/migrate.ts',
       'src/store/notice.ts',
       'src/store/types.ts',
       'src/store/id.ts',
       'src/store/lifecycle.ts',
+      'src/store/limits.ts',
+      'src/store/select.ts',
       'src/lib/format.ts',
       'src/lib/calendar.ts',
       'src/theme/tokens.ts',
@@ -48,8 +75,17 @@ module.exports = defineConfig([
               allowTypeImports: true,
               message: 'Shared with the website: Skia for types only (`import type`).',
             },
+            {
+              regex: '^@/(variant|plus)(/.*)?$',
+              message: 'Shared with the website: never ask which app this is; take names and limits as parameters.',
+            },
           ],
         },
+      ],
+      // The website's bundle has no process.env, and the variant must come in as a parameter.
+      'no-restricted-properties': [
+        'error',
+        { object: 'process', property: 'env', message: 'Shared with the website: take the value as a parameter.' },
       ],
     },
   },
@@ -88,7 +124,7 @@ module.exports = defineConfig([
   {
     // The game sim runs on the UI thread as worklets: plain data in, no platform imports.
     files: ['src/game/sim/**/*.ts'],
-    ignores: ['src/game/sim/__tests__/**'],
+    ignores: ['src/game/sim/**/__tests__/**'],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -108,9 +144,11 @@ module.exports = defineConfig([
   {
     // Sim and scene drawing both run as worklets: no clock or Math.random (the seeded generator
     // lives in the game state), no classes, and no use before definition, because the worklets
-    // plugin turns function declarations into constants captured when the module loads.
+    // plugin turns function declarations into constants captured when the module loads. They run
+    // every frame too, so nothing that allocates as it goes: iterators, spreads, rest, and the
+    // array helpers that build arrays or take a callback.
     files: ['src/game/sim/**/*.ts', 'src/game/draw/**/*.ts'],
-    ignores: ['src/game/*/__tests__/**'],
+    ignores: ['src/game/**/__tests__/**'],
     rules: {
       'no-restricted-syntax': [
         'error',
@@ -128,6 +166,18 @@ module.exports = defineConfig([
           message: 'Worklets take dt; they never read the clock.',
         },
         { selector: 'ClassDeclaration', message: 'Worklets can’t carry classes to the UI thread; use plain objects.' },
+        { selector: 'ForOfStatement', message: 'Worklets run every frame: loop by index, so no iterator is made.' },
+        { selector: 'SpreadElement', message: 'Worklets run every frame: a spread copies; set fields in place.' },
+        { selector: 'RestElement', message: 'Worklets run every frame: rest makes a new array or object.' },
+        {
+          selector:
+            "CallExpression[callee.property.name=/^(map|filter|forEach|some|every|find|findIndex|reduce|slice|concat|flat|flatMap)$/]",
+          message: 'Worklets run every frame: loop by index instead (these make arrays or callbacks).',
+        },
+        {
+          selector: "CallExpression[callee.object.name='Object'][callee.property.name=/^(keys|values|entries)$/]",
+          message: 'Worklets run every frame: Object.keys/values/entries make arrays.',
+        },
       ],
       '@typescript-eslint/no-use-before-define': [
         'error',

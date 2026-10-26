@@ -8,7 +8,7 @@ import { space } from '@/theme/tokens';
 
 export function Screen(props: {
   children: ReactNode;
-  /** Fixed, vertically centered content instead of a scrolling column. */
+  /** Vertically centered content, which scrolls only when large text makes it taller than the screen. */
   centered?: boolean;
   /** Pinned to the bottom of a fixed screen (e.g. a result sheet). */
   footer?: ReactNode;
@@ -17,17 +17,14 @@ export function Screen(props: {
   const { children, centered, footer, style } = props;
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      {centered ? (
-        <View style={[styles.content, styles.centered, style]}>{children}</View>
-      ) : (
-        <ScrollView
-          contentContainerStyle={[styles.content, style]}
-          keyboardShouldPersistTaps="handled"
-          automaticallyAdjustKeyboardInsets
-        >
-          {children}
-        </ScrollView>
-      )}
+      <ScrollView
+        contentContainerStyle={[styles.content, centered && styles.centered, style]}
+        alwaysBounceVertical={!centered}
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
+      >
+        {children}
+      </ScrollView>
       {footer ? <View style={styles.footer}>{footer}</View> : null}
     </SafeAreaView>
   );
@@ -36,6 +33,6 @@ export function Screen(props: {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   content: { paddingHorizontal: space.xl, paddingTop: space.xl, paddingBottom: space.xxxl, gap: space.xxl },
-  centered: { flex: 1, justifyContent: 'center' },
+  centered: { flexGrow: 1, justifyContent: 'center' },
   footer: { paddingHorizontal: space.xl, paddingBottom: space.xl, gap: space.md },
 });

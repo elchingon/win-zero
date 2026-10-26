@@ -1,7 +1,11 @@
-// Particles, shockwaves, shake and flash: what a kill throws, the caps, draining, and reduce motion.
+// Particles, shockwaves, shake and flash: what a kill throws, the caps, draining, reduce motion,
+// and how far apart full-screen flashes come.
 import { describe, expect, it } from '@jest/globals';
 
 import {
+  FLASH_BOMB,
+  FLASH_FINAL,
+  FLASH_GAP,
   KILL_FRAGMENTS,
   KILL_FRAGMENTS_BUSY,
   KILL_PARTICLE_CAP,
@@ -9,12 +13,13 @@ import {
   KILL_SPARKS_BUSY,
   MAX_PARTICLES,
   MAX_RINGS,
+  REDUCED_FLASH,
   REDUCED_SHAKE,
   SHAKE_KILL_MAX,
   SHAKE_MIN,
 } from '../constants';
 import { killZero } from '../damage';
-import { addShake, updateEffects } from '../effects';
+import { addFlash, addShake, updateEffects } from '../effects';
 import { step } from '../step';
 import { game, popIn, run } from './fixtures';
 
@@ -129,5 +134,37 @@ describe('shake', () => {
     addShake(s, 10);
     addShake(s, 4);
     expect(s.shake).toBe(10);
+  });
+});
+
+describe('flashes', () => {
+  /** Step at 60 fps for `seconds`. */
+  const wait = (s: ReturnType<typeof game>, seconds: number) => {
+    for (let t = 0; t < seconds - 1e-9; t += 1 / 60) step(s, 1 / 60);
+  };
+
+  it('are much dimmer under reduce motion', () => {
+    const s = game(8, { reduceMotion: true });
+    addFlash(s, FLASH_BOMB);
+    expect(s.flash).toBeCloseTo(FLASH_BOMB * REDUCED_FLASH);
+  });
+
+  it(`come at most once every ${FLASH_GAP} s, so quick bombs can't strobe`, () => {
+    const s = game(8);
+    addFlash(s, FLASH_BOMB);
+    wait(s, 0.2);
+    const fading = s.flash;
+    addFlash(s, FLASH_BOMB);
+    expect(s.flash).toBe(fading);
+    wait(s, FLASH_GAP);
+    addFlash(s, FLASH_BOMB);
+    expect(s.flash).toBe(FLASH_BOMB);
+  });
+
+  it('within one frame are one flash, at the brighter level', () => {
+    const s = game(8);
+    addFlash(s, FLASH_BOMB);
+    addFlash(s, FLASH_FINAL);
+    expect(s.flash).toBe(FLASH_FINAL);
   });
 });

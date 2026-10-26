@@ -4,16 +4,20 @@
 import {
   addDays,
   answer,
+  checkInDays,
   createGoal,
   currentCheckInTime,
   dayKeyAt,
   MS_PER_MINUTE,
+  nextGoalDay,
   opensAt,
   wallTimeToInstant,
+  weekdayOf,
   type ClockTime,
   type DayKey,
   type GoalState,
   type TimeZone,
+  type Weekday,
 } from '@/engine';
 
 /** Longest run the debug tools will build. */
@@ -29,20 +33,29 @@ function rebuilt(state: GoalState, firstDay: DayKey, tz: TimeZone): GoalState {
     goal: state.goal,
     checkInTime: currentCheckInTime(state),
     morningTime: state.morningTime,
+    days: checkInDays(state),
     now: wallTimeToInstant(firstDay, CREATED_AT, tz),
     tz,
   });
 }
 
-/** The day whose window is open at `now`: today once check-in time has passed, else yesterday. */
+const isCheckInDay = (state: GoalState, day: DayKey) => checkInDays(state).includes(weekdayOf(day) as Weekday);
+
+/**
+ * The check-in day whose window is open at `now`: today once check-in time has passed, else the
+ * check-in day before. On a rest day after the last one closed, that last one (left to resolve
+ * as missed, as it would be).
+ */
 export function openDayAt(state: GoalState, now: Date, tz: TimeZone): DayKey {
   const today = dayKeyAt(now, tz);
-  const probe = rebuilt(state, today, tz);
-  return opensAt(probe, today).getTime() <= now.getTime() ? today : addDays(today, -1);
+  const probe = rebuilt(state, addDays(today, -7), tz);
+  let day = today;
+  while (!isCheckInDay(state, day) || opensAt(probe, day).getTime() > now.getTime()) day = addDays(day, -1);
+  return day;
 }
 
 /**
- * The goal rebuilt with `n - 1` back-dated Yes answers on the days just before the window
+ * The goal rebuilt with `n - 1` back-dated Yes answers on the check-in days just before the window
  * open at `now`, which is left pending. Answering Yes to it makes the streak `n`, with the
  * bombs, shields and unlocks a real run would have earned. The goal's wording, times and id
  * carry over; its history, streak and rewards are replaced.
@@ -52,9 +65,13 @@ export function seedYesRun(state: GoalState, n: number, now: Date, tz: TimeZone)
     throw new RangeError(`Run length must be an integer from 1 to ${SEED_MAX_N}, got ${n}`);
   }
   const openDay = openDayAt(state, now, tz);
-  const firstDay = addDays(openDay, -(n - 1));
+  let firstDay = openDay;
+  for (let k = 1; k < n; k++) {
+    firstDay = addDays(firstDay, -1);
+    while (!isCheckInDay(state, firstDay)) firstDay = addDays(firstDay, -1);
+  }
   let s = rebuilt(state, firstDay, tz);
-  for (let day = firstDay; day < openDay; day = addDays(day, 1)) {
+  for (let day = firstDay; day < openDay; day = nextGoalDay(s, day)) {
     const at = new Date(opensAt(s, day).getTime() + ANSWER_AFTER_OPEN_MS);
     const r = answer(s, { answer: 'yes', day }, at, tz);
     if (!r.ok) throw new Error(`Seeding ${day} was rejected: ${r.reason}`);

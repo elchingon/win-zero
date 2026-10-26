@@ -9,6 +9,9 @@ describe('shared-guard', () => {
     expect(isShared('engine/index.ts')).toBe(true);
     expect(isShared('game/sim/step.ts')).toBe(true);
     expect(isShared('game/draw/scene.ts')).toBe(true);
+    expect(isShared('game/sim/modes/catch.ts')).toBe(true);
+    expect(isShared('game/draw/modes/catch.ts')).toBe(true);
+    expect(isShared('ui/copy/modes.ts')).toBe(true);
     expect(isShared('store/createAppStore.ts')).toBe(true);
     expect(isShared('lib/format.ts')).toBe(true);
     expect(isShared('dev/seedRun.ts')).toBe(true);
@@ -22,6 +25,7 @@ describe('shared-guard', () => {
     expect(isShared('app/index.tsx')).toBe(false);
     expect(isShared('engine/__tests__/rules.test.ts')).toBe(false);
     expect(isShared('game/sim/__tests__/fixtures.ts')).toBe(false);
+    expect(isShared('game/sim/modes/__tests__/catch.test.ts')).toBe(false);
   });
 
   it('spots native-only packages', () => {

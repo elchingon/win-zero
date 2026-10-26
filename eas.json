@@ -14,11 +14,31 @@
         "simulator": true
       }
     },
+    "development-plus": {
+      "extends": "development",
+      "env": {
+        "EXPO_PUBLIC_APP_VARIANT": "plus"
+      }
+    },
+    "development-simulator-plus": {
+      "extends": "development-plus",
+      "ios": {
+        "simulator": true
+      }
+    },
     "preview": {
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_PRIVACY_URL": "https://winzero.app/privacy",
-        "EXPO_PUBLIC_SUPPORT_URL": "https://winzero.app/support"
+        "EXPO_PUBLIC_SUPPORT_URL": "https://winzero.app/support",
+        "EXPO_PUBLIC_PLUS_STORE_URL_ANDROID": "https://play.google.com/store/apps/details?id=com.e7systems.winzeroplus",
+        "EXPO_PUBLIC_PLUS_STORE_URL_IOS": "https://winzero.app/"
+      }
+    },
+    "preview-plus": {
+      "extends": "preview",
+      "env": {
+        "EXPO_PUBLIC_APP_VARIANT": "plus"
       }
     },
     "perf": {
@@ -30,6 +50,12 @@
         "buildType": "apk"
       }
     },
+    "perf-plus": {
+      "extends": "perf",
+      "env": {
+        "EXPO_PUBLIC_APP_VARIANT": "plus"
+      }
+    },
     "production": {
       "environment": "production",
       "autoIncrement": true,
@@ -37,12 +63,30 @@
         "EXPO_PUBLIC_PRIVACY_URL": "https://winzero.app/privacy",
         "EXPO_PUBLIC_SUPPORT_URL": "https://winzero.app/support"
       }
+    },
+    "production-plus": {
+      "extends": "production",
+      "env": {
+        "EXPO_PUBLIC_APP_VARIANT": "plus"
+      }
     }
   },
   "submit": {
     "production": {
       "android": {
         "track": "internal"
+      },
+      "ios": {
+        "ascAppId": "6823793298"
+      }
+    },
+    "production-plus": {
+      "ios": {
+        "bundleIdentifier": "com.e7systems.winzeroplus"
+      },
+      "android": {
+        "track": "internal",
+        "applicationId": "com.e7systems.winzeroplus"
       }
     }
   }

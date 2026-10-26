@@ -11,6 +11,8 @@ expo-env.d.ts
 
 # Native
 .kotlin/
+# Gradle output of local modules (modules/), built with the app
+modules/*/android/build/
 *.orig.*
 *.jks
 *.p8
@@ -48,6 +50,8 @@ credentials/
 # generated native folders
 /ios
 /android
+# the other app's Xcode project, waiting for the next switch (scripts/prebuild.mjs)
+/.ios-parked
 
 # local release builds (npm run build:android)
 /build

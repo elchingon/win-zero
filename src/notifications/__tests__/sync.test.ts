@@ -7,7 +7,8 @@ import type { NotificationRequestInput } from 'expo-notifications';
 
 import { type GoalState } from '@/engine';
 import { at, DAY0, DENVER, newGoal, yesDays } from '@/engine/__tests__/fixtures';
-import { fakeAppState, flush, harness, ready, withGoal } from '@/store/__tests__/harness';
+import { fakeAppState, flush, gid, harness, ready, withGoal } from '@/store/__tests__/harness';
+import { primaryGoal } from '@/store/select';
 
 import { reminderRequests } from '../schedule';
 import type { ReminderData } from '../shared';
@@ -81,8 +82,13 @@ function fakeNotifications() {
   };
 }
 
-function input(goal: GoalState | null, now = at(DAY0, '12:00'), patch: Partial<SyncInput> = {}): SyncInput {
-  return { goal, now, tz: DENVER, offsetMs: 0, reengage: true, showGoal: false, ...patch };
+function input(
+  goal: GoalState | GoalState[] | null,
+  now = at(DAY0, '12:00'),
+  patch: Partial<SyncInput> = {},
+): SyncInput {
+  const goals = goal === null ? [] : Array.isArray(goal) ? goal : [goal];
+  return { goals, now, tz: DENVER, offsetMs: 0, reengage: true, showGoal: false, ...patch };
 }
 
 function setup(state: { input: SyncInput; allowed?: boolean }) {
@@ -99,7 +105,7 @@ function setup(state: { input: SyncInput; allowed?: boolean }) {
   return { fake, sync, errors, prepare };
 }
 
-const expectedIds = (i: SyncInput) => reminderRequests({ ...i, goal: i.goal! }).map((r) => r.identifier);
+const expectedIds = (i: SyncInput) => reminderRequests(i).map((r) => r.identifier);
 
 describe('createReminderSync', () => {
   it('cancels what was scheduled, then schedules the plan', async () => {
@@ -166,20 +172,20 @@ describe('createReminderSync', () => {
     const state = { input: input(newGoal(), at(DAY0, '21:00')) };
     const { fake, sync } = setup(state);
     await sync.sync({ force: true });
-    expect(fake.ids()).toContain('morning-2026-10-13');
+    expect(fake.ids()).toContain('g1:morning-2026-10-13');
 
     state.input = input(yesDays(newGoal(), DAY0, 1), at(DAY0, '21:00'));
     await sync.sync();
-    expect(fake.ids()).not.toContain('morning-2026-10-13');
-    expect(fake.ids()[0]).toBe('checkin-2026-10-14');
+    expect(fake.ids()).not.toContain('g1:morning-2026-10-13');
+    expect(fake.ids()[0]).toBe('g1:checkin-2026-10-14');
 
     state.input = { ...state.input, showGoal: true };
     await sync.sync();
-    expect(fake.scheduled.get('checkin-2026-10-14')?.content.body).toBe('Did you stick to “Stop drinking” today?');
+    expect(fake.scheduled.get('g1:checkin-2026-10-14')?.content.body).toBe('Did you stick to “Stop drinking” today?');
 
     state.input = { ...state.input, offsetMs: 60_000 };
     await sync.sync();
-    expect((fake.scheduled.get('checkin-2026-10-14')?.trigger as { date: Date }).date).toEqual(
+    expect((fake.scheduled.get('g1:checkin-2026-10-14')?.trigger as { date: Date }).date).toEqual(
       new Date(at('2026-10-14', '20:00').getTime() - 60_000),
     );
   });
@@ -203,11 +209,11 @@ describe('createReminderSync', () => {
 
   it('keeps scheduling when one request fails', async () => {
     const { fake, sync, errors } = setup({ input: input(newGoal()) });
-    fake.failing.add('checkin-2026-10-14');
+    fake.failing.add('g1:checkin-2026-10-14');
     await sync.sync({ force: true });
     expect(errors).toHaveLength(1);
     expect(fake.ids()).toHaveLength(36);
-    expect(fake.ids()).toContain('checkin-2026-10-15');
+    expect(fake.ids()).toContain('g1:checkin-2026-10-15');
   });
 
   it('retries the one-time setup after it fails', async () => {
@@ -225,6 +231,18 @@ describe('createReminderSync', () => {
 });
 
 describe('staleDelivered', () => {
+  it("judges each notification by its own goal's open days, and clears a goal that's gone", () => {
+    const a = yesDays(newGoal(), DAY0, 2); // 10-13 and 10-14 answered
+    const b = { ...newGoal(), goalId: 'b' }; // nothing answered: 10-13 open until midnight ending 10-14
+    const now = at('2026-10-14', '08:00');
+    const shown = [
+      { identifier: 'g1:checkin-2026-10-13', data: { goalId: 'g1', day: DAY0, kind: 'checkin' } }, // a answered it
+      { identifier: 'b:checkin-2026-10-13', data: { goalId: 'b', day: DAY0, kind: 'checkin' } }, // b's still open
+      { identifier: 'c:checkin-2026-10-13', data: { goalId: 'c', day: DAY0, kind: 'checkin' } }, // archived
+    ];
+    expect(staleDelivered(shown, input([a, b], now))).toEqual(['g1:checkin-2026-10-13', 'c:checkin-2026-10-13']);
+  });
+
   it("clears what's no longer open, and keeps the open check-in", () => {
     const goal = yesDays(newGoal(), DAY0, 1); // 10-13 answered
     const now = at('2026-10-15', '08:00'); // 10-14 open until midnight tonight
@@ -285,16 +303,18 @@ describe('startReminderSync', () => {
 
     const s = () => h.store.getState();
     const changes: [string, () => void][] = [
-      ['setup', () => s().setupGoal({ goal: 'Stop drinking', checkInTime: '20:00', morningTime: '09:00' })],
-      ['wording', () => s().setGoalText('Stay sober')],
-      ['check-in time', () => s().setCheckInTime('21:00')],
-      ['morning time', () => s().setMorningTime('08:00')],
+      ['setup', () => s().addGoal({ goal: 'Stop drinking', checkInTime: '20:00', morningTime: '09:00' })],
+      ['wording', () => s().setGoalText(gid(h.store), 'Stay sober')],
+      ['check-in time', () => s().setCheckInTime(gid(h.store), '21:00')],
+      ['morning time', () => s().setMorningTime(gid(h.store), '08:00')],
       ['weekly nudge', () => s().setPref('reengage', false)],
       ['goal in reminders', () => s().setPref('goalInReminders', true)],
       ['dev clock', () => s().advanceDevClock(60_000)],
-      ['check-in', () => (h.setTime(DAY0, '21:30'), s().answer('yes'))],
-      ['not today', () => (h.setTime('2026-10-14', '21:30'), s().answer('not-today'))],
+      ['check-in', () => (h.setTime(DAY0, '21:30'), s().answer(gid(h.store), 'yes'))],
+      ['not today', () => (h.setTime('2026-10-14', '21:30'), s().answer(gid(h.store), 'not-today'))],
       ['undo', () => s().undoNotToday()],
+      ['moved to Plus', () => s().confirmMovedOut(s().startMoveOut()!)],
+      ['kept using here', () => s().keepUsingHere()],
       ['erase', () => s().erase()],
     ];
     for (const [name, change] of changes) {
@@ -308,6 +328,12 @@ describe('startReminderSync', () => {
     s().setPref('sound', false);
     s().setPref('haptics', false);
     expect(rec.calls).toHaveLength(before);
+    s().addGoal({ goal: 'Stop drinking', checkInTime: '20:00', morningTime: '09:00' });
+    const sent = rec.calls.length;
+    s().startMoveOut(); // a move on its way changes nothing until Plus confirms it
+    expect(rec.calls).toHaveLength(sent);
+    s().erase();
+    rec.calls.splice(before);
 
     app.emit('background');
     expect(rec.calls).toHaveLength(before);
@@ -327,12 +353,36 @@ describe('startReminderSync', () => {
     expect(syncInputFrom(h.store.getState()).showGoal).toBe(false); // private by default
     h.store.getState().setPref('goalInReminders', true);
     expect(syncInputFrom(h.store.getState())).toEqual({
-      goal: h.store.getState().goal,
+      goals: [primaryGoal(h.store.getState())],
       now: new Date(h.clock.t + 60_000),
       tz: DENVER,
       offsetMs: 60_000,
       reengage: false,
       showGoal: true,
     });
+  });
+});
+
+describe('once moved to Win Zero Plus (SPEC 9)', () => {
+  it('schedules nothing and clears what was delivered, until the user keeps using Win Zero', async () => {
+    const h = await withGoal(yesDays(newGoal(), DAY0, 3));
+    h.setTime('2026-10-16', '21:00');
+    const fake = fakeNotifications();
+    const sync = createReminderSync({ api: fake.api, read: () => syncInputFrom(h.store.getState()), allowed: async () => true });
+    await sync.sync({ force: true });
+    expect(fake.ids().length).toBeGreaterThan(0);
+    fake.present('g1:checkin-2026-10-16', { goalId: 'g1', day: '2026-10-16', kind: 'checkin' });
+
+    const s = () => h.store.getState();
+    s().confirmMovedOut(s().startMoveOut()!);
+    expect(syncInputFrom(s()).goals).toEqual([]);
+    await sync.sync();
+    expect(fake.ids()).toEqual([]);
+    expect(fake.presentedIds()).toEqual([]);
+
+    s().keepUsingHere();
+    expect(syncInputFrom(s()).goals).toEqual([primaryGoal(s())]);
+    await sync.sync();
+    expect(fake.ids().length).toBeGreaterThan(0);
   });
 });

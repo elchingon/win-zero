@@ -1,16 +1,21 @@
 // @vitest-environment jsdom
 // The screens on the shared store, in a browser-like page with the game's canvas stubbed out:
 // setting up, checking in Yes (to the round), Not today (to the notice, with Undo), and credits:
-// a bonus round, and the Weapon credit question before a round.
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+// their hints, a bonus round, and the Weapon credit question before a round.
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { weaponById } from '@/engine';
+import { YES_ROUTE_MS } from '@/game/yes';
+import { primaryGoal, primaryRound } from '@/store/select';
 import { WEAPON_PROMPT } from '@/ui/copy/credits';
 
 import { routes } from './router';
 import { appStore } from './store';
+
+/** A Yes's round opens once its celebration has covered the screen; allow for a slow machine. */
+const ROUND_OPENS_MS = YES_ROUTE_MS + 1500;
 
 beforeAll(() => {
   HTMLCanvasElement.prototype.getContext = (() => null) as typeof HTMLCanvasElement.prototype.getContext;
@@ -29,6 +34,9 @@ function open(path = '/') {
   return router;
 }
 
+/** A Game credit to spend, as the first Yes pays. */
+const holdGameCredit = () => act(() => appStore.setState({ credits: { balance: { game: 1, weapon: 0 }, claimed: ['first-yes'] } }));
+
 /** Set up a goal whose check-in opened at midnight, so today's is open now. */
 async function setUp(goal: string) {
   const router = open();
@@ -46,14 +54,51 @@ describe('the app on the web', () => {
   it('sets up a goal, checks in Yes, and opens the round', async () => {
     const router = await setUp('Read 20 minutes');
     fireEvent.click(screen.getByRole('button', { name: 'Yes, I did' }));
-    await waitFor(() => expect(router.state.location.pathname).toBe('/round'));
-    expect(appStore.getState().round).toMatchObject({ n: 1, played: false });
-    expect(appStore.getState().goal?.streak).toBe(1);
+    // The celebration holds the round back until it has covered the screen.
+    expect(router.state.location.pathname).toBe('/');
+    await waitFor(() => expect(router.state.location.pathname).toBe('/round'), { timeout: ROUND_OPENS_MS });
+    expect(primaryRound(appStore.getState())).toMatchObject({ n: 1, played: false });
+    expect(primaryGoal(appStore.getState())?.streak).toBe(1);
     expect(await screen.findByRole('button', { name: 'Leave the round' })).toBeTruthy();
 
     // Back on Home, the unplayed round waits there.
     await router.navigate('/');
     expect(await screen.findByText('Your Day 1 round is ready.')).toBeTruthy();
+  });
+
+  it("reveals the first Yes's Game credit, then opens a tip back on Home, once", async () => {
+    const router = await setUp('Read 20 minutes');
+    fireEvent.click(screen.getByRole('button', { name: 'Yes, I did' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/round'), { timeout: ROUND_OPENS_MS });
+    const round = primaryRound(appStore.getState());
+    expect(round?.rewards.credits).toEqual([{ kind: 'game', amount: 1, key: 'first-yes' }]);
+    // The canvas is stubbed out, so the round is finished for it.
+    act(() => appStore.getState().finishRound(primaryGoal(appStore.getState())?.goalId ?? '', round?.day ?? ''));
+    await act(() => router.navigate('/'));
+
+    const tip = await screen.findByRole('dialog', { name: 'Day one, done.' });
+    expect(tip.textContent).toContain('“A journey of a thousand miles begins with a single step.” You just took it.');
+    expect(tip.textContent).toContain('your next round has 2 to shoot.');
+    expect(tip.textContent).toContain('You earned a Game credit for starting.');
+    fireEvent.click(screen.getByRole('button', { name: "Let's go" }));
+    expect(screen.queryByRole('dialog', { name: 'Day one, done.' })).toBeNull();
+    expect(appStore.getState().tipsSeen).toEqual(['first-round']);
+  });
+
+  it('explains each credit behind its hint, with the ways already earned marked', async () => {
+    await setUp('Read 20 minutes');
+    fireEvent.click(screen.getByRole('button', { name: 'About Game credits' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Game credits' });
+    expect(dialog.textContent).toContain('as many zeros as you like');
+    // None earned yet: the first Yes earns one.
+    expect(screen.getByText('Your first Yes').closest('li')?.className).not.toContain('earned');
+    expect(screen.getByText('Reaching 3 zeros').closest('li')?.className).not.toContain('earned');
+    expect(screen.getByText('Every 7 Yeses in a row')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Got it' }));
+    expect(screen.queryByRole('dialog', { name: 'Game credits' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'About Weapon credits' }));
+    expect((await screen.findByRole('dialog', { name: 'Weapon credits' })).textContent).toContain('Every 30 Yeses in a row');
   });
 
   it('answers Not today, shows the notice, and can take it back', async () => {
@@ -63,11 +108,13 @@ describe('the app on the web', () => {
     expect(await screen.findByRole('heading', { name: 'Thanks for checking in.' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Undo Not today' }));
     await screen.findByRole('heading', { name: 'Did you stick to “Quit vaping” today?' });
-    expect(appStore.getState().goal?.history).toHaveLength(0);
+    expect(primaryGoal(appStore.getState())?.history).toHaveLength(0);
   });
 
-  it('earns a Game credit at setup, and spends it on a bonus round of the size chosen', async () => {
+  it('spends a Game credit on a bonus round of the size chosen', async () => {
     const router = await setUp('Read 20 minutes');
+    expect(screen.getByRole('group', { name: '0 Game credits' })).toBeTruthy(); // setting up pays none
+    holdGameCredit();
     expect(screen.getByRole('group', { name: '1 Game credit' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Play a bonus round' }));
     fireEvent.click(screen.getByRole('button', { name: '1,000' }));
@@ -78,14 +125,16 @@ describe('the app on the web', () => {
     expect(appStore.getState().credits.balance.game).toBe(0);
     expect(await screen.findByRole('main', { name: 'Bonus round' })).toBeTruthy();
     expect(screen.getByText('BONUS')).toBeTruthy();
-    expect(appStore.getState().goal?.history).toHaveLength(0); // the streak is untouched
+    expect(primaryGoal(appStore.getState())?.history).toHaveLength(0); // the streak is untouched
   });
 
   it("won't start a bonus round of a size out of range", async () => {
     await setUp('Read 20 minutes');
+    holdGameCredit();
     fireEvent.click(screen.getByRole('button', { name: 'Play a bonus round' }));
     fireEvent.change(screen.getByLabelText('Zeros'), { target: { value: '0' } });
-    expect(screen.getByText('A whole number from 1 to 100,000, please.')).toBeTruthy();
+    // An alert, so a screen reader says it as it appears.
+    expect(screen.getByRole('alert').textContent).toBe('A whole number from 1 to 100,000, please.');
     expect((screen.getByRole('button', { name: 'Start' }) as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(screen.getByRole('button', { name: 'Play a bonus round' })).toBeTruthy();
@@ -97,11 +146,11 @@ describe('the app on the web', () => {
     const { credits } = appStore.getState();
     appStore.setState({ credits: { ...credits, balance: { ...credits.balance, weapon: 1 } } });
     fireEvent.click(screen.getByRole('button', { name: 'Yes, I did' }));
-    await waitFor(() => expect(router.state.location.pathname).toBe('/round'));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/round'), { timeout: ROUND_OPENS_MS });
     expect(await screen.findByRole('dialog', { name: 'Use a Weapon credit?' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: WEAPON_PROMPT.option(weaponById('rocket')) }));
     expect(await screen.findByRole('button', { name: /^Weapon: Rocket/ })).toBeTruthy();
-    expect(appStore.getState().round?.borrowed).toEqual(['rocket']);
+    expect(primaryRound(appStore.getState())?.borrowed).toEqual(['rocket']);
     expect(appStore.getState().credits.balance.weapon).toBe(0);
   });
 
@@ -114,6 +163,16 @@ describe('the app on the web', () => {
     // With no round to play, a practice link goes back to base.
     await router.navigate('/round?practice=60');
     await waitFor(() => expect(router.state.location.pathname).toBe('/'));
+  });
+
+  it('saves new wording for the goal, and says so to a screen reader', async () => {
+    await setUp('Exercise more');
+    cleanup();
+    open('/settings');
+    fireEvent.change(await screen.findByLabelText('Daily goal'), { target: { value: 'Walk after dinner' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save goal' }));
+    expect(primaryGoal(appStore.getState())?.goal).toBe('Walk after dinner');
+    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('Saved. Your streak and history stay the same.'));
   });
 
   it('keeps Settings and How it works free of notification talk', async () => {

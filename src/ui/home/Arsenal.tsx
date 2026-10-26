@@ -1,29 +1,42 @@
-// Weapons by unlock day with progress to the next one (the prototype's .arsenal list).
-// Tapping an unlocked weapon equips it; a new unlock equips itself.
+// Weapons by unlock day with progress to the next one (the prototype's .arsenal list), shared
+// by every goal and named by the game mode (SPEC 9). Tapping an unlocked weapon equips it; a new
+// unlock equips itself.
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { arsenal, equippedWeapon, nextUnlock, type GoalState, type WeaponId } from '@/engine';
+import { arsenal, DEFAULT_MODE, equippedWeapon, nextUnlock, type ModeId, type WeaponId } from '@/engine';
 import { plural } from '@/lib/format';
 import { colors, fonts, space } from '@/theme/tokens';
 import { Eyebrow, Fine, shared } from '@/ui/bits';
+import { MODE_COPY, powerUp } from '@/ui/copy/modes';
 import { feedback } from '@/ui/feedback';
 
-export function Arsenal(props: { goal: GoalState; pick: WeaponId | null; onEquip: (id: WeaponId) => void }) {
-  const { goal, pick, onEquip } = props;
-  const next = nextUnlock(goal.bestStreak, goal.streak);
-  const equipped = equippedWeapon(pick, goal.bestStreak);
+export function Arsenal(props: {
+  /** How far the shared arsenal reaches (arsenalBestOf). */
+  best: number;
+  /** The streak closest to the next unlock (arsenalStreakOf). */
+  streak: number;
+  pick: WeaponId | null;
+  onEquip: (id: WeaponId) => void;
+  /** The game rounds play in, which names the power-ups (Win Zero Plus). The Shooter when absent. */
+  mode?: ModeId;
+}) {
+  const { best, streak, pick, onEquip, mode = DEFAULT_MODE } = props;
+  const next = nextUnlock(best, streak);
+  const nextUp = next ? powerUp(mode, next.weapon) : null;
+  const kind = MODE_COPY[mode].tier.toLowerCase();
+  const equipped = equippedWeapon(pick, best);
   const progress = next ? next.progress : 1;
   return (
     <View style={shared.section}>
       <View style={shared.sectionHead}>
         <Eyebrow header>Arsenal</Eyebrow>
-        <Fine>{next ? `${next.weapon.name} in ${plural(next.daysToGo, 'day')}` : 'Fully armed'}</Fine>
+        <Fine>{next && nextUp ? `${nextUp.name} in ${plural(next.daysToGo, 'day')}` : 'Fully armed'}</Fine>
       </View>
       <View
         style={styles.bar}
         accessible
         accessibilityRole="progressbar"
-        accessibilityLabel={next ? `Next weapon: ${next.weapon.name}` : 'Every weapon unlocked'}
+        accessibilityLabel={nextUp ? `Next ${kind}: ${nextUp.name}` : `Every ${kind} unlocked`}
         accessibilityValue={
           next
             ? { min: 0, max: 100, now: Math.round(progress * 100), text: `${plural(next.daysToGo, 'day')} to go` }
@@ -33,8 +46,9 @@ export function Arsenal(props: { goal: GoalState; pick: WeaponId | null; onEquip
         <View style={[styles.fill, { width: `${Math.round(progress * 100)}%` }]} />
       </View>
       <View style={shared.list}>
-        {arsenal(goal.bestStreak, goal.streak).map(({ weapon, unlocked, daysToGo }) => {
+        {arsenal(best, streak).map(({ weapon, unlocked, daysToGo }) => {
           const isEquipped = weapon.id === equipped.id;
+          const { name, description } = powerUp(mode, weapon);
           const status = isEquipped ? 'EQUIPPED' : unlocked ? 'READY' : `${daysToGo}D TO GO`;
           return (
             <Pressable
@@ -48,16 +62,16 @@ export function Arsenal(props: { goal: GoalState; pick: WeaponId | null; onEquip
               }}
               accessibilityRole="button"
               accessibilityState={{ selected: isEquipped, disabled: !unlocked }}
-              accessibilityLabel={`${weapon.name}. ${weapon.description} ${
+              accessibilityLabel={`${name}.${description ? ` ${description}` : ''} ${
                 isEquipped ? 'Equipped.' : unlocked ? 'Ready.' : `Unlocks in ${plural(daysToGo, 'day')}.`
               }`}
               accessibilityHint={unlocked && !isEquipped ? 'Equips it for your rounds' : undefined}
-              style={({ pressed }) => [styles.row, !unlocked && styles.locked, pressed && !isEquipped && { opacity: 0.7 }]}
+              style={({ pressed }) => [styles.row, pressed && !isEquipped && { opacity: 0.7 }]}
             >
               <Text style={[styles.day, unlocked && { color: colors.amber }]}>DAY {weapon.unlockAt}</Text>
               <View style={styles.text}>
-                <Text style={styles.name}>{weapon.name}</Text>
-                <Text style={styles.desc}>{weapon.description}</Text>
+                <Text style={[styles.name, !unlocked && styles.locked]}>{name}</Text>
+                {description ? <Text style={styles.desc}>{description}</Text> : null}
               </View>
               <Text style={[styles.status, isEquipped && styles.equipped]}>{status}</Text>
             </Pressable>
@@ -83,7 +97,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.line,
   },
-  locked: { opacity: 0.5 },
+  // A locked name steps down to muted, as its day and status are, rather than fading the row:
+  // faded, the row's text fell to about 3:1, under the 4.5:1 that text needs.
+  locked: { color: colors.muted },
   day: { minWidth: 62, fontFamily: fonts.monoSemiBold, fontSize: 11, letterSpacing: 0.88, color: colors.muted },
   text: { flex: 1, gap: 2 },
   name: { fontFamily: fonts.bodyBold, fontSize: 16, color: colors.fg },

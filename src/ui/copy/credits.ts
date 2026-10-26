@@ -1,10 +1,12 @@
-// Credits in plain words: their names, the result sheet's line for one a Yes earned, what each
-// is for, Home's Credits section and bonus round sheet, and the question before a round. Why a credit was earned comes from the engine's rewards, so the words can't drift
-// from the rules. Shared by the app and the website.
+// Credits in plain words: their names, the result sheet's line for one a Yes earned and the popup
+// that reveals a Game credit after the round, what each is for, Home's Credits section with its
+// hints and bonus round sheet, and the question before a round. Why a credit was earned comes from the engine's rewards, so the words can't drift from
+// the rules. Shared by the app and the website.
 import {
   BONUS_MAX_N,
+  creditReason,
   CREDIT_REWARDS,
-  creditRewardById,
+  creditRewardClaimed,
   lockedWeapons,
   type CreditGrant,
   type CreditKind,
@@ -23,8 +25,34 @@ export function creditCount(kind: CreditKind, n: number): string {
 /** A credit a Yes earned: 'Weapon credit earned for 3 Yeses in a row.' */
 export function creditEarned(grant: CreditGrant): string {
   const what = grant.amount === 1 ? NAMES[grant.kind] : creditCount(grant.kind, grant.amount);
-  const reason = creditRewardById(grant.key)?.reason;
+  const reason = creditReason(grant.key);
   return reason ? `${what} earned ${reason}.` : `${what} earned.`;
+}
+
+/** A popup announcing new credits: a big '+1', a title, a line or two, and its button. */
+export interface CreditNews {
+  badge: string;
+  title: string;
+  lines: string[];
+  button: string;
+}
+
+/**
+ * After the first play of a round whose Yes earned Game credits (`grants`): what came in and why,
+ * and how many there are now (`balance`, the wallet's Game credits).
+ */
+export function creditReveal(grants: readonly CreditGrant[], balance: number): CreditNews {
+  const total = grants.reduce((sum, g) => sum + g.amount, 0);
+  const reasons = [...new Set(grants.map((g) => creditReason(g.key)).filter((r) => r !== undefined))];
+  return {
+    badge: `+${formatCount(total)}`,
+    title: total === 1 ? 'Game credit earned!' : 'Game credits earned!',
+    lines: [
+      ...reasons.map((r) => `Earned ${r}.`),
+      `You now have ${creditCount('game', balance)}. Spend one on a bonus round from Home, any size you like.`,
+    ],
+    button: 'Nice!',
+  };
 }
 
 /** What each credit is for. */
@@ -36,10 +64,11 @@ export const CREDIT_USES: Record<CreditKind, string> = {
 
 /**
  * How a credit is earned, from the rewards themselves: 'You earn a Game credit for … and for ….'
- * Rewards in `claimed` are left out, as each pays once; null when none are left.
+ * One-time rewards already in `claimed` are left out; repeating ones always stay. Null when none
+ * are left.
  */
 export function creditsEarnedBy(kind: CreditKind, claimed: readonly string[] = []): string | null {
-  const reasons = CREDIT_REWARDS.filter((r) => r.kind === kind && !claimed.includes(r.id)).map((r) => r.reason);
+  const reasons = CREDIT_REWARDS.filter((r) => r.kind === kind && !creditRewardClaimed(r, claimed)).map((r) => r.reason);
   return reasons.length > 0 ? `You earn a ${NAMES[kind]} ${joinAnd(reasons)}.` : null;
 }
 
@@ -51,28 +80,77 @@ export const CREDITS_HOME = {
   title: 'Credits',
   playBonus: 'Play a bonus round',
   playBonusHint: 'Uses 1 Game credit. You choose how many zeros.',
-  bonusAbout: 'As many zeros as you like. Your streak and rewards stay as they are.',
   bonusReady: (n: number) => `Your bonus round of ${zeros(n)} is ready.`,
   bonusReadyLede: "It's paid for. Play it whenever you like.",
   playBonusNow: 'Play bonus round',
-  weaponWaiting: "You'll be asked before your next round whether to use one.",
+};
+
+/** Each credit count's label, and the title of the popup its hint opens. */
+const COUNT_TITLES: Record<CreditKind, string> = { game: 'Game credits', weapon: 'Weapon credits' };
+
+/** The hint on each credit count, and the popup it opens. */
+export const CREDITS_HELP = {
+  title: COUNT_TITLES,
+  /** The hint button, for screen readers: 'About Game credits'. */
+  button: (kind: CreditKind) => `About ${COUNT_TITLES[kind]}`,
+  gameSpend: 'To spend one, tap Play a bonus round and choose how many zeros. The round waits on Home until you play it.',
+  bonusWaiting: 'Your bonus round is paid for and waiting on Home.',
   weaponAllUnlocked: 'Every weapon is unlocked, so your Weapon credits wait here for new ones.',
+  earnTitle: 'How to earn one',
+  earned: 'Earned',
+  footer: 'The ways that start with Every keep paying. The rest are earned once, and credits stay banked until you use them.',
+  close: 'Got it',
 };
 
 /**
- * Home's notes under the credit counts, in plain words: with none of a kind, how to earn one; with
- * some, what it's for, or when it comes up. `bonusWaiting`: a bonus round is already paid for.
+ * One way to earn a credit, for the popup's list ("3 Yeses in a row"), and whether it's been
+ * earned: a repeating way ("Every 7 Yeses in a row") never is, as it keeps paying.
  */
-export function creditNotes(credits: CreditWallet, bestStreak: number, bonusWaiting: boolean): string[] {
-  const { game, weapon } = credits.balance;
-  const gameNote = game > 0 ? (bonusWaiting ? null : CREDITS_HOME.bonusAbout) : creditsEarnedBy('game', credits.claimed);
-  const weaponNote =
-    weapon > 0
-      ? lockedWeapons(bestStreak).length > 0
-        ? CREDITS_HOME.weaponWaiting
-        : CREDITS_HOME.weaponAllUnlocked
-      : creditsEarnedBy('weapon', credits.claimed);
-  return [gameNote, weaponNote].filter((n): n is string => n !== null);
+export interface CreditWay {
+  label: string;
+  earned: boolean;
+}
+
+export interface CreditHelp {
+  title: string;
+  /** What the credit does and how it's used. */
+  lines: string[];
+  /** Where things stand right now, when that's worth a line. */
+  status: string | null;
+  ways: CreditWay[];
+}
+
+/** A reward's reason as a list item: 'for your first Yes' is 'Your first Yes'. */
+function wayLabel(reason: string): string {
+  const what = reason.replace(/^for /, '');
+  return what.charAt(0).toUpperCase() + what.slice(1);
+}
+
+/**
+ * The popup behind a credit count's hint: what the credit is and how it's used, where things
+ * stand, and every way to earn one, from the engine's rewards, the one-time ones already earned
+ * marked as such. `best`: how far the arsenal reaches (whether a Weapon credit has anything left to lend).
+ * `bonusWaiting`: a bonus round is already paid for.
+ */
+export function creditHelp(kind: CreditKind, credits: CreditWallet, best: number, bonusWaiting: boolean): CreditHelp {
+  const ways = CREDIT_REWARDS.filter((r) => r.kind === kind).map((r) => ({
+    label: wayLabel(r.reason),
+    earned: creditRewardClaimed(r, credits.claimed),
+  }));
+  if (kind === 'game') {
+    return {
+      title: CREDITS_HELP.title.game,
+      lines: [CREDIT_USES.game, CREDITS_HELP.gameSpend],
+      status: bonusWaiting ? CREDITS_HELP.bonusWaiting : null,
+      ways,
+    };
+  }
+  return {
+    title: CREDITS_HELP.title.weapon,
+    lines: [CREDIT_USES.weapon],
+    status: credits.balance.weapon > 0 && lockedWeapons(best).length === 0 ? CREDITS_HELP.weaponAllUnlocked : null,
+    ways,
+  };
 }
 
 /** Ready-made sizes for a bonus round, and the one the sheet starts on. */
@@ -93,10 +171,12 @@ export const BONUS_SHEET = {
 /** Before a round, when a Weapon credit could lend it something. */
 export const WEAPON_PROMPT = {
   title: 'Use a Weapon credit?',
-  body: (credits: number) =>
-    `You have ${creditCount('weapon', credits)}. Pick a weapon you haven't unlocked yet to use in this round and its replays.`,
+  /** `kind`: what the game mode calls a power-up (Win Zero Plus, SPEC 9); a weapon in the Shooter. */
+  body: (credits: number, kind = 'weapon') =>
+    `You have ${creditCount('weapon', credits)}. Pick a ${kind} you haven't unlocked yet to use in this round and its replays.`,
   skip: 'Not this time',
-  /** A screen reader's name for one weapon on offer. */
-  option: (w: WeaponDef) => `${w.name}. ${w.description} Unlocks on day ${w.unlockAt}.`,
+  /** A screen reader's name for one weapon on offer, by the game mode's name for it and its description, if any. */
+  option: (w: WeaponDef, name = w.name, about: string | null = w.description) =>
+    `${name}.${about ? ` ${about}` : ''} Unlocks on day ${w.unlockAt}.`,
   optionHint: 'Uses 1 Weapon credit for this round',
 };

@@ -6,6 +6,7 @@ import {
   clockTimeAt,
   dayKeyAt,
   diffDays,
+  normalizeDays,
   weekdayOf,
   type ClockTime,
   type DayKey,
@@ -94,6 +95,30 @@ export function formatMonth(month: string): string {
 /** '1 zero', '3 zeros'. */
 export function plural(n: number, one: string, many = `${one}s`): string {
   return `${n} ${n === 1 ? one : many}`;
+}
+
+/** Monday to Friday, and Saturday and Sunday (0 = Sunday … 6 = Saturday). */
+const WORK_WEEK = '1,2,3,4,5';
+const WEEKEND = '0,6';
+
+/**
+ * A goal's check-in days (SPEC 9): 'Every day', 'Weekdays', 'Weekends', 'Sundays' for one day, or
+ * 'Mon, Wed, Fri' in week order. `days` are 0 = Sunday … 6 = Saturday, absent for every day, as the
+ * engine keeps them; the week starts on `firstWeekday` (1 = Sunday … 7 = Saturday, as
+ * expo-localization reports it, like the history calendar). Throws for an empty list.
+ */
+export function formatDays(days: readonly number[] | undefined, firstWeekday: number): string {
+  const set = normalizeDays(days);
+  if (!set) return 'Every day';
+  const key = set.join(',');
+  if (key === WORK_WEEK) return 'Weekdays';
+  if (key === WEEKEND) return 'Weekends';
+  if (set.length === 1) return `${WEEKDAYS[set[0] ?? 0]}s`;
+  const place = (d: number) => (d - (firstWeekday - 1) + 7) % 7;
+  return [...set]
+    .sort((a, b) => place(a) - place(b))
+    .map((d) => WEEKDAYS[d]?.slice(0, 3))
+    .join(', ');
 }
 
 /** 'a', 'a and b', 'a, b and c'. */

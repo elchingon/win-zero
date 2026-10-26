@@ -25,6 +25,27 @@ describe('milestoneShareText', () => {
     );
   });
 
+  it('names the app it was shared from', () => {
+    expect(milestoneShareText(5, { ...none, bomb: true }, 'Win Zero Plus')).toBe(
+      'Day 5 on Win Zero Plus: 5 zeros down. I earned a bomb.',
+    );
+  });
+
+  it('names the power-ups as the game played does (SPEC 9)', () => {
+    const twin = { ...none, weapons: ['twin' as const] };
+    expect(milestoneShareText(3, twin, 'Win Zero Plus', 'shooter')).toBe('Day 3 on Win Zero Plus: 3 zeros down. I unlocked the Twin Barrel.');
+    expect(milestoneShareText(3, twin, 'Win Zero Plus', 'orbit')).toBe('Day 3 on Win Zero Plus: 3 zeros down. I unlocked the Twin Barrel.');
+    expect(milestoneShareText(3, twin, 'Win Zero Plus', 'catch')).toBe(
+      'Day 3 on Win Zero Plus: 3 zeros down. I unlocked a new catcher, Twin Cups.',
+    );
+    expect(milestoneShareText(3, { ...twin, bomb: true }, 'Win Zero Plus', 'breaker')).toBe(
+      'Day 3 on Win Zero Plus: 3 zeros down. I unlocked a new power-up, 2 balls, and earned a bomb.',
+    );
+    expect(milestoneShareText(3, { ...none, weapons: ['twin', 'scatter'] }, 'Win Zero Plus', 'slice')).toBe(
+      'Day 3 on Win Zero Plus: 3 zeros down. I unlocked new power-ups, Twin Blade and Wide Arc.',
+    );
+  });
+
   it('has nothing to share for a round that earned nothing', () => {
     expect(milestoneShareText(4, none)).toBeNull();
     expect(milestoneShareText(21, { ...none, shieldCapped: true })).toBeNull(); // shields already full

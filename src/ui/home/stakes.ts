@@ -18,7 +18,7 @@ export function checkInStakes(goal: GoalState): Stakes {
       : no.lose === 0
         ? null
         : no.kind === 'reset'
-          ? 'a fresh start, from one zero'
+          ? 'a fresh start, from zero'
           : 'one zero comes off';
   return { yes: `${plural(goal.streak + 1, 'zero')} to shoot`, notToday };
 }

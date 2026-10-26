@@ -3,29 +3,46 @@ import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { DEFAULT_CHECK_IN_TIME, DEFAULT_MORNING_TIME, firstCheckInOpenAt } from '@/engine';
+import { DEFAULT_CHECK_IN_TIME, DEFAULT_MORNING_TIME, EVERY_DAY, firstCheckInOpenAt, type Weekday } from '@/engine';
 import { formatClockTime } from '@/lib/format';
 import { requestReminderPermission } from '@/notifications/permissions';
 import { appStore, useApp } from '@/store';
 import { colors, fonts, space, type } from '@/theme/tokens';
-import { Chip, Em, Eyebrow, Field, Fine, Lede, TextField } from '@/ui/bits';
+import { Chip, Em, Eyebrow, Field, Fine, Lede, shared, TextField } from '@/ui/bits';
 import { TopBar } from '@/ui/Brand';
 import { Button, LinkButton } from '@/ui/Button';
-import { GOAL_MAX_LENGTH, reminderWhen, RULES, SUGGESTIONS } from '@/ui/copy/rules';
+import { GOAL_MAX_LENGTH, reminderWhen, rules, SUGGESTIONS } from '@/ui/copy/rules';
 import { feedback } from '@/ui/feedback';
 import { Screen } from '@/ui/Screen';
 import { TimeField } from '@/ui/TimeField';
 import { useDeviceCalendar } from '@/ui/useDevice';
+import { APP_NAME } from '@/variant';
+
+
+// Win Zero Plus only: check-in days (SPEC 9). The literal comparison folds per file, so Win Zero's
+// bundle leaves it out, and Win Zero's goal checks in every day.
+const PlusGoals: typeof import('@/plus/goals') | null =
+  process.env.EXPO_PUBLIC_APP_VARIANT === 'plus'
+    ? // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require('@/plus/goals')
+    : null;
 
 export default function Setup() {
-  const hasGoal = useApp((s) => s.goal !== null);
-  const setupGoal = useApp((s) => s.setupGoal);
+  const hasGoal = useApp((s) => s.goals.length > 0);
+  const addGoal = useApp((s) => s.addGoal);
   const { h24 } = useDeviceCalendar();
   const [step, setStep] = useState<'goal' | 'reminders'>('goal');
   const [goal, setGoal] = useState('');
   const [checkInTime, setCheckInTime] = useState(DEFAULT_CHECK_IN_TIME);
   const [morningTime, setMorningTime] = useState(DEFAULT_MORNING_TIME);
+  const [days, setDays] = useState<Weekday[]>([...EVERY_DAY]);
   const [busy, setBusy] = useState(false);
+  /** Chosen days in Win Zero Plus; Win Zero's goal checks in every day. */
+  const chosenDays = PlusGoals ? days : undefined;
+  // The rules and the goal's label follow the days as they're picked, below them.
+  const everyDay = !chosenDays || chosenDays.length === EVERY_DAY.length;
+  const ruleList = rules(APP_NAME, { everyDay });
+  const goalLabel = everyDay ? 'Your daily goal' : 'Your goal';
 
   if (hasGoal && !busy) return <Redirect href="/" />;
 
@@ -34,7 +51,7 @@ export default function Setup() {
   const finish = async (askPermission: boolean) => {
     setBusy(true);
     if (askPermission) await requestReminderPermission();
-    const r = setupGoal({ goal, checkInTime, morningTime });
+    const r = addGoal({ goal, checkInTime, morningTime, days: chosenDays });
     if (r.ok) {
       feedback.success();
       router.replace('/');
@@ -47,7 +64,7 @@ export default function Setup() {
   if (step === 'reminders') {
     const store = appStore.getState();
     // Past check-in time already: the first question is about today, straight away.
-    const todayCounts = firstCheckInOpenAt({ checkInTime, now: store.now(), tz: store.timeZone() });
+    const todayCounts = firstCheckInOpenAt({ checkInTime, days: chosenDays, now: store.now(), tz: store.timeZone() });
     return (
       <Screen>
         <TopBar right={<LinkButton label="Back" onPress={() => setStep('goal')} />} />
@@ -64,7 +81,7 @@ export default function Setup() {
           </Lede>
         ) : null}
         <Lede>
-          Win Zero asks at your check-in time. {reminderWhen(checkInTime, formatClockTime(morningTime, h24), morningTime)}{' '}
+          {APP_NAME} asks at your check-in time. {reminderWhen(checkInTime, formatClockTime(morningTime, h24), morningTime)}{' '}
           There&apos;s no rush: you can answer until midnight the next day, right from the notification or in the app.
         </Lede>
         <Lede>If you&apos;re away for a while, reminders ease off to one gentle nudge a week.</Lede>
@@ -87,7 +104,7 @@ export default function Setup() {
         Every day you win, there&apos;s <Em>one more zero</Em> to shoot.
       </Text>
       <View style={styles.rules}>
-        {RULES.map((r) => (
+        {ruleList.map((r) => (
           <View key={r.mark} style={styles.rule}>
             <Text style={[styles.ruleMark, r.tone === 'flare' && { color: colors.flare }]}>{r.mark}</Text>
             <Text style={[type.body, styles.ruleText]}>{r.text}</Text>
@@ -96,7 +113,7 @@ export default function Setup() {
       </View>
 
       <View style={styles.form}>
-        <Field label="Your daily goal">
+        <Field label={goalLabel}>
           <TextField
             value={goal}
             onChangeText={setGoal}
@@ -104,9 +121,9 @@ export default function Setup() {
             maxLength={GOAL_MAX_LENGTH}
             returnKeyType="done"
             autoCapitalize="sentences"
-            accessibilityLabel="Your daily goal"
+            accessibilityLabel={goalLabel}
           />
-          <View style={styles.chips}>
+          <View style={shared.chips}>
             {SUGGESTIONS.map((s) => (
               <Chip key={s} label={s} selected={goal.trim() === s} onPress={() => setGoal(s)} />
             ))}
@@ -126,6 +143,7 @@ export default function Setup() {
           h24={h24}
           hint="Only if you haven't answered by then: the next morning, or later the same day if it's after check-in time."
         />
+        {PlusGoals ? <PlusGoals.ChooseDays days={days} onChange={setDays} /> : null}
         <Button
           label="Start my streak"
           onPress={() => setStep('reminders')}
@@ -144,5 +162,4 @@ const styles = StyleSheet.create({
   ruleMark: { width: 52, fontFamily: fonts.display, fontSize: 15, letterSpacing: 0.3, color: colors.amber },
   ruleText: { flex: 1 },
   form: { gap: 18 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
 });

@@ -30,11 +30,36 @@ export function Chip(props: { label: string; selected: boolean; onPress: () => v
   );
 }
 
-/** A number with its label, and an optional caption under it (say, the dates it covers). */
-export function StatTile(props: { label: string; value: string; hero?: boolean; caption?: string; spoken?: string }) {
-  const spoken = props.spoken ?? `${props.label}: ${props.value}${props.caption ? `, ${props.caption}` : ''}`;
+/** A small "i" in a ring that opens a hint, such as on a stat tile's corner. */
+export function HintButton(props: { label: string; onPress: () => void; className?: string }) {
   return (
-    <div className="stat" role="group" aria-label={spoken}>
+    <button
+      type="button"
+      className={`hint${props.className ? ` ${props.className}` : ''}`}
+      aria-label={props.label}
+      onClick={props.onPress}
+    >
+      <span aria-hidden="true">i</span>
+    </button>
+  );
+}
+
+/**
+ * A number with its label, and an optional caption under it (say, the dates it covers). `help`
+ * adds a hint button in the top-right corner, outside the tile's group.
+ */
+export function StatTile(props: {
+  label: string;
+  value: string;
+  hero?: boolean;
+  caption?: string;
+  spoken?: string;
+  help?: { label: string; onPress: () => void };
+}) {
+  const { help } = props;
+  const spoken = props.spoken ?? `${props.label}: ${props.value}${props.caption ? `, ${props.caption}` : ''}`;
+  const tile = (
+    <div className={`stat${help ? ' has-help' : ''}`} role="group" aria-label={spoken}>
       <span className="stat-label" aria-hidden="true">
         {props.label}
       </span>
@@ -46,6 +71,13 @@ export function StatTile(props: { label: string; value: string; hero?: boolean; 
           {props.caption}
         </span>
       ) : null}
+    </div>
+  );
+  if (!help) return tile;
+  return (
+    <div className="stat-wrap">
+      {tile}
+      <HintButton label={help.label} onPress={help.onPress} className="stat-help" />
     </div>
   );
 }
@@ -66,7 +98,8 @@ export function Field(props: { label: string; hint?: string; error?: string | nu
       </label>
       {props.children(id, note ? noteId : undefined)}
       {note ? (
-        <p id={noteId} className={`fine${props.error ? ' tone-flare' : ''}`}>
+        // An error is an alert, so a screen reader says it as it appears.
+        <p id={noteId} className={`fine${props.error ? ' tone-flare' : ''}`} role={props.error ? 'alert' : undefined}>
           {note}
         </p>
       ) : null}

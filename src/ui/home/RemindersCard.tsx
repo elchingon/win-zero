@@ -5,12 +5,16 @@ import { StyleSheet, Text } from 'react-native';
 import { colors, fonts, type } from '@/theme/tokens';
 import { Card } from '@/ui/bits';
 import { Button, LinkButton } from '@/ui/Button';
+import { APP_NAME } from '@/variant';
 
 export function RemindersCard(props: {
   /** Turned off in system settings, rather than never turned on. */
   denied: boolean;
-  /** The check-in time, formatted for this device. */
-  checkInTime: string;
+  /**
+   * The check-in time, formatted for this device; null when there isn't one daily time to name
+   * (Win Zero Plus: a goal on chosen days, or several goals).
+   */
+  checkInTime: string | null;
   onTurnOn: () => void;
   onHide: () => void;
 }) {
@@ -21,7 +25,9 @@ export function RemindersCard(props: {
       <Text style={type.lede}>
         {denied
           ? "They're turned off in your phone's settings. Turn them on there and your check-in will find you."
-          : `Win Zero asks one question each day at ${checkInTime}. A reminder makes sure it finds you.`}
+          : checkInTime
+            ? `${APP_NAME} asks one question each day at ${checkInTime}. A reminder makes sure it finds you.`
+            : `${APP_NAME} asks at each check-in time. A reminder makes sure it finds you.`}
       </Text>
       <Button label={denied ? 'Open settings' : 'Turn on reminders'} onPress={onTurnOn} />
       <LinkButton label="Not now" accessibilityHint="Hides this for a week" onPress={onHide} />

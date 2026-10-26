@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 // Renders the game's sound effects to assets/sfx/*.wav, porting the prototype's Web Audio
 // synthesis (docs/prototype/win-zero.html, sfx()): the shot's falling square chirp, the pop
-// of filtered noise, and the big boom (noise plus a sinking sine). Plus one the prototype
-// doesn't have: the horn fanfare that brings up the encouragement after a round. No
+// of filtered noise, and the big boom (noise plus a sinking sine). Plus three the prototype
+// doesn't have: the horn fanfare that brings up the encouragement after a round, and Win Zero
+// Plus's game modes' bounce (a catch, a ball off the paddle) and swish (a blade), and the chime
+// for a Yes, as the zero pops out of the button. No
 // dependencies; the noise is seeded, so running it again writes the same files.
 //
 //   node scripts/gen-sfx.mjs        (or: npm run gen:sfx)
@@ -54,6 +56,29 @@ function lowpass(qDb) {
     const a1 = (-2 * cos) / a0;
     const a2 = (1 - alpha) / a0;
     const y = b0 * x + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
+    x2 = x1;
+    x1 = x;
+    y2 = y1;
+    y1 = y;
+    return y;
+  };
+}
+
+/** A band-pass biquad (RBJ cookbook, 0 dB peak, as Web Audio's) whose center follows `center(t)`. `q` is linear. */
+function bandpass(q) {
+  let x1 = 0;
+  let x2 = 0;
+  let y1 = 0;
+  let y2 = 0;
+  return (x, freq) => {
+    const w = (2 * Math.PI * Math.min(freq, RATE * 0.49)) / RATE;
+    const alpha = Math.sin(w) / (2 * q);
+    const a0 = 1 + alpha;
+    const b0 = alpha / a0;
+    const b2 = -alpha / a0;
+    const a1 = (-2 * Math.cos(w)) / a0;
+    const a2 = (1 - alpha) / a0;
+    const y = b0 * x + b2 * x2 - a1 * y1 - a2 * y2;
     x2 = x1;
     x1 = x;
     y2 = y1;
@@ -181,6 +206,82 @@ function fanfare() {
   return render(0.3 + 0.65 + HORN_RELEASE_S, (t) => notes.reduce((sum, note) => sum + note(t), 0) * FANFARE_GAIN);
 }
 
+// --- The game modes' sounds (new, not in the prototype) ----------------------------------
+
+/** Bounce: a rubbery thunk, a sine sinking 420 → 190 Hz over 90 ms, over a faint low-passed click. */
+const BOUNCE_GAIN = 0.24;
+const BOUNCE_S = 0.15;
+const BOUNCE_CLICK = 0.1;
+const BOUNCE_CLICK_S = 0.012;
+const BOUNCE_CLICK_HZ = 3000;
+
+function bounce() {
+  const osc = sine();
+  const freq = expRamp(420, 190, 0.09);
+  const gain = expRamp(BOUNCE_GAIN, 0.0001, BOUNCE_S - 0.01);
+  const rand = noise(NOISE_SEED + 3);
+  const filter = lowpass(DEFAULT_Q_DB);
+  const click = expRamp(BOUNCE_CLICK, 0.0001, BOUNCE_CLICK_S);
+  return render(BOUNCE_S, (t) => osc(freq(t)) * gain(t) + filter(rand(), BOUNCE_CLICK_HZ) * click(t));
+}
+
+/** Swish: noise through a band-pass sweeping 2600 → 700 Hz, swelling over 25 ms, gone by 0.22 s. */
+const SWISH_GAIN = 0.42;
+const SWISH_Q = 1.4;
+const SWISH_RISE_S = 0.025;
+const SWISH_S = 0.22;
+
+function swish() {
+  const rand = noise(NOISE_SEED + 2);
+  const filter = bandpass(SWISH_Q);
+  const center = expRamp(2600, 700, 0.18);
+  const fade = expRamp(SWISH_GAIN, 0.0001, SWISH_S - SWISH_RISE_S - 0.005);
+  return render(SWISH_S, (t) => filter(rand(), center(t)) * (t < SWISH_RISE_S ? (SWISH_GAIN * t) / SWISH_RISE_S : fade(t - SWISH_RISE_S)));
+}
+
+// --- The Yes chime (new, not in the prototype) -------------------------------------------
+
+/** The zero popping out of the button: a sine rising 480 → 960 Hz, in and gone in 90 ms. */
+const BLOOP_GAIN = 0.28;
+const BLOOP_RISE_S = 0.07;
+const BLOOP_S = 0.09;
+const BLOOP_ATTACK_S = 0.005;
+/** Then a bell rising a fifth, G5 to D6. A quieter partial 2.76x up makes each ring like metal. */
+const D6 = 1174.66;
+const BELL_GAIN = 0.24;
+const BELL_PARTIAL = 2.76;
+const BELL_PARTIAL_LEVEL = 0.25;
+const BELL_ATTACK_S = 0.004;
+const BELL_DECAY_S = 0.5;
+const BELL_START_S = 0.06;
+const BELL_GAP_S = 0.08;
+
+/** One bell strike at `start`, ringing out over BELL_DECAY_S. */
+function bell(freq, start, level) {
+  const tone = sine();
+  const partial = sine();
+  const decay = expRamp(1, 0.0001, BELL_DECAY_S);
+  return (t) => {
+    const u = t - start;
+    if (u < 0 || u > BELL_DECAY_S) return 0;
+    const env = Math.min(1, u / BELL_ATTACK_S) * decay(u);
+    return (tone(freq) + BELL_PARTIAL_LEVEL * partial(freq * BELL_PARTIAL)) * env * level;
+  };
+}
+
+function yes() {
+  const osc = sine();
+  const freq = expRamp(480, 960, BLOOP_RISE_S);
+  const fade = expRamp(BLOOP_GAIN, 0.0001, BLOOP_S - BLOOP_ATTACK_S);
+  const bloop = (t) => {
+    if (t > BLOOP_S) return 0;
+    const env = t < BLOOP_ATTACK_S ? (BLOOP_GAIN * t) / BLOOP_ATTACK_S : fade(t - BLOOP_ATTACK_S);
+    return osc(freq(t)) * env;
+  };
+  const bells = [bell(G5, BELL_START_S, BELL_GAIN), bell(D6, BELL_START_S + BELL_GAP_S, BELL_GAIN)];
+  return render(BELL_START_S + BELL_GAP_S + BELL_DECAY_S, (t) => bloop(t) + bells[0](t) + bells[1](t));
+}
+
 // --- Output ---------------------------------------------------------------------------------
 
 function fadeEnds(samples) {
@@ -217,11 +318,21 @@ function wav(samples, scale) {
 
 const peakOf = (samples) => samples.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
 
-const sounds = { shoot: shoot(), pop: pop(), boom: boom(), fanfare: fanfare() };
+const sounds = {
+  shoot: shoot(),
+  pop: pop(),
+  boom: boom(),
+  fanfare: fanfare(),
+  bounce: bounce(),
+  swish: swish(),
+  yes: yes(),
+};
 for (const s of Object.values(sounds)) fadeEnds(s);
-// The boom sets the shared scale. A louder fanfare would quietly change every other file.
-if (peakOf(sounds.fanfare) >= peakOf(sounds.boom)) {
-  throw new Error(`The fanfare (peak ${peakOf(sounds.fanfare).toFixed(3)}) would outshout the boom; lower FANFARE_GAIN.`);
+// The boom sets the shared scale. A louder sound would quietly change every other file.
+for (const [name, samples] of Object.entries(sounds)) {
+  if (name !== 'boom' && peakOf(samples) >= peakOf(sounds.boom)) {
+    throw new Error(`The ${name} (peak ${peakOf(samples).toFixed(3)}) would outshout the boom; lower its gain.`);
+  }
 }
 const loudest = Math.max(...Object.values(sounds).map(peakOf));
 const scale = PEAK / loudest;

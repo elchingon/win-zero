@@ -1,11 +1,17 @@
-// What a frame's report sounds and feels like: which sounds to play and which haptics to fire.
-// Pure (the clock comes in as `nowMs`), so the throttling can be tested.
+// What a frame's report sounds and feels like: which sounds to play and which haptics to fire,
+// by game mode. Pure (the clock comes in as `nowMs`), so the throttling can be tested.
+import { DEFAULT_MODE, type ModeId } from '@/engine';
+
 import type { Report } from './sim/types';
 
 /** Pops closer together than this blur into one, as in the prototype. */
 export const POP_MIN_MS = 35;
 /** Kill haptics closer together than this feel like one long buzz. */
 export const KILL_HAPTIC_MIN_MS = 60;
+/** Bounces closer together than this blur into one. */
+export const BOUNCE_MIN_MS = 45;
+/** Swishes closer together than this sound like one long one. */
+export const SWISH_MIN_MS = 90;
 
 export interface Cues {
   shoot: boolean;
@@ -14,6 +20,10 @@ export interface Cues {
   killHaptic: boolean;
   bombHaptic: boolean;
   boomHaptic: boolean;
+  /** Win Zero Plus's game modes only: a catch, or a ball off the paddle or a brick. */
+  bounce?: boolean;
+  /** Win Zero Plus's Slice only: the blade's swing. */
+  swish?: boolean;
 }
 
 /** A gate that opens at most once per `minMs`. */
@@ -26,8 +36,10 @@ export function makeGate(minMs: number): (nowMs: number) => boolean {
   };
 }
 
-/** A cue sheet for one round: call it with each report and the time it arrived. */
-export function makeCues(): (report: Report, nowMs: number) => Cues {
+type CueSheet = (report: Report, nowMs: number) => Cues;
+
+/** The Shooter's sounds: a shot per frame that fires, pops for kills, a boom for bombs and the end. */
+function shooterCues(): CueSheet {
   const popGate = makeGate(POP_MIN_MS);
   const killGate = makeGate(KILL_HAPTIC_MIN_MS);
   return (r, nowMs) => {
@@ -42,4 +54,54 @@ export function makeCues(): (report: Report, nowMs: number) => Cues {
       boomHaptic: r.final,
     };
   };
+}
+
+/** Catch: the Shooter's pops and booms, with a bounce for a catch that doesn't pop its zero. */
+function catchCues(): CueSheet {
+  const shooter = shooterCues();
+  const bounceGate = makeGate(BOUNCE_MIN_MS);
+  return (r, nowMs) => {
+    const c = shooter(r, nowMs);
+    c.bounce = r.bounces > 0 && !c.boom && r.kills === 0 && bounceGate(nowMs);
+    return c;
+  };
+}
+
+/** Slice: a swish for each swing of the blade, and the Shooter's pops and booms. */
+function sliceCues(): CueSheet {
+  const shooter = shooterCues();
+  const swishGate = makeGate(SWISH_MIN_MS);
+  return (r, nowMs) => {
+    const c = shooter(r, nowMs);
+    c.swish = r.swishes > 0 && swishGate(nowMs);
+    return c;
+  };
+}
+
+/** Breaker: a bounce for a ball off the paddle or a brick it doesn't break, the laser's shot, pops and booms. */
+function breakerCues(): CueSheet {
+  const shooter = shooterCues();
+  const bounceGate = makeGate(BOUNCE_MIN_MS);
+  return (r, nowMs) => {
+    const c = shooter(r, nowMs);
+    c.bounce = r.bounces > 0 && !c.boom && r.kills === 0 && bounceGate(nowMs);
+    return c;
+  };
+}
+
+/** A cue sheet for one round in `mode`: call it with each report and the time it arrived. */
+export function makeCues(mode: ModeId = DEFAULT_MODE): CueSheet {
+  switch (mode) {
+    case 'catch':
+      return catchCues();
+    case 'slice':
+      return sliceCues();
+    case 'breaker':
+      return breakerCues();
+    // Orbit's turret sounds as the Shooter's does.
+    case 'orbit':
+    case 'shooter':
+    default:
+      return shooterCues();
+  }
 }

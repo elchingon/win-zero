@@ -6,6 +6,7 @@ import {
   formatClockTime,
   formatCount,
   formatDayRange,
+  formatDays,
   formatDayShort,
   formatMonth,
   formatUntil,
@@ -64,6 +65,36 @@ describe('format', () => {
 
   it('groups big counts with commas', () => {
     expect([formatCount(7), formatCount(501), formatCount(1000), formatCount(100000)]).toEqual(['7', '501', '1,000', '100,000']);
+  });
+});
+
+describe('formatDays', () => {
+  /** expo-localization's numbering: 1 = Sunday, 2 = Monday. */
+  const SUNDAY_FIRST = 1;
+  const MONDAY_FIRST = 2;
+
+  it('names every day, weekdays and weekends in words', () => {
+    expect(formatDays(undefined, SUNDAY_FIRST)).toBe('Every day');
+    expect(formatDays([0, 1, 2, 3, 4, 5, 6], MONDAY_FIRST)).toBe('Every day');
+    expect(formatDays([5, 1, 3, 2, 4], SUNDAY_FIRST)).toBe('Weekdays');
+    expect(formatDays([6, 0], MONDAY_FIRST)).toBe('Weekends');
+  });
+
+  it('names a single day by its weekday', () => {
+    expect(formatDays([0], MONDAY_FIRST)).toBe('Sundays');
+    expect(formatDays([3, 3], SUNDAY_FIRST)).toBe('Wednesdays');
+  });
+
+  it('lists any other days short, in the order the week starts on this phone', () => {
+    expect(formatDays([5, 1, 3], MONDAY_FIRST)).toBe('Mon, Wed, Fri');
+    expect(formatDays([1, 3, 5], SUNDAY_FIRST)).toBe('Mon, Wed, Fri');
+    expect(formatDays([0, 2], SUNDAY_FIRST)).toBe('Sun, Tue');
+    expect(formatDays([0, 2], MONDAY_FIRST)).toBe('Tue, Sun');
+    expect(formatDays([6, 0, 1], 7)).toBe('Sat, Sun, Mon');
+  });
+
+  it('turns down a schedule with no days', () => {
+    expect(() => formatDays([], SUNDAY_FIRST)).toThrow();
   });
 });
 

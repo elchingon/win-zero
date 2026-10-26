@@ -1,8 +1,12 @@
-// OS accessibility settings, kept current. (Reanimated's useReducedMotion only reads once.)
+// OS accessibility settings, kept current (Reanimated's useReducedMotion only reads once), and
+// the app's own switches in Settings › Accessibility that go with them.
 import { useEffect, useState } from 'react';
 import { AccessibilityInfo } from 'react-native';
+import { ReduceMotion } from 'react-native-reanimated';
 
-type FlagEvent = 'reduceMotionChanged' | 'screenReaderChanged';
+import { useApp } from '@/store';
+
+type FlagEvent = 'reduceMotionChanged' | 'screenReaderChanged' | 'boldTextChanged';
 
 function useA11yFlag(read: () => Promise<boolean>, event: FlagEvent): boolean {
   const [on, setOn] = useState(false);
@@ -23,6 +27,26 @@ function useA11yFlag(read: () => Promise<boolean>, event: FlagEvent): boolean {
 /** The OS reduce-motion setting. */
 export function useReduceMotion(): boolean {
   return useA11yFlag(AccessibilityInfo.isReduceMotionEnabled, 'reduceMotionChanged');
+}
+
+/**
+ * Calm effects: the OS reduce-motion setting, or Reduce effects in Settings › Accessibility. Use
+ * this, not useReduceMotion, for anything the app moves itself.
+ */
+export function useReduceEffects(): boolean {
+  const os = useReduceMotion();
+  const chosen = useApp((s) => s.prefs.reduceEffects);
+  return os || chosen;
+}
+
+/** For Reanimated's entering animations, which follow only the OS: reduced too while Reduce effects is on. */
+export function useAnimationMotion(): ReduceMotion {
+  return useApp((s) => s.prefs.reduceEffects) ? ReduceMotion.Always : ReduceMotion.System;
+}
+
+/** iOS's Bold Text setting; always false on Android. */
+export function useSystemBoldText(): boolean {
+  return useA11yFlag(AccessibilityInfo.isBoldTextEnabled, 'boldTextChanged');
 }
 
 /** VoiceOver or TalkBack is on. */

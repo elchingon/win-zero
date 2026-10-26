@@ -1,31 +1,19 @@
 'worklet';
 // One frame of the round. The frame callback calls step() with the time since the last frame.
+// The round's mode moves its own pieces; effects and the ending are shared by every mode.
 import { updateBullets } from './bullets';
 import { HIT_FLASH, MAX_DT } from './constants';
 import { updateEffects } from './effects';
-import { updateFiring } from './input';
+import { stepBreaker } from './modes/breaker';
+import { stepCatch } from './modes/catch';
+import { stepOrbit } from './modes/orbit';
+import { stepSlice } from './modes/slice';
+import { moveZero } from './move';
 import { updatePhase } from './phase';
-import type { GameState, Zero } from './types';
+import { updateFiring } from './trigger';
+import type { GameState } from './types';
 
-/** Move a zero and bounce it off the play area's edges. */
-export function moveZero(z: Zero, state: GameState, dt: number): void {
-  z.x += z.vx * dt;
-  z.y += z.vy * dt;
-  if (z.x < z.rx) {
-    z.x = z.rx;
-    z.vx = Math.abs(z.vx);
-  } else if (z.x > state.width - z.rx) {
-    z.x = state.width - z.rx;
-    z.vx = -Math.abs(z.vx);
-  }
-  if (z.y < state.top + z.ry) {
-    z.y = state.top + z.ry;
-    z.vy = Math.abs(z.vy);
-  } else if (z.y > state.bottom - z.ry) {
-    z.y = state.bottom - z.ry;
-    z.vy = -Math.abs(z.vy);
-  }
-}
+export { moveZero } from './move';
 
 function updateZeros(state: GameState, dt: number): void {
   // The fill freezes whatever's left behind it.
@@ -45,9 +33,30 @@ export function step(state: GameState, dt: number): void {
   state.time += d;
   state.phaseT += d;
   state.sinceShot += d;
-  updateFiring(state);
-  updateZeros(state, d);
-  updateBullets(state, d);
+  state.sinceDamage += d;
+  switch (state.mode) {
+    case 'catch':
+      stepCatch(state, d);
+      break;
+    case 'orbit':
+      updateFiring(state);
+      stepOrbit(state, d);
+      updateBullets(state, d);
+      break;
+    case 'slice':
+      stepSlice(state, d);
+      break;
+    case 'breaker':
+      stepBreaker(state, d);
+      break;
+    case 'shooter':
+    default:
+      updateFiring(state);
+      updateZeros(state, d);
+      updateBullets(state, d);
+  }
   updateEffects(state, d);
   updatePhase(state, d);
+  // Last, so a flash between frames (a bomb) and one in this step (the final) count as one.
+  state.sinceFlash += d;
 }

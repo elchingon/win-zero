@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { resultLines, sheetEyebrow, type ResultMode } from '@/game/result';
 import { milestoneShareText } from '@/game/shareText';
 import { formatCount } from '@/lib/format';
+import { arsenalBestOf, slotById } from '@/store/select';
 import type { RoundRecord } from '@/store/types';
 
 import { shareText } from '../platform/share';
@@ -15,15 +16,24 @@ import { Button } from '../ui/Button';
 /** The sheet rises over this long, then takes focus. */
 const RISE_MS = 500;
 
-export function ResultSheet(props: { n: number; mode: ResultMode; record: RoundRecord | null; onBack: () => void; onReplay: () => void }) {
-  const { n, mode, record, onBack, onReplay } = props;
-  const goal = useApp((s) => s.goal);
+export function ResultSheet(props: {
+  n: number;
+  mode: ResultMode;
+  /** Whose round this is; null for bonus and practice rounds. */
+  goalId: string | null;
+  record: RoundRecord | null;
+  onBack: () => void;
+  onReplay: () => void;
+}) {
+  const { n, mode, goalId, record, onBack, onReplay } = props;
+  const goal = useApp((s) => (goalId ? (slotById(s, goalId)?.goal ?? null) : null));
+  const best = useApp(arsenalBestOf);
   const credits = useApp((s) => s.credits);
   const heading = useRef<HTMLHeadingElement>(null);
   const [shareNote, setShareNote] = useState<string | null>(null);
   // A round that earned something can be shared; practice rounds earn nothing.
   const share = mode !== 'practice' && record ? milestoneShareText(record.n, record.rewards) : null;
-  const lines = resultLines(n, mode, record, goal, credits);
+  const lines = resultLines(n, mode, record, goal, credits, best);
 
   // Keyboard and screen reader users land on "N zeros down" as the sheet arrives.
   useEffect(() => {

@@ -3,7 +3,7 @@ import { describe, expect, it } from '@jest/globals';
 
 import { BULLET_SPEED, HIT_MIN_RX, HIT_MIN_RY, HIT_PAD } from '../constants';
 import { damageZero, killZero } from '../damage';
-import { hitTest, hittable } from '../hit';
+import { hitTest, hittable, segmentHitsZero } from '../hit';
 import { pressFire, releaseFire } from '../input';
 import { resetReport } from '../report';
 import { step } from '../step';
@@ -20,6 +20,20 @@ describe('hit test', () => {
     expect(hitTest(200, 400 - 40 - HIT_PAD - 0.5, z)).toBe(false);
     // Inside the bounding box but outside the ellipse.
     expect(hitTest(200 + 33, 400 + 43, z)).toBe(false);
+  });
+
+  it('meets a blade’s stroke that crosses the padded ellipse, and only one that does (Slice)', () => {
+    const z = zero(30, 40);
+    const edge = 30 + HIT_PAD;
+    expect(segmentHitsZero(100, 400, 300, 400, z, 0)).toBe(true); // straight through
+    expect(segmentHitsZero(200, 300, 200, 500, z, 0)).toBe(true);
+    expect(segmentHitsZero(100, 300, 300, 300, z, 0)).toBe(false); // above it
+    expect(segmentHitsZero(100, 400, 200 - edge - 1, 400, z, 0)).toBe(false); // stops short
+    expect(segmentHitsZero(200 + edge - 0.5, 300, 200 + edge - 0.5, 500, z, 0)).toBe(true); // grazes the edge
+    expect(segmentHitsZero(200 + edge + 0.5, 300, 200 + edge + 0.5, 500, z, 0)).toBe(false);
+    expect(segmentHitsZero(200 + edge + 0.5, 300, 200 + edge + 0.5, 500, z, 2)).toBe(true); // a longer reach
+    expect(segmentHitsZero(200, 400, 200, 400, z, 0)).toBe(true); // a point on it
+    expect(segmentHitsZero(100, 300, 100, 300, z, 0)).toBe(false);
   });
 
   it('pads small zeros out to a fair target', () => {

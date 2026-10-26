@@ -12,12 +12,16 @@ import {
   REENGAGE_NUDGE_COUNT,
   REMINDER_MAX_WINDOWS,
   resolve,
+  setGoalAlias,
   type GoalState,
 } from '@/engine';
 import { at, DAY0, DENVER, newGoal, TOKYO, yesDays } from '@/engine/__tests__/fixtures';
 
 import {
   BOTH_OPEN_BODY,
+  bothOpenBody,
+  checkInTitle,
+  goalLabel,
   MAX_SCHEDULED,
   NUDGES,
   reminderRequests,
@@ -29,8 +33,9 @@ import { readReminderData } from '../shared';
 
 const CHATHAM = 'Pacific/Chatham';
 
-function input(goal: GoalState, now: Date, patch: Partial<ReminderInput> = {}): ReminderInput {
-  return { goal, now, tz: DENVER, offsetMs: 0, reengage: false, showGoal: false, ...patch };
+function input(goal: GoalState | GoalState[], now: Date, patch: Partial<ReminderInput> = {}): ReminderInput {
+  const goals = Array.isArray(goal) ? goal : [goal];
+  return { goals, now, tz: DENVER, offsetMs: 0, reengage: false, showGoal: false, ...patch };
 }
 
 /** A goal whose run of misses reset the streak, so only weekly nudges are left. */
@@ -41,12 +46,27 @@ function pausedGoal() {
   return { goal, now };
 }
 
+describe('checkInTitle', () => {
+  it("calls a daily goal's check-in daily, and not one on chosen days (SPEC 9)", () => {
+    expect(checkInTitle(newGoal())).toBe('Daily check-in');
+    expect(checkInTitle(newGoal({ days: [1, 3, 5] }))).toBe('Check-in time');
+  });
+
+  it("titles a goal's notifications by its days", () => {
+    const reqs = reminderRequests(input(newGoal({ days: [0, 1, 2, 3, 4, 5] }), at(DAY0, '12:00')));
+    const checkins = reqs.filter((r) => r.content.data.kind === 'checkin');
+    expect(checkins.length).toBeGreaterThan(0);
+    expect(checkins.every((r) => r.content.title === 'Check-in time')).toBe(true);
+    expect(reqs.filter((r) => r.content.data.kind === 'morning').every((r) => r.content.title === 'Still time to check in')).toBe(true);
+  });
+});
+
 describe('reminderRequests', () => {
   it('asks the evening question and the next-morning one, without naming the goal', () => {
     const reqs = reminderRequests(input(newGoal(), at(DAY0, '12:00')));
     expect(reqs).toHaveLength(2 * REMINDER_MAX_WINDOWS + 1); // and the next day's check-in before the reset
     expect(reqs[0]).toEqual({
-      identifier: 'checkin-2026-10-13',
+      identifier: 'g1:checkin-2026-10-13',
       content: {
         title: 'Daily check-in',
         body: 'Did you stick to your goal today?',
@@ -57,7 +77,7 @@ describe('reminderRequests', () => {
       trigger: { type: SchedulableTriggerInputTypes.DATE, date: at(DAY0, '20:00'), channelId: 'checkin' },
     });
     expect(reqs[1]).toEqual({
-      identifier: 'morning-2026-10-13',
+      identifier: 'g1:morning-2026-10-13',
       content: {
         title: 'Still time to check in',
         body: 'Did you stick to your goal yesterday?',
@@ -74,7 +94,7 @@ describe('reminderRequests', () => {
     const shift = newGoal({ checkInTime: '06:00', morningTime: '14:00' });
     const reqs = reminderRequests(input(shift, at(DAY0, '05:00')));
     expect(reqs[1]).toMatchObject({
-      identifier: 'morning-2026-10-13',
+      identifier: 'g1:morning-2026-10-13',
       content: { title: 'Still time to check in', body: 'Did you stick to your goal today?', categoryIdentifier: 'checkin' },
       trigger: { date: at(DAY0, '14:00') },
     });
@@ -82,9 +102,9 @@ describe('reminderRequests', () => {
 
   it("asks without buttons when yesterday is still open, so a tap opens Home on yesterday's card", () => {
     const reqs = reminderRequests(input(newGoal(), at(DAY0, '12:00'), { showGoal: true }));
-    const both = reqs.find((r) => r.identifier === 'checkin-2026-10-14');
+    const both = reqs.find((r) => r.identifier === 'g1:checkin-2026-10-14');
     expect(both).toEqual({
-      identifier: 'checkin-2026-10-14',
+      identifier: 'g1:checkin-2026-10-14',
       content: {
         title: 'Daily check-in',
         body: BOTH_OPEN_BODY,
@@ -99,7 +119,7 @@ describe('reminderRequests', () => {
     const answered = yesDays(newGoal(), DAY0, 1);
     const plain = reminderRequests(input(answered, at('2026-10-14', '09:00')));
     expect(plain[0]).toMatchObject({
-      identifier: 'checkin-2026-10-14',
+      identifier: 'g1:checkin-2026-10-14',
       content: { body: 'Did you stick to your goal today?', categoryIdentifier: 'checkin' },
     });
   });
@@ -126,8 +146,8 @@ describe('reminderRequests', () => {
     const goal = yesDays(newGoal(), DAY0, 3); // through 10-15, last resolved then
     const now = at('2026-10-21', '00:30'); // 10-16 .. 10-19 have closed; 10-20 is open
     const reqs = reminderRequests(input(goal, now));
-    expect(reqs[0]?.identifier).toBe('morning-2026-10-20');
-    expect(reqs[1]?.identifier).toBe('checkin-2026-10-21');
+    expect(reqs[0]?.identifier).toBe('g1:morning-2026-10-20');
+    expect(reqs[1]?.identifier).toBe('g1:checkin-2026-10-21');
     expect(reqs.every((r) => r.trigger.date.getTime() > now.getTime())).toBe(true);
   });
 
@@ -137,7 +157,7 @@ describe('reminderRequests', () => {
     expect(reqs).toHaveLength(REENGAGE_NUDGE_COUNT);
     for (const r of reqs) {
       expect(r.content.data.kind).toBe('reengage');
-      expect(r.identifier).toBe(`reengage-${r.content.data.day}`);
+      expect(r.identifier).toBe(`g1:reengage-${r.content.data.day}`);
       expect(r.content.categoryIdentifier).toBeUndefined();
       expect(r.content.sound).toBeUndefined();
       expect(JSON.stringify(r.content)).not.toContain('Stop drinking');
@@ -181,7 +201,7 @@ describe('reminderRequests', () => {
       const expectedDay = r.content.data.kind === 'checkin' ? r.content.data.day : addDays(r.content.data.day, 1);
       expect(dayKeyAt(r.trigger.date, CHATHAM)).toBe(expectedDay);
     }
-    expect(reqs.find((r) => r.identifier === 'checkin-2026-09-27')?.trigger.date.toISOString()).toBe(
+    expect(reqs.find((r) => r.identifier === 'g1:checkin-2026-09-27')?.trigger.date.toISOString()).toBe(
       '2026-09-27T06:15:00.000Z', // 20:00 at +13:45
     );
   });
@@ -189,9 +209,9 @@ describe('reminderRequests', () => {
   it('follows the device into a new time zone', () => {
     const now = at(DAY0, '12:00'); // 10-14 03:00 in Tokyo; 10-13's window opens on arrival
     const reqs = reminderRequests(input(newGoal(), now, { tz: TOKYO }));
-    expect(reqs[0]?.identifier).toBe('morning-2026-10-13');
+    expect(reqs[0]?.identifier).toBe('g1:morning-2026-10-13');
     expect(reqs[0]?.trigger.date).toEqual(at('2026-10-14', '09:00', TOKYO));
-    expect(reqs[1]).toMatchObject({ identifier: 'checkin-2026-10-14', trigger: { date: at('2026-10-14', '20:00', TOKYO) } });
+    expect(reqs[1]).toMatchObject({ identifier: 'g1:checkin-2026-10-14', trigger: { date: at('2026-10-14', '20:00', TOKYO) } });
   });
 });
 
@@ -230,5 +250,57 @@ describe('readReminderData', () => {
     expect(readReminderData({ goalId: 'g1', day: '2026-13-40', kind: 'checkin' })).toBeNull();
     expect(readReminderData({ goalId: 'g1', day: DAY0, kind: 'promo' })).toBeNull();
     expect(readReminderData({ day: DAY0, kind: 'checkin' })).toBeNull();
+  });
+});
+
+describe('several goals (SPEC 9)', () => {
+  const goal = (goalId: string, wording: string, checkInTime = '20:00') => ({
+    ...newGoal({ checkInTime }),
+    goalId,
+    goal: wording,
+  });
+  const three = [goal('a', 'Stop drinking'), goal('b', 'Run', '07:00'), goal('c', 'Read', '21:30')];
+
+  it('plans every goal within the iOS limit, with an id for each goal', () => {
+    const reqs = reminderRequests(input(three, at(DAY0, '12:00'), { reengage: true }));
+    expect(reqs).toHaveLength(MAX_SCHEDULED);
+    const ids = reqs.map((r) => r.identifier);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const id of ['a', 'b', 'c']) {
+      expect(reqs.filter((r) => r.content.data.goalId === id && r.content.data.kind === 'checkin').length).toBeGreaterThan(2);
+    }
+    expect(ids).toContain('b:checkin-2026-10-14');
+    expect(reqs.map((r) => r.trigger.date.getTime())).toEqual(
+      [...reqs].map((r) => r.trigger.date.getTime()).sort((x, y) => x - y),
+    );
+  });
+
+  it('names each goal by its place, or by its lock-screen name, and never by its wording unless asked', () => {
+    const named = [three[0]!, setGoalAlias(three[1]!, 'Morning run'), three[2]!];
+    const reqs = reminderRequests(input(named, at(DAY0, '12:00')));
+    // Each goal's first reminder with buttons. B's 07:00 check-ins each come while the day before is
+    // still open, so its first is the 09:00 reminder.
+    const first = (id: string) => reqs.find((r) => r.content.data.goalId === id && r.content.categoryIdentifier);
+    expect(first('a')?.content.body).toBe('Did you stick to your first goal today?');
+    expect(first('b')?.content.body).toBe('Did you stick to “Morning run” today?');
+    expect(first('c')?.content.body).toBe('Did you stick to your third goal today?');
+    for (const r of reqs) expect(JSON.stringify(r.content)).not.toMatch(/Stop drinking|“Run”|Read/);
+
+    const shown = reminderRequests(input(named, at(DAY0, '12:00'), { showGoal: true }));
+    const b = shown.find((r) => r.content.data.goalId === 'b' && r.content.categoryIdentifier);
+    expect(b?.content.body).toBe('Did you stick to “Run” today?');
+  });
+
+  it('says whose yesterday is still open', () => {
+    const reqs = reminderRequests(input(three, at(DAY0, '12:00')));
+    const both = reqs.find((r) => r.identifier === 'c:checkin-2026-10-14');
+    expect(both?.content.body).toBe(bothOpenBody('your third goal'));
+    expect(both?.content.categoryIdentifier).toBeUndefined();
+  });
+
+  it('labels one goal as before', () => {
+    expect(goalLabel(three[0]!, 0, 1, false)).toBe('your goal');
+    expect(goalLabel(setGoalAlias(three[0]!, 'Sober'), 0, 1, false)).toBe('your goal');
+    expect(goalLabel(three[0]!, 0, 1, true)).toBe('“Stop drinking”');
   });
 });

@@ -4,6 +4,8 @@
 // fires. Finish round stays hidden until it gets keyboard focus.
 import type { ReactNode } from 'react';
 
+import { MODE_COPY } from '@/ui/copy/modes';
+
 export function Hud(props: {
   left: number;
   total: number;
@@ -49,7 +51,7 @@ export function Hud(props: {
       </div>
 
       <p key={p.hintKey} className="hud-hint" aria-hidden="true">
-        Hold anywhere to fire
+        {MODE_COPY.shooter.hint}
       </p>
 
       {p.controls ? (

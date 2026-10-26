@@ -1,27 +1,25 @@
-// The sim runs on the UI thread as worklets, so every file must be a worklet file that imports
-// only sim modules and engine constants, never reads the clock or Math.random, and every
-// function it exports (and every function those capture) must be a worklet. Jest runs
-// everything on one thread, so a missed directive would only show up as a crash on a device.
+// The sim runs on the UI thread as worklets, so every file (game modes' subfolders too) must be
+// a worklet file that imports only sim modules and engine constants, never reads the clock or
+// Math.random, and every function it exports (and every function those capture) must be a
+// worklet. Jest runs everything on one thread, so a missed directive would only show up as a
+// crash on a device.
 import { describe, expect, it } from '@jest/globals';
-import { readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
+
+import { importCycles, importGraph, nonWorklets, sourceFiles, specifiers } from '../../__tests__/workletSources';
 
 const SIM_DIR = join(__dirname, '..');
 
-const sources = readdirSync(SIM_DIR)
-  .filter((f) => f.endsWith('.ts'))
-  .map((f) => ({ file: f, code: readFileSync(join(SIM_DIR, f), 'utf8') }));
+const sources = sourceFiles(SIM_DIR);
 
-type MaybeWorklet = { __workletHash?: number; __closure?: Record<string, unknown> };
-
-/** Names of functions reachable from `fn` that aren't worklets. */
-function nonWorklets(fn: unknown, name: string, seen = new Set<unknown>()): string[] {
-  if (typeof fn !== 'function' || seen.has(fn)) return [];
-  seen.add(fn);
-  const w = fn as MaybeWorklet;
-  if (!w.__workletHash) return [name];
-  return Object.entries(w.__closure ?? {}).flatMap(([k, v]) => nonWorklets(v, `${name} → ${k}`, seen));
+/** A relative import that stays inside the sim folder (and out of its tests). */
+function insideSim(file: string, spec: string): boolean {
+  if (!spec.startsWith('./') && !spec.startsWith('../')) return false;
+  const rel = relative(SIM_DIR, resolve(dirname(join(SIM_DIR, file)), spec));
+  return !rel.startsWith('..') && !rel.split(sep).includes('__tests__');
 }
+
+const fromEngine = (spec: string) => spec === '@/engine' || (spec.startsWith('@/engine/') && !spec.includes('__tests__'));
 
 describe('sim purity', () => {
   it('has source files to check', () => {
@@ -32,10 +30,9 @@ describe('sim purity', () => {
     expect(code.replace(/^\s*(\/\/.*\n)*/, '').startsWith("'worklet';")).toBe(true);
   });
 
-  it.each(sources)('$file imports only sim modules and the engine', ({ code }) => {
-    const specifiers = [...code.matchAll(/(?:from|import)\s*\(?\s*['"]([^'"]+)['"]/g)].map((m) => m[1] ?? '');
-    for (const spec of specifiers) {
-      expect(spec.startsWith('./') || spec === '@/engine' || spec.startsWith('@/engine/')).toBe(true);
+  it.each(sources)('$file imports only sim modules and the engine', ({ file, code }) => {
+    for (const spec of specifiers(code)) {
+      expect({ spec, ok: insideSim(file, spec) || fromEngine(spec) }).toEqual({ spec, ok: true });
     }
   });
 
@@ -50,5 +47,22 @@ describe('sim purity', () => {
     const mod = require(join(SIM_DIR, file)) as Record<string, unknown>;
     const bad = Object.entries(mod).flatMap(([name, value]) => nonWorklets(value, name));
     expect(bad).toEqual([]);
+  });
+
+  // A worklet binds its imports when its module loads, so in an import cycle one side would
+  // capture nothing, on a device as in whichever order a test happens to load them.
+  it('imports in no circles', () => {
+    const graph = importGraph([SIM_DIR]);
+    expect([...graph.values()].flat().length).toBeGreaterThan(0);
+    expect(importCycles(graph, SIM_DIR)).toEqual([]);
+  });
+
+  it('would see a circle if there were one', () => {
+    const graph = new Map([
+      [join(SIM_DIR, 'a.ts'), [join(SIM_DIR, 'b.ts')]],
+      [join(SIM_DIR, 'b.ts'), [join(SIM_DIR, 'c.ts')]],
+      [join(SIM_DIR, 'c.ts'), [join(SIM_DIR, 'a.ts')]],
+    ]);
+    expect(importCycles(graph, SIM_DIR)).toEqual([['a.ts', 'b.ts', 'c.ts', 'a.ts']]);
   });
 });

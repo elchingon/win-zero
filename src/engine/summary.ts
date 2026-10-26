@@ -1,4 +1,5 @@
 // Read-only summaries of a goal for the screens, so the UI never re-derives the rules.
+import { isGoalDay } from './goalDays';
 import { slip, SLIDE_FINAL, type Final } from './rules';
 import type { DayKey, DayResult, GoalState, HistoryEntry } from './types';
 
@@ -37,6 +38,23 @@ export function missDigest(state: GoalState, seenThrough: DayKey | null): MissDi
     prev = e.streakAfter;
   }
   return digest;
+}
+
+/** The days history has settled, for `isRestDay` across a calendar month. */
+export function settledDays(state: GoalState): Set<DayKey> {
+  return new Set(state.history.map((e) => e.day));
+}
+
+/**
+ * True when `day` is a rest day: not a check-in day (SPEC 9). Up to the last settled day, history
+ * decides, since it keeps every check-in day even after old schedule entries are pruned: a day there
+ * with no entry was a rest day. Later days follow the schedule. Days before the goal began are
+ * neither. Pass `settled` (from `settledDays`) when asking about many days.
+ */
+export function isRestDay(state: GoalState, day: DayKey, settled: ReadonlySet<DayKey> = settledDays(state)): boolean {
+  if (day < state.firstDay) return false;
+  if (state.lastSettledDay !== null && day <= state.lastSettledDay) return !settled.has(day);
+  return !isGoalDay(state, day);
 }
 
 export type CalendarMark = DayResult | 'paused';

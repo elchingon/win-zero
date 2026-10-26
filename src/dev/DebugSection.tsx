@@ -1,6 +1,7 @@
 // Development builds only (Settings and Home load this behind __DEV__, so production bundles
 // leave it out). Moves the app's clock to test missed days, slips and resets on a device, jumps
-// to a long run to try later weapons, armored zeros and big fills, and sends a test check-in.
+// to a long run to try later weapons, armored zeros and big fills, and sends a test check-in. In
+// Win Zero Plus, it also switches the app icon, and with several goals jumps the one picked.
 import * as Notifications from 'expo-notifications';
 import { router, usePathname } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -10,17 +11,23 @@ import { MS_PER_DAY, MS_PER_HOUR, pendingWindow } from '@/engine';
 import { onSynced } from '@/notifications';
 import { getReminderPermission } from '@/notifications/permissions';
 import { TEST_DELAY_SECONDS, testCheckInRequest } from '@/notifications/schedule';
-import { appStore, useApp } from '@/store';
+import { appStore, primaryGoal, useApp } from '@/store';
 import { colors, fonts, radii, space } from '@/theme/tokens';
-import { Eyebrow, Fine, TextField } from '@/ui/bits';
+import { Chip, Eyebrow, Fine, TextField } from '@/ui/bits';
 import { Button, LinkButton } from '@/ui/Button';
+import { FEATURES } from '@/variant';
 
 import { debugReadout, JUMP_DAYS, parseCount, PRACTICE_MAX_N } from './demo';
+import { IconChips } from './IconChips';
 import { summarizePending, type PendingSummary } from './pending';
 import { SEED_MAX_N } from './seedRun';
 
 export function DebugSection() {
-  const goal = useApp((s) => s.goal);
+  const goal = useApp(primaryGoal);
+  const slots = useApp((s) => s.goals);
+  const [jumpGoalId, setJumpGoalId] = useState<string | null>(null);
+  /** The goal Jump to day rebuilds: the one picked, with several (Win Zero Plus), or the first. */
+  const jumpGoal = slots.find((s) => s.goal.goalId === jumpGoalId)?.goal ?? goal;
   const offset = useApp((s) => s.devClockOffsetMs);
   const pathname = usePathname();
   const [customDay, setCustomDay] = useState('');
@@ -47,13 +54,14 @@ export function DebugSection() {
 
   const sendTest = async () => {
     const s = appStore.getState();
-    if (!s.goal) return;
+    const first = primaryGoal(s);
+    if (!first) return;
     if ((await getReminderPermission()) !== 'granted') {
       setTestNote('Reminders are off. Turn them on in Settings first.');
       return;
     }
     const request = testCheckInRequest(
-      { goal: s.goal, now: s.now(), tz: s.timeZone(), showGoal: s.prefs.goalInReminders },
+      { goal: first, now: s.now(), tz: s.timeZone(), showGoal: s.prefs.goalInReminders },
       `test-${Date.now()}`,
     );
     try {
@@ -69,7 +77,7 @@ export function DebugSection() {
 
   // The answer leaves Home the round to open, so from Settings, go back to Home.
   const jump = (n: number) => {
-    if (store.devJumpToDay(n)?.ok && pathname !== '/') router.dismissTo('/');
+    if (jumpGoal && store.devJumpToDay(jumpGoal.goalId, n)?.ok && pathname !== '/') router.dismissTo('/');
   };
 
   return (
@@ -124,11 +132,20 @@ export function DebugSection() {
       </View>
       {testNote ? <Fine>{testNote}</Fine> : null}
 
+      {FEATURES.altIcons ? <IconChips /> : null}
+
       <Eyebrow>Jump to day</Eyebrow>
       <Fine>
         Rebuilds your history as N−1 days of Yes, then checks in and starts the Day N round. Overwrites your streak,
         history and rewards.
       </Fine>
+      {slots.length > 1 ? (
+        <View style={styles.row}>
+          {slots.map(({ goal: g }) => (
+            <Chip key={g.goalId} label={g.goal} selected={g.goalId === jumpGoal?.goalId} onPress={() => setJumpGoalId(g.goalId)} />
+          ))}
+        </View>
+      ) : null}
       <View style={styles.row}>
         {JUMP_DAYS.map((n) => (
           <Button key={n} small variant="ghost" label={`Day ${n}`} onPress={() => jump(n)} disabled={!goal} />

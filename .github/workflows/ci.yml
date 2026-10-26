@@ -1,5 +1,6 @@
-# Type check, lint, and the unit tests in three time zones (UTC, Denver, Chatham), as each
-# commit does locally. Native builds stay on EAS; the website deploys from Cloudflare Pages.
+# Type check, lint, both apps' configs (Win Zero and Win Zero Plus), and the unit tests in three
+# time zones (UTC, Denver, Chatham), as each commit does locally. Native builds stay on EAS; the
+# website deploys from Cloudflare Pages.
 name: CI
 
 on:
@@ -24,6 +25,7 @@ jobs:
       - run: npm ci
       - run: npx tsc --noEmit
       - run: npm run lint
+      - run: npm run check:variants
       - run: npm run test:tz
 
   # The website (winzero.app). Cloudflare Pages builds it from website/ with only website's own

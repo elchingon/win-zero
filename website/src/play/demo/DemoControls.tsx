@@ -8,6 +8,7 @@ import { useLocation, useNavigate } from 'react-router';
 import { debugReadout, JUMP_DAYS, parseCount, PRACTICE_MAX_N } from '@/dev/demo';
 import { SEED_MAX_N } from '@/dev/seedRun';
 import { MS_PER_DAY, MS_PER_HOUR, pendingWindow } from '@/engine';
+import { primaryGoal } from '@/store/select';
 
 import { ROUTES } from '../nav';
 import { enterDemo, leaveDemo } from '../platform/mode';
@@ -49,7 +50,7 @@ function PracticeRound() {
 function DemoTools() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const goal = useApp((s) => s.goal);
+  const goal = useApp(primaryGoal);
   const offset = useApp((s) => s.devClockOffsetMs);
   const [customDay, setCustomDay] = useState('');
   const store = appStore.getState();
@@ -59,7 +60,7 @@ function DemoTools() {
 
   // The answer leaves Home the round to open, so from Settings, go back to Home.
   const jump = (n: number) => {
-    if (store.devJumpToDay(n)?.ok && pathname !== ROUTES.home) navigate(ROUTES.home);
+    if (goal && store.devJumpToDay(goal.goalId, n)?.ok && pathname !== ROUTES.home) navigate(ROUTES.home);
   };
 
   return (

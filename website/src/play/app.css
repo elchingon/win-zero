@@ -522,6 +522,57 @@ a {
   white-space: nowrap;
 }
 
+/* A stat tile with a hint in its top-right corner. */
+.stat-wrap {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+
+.stat-wrap > .stat {
+  flex: 1;
+}
+
+.stat.has-help .stat-label {
+  padding-right: 26px;
+}
+
+.stat-help {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+/* A hint button: a small "i" in a ring, with a 44px target. */
+.hint {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1.5px solid var(--muted);
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.hint::before {
+  content: '';
+  position: absolute;
+  inset: -11px;
+}
+
+.hint:hover {
+  border-color: var(--fg);
+  color: var(--fg);
+}
+
 /* Cards */
 .card {
   display: flex;
@@ -748,8 +799,12 @@ a {
 }
 
 .weapon-row.locked {
-  opacity: 0.5;
   cursor: default;
+}
+
+/* Locked rows step down to muted text instead of fading, which left them about 3:1. */
+.weapon-row.locked .weapon-name {
+  color: var(--muted);
 }
 
 .weapon-row[aria-pressed='true'] {
@@ -910,6 +965,8 @@ a {
 .glyph-shielded {
   border: 3px solid var(--teal);
   box-shadow: 0 0 6px rgb(63 220 203 / 0.6);
+  /* A dot inside the ring, so Shielded isn't told from Yes by color alone. */
+  background: radial-gradient(closest-side, var(--teal) 66%, transparent 72%);
 }
 
 .glyph-missed {
@@ -921,7 +978,7 @@ a {
 .glyph-paused {
   width: 6px;
   height: 6px;
-  background: var(--line);
+  background: var(--edge);
 }
 
 .glyph-pending {
@@ -1124,6 +1181,17 @@ a {
   to {
     opacity: 1;
   }
+}
+
+/* The Yes celebration: over every screen, the round too, while it plays (taking its clicks). */
+.yes-celebration {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
 }
 
 /* The round: the canvas full screen, the HUD and the result sheet over it. */
@@ -1374,6 +1442,95 @@ a {
   font-weight: 700;
   color: var(--fg);
   text-align: center;
+}
+
+/* A Game credit's popup after the round: a big amber +1 over its title. */
+.credit-title {
+  line-height: 30px;
+}
+
+.credit-badge {
+  display: block;
+  font-size: 56px;
+  line-height: 64px;
+  color: var(--amber);
+}
+
+.credit-line {
+  margin: 0;
+  color: var(--fg);
+  text-align: center;
+}
+
+/* Pinned over the window, for a hint on a scrolling screen. */
+.popup-backdrop.fixed {
+  position: fixed;
+  z-index: 3;
+}
+
+/* A credit count's hint: what it is, how it's used, and every way to earn one. */
+.hint-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 60vh;
+  overflow-y: auto;
+  touch-action: pan-y;
+}
+
+.hint-line {
+  margin: 0;
+  font-size: 16px;
+  line-height: 23px;
+  color: var(--fg);
+}
+
+.hint-line.hint-status {
+  color: var(--amber);
+}
+
+.hint-ways {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hint-way {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  line-height: 23px;
+  color: var(--fg);
+}
+
+/* A tiny zero by each way: muted until it's been earned, then teal. */
+.hint-ring {
+  flex: none;
+  width: 9px;
+  height: 12px;
+  border: 2px solid var(--line);
+  border-radius: 50%;
+}
+
+.hint-way.earned .hint-ring {
+  border-color: var(--teal);
+}
+
+.hint-way-label {
+  flex: 1;
+}
+
+.hint-earned {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--teal);
 }
 
 /* The Weapon credit question before a round: the weapons on offer scroll, the buttons stay put. */

@@ -1,6 +1,7 @@
 // The shooting round: the canvas filling the screen, the HUD over it, and once the round is won,
-// a line of encouragement and then the result sheet over the fill. A real round is the one the
-// latest Yes earned (its rewards are already banked); Replay plays it again in place, with no
+// a line of encouragement, a popup for any Game credit its Yes earned, and then the result sheet
+// over the fill. A real round is the one the latest Yes earned (its rewards are already banked,
+// and only revealed here); Replay plays it again in place, with no
 // effect on the streak. ?round=bonus plays the bonus round a Game credit paid for, which changes
 // nothing either. Before a round not yet played, a player holding a Weapon credit is asked
 // whether to borrow a weapon they haven't unlocked for it. In demo mode, ?practice=N plays any N
@@ -11,11 +12,14 @@ import { Navigate, useSearchParams } from 'react-router';
 import { parseCount, PRACTICE_BEST, PRACTICE_BOMBS, PRACTICE_MAX_N } from '@/dev/demo';
 import { composeRound, equippedWeapon, fillPlan, roundWeapons, weaponCreditOffer, type WeaponId } from '@/engine';
 import { makeCues } from '@/game/cues';
-import { hudLabel, replayMode, roundOverlay, type ResultMode } from '@/game/result';
+import { hudLabel, replayMode, revealedCredits, roundOverlay, type ResultMode } from '@/game/result';
 import type { Report } from '@/game/sim/types';
+import { arsenalBestOf, primarySlot, slotById, totalBombs } from '@/store/select';
 import type { CreditRound, RoundRecord } from '@/store/types';
+import { creditReveal } from '@/ui/copy/credits';
 
 import { CheerPopup } from '../game/CheerPopup';
+import { CreditPopup } from '../game/CreditPopup';
 import { GameCanvas, type FrameStats, type GameHandle, type RoundSetup } from '../game/GameCanvas';
 import { Hud } from '../game/Hud';
 import { ResultSheet } from '../game/ResultSheet';
@@ -34,32 +38,51 @@ export function Round() {
   const [params] = useSearchParams();
   // Outside demo mode, a round of any size is a bonus round, paid for with a Game credit.
   const practice = demoMode ? parseCount(params.get('practice') ?? '', PRACTICE_MAX_N) : null;
-  if (practice) return <Play initialMode="practice" n={practice} best={PRACTICE_BEST} record={null} borrowed={NONE_BORROWED} />;
-  return params.get('round') === 'bonus' ? <BonusStoreRound /> : <StoreRound />;
+  if (practice) {
+    return <Play initialMode="practice" goalId={null} n={practice} best={PRACTICE_BEST} record={null} borrowed={NONE_BORROWED} />;
+  }
+  return params.get('round') === 'bonus' ? <BonusStoreRound /> : <StoreRound goalId={params.get('goal')} />;
 }
 
-function StoreRound() {
+/** `goalId`'s round; without one (an old link), the first round waiting, or the first goal's. */
+function StoreRound({ goalId: wanted }: { goalId: string | null }) {
   // Read once: if a day settles mid-round, the round on screen stays put.
-  const [record] = useState(() => appStore.getState().round);
-  const best = useApp((s) => s.goal?.bestStreak);
-  if (!record || best === undefined) return <Navigate to={ROUTES.home} replace />;
+  const [slot] = useState(() => {
+    const s = appStore.getState();
+    if (wanted) return slotById(s, wanted);
+    return s.goals.find((g) => g.round && !g.round.played) ?? primarySlot(s);
+  });
+  const best = useApp(arsenalBestOf);
+  const record = slot?.round;
+  if (!slot || !record) return <Navigate to={ROUTES.home} replace />;
+  const goalId = slot.goal.goalId;
   // Home only offers rounds not yet played; one that was is a replay.
   return (
-    <WeaponCreditGate target="daily" fresh={!record.played} best={best} borrowed={record.borrowed}>
+    <WeaponCreditGate target={{ round: 'daily', goalId }} fresh={!record.played} best={best} borrowed={record.borrowed}>
       {(borrowed) => (
-        <Play initialMode={record.played ? 'replay' : 'real'} n={record.n} best={best} record={record} borrowed={borrowed} />
+        <Play
+          initialMode={record.played ? 'replay' : 'real'}
+          goalId={goalId}
+          n={record.n}
+          best={best}
+          record={record}
+          borrowed={borrowed}
+        />
       )}
     </WeaponCreditGate>
   );
 }
 
+const BONUS: CreditRound = { round: 'bonus' };
+
 function BonusStoreRound() {
   const [bonus] = useState(() => appStore.getState().bonus);
-  const best = useApp((s) => s.goal?.bestStreak);
-  if (!bonus || best === undefined) return <Navigate to={ROUTES.home} replace />;
+  const best = useApp(arsenalBestOf);
+  const hasGoal = useApp((s) => s.goals.length > 0);
+  if (!bonus || !hasGoal) return <Navigate to={ROUTES.home} replace />;
   return (
-    <WeaponCreditGate target="bonus" fresh={!bonus.played} best={best} borrowed={bonus.borrowed}>
-      {(borrowed) => <Play initialMode="bonus" n={bonus.n} best={best} record={null} borrowed={borrowed} />}
+    <WeaponCreditGate target={BONUS} fresh={!bonus.played} best={best} borrowed={bonus.borrowed}>
+      {(borrowed) => <Play initialMode="bonus" goalId={null} n={bonus.n} best={best} record={null} borrowed={borrowed} />}
     </WeaponCreditGate>
   );
 }
@@ -89,7 +112,7 @@ function WeaponCreditGate(props: {
     setAsked(true);
   };
   return (
-    <main className="round" aria-label={target === 'bonus' ? 'Bonus round' : 'Your round'}>
+    <main className="round" aria-label={target.round === 'bonus' ? 'Bonus round' : 'Your round'}>
       <WeaponCreditPrompt offer={offer} credits={credits.balance.weapon} onPick={pick} onSkip={() => setAsked(true)} />
     </main>
   );
@@ -97,6 +120,8 @@ function WeaponCreditGate(props: {
 
 function Play(props: {
   initialMode: ResultMode;
+  /** The goal whose round this is; null for bonus and practice rounds. */
+  goalId: string | null;
   n: number;
   best: number;
   /** The day's round; null for bonus and practice rounds. */
@@ -104,12 +129,13 @@ function Play(props: {
   /** Weapons not yet unlocked that a Weapon credit lent this round. */
   borrowed: WeaponId[];
 }) {
-  const { initialMode, n, best, record, borrowed } = props;
+  const { initialMode, goalId, n, best, record, borrowed } = props;
   const goHome = useGoHome();
   const [mode, setMode] = useState(initialMode);
   const reduceMotion = useReduceMotion();
   const sound = useApp((s) => s.prefs.sound);
-  const bankedBombs = useApp((s) => s.goal?.bombs ?? 0);
+  // A goal's round has that goal's bombs; a bonus round gets as many as every goal has banked.
+  const bankedBombs = useApp((s) => (goalId ? (slotById(s, goalId)?.goal.bombs ?? 0) : totalBombs(s)));
   const storePick = useApp((s) => s.weapon);
   // Practice, and a round with a borrowed weapon, keep their pick to themselves: the saved pick is
   // always a weapon the player has unlocked. A borrowed weapon starts equipped.
@@ -129,7 +155,11 @@ function Play(props: {
   const [over, setOver] = useState(false);
   const [landed, setLanded] = useState(false);
   const [cheered, setCheered] = useState(false);
-  const overlay = roundOverlay(landed, mode, cheered);
+  // The Game credits the Yes earned, revealed once the cheer is dismissed.
+  const earned = useMemo(() => revealedCredits(mode, record), [mode, record]);
+  const [revealed, setRevealed] = useState(false);
+  const gameCredits = useApp((s) => s.credits.balance.game);
+  const overlay = roundOverlay(landed, mode, cheered, earned.length > 0 && !revealed);
   // A real round spends banked bombs. Replays, bonus rounds and practice get free ones: a replay or
   // a bonus round as many as are banked, which it never touches.
   const [freeBombs, setFreeBombs] = useState(() => (mode === 'practice' ? PRACTICE_BOMBS : bankedBombs));
@@ -171,13 +201,14 @@ function Play(props: {
   // The last zero went: a real round or a bonus round counts as played.
   useEffect(() => {
     if (!over) return;
-    if (mode === 'real') appStore.getState().finishRound();
+    if (mode === 'real' && goalId && record) appStore.getState().finishRound(goalId, record.day);
     if (mode === 'bonus') appStore.getState().finishBonusRound();
-  }, [over, mode]);
+  }, [over, mode, goalId, record]);
 
-  // The encouragement arrives with a fanfare.
+  // The encouragement arrives with a fanfare, and a Game credit with the Yes chime.
   useEffect(() => {
     if (overlay === 'cheer') play('fanfare');
+    if (overlay === 'credit') play('yes');
   }, [overlay, play]);
 
   // The fill runs a few seconds before the result sheet; say the round is won right away.
@@ -191,6 +222,7 @@ function Play(props: {
   };
 
   const dismissCheer = useCallback(() => setCheered(true), []);
+  const dismissCredit = useCallback(() => setRevealed(true), []);
 
   /** Play the same round again, right here, with fresh positions and free bombs. */
   const replay = () => {
@@ -208,7 +240,7 @@ function Play(props: {
   const onBomb = () => {
     if (over || bombs < 1) return;
     if (mode === 'real') {
-      if (!appStore.getState().spendBomb()) return;
+      if (!goalId || !appStore.getState().spendBomb(goalId)) return;
     } else {
       setFreeBombs((b) => b - 1);
     }
@@ -236,9 +268,11 @@ function Play(props: {
         onFrameStats={mode === 'practice' ? setStats : undefined}
       />
       {overlay === 'sheet' ? (
-        <ResultSheet n={n} mode={mode} record={record} onBack={goHome} onReplay={replay} />
+        <ResultSheet n={n} mode={mode} goalId={goalId} record={record} onBack={goHome} onReplay={replay} />
       ) : overlay === 'cheer' ? (
         <CheerPopup onDismiss={dismissCheer} />
+      ) : overlay === 'credit' ? (
+        <CreditPopup news={creditReveal(earned, gameCredits)} onDismiss={dismissCredit} />
       ) : (
         <Hud
           left={left}

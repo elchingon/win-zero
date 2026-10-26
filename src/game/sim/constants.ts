@@ -22,6 +22,14 @@ export const TURRET_Y_FROM_BOTTOM = 46;
 
 // --- Zeros ---------------------------------------------------------------------------------
 
+/**
+ * Most zeros a round ever holds: the engine's OBJECT_CAP with room to spare, which a mode may
+ * use (Orbit's split pieces). The scene's zero batches are sized from it.
+ */
+export const MAX_ZEROS = 64;
+/** Orbit (SPEC 9): an armored zero splits into this many smaller zeros that carry its value on. */
+export const ORBIT_PIECES = 2;
+
 /** Each zero's radius is the round's base radius times 1 ± half of this. */
 export const SIZE_JITTER = 0.3;
 export const SPEED_BASE = 110;
@@ -46,6 +54,11 @@ export const ARMOR_SIZE_SCALE = 1.3;
 export const ARMOR_SPEED_SCALE = 0.55;
 /** A zero that survives a hit flashes, fading over this long. */
 export const HIT_FLASH = 0.18;
+/**
+ * Late in a round, once only this many objects are left, every game mode but the Shooter helps
+ * with them (homing, a magnet), so the last zero can always be cleared (SPEC 9).
+ */
+export const ASSIST_LAST = 3;
 
 // --- Shots ---------------------------------------------------------------------------------
 
@@ -167,9 +180,15 @@ export const SHAKE_BOMB = 16;
 export const SHAKE_FINAL = 24;
 export const FLASH_BOMB = 0.6;
 export const FLASH_FINAL = 1;
-/** Reduce motion: shake is scaled by this, and particle counts by REDUCED_PARTICLES. */
+/** Reduce motion: shake is scaled by this, particle counts by REDUCED_PARTICLES, flashes by REDUCED_FLASH. */
 export const REDUCED_SHAKE = 0.17;
 export const REDUCED_PARTICLES = 0.5;
+export const REDUCED_FLASH = 0.25;
+/**
+ * Seconds from one full-screen flash to the next, for everyone: no more than 3 a second (WCAG
+ * 2.3.1), however fast bombs go. Flashes within one frame are one flash.
+ */
+export const FLASH_GAP = 0.34;
 
 // --- Celebration and fill ------------------------------------------------------------------
 

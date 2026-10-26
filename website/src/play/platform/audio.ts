@@ -1,4 +1,4 @@
-// The round's sound effects on the web: the phone app's own WAVs (scripts/gen-sfx.mjs), played
+// The round's sound effects and the Yes chime on the web: the phone app's own WAVs (scripts/gen-sfx.mjs), played
 // through Web Audio. Each sound has a few voices; a quick repeat past them cuts off the oldest,
 // as the app's round-robin players do. Browsers only start audio after a tap, so the context
 // resumes on the first press.
@@ -6,12 +6,14 @@ import boom from '@assets/sfx/boom.wav?url';
 import fanfare from '@assets/sfx/fanfare.wav?url';
 import pop from '@assets/sfx/pop.wav?url';
 import shoot from '@assets/sfx/shoot.wav?url';
+import yes from '@assets/sfx/yes.wav?url';
 
 const SOUNDS = {
   shoot: { url: shoot, voices: 4 },
   pop: { url: pop, voices: 4 },
   boom: { url: boom, voices: 2 },
   fanfare: { url: fanfare, voices: 1 },
+  yes: { url: yes, voices: 1 },
 } as const;
 
 export type Sound = keyof typeof SOUNDS;
@@ -50,9 +52,9 @@ export function loadSounds(): Promise<void> {
 }
 
 /** Call from a tap or key press: browsers keep audio suspended until one. */
-export function resumeAudio(): void {
+export function resumeAudio(): Promise<void> {
   const ctx = audioContext();
-  if (ctx && ctx.state !== 'running') void ctx.resume().catch(() => {});
+  return ctx && ctx.state !== 'running' ? ctx.resume().catch(() => {}) : Promise.resolve();
 }
 
 export function playSound(sound: Sound): void {
