@@ -337,7 +337,7 @@ export function homeFaqs(facts: Facts): Faq[] {
     {
       q: 'Can I move my progress from Win Zero to Win Zero Plus?',
       a:
-        'Yes. With both apps on the same phone, open Win Zero and go to Settings › About › Move to Win Zero Plus. Your ' +
+        'Yes. With both apps on the same phone, open Win Zero and go to Settings › Win Zero Plus › Move to Win Zero Plus. Your ' +
         'goal, history, streak, rewards and credits move straight from one app to the other on your phone. Nothing ' +
         'goes through a server.',
     },
@@ -381,7 +381,7 @@ export function plusFaqs(facts: Facts): Faq[] {
       q: 'Do I need Win Zero to use Plus?',
       a:
         'No. Plus works on its own. If you already use Win Zero, you can bring your goal, history, streak, rewards ' +
-        'and credits over on the same phone, from Win Zero\'s Settings › About › Move to Win Zero Plus.',
+        'and credits over on the same phone, from Win Zero\'s Settings › Win Zero Plus › Move to Win Zero Plus.',
     },
     {
       q: 'What do I earn as I play?',

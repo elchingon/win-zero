@@ -167,7 +167,7 @@ Already using Win Zero? You can bring everything over: goals, every day of histo
 bombs, shields, weapons, credits and settings.
 
 1. Install Win Zero Plus.
-2. In Win Zero, open **Settings → About → Move to Win Zero Plus**, and tap **Move to Win Zero
+2. In Win Zero, open **Settings → Win Zero Plus → Move to Win Zero Plus**, and tap **Move to Win Zero
    Plus**.
 3. Win Zero Plus opens and shows what's arriving. Nothing changes until you tap **Bring it over**.
 
