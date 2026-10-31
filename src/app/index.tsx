@@ -30,6 +30,7 @@ import { feedback } from '@/ui/feedback';
 import { Arsenal } from '@/ui/home/Arsenal';
 import { CheckInCard } from '@/ui/home/CheckInCard';
 import { CreditsCard } from '@/ui/home/CreditsCard';
+import { Celebrations } from '@/ui/home/Celebrations';
 import { FirstRoundTip } from '@/ui/home/FirstRoundTip';
 import { HistoryCalendar } from '@/ui/home/HistoryCalendar';
 import { moveCardFor, moveCheckAt } from '@/ui/home/moved';
@@ -218,6 +219,7 @@ function HomeScreen({ goal }: { goal: GoalState }) {
       {DemoControls ? <DemoControls /> : null}
 
       <FirstRoundTip />
+      <Celebrations />
     </Screen>
   );
 }

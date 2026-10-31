@@ -111,6 +111,71 @@ describe('Setup', () => {
   });
 });
 
+describe("Home's celebrations", () => {
+  /** A goal on `n`, the round its last Yes earned (a new high, so a celebration's), on DAY0's calendar. */
+  function milestone(n: number, rewards: Partial<RoundRecord['rewards']>, played: boolean) {
+    const goal = yesDays(newGoal({ tz: tz() }), DAY0, n, tz());
+    const day = goal.history.at(-1)?.day ?? DAY0;
+    const round: RoundRecord = {
+      day,
+      n,
+      rewards: { bomb: false, shield: false, shieldCapped: false, weapons: [], credits: [], ...rewards },
+      borrowed: [],
+      played,
+    };
+    appStore.setState({ goals: [{ goal, round, seenThrough: null }] });
+    return { goal, day };
+  }
+
+  it('opens Day 7 once Home is back in front after the round, not over it, with the chime', async () => {
+    const cue = jest.spyOn(yesCelebration, 'cue');
+    const { goal, day } = milestone(7, { shield: true, weapons: ['scatter'] }, false);
+    const app = await open('/', { day, time: '22:00' });
+    const title = { name: 'Congratulations on Day 7!' };
+    expect(screen.queryByRole('header', title)).not.toBeOnTheScreen(); // not played yet
+    await fireEvent.press(screen.getByRole('button', { name: 'Play now' }));
+    expect(app.pathname()).toBe('/play');
+    await act(async () => appStore.getState().finishRound(goal.goalId, day));
+    expect(screen.queryByRole('header', title)).not.toBeOnTheScreen();
+    expect(cue).not.toHaveBeenCalled();
+
+    await act(async () => router.dismissTo('/'));
+    expect(app.pathname()).toBe('/');
+    expect(screen.getByRole('header', title)).toBeOnTheScreen();
+    expect(cue).toHaveBeenCalledTimes(1);
+  });
+
+  it('says what Day 7 means and what the shield does, and stays closed once closed', async () => {
+    const { day } = milestone(7, { shield: true }, true);
+    await open('/', { day, time: '22:00' });
+    expect(screen.getByText(/^“Success is the sum of small efforts/)).toBeOnTheScreen();
+    expect(screen.getByText('You earned a shield')).toBeOnTheScreen();
+    expect(screen.getByText(/your shield steps in and your streak stays/)).toBeOnTheScreen();
+    expect(screen.getByText(/^Keep going\. .*Your next shield comes on Day 14\.$/)).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Keep going' }));
+    expect(screen.queryByRole('header', { name: 'Congratulations on Day 7!' })).not.toBeOnTheScreen();
+    expect(appStore.getState().tipsSeen).toEqual(['day-7']);
+  });
+
+  it('opens Day 30 with what it earned, in Win Zero without a theme', async () => {
+    const { day } = milestone(30, { bomb: true, weapons: ['chain'] }, true);
+    await open('/', { day, time: '22:00' });
+    expect(screen.getByRole('header', { name: 'Congratulations on Day 30!' })).toBeOnTheScreen();
+    expect(screen.getByText('New weapon: Chain Zapper')).toBeOnTheScreen();
+    expect(screen.getByText('Bomb earned')).toBeOnTheScreen();
+    expect(screen.queryByText(/New theme/)).not.toBeOnTheScreen();
+    expect(screen.getByText(/the Rail Laser, comes on Day 60\.$/)).toBeOnTheScreen();
+  });
+
+  it('stays out on a day with no celebration, and on a climb back that earned nothing', async () => {
+    const { day } = milestone(14, { shield: true }, true);
+    await open('/', { day, time: '22:00' });
+    expect(screen.queryByText(/^Congratulations/)).not.toBeOnTheScreen();
+    await act(async () => milestone(7, {}, true));
+    expect(screen.queryByText(/^Congratulations/)).not.toBeOnTheScreen();
+  });
+});
+
 describe("Home's first-round tip", () => {
   const TIP = { name: 'Day one, done.' };
   /** The first Yes, on DAY0, and its round, which earned the first Game credit. */

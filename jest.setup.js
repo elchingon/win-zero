@@ -6,6 +6,8 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 // jest-expo reports Expo Go, so importing expo-notifications warns that remote push is gone
 // from Expo Go. The app runs in a development build and uses local notifications only.
 jest.mock('expo-notifications/build/warnOfExpoGoPushUsage', () => ({ warnOfExpoGoPushUsage: () => {} }));
+// A celebration's icon is Skia, which Home's tests leave out.
+jest.mock('./src/ui/home/CelebrationMark', () => ({ CelebrationMark: () => null }));
 // Win Zero Plus's app-icons module is native: a stand-in that remembers the icon, and refuses a
 // name the app doesn't have, as the real one does.
 jest.mock('./modules/app-icons', () => {

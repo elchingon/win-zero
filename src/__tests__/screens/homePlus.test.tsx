@@ -302,6 +302,29 @@ describe('Home with several goals', () => {
   });
 });
 
+describe("Home's celebrations", () => {
+  it("opens for any goal's Day 30, with the theme and its icon", async () => {
+    const goal = yesDays(newGoal({ tz: tz() }), DAY0, 30, tz());
+    const day = goal.history.at(-1)?.day ?? DAY0;
+    const round: RoundRecord = {
+      day,
+      n: 30,
+      rewards: { bomb: true, shield: false, shieldCapped: false, weapons: ['chain'], credits: [] },
+      borrowed: [],
+      played: true,
+      unlocks: ['ember'],
+    };
+    const other = { ...newGoal({ tz: tz() }), goalId: 'g2', goal: 'Read' };
+    await open([slot(other), { ...slot(goal), round }], { day, time: '22:00' });
+    expect(screen.getByRole('header', { name: 'Congratulations on Day 30!' })).toBeOnTheScreen();
+    expect(screen.getByText('New theme: Ember')).toBeOnTheScreen();
+    expect(screen.getByText(/Its app icon is unlocked too\.$/)).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Keep going' }));
+    expect(screen.queryByRole('header', { name: 'Congratulations on Day 30!' })).not.toBeOnTheScreen();
+    expect(appStore.getState().tipsSeen).toEqual(['day-30']);
+  });
+});
+
 describe("Home's first-round tip", () => {
   it('opens after the first Yes of any goal has its round played, and stays closed once closed', async () => {
     const first = yesDays(newGoal({ tz: tz() }), DAY0, 1, tz());

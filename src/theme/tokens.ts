@@ -1,5 +1,6 @@
 // Visual identity from SPEC section 7, measured off docs/prototype/win-zero.html.
 // Plain data only: shared by React Native styles and the Skia game canvas.
+import type { HighlightKind } from '@/engine';
 
 export const colors = {
   ink: '#0D1130',
@@ -22,6 +23,15 @@ export function withAlpha(hex: string, opacity: number): string {
   const n = Number.parseInt(hex.slice(1), 16);
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${opacity})`;
 }
+
+/** Celebration panels' icons (SPEC 6): an SVG path each, on a CELEBRATION_MARK_BOX square. */
+export const CELEBRATION_MARK_BOX = 24;
+export const CELEBRATION_MARKS: Record<HighlightKind, string> = {
+  shield: 'M12 2 L20 5 V11 C20 16.5 16.6 20.4 12 22 C7.4 20.4 4 16.5 4 11 V5 Z',
+  weapon: 'M13.5 2 L5 13.5 H11 L9.5 22 L19 9.5 H12.5 Z',
+  theme: 'M12 2 L14.4 9.6 L22 12 L14.4 14.4 L12 22 L9.6 14.4 L2 12 L9.6 9.6 Z',
+  bomb: 'M11 6.5 A7.5 7.5 0 1 0 11 21.5 A7.5 7.5 0 1 0 11 6.5 Z M15 6 L18 3 L20 5 L17 8 Z',
+};
 
 /** Rotating ring colors for zeros, in prototype order. */
 export const zeroPalette = [colors.amber, colors.flare, colors.teal, colors.fg] as const;
