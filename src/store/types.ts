@@ -1,5 +1,7 @@
+import { CELEBRATIONS } from '@/engine';
 import type {
   AnswerRejection,
+  CelebrationId,
   CreditGrant,
   CreditWallet,
   DayKey,
@@ -89,9 +91,12 @@ export interface GoalSlot {
   seenThrough: DayKey | null;
 }
 
-/** A one-time tip on Home (SPEC 6). `first-round`: after the first Yes's round, how the app works. */
-export type TipId = 'first-round';
-export const TIP_IDS: readonly TipId[] = ['first-round'];
+/**
+ * A one-time popup on Home (SPEC 6). `first-round`: after the first Yes's round, how the app works.
+ * The rest are the engine's celebrations, so a new one is remembered with no change here.
+ */
+export type TipId = 'first-round' | CelebrationId;
+export const TIP_IDS: readonly TipId[] = ['first-round', ...CELEBRATIONS.map((c) => c.id)];
 
 /** A goal set aside (SPEC 9): its history kept to read, with no reminders, and its slot free. */
 export interface ArchivedGoal {

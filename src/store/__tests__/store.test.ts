@@ -5,6 +5,8 @@ import { beforeEach, describe, expect, it } from '@jest/globals';
 import {
   addDays,
   BONUS_MAX_N,
+  CELEBRATIONS,
+  celebrationFor,
   currentCheckInTime,
   EMPTY_WALLET,
   GOAL_ALIAS_MAX_LENGTH,
@@ -32,12 +34,13 @@ import {
 } from '../createAppStore';
 import { startLifecycle } from '../lifecycle';
 import { DEFAULT_PERSISTED, DEFAULT_PREFS } from '../migrate';
-import { STORE_BACKUP_KEY, STORE_KEY, STORE_VERSION } from '../types';
+import { STORE_BACKUP_KEY, STORE_KEY, STORE_VERSION, type GoalSlot, type RoundRecord } from '../types';
 import { fakeAppState, flush, gid, harness, noticeOf, oneGoal, putGoal, ready, withGoal } from './harness';
 import { PLUS_LIMITS } from '../limits';
 import {
   arsenalBestOf,
   canAddGoal,
+  celebrationSlot,
   firstRoundTipSlot,
   gameModeOf,
   isMovedOut,
@@ -515,6 +518,92 @@ describe("Home's reminders-off card", () => {
     await ready(store);
     expect(primaryGoal(store.getState())?.goalId).toBe('g1');
     expect(store.getState().reminderCardHiddenUntil).toBeNull();
+  });
+});
+
+describe("Home's celebrations (SPEC 6)", () => {
+  /** A goal one Yes short of `day`, with that Yes answered, so its round is the real one. */
+  async function arrive(day: number, opts: Parameters<typeof withGoal>[1] = {}) {
+    const h = await withGoal(yesDays(newGoal(), DAY0, day - 1), opts);
+    const today = addDays(DAY0, day - 1);
+    h.setTime(today, '21:00');
+    h.store.getState().answer(gid(h.store), 'yes');
+    return { h, today };
+  }
+
+  describe.each(CELEBRATIONS.map((c) => [c.id, c] as const))('%s', (id, c) => {
+    it('follows its played round until closed, and comes back only after everything is erased', async () => {
+      const { h, today } = await arrive(c.day);
+      const round = h.store.getState().goals[0]?.round;
+      expect(round && celebrationFor(round)).toBe(c);
+      expect(celebrationSlot(h.store.getState())).toBeNull(); // the round hasn't been played
+      h.store.getState().finishRound(gid(h.store), today);
+      expect(celebrationSlot(h.store.getState())).toBe(h.store.getState().goals[0]);
+      h.store.getState().seeTip(id);
+      expect(h.store.getState().tipsSeen).toEqual([id]);
+      expect(celebrationSlot(h.store.getState())).toBeNull();
+      h.store.getState().erase();
+      expect(h.store.getState().tipsSeen).toEqual([]);
+    });
+
+    it('stays out when the round earned nothing new', async () => {
+      const { h, today } = await arrive(c.day);
+      h.store.getState().finishRound(gid(h.store), today);
+      const slot = h.store.getState().goals[0] as GoalSlot;
+      const round = slot.round as RoundRecord;
+      h.store.setState({
+        goals: [{ ...slot, round: { ...round, rewards: { ...round.rewards, bomb: false, shield: false } } }],
+      });
+      expect(celebrationSlot(h.store.getState())).toBeNull();
+    });
+
+    it('remembers being closed across a restart', async () => {
+      const a = harness();
+      await ready(a.store);
+      a.store.getState().seeTip(id);
+      await flush();
+      const b = harness();
+      await ready(b.store);
+      expect(b.store.getState().tipsSeen).toEqual([id]);
+    });
+  });
+
+  it("finds a later goal's round, and takes two due at once one at a time", async () => {
+    const week = { ...yesDays(newGoal(), DAY0, 7), goalId: 'a' };
+    const month = { ...yesDays(newGoal(), DAY0, 30), goalId: 'b' };
+    const none = { ...newGoal(), goalId: 'c' };
+    const rewards = { bomb: false, shield: true, shieldCapped: false, weapons: [], credits: [] };
+    const roundOf = (n: number, r = rewards): RoundRecord => ({ day: DAY0, n, rewards: r, borrowed: [], played: true });
+    const h = await withGoal(none, { limits: PLUS_LIMITS });
+    const sevenDays: GoalSlot = { goal: week, round: roundOf(7), seenThrough: null };
+    const thirtyDays: GoalSlot = { goal: month, round: roundOf(30, { ...rewards, bomb: true, shield: false }), seenThrough: null };
+    const third: GoalSlot = { goal: none, round: null, seenThrough: null };
+    h.store.setState({ goals: [third, sevenDays, thirtyDays] });
+
+    expect(celebrationSlot(h.store.getState())?.goal.goalId).toBe('a');
+    h.store.getState().seeTip('day-7');
+    expect(celebrationSlot(h.store.getState())?.goal.goalId).toBe('b');
+    h.store.getState().seeTip('day-30');
+    expect(celebrationSlot(h.store.getState())).toBeNull();
+  });
+
+  it('shows Day 7 once on an install: a second goal reaching it stays quiet', async () => {
+    const { h, today } = await arrive(7);
+    h.store.getState().finishRound(gid(h.store), today);
+    h.store.getState().seeTip('day-7');
+    const slot = h.store.getState().goals[0] as GoalSlot;
+    h.store.setState({ goals: [slot, { ...slot, goal: { ...slot.goal, goalId: 'second' } }] });
+    expect(celebrationSlot(h.store.getState())).toBeNull();
+  });
+
+  it('reads the tips seen, the celebrations included', async () => {
+    await AsyncStorage.setItem(
+      STORE_KEY,
+      JSON.stringify({ version: STORE_VERSION, state: { goal: newGoal(), tipsSeen: ['day-30', 'day-7', 'day-999', 'day-7'] } }),
+    );
+    const a = harness();
+    await ready(a.store);
+    expect(a.store.getState().tipsSeen).toEqual(['day-30', 'day-7']);
   });
 });
 

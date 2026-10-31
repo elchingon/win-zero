@@ -1,7 +1,7 @@
 // Reading goals out of the store's state (SPEC 9), shared with the website. The free app and the
 // website show one goal, the first. Every selector returns something already in the state, or a
 // number, so a React selector never sees a fresh object and re-renders for nothing.
-import { arsenalReach, equippedMode, equippedTheme, type GoalState, type ModeId, type ThemeId } from '@/engine';
+import { arsenalReach, celebrationFor, equippedMode, equippedTheme, type GoalState, type ModeId, type ThemeId } from '@/engine';
 
 import type { Limits } from './limits';
 import type { GoalSlot, PersistedState, RoundRecord } from './types';
@@ -56,4 +56,17 @@ export function firstRoundTipSlot(s: Pick<PersistedState, 'goals' | 'archived' |
     for (const entry of goal.history) if (entry.result === 'yes' && ++yeses > 1) return null;
   }
   return yeses === 1 ? (s.goals.find((slot) => slot.round?.played) ?? null) : null;
+}
+
+/**
+ * The goal Home's next celebration follows (SPEC 6): the first whose latest round has been played
+ * and earned one not yet closed. `celebrationFor(slot.round)` says which.
+ */
+export function celebrationSlot(s: Pick<PersistedState, 'goals' | 'tipsSeen'>): GoalSlot | null {
+  return (
+    s.goals.find((slot) => {
+      const due = slot.round?.played ? celebrationFor(slot.round) : null;
+      return due !== null && !s.tipsSeen.includes(due.id);
+    }) ?? null
+  );
 }
