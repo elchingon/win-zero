@@ -162,7 +162,7 @@ describe("Home's celebrations", () => {
     await open('/', { day, time: '22:00' });
     expect(screen.getByRole('header', { name: 'Congratulations on Day 30!' })).toBeOnTheScreen();
     expect(screen.getByText('New weapon: Chain Zapper')).toBeOnTheScreen();
-    expect(screen.getByText('Bomb earned')).toBeOnTheScreen();
+    expect(screen.getByText(/^Bomb earned\./)).toBeOnTheScreen();
     expect(screen.queryByText(/New theme/)).not.toBeOnTheScreen();
     expect(screen.getByText(/the Rail Laser, comes on Day 60\.$/)).toBeOnTheScreen();
   });

@@ -57,7 +57,7 @@ const HIGHLIGHTS: Record<HighlightKind, (c: CelebrationContext) => Highlight[]> 
             title: 'You earned a shield',
             lines: [
               `You have ${goal.shields} of ${SHIELD_CAP}.`,
-              `A hard stretch can't wipe out your run while you hold one. A slip still costs a zero, but when ${SLIDE_FINAL} in a row would start you over, your shield steps in and your streak stays. It works on its own, so there's nothing to do.`,
+              `When a hard stretch reaches ${SLIDE_FINAL} slips in a row and would start you over, your shield steps in and your streak stays. It works on its own, so there's nothing to do.`,
             ],
           },
         ]
@@ -74,7 +74,7 @@ const HIGHLIGHTS: Record<HighlightKind, (c: CelebrationContext) => Highlight[]> 
       lines: [`Pick it in Settings › Themes.${icons ? ' Its app icon is unlocked too.' : ''}`],
     })),
   bomb: ({ round, goal }) =>
-    round.rewards.bomb ? [{ kind: 'bomb', title: 'Bomb earned', lines: [`You have ${goal.bombs}.`] }] : [],
+    round.rewards.bomb ? [{ kind: 'bomb', title: `Bomb earned. You have ${goal.bombs}.`, lines: [] }] : [],
 };
 
 /** The next weapon's sentence, or nothing with all of them unlocked. */

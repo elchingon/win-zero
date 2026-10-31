@@ -42,7 +42,7 @@ describe('celebration copy (SPEC 6)', () => {
           title: 'You earned a shield',
           lines: [
             'You have 1 of 3.',
-            "A hard stretch can't wipe out your run while you hold one. A slip still costs a zero, but when 7 in a row would start you over, your shield steps in and your streak stays. It works on its own, so there's nothing to do.",
+            "When a hard stretch reaches 7 slips in a row and would start you over, your shield steps in and your streak stays. It works on its own, so there's nothing to do.",
           ],
         },
       ],
@@ -65,7 +65,7 @@ describe('celebration copy (SPEC 6)', () => {
       lines: ["30 zeros down. This is more than a good run now. It's who you're becoming, one check-in at a time."],
       highlights: [
         { kind: 'weapon', title: 'New weapon: Chain Zapper', lines: ['Lightning jumps to 4 more zeros.'] },
-        { kind: 'bomb', title: 'Bomb earned', lines: ['You have 6.'] },
+        { kind: 'bomb', title: 'Bomb earned. You have 6.', lines: [] },
       ],
       closing:
         "Keep going. Hard days may still come, and you've already shown you can get through them. Your next weapon, the Rail Laser, comes on Day 60.",
