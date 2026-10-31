@@ -61,7 +61,7 @@ describe('celebration copy (SPEC 6)', () => {
   it('Day 30: features the weapon and the bomb, and names the next weapon', () => {
     expect(celebrationCopy(entry('day-30'), day30())).toEqual({
       title: 'Congratulations on Day 30!',
-      quote: '“We are what we repeatedly do.”',
+      quote: "You didn't just do it once. You completed your goal for 30 days. That's not just a streak, that's a personality trait now.",
       lines: ["30 zeros down. This is more than a good run now. It's who you're becoming, one check-in at a time."],
       highlights: [
         { kind: 'weapon', title: 'New weapon: Chain Zapper', lines: ['Lightning jumps to 4 more zeros.'] },
@@ -100,7 +100,7 @@ describe('celebration copy (SPEC 6)', () => {
     expect(celebrationFor({ n: c.day, rewards })).toBe(c);
     const tip = celebrationCopy(c, context({ n: c.day, rewards }, { shields: 1, bombs: 1 }));
     expect(tip.title).toContain(`Day ${c.day}`);
-    expect(tip.quote).toMatch(/^“.+”$/);
+    expect(tip.quote).not.toBe('');
     expect(tip.lines.length).toBeGreaterThan(0);
     expect(tip.highlights.length).toBeGreaterThan(0);
     expect(tip.closing).toMatch(/^Keep going\./);

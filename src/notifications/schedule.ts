@@ -22,6 +22,7 @@ import {
   type TimeZone,
 } from '@/engine';
 
+import { lapseLine } from './lapseCopy';
 import { CHECKIN_CATEGORY_ID, CHECKIN_CHANNEL_ID, type ReminderData } from './shared';
 
 /** iOS keeps at most this many pending notifications per app and drops the rest. */
@@ -110,15 +111,22 @@ function nudgeFor(state: GoalState, day: DayKey): { title: string; body: string 
 function contentFor(state: GoalState, r: GoalReminder, label: string, several: boolean): ReminderContent {
   const data: ReminderData = { goalId: state.goalId, day: r.day, kind: r.kind };
   if (r.kind === 'reengage') return { ...nudgeFor(state, r.day), data };
+  const lapse = r.lapse ? lapseLine(r.lapse, r.kind) : null;
   // No buttons: a Yes here couldn't say which day it means. A tap opens Home, which asks about
   // yesterday first. Answering yesterday reschedules this as a plain check-in.
   if (r.earlier) {
+    if (lapse) {
+      const prompt = several ? `Tap to answer for ${label}.` : 'Tap to answer.';
+      return { title: lapse.title, body: `${lapse.line} ${prompt}`, data, sound: 'default' };
+    }
     return { title: checkInTitle(state), body: several ? bothOpenBody(label) : BOTH_OPEN_BODY, data, sound: 'default' };
   }
   const when = isWindowToday(windowFor(state, r.day), r.at) ? 'today' : 'yesterday';
+  const question = checkInQuestion(label, when);
   return {
-    title: r.kind === 'checkin' ? checkInTitle(state) : MORNING_TITLE,
-    body: checkInQuestion(label, when),
+    title: lapse?.title ?? (r.kind === 'checkin' ? checkInTitle(state) : MORNING_TITLE),
+    // The question stays, so its Yes and Not today buttons still make sense.
+    body: lapse ? `${lapse.line} ${question}` : question,
     data,
     categoryIdentifier: CHECKIN_CATEGORY_ID,
     sound: 'default',
