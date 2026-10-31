@@ -1,4 +1,4 @@
-// Home: the goal, the numbers, today's check-in (or when the next one comes), credits and the
+// Home: an open check-in first, then the goal, the numbers, when the next check-in comes, credits and the
 // bonus round, the arsenal, and the history calendar, with a tip after the first round. Once Win Zero has moved to Win Zero Plus
 // (SPEC 9), only where the goals went. Win Zero Plus has its own Home (src/plus/home), with one
 // goal or several.
@@ -147,6 +147,22 @@ function HomeScreen({ goal }: { goal: GoalState }) {
     <Screen>
       <TopBar right={<LinkButton label="Settings" onPress={() => router.push('/settings')} />} />
 
+      {pending ? (
+        <>
+          {firstToday ? <Text style={type.lede}>Today counts: your first check-in is open now.</Text> : null}
+          <CheckInCard
+            key={pending.day}
+            goal={goal}
+            window={pending}
+            now={now}
+            tz={tz}
+            h24={h24}
+            onYes={onYes}
+            onNotToday={onNotToday}
+          />
+        </>
+      ) : null}
+
       <View style={styles.goal}>
         <Eyebrow header>{goalEyebrow(goal, firstWeekday)}</Eyebrow>
         <Text style={type.goal}>{goal.goal}</Text>
@@ -162,21 +178,7 @@ function HomeScreen({ goal }: { goal: GoalState }) {
 
       {unplayed ? <ReadyRoundCard round={unplayed} goalId={goal.goalId} /> : null}
 
-      {pending ? (
-        <>
-          {firstToday ? <Text style={type.lede}>Today counts: your first check-in is open now.</Text> : null}
-          <CheckInCard
-            key={pending.day}
-            goal={goal}
-            window={pending}
-            now={now}
-            tz={tz}
-            h24={h24}
-            onYes={onYes}
-            onNotToday={onNotToday}
-          />
-        </>
-      ) : goal.history.length === 0 ? (
+      {pending ? null : goal.history.length === 0 ? (
         <Card>
           <Text style={styles.cardTitle}>You&apos;re all set.</Text>
           <Text style={type.lede}>Your first check-in is {nextWhen}.</Text>
