@@ -205,6 +205,11 @@ The EAS steps above are one way. The other, used for the first releases, builds 
   (or `win-zero-plus.aab`) in Play Console → Test and release → Testing → Internal testing →
   Create new release. The first upload enrolls the app in Play App Signing, with the key that
   signed it as the upload key.
+- **R8:** Android release builds, local and EAS, shrink and obfuscate their code with R8
+  (`expo-build-properties` in `app.json`), which Play's DEX optimization check asks for. The AAB
+  carries R8's mapping file and the native debug symbols, so Play reads crashes and ANRs without a
+  separate upload. R8 can strip code that native modules only reach by reflection, so play a round
+  on a release build before uploading: a missing class crashes at once.
 
 ## 4. Listings and forms
 
