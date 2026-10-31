@@ -51,6 +51,7 @@ website/            winzero.app: Vite + React, deployed by Cloudflare Pages (see
 - Copy tone: supportive and plain. Never shaming; users may be working on sobriety.
 - Keep the game at 60 fps on a mid-range Android phone with 60 objects + particles. Cap particle counts.
 - Commit in small, working steps with clear messages.
+- Every feature request gets a new branch before its first commit. Never commit on `main` without asking first. Run `git branch --show-current` right before committing and before saying which branch work is on; the branch can change during a session, so don't trust the git status from the start of it.
 - The website imports pure code from `src/` (the allowlist in `website/plugins/shared-guard.ts`, mirrored in the root ESLint config). Keep those files free of React Native, Expo and runtime Skia; move new shared logic into such a module rather than copying it into `website/`.
 - Shared code never reads the variant or `process.env`: it takes names and limits as parameters, and only app code (`src/variant`) knows which app it is. Gate Plus-only code with the literal `process.env.EXPO_PUBLIC_APP_VARIANT === 'plus'` where it's required, so the free bundle drops it. Never set the variant in `.env`.
 - `/privacy` and `/support` on winzero.app are built from `docs/store/privacy-policy.md` and `support.md`, and their URLs are in the app binaries and store listings: keep them working.
