@@ -28,10 +28,15 @@ import {
   TEST_DELAY_SECONDS,
   testCheckInRequest,
   type ReminderInput,
+  type ReminderRequest,
 } from '../schedule';
+import { ENCOURAGE_LINES, lapseLine } from '../lapseCopy';
 import { readReminderData } from '../shared';
 
 const CHATHAM = 'Pacific/Chatham';
+/** Roughly what a lock screen shows before cutting a notification off. */
+const LOCK_SCREEN_TITLE = 50;
+const LOCK_SCREEN_BODY = 178;
 
 function input(goal: GoalState | GoalState[], now: Date, patch: Partial<ReminderInput> = {}): ReminderInput {
   const goals = Array.isArray(goal) ? goal : [goal];
@@ -53,7 +58,7 @@ describe('checkInTitle', () => {
   });
 
   it("titles a goal's notifications by its days", () => {
-    const reqs = reminderRequests(input(newGoal({ days: [0, 1, 2, 3, 4, 5] }), at(DAY0, '12:00')));
+    const reqs = reminderRequests(input(newGoal({ days: [0, 1, 2, 3, 4, 5] }), at(DAY0, '12:00'))).slice(0, 6); // before any lapse
     const checkins = reqs.filter((r) => r.content.data.kind === 'checkin');
     expect(checkins.length).toBeGreaterThan(0);
     expect(checkins.every((r) => r.content.title === 'Check-in time')).toBe(true);
@@ -212,6 +217,148 @@ describe('reminderRequests', () => {
     expect(reqs[0]?.identifier).toBe('g1:morning-2026-10-13');
     expect(reqs[0]?.trigger.date).toEqual(at('2026-10-14', '09:00', TOKYO));
     expect(reqs[1]).toMatchObject({ identifier: 'g1:checkin-2026-10-14', trigger: { date: at('2026-10-14', '20:00', TOKYO) } });
+  });
+});
+
+describe('reminders as check-in days go unanswered', () => {
+  // Answered through 11-01, so 11-02 is day 1, 11-08 is day 7, and 11-15 would be the final.
+  const run = () => ({ ...yesDays(newGoal(), DAY0, 20), shields: 0 });
+  const now = at('2026-11-01', '21:00');
+  const byId = (reqs: ReminderRequest[], id: string) => reqs.find((r) => r.identifier === id);
+
+  it('keeps the plain words for days 1 to 3', () => {
+    const reqs = reminderRequests(input(run(), now));
+    expect(byId(reqs, 'g1:checkin-2026-11-02')?.content).toMatchObject({ title: 'Daily check-in', body: 'Did you stick to your goal today?' });
+    expect(byId(reqs, 'g1:morning-2026-11-03')?.content).toMatchObject({ title: 'Still time to check in', body: 'Did you stick to your goal yesterday?' });
+    expect(byId(reqs, 'g1:checkin-2026-11-04')?.content).toMatchObject({ title: 'Daily check-in', body: BOTH_OPEN_BODY });
+  });
+
+  it('encourages from day 4, with no buttons while yesterday is open and the question when there are buttons', () => {
+    const reqs = reminderRequests(input(run(), now));
+    expect(byId(reqs, 'g1:checkin-2026-11-05')).toMatchObject({
+      content: { title: 'Your next zero is pacing', body: "It's been asking about you. Come say hi. Tap to answer.", sound: 'default' },
+      trigger: { date: at('2026-11-05', '20:00') },
+    });
+    expect(byId(reqs, 'g1:checkin-2026-11-05')?.content.categoryIdentifier).toBeUndefined();
+    expect(byId(reqs, 'g1:morning-2026-11-05')?.content).toMatchObject({
+      title: 'No lecture, promise',
+      body: 'Just a game that saved your spot. Did you stick to your goal yesterday?',
+      categoryIdentifier: 'checkin',
+      data: { goalId: 'g1', day: '2026-11-05', kind: 'morning' },
+    });
+  });
+
+  it('warns on day 7 that the zeros are at stake, and that starting over is always there', () => {
+    const reqs = reminderRequests(input(run(), now));
+    expect(byId(reqs, 'g1:checkin-2026-11-08')?.content).toMatchObject({
+      title: 'Your 20 zeros are getting nervous',
+      body: "Free days are almost up. After that they slip away, then reset. You can always start over, but we'd love to keep them. Tap to answer.",
+    });
+    expect(byId(reqs, 'g1:morning-2026-11-08')?.content).toMatchObject({
+      title: 'Your 20 zeros took a vote',
+      body: "They want you back before the free days run out. We'd be sad to see them go. Did you stick to your goal yesterday?",
+    });
+  });
+
+  it('counts the zeros down through the slide, then calls time before they reset', () => {
+    const reqs = reminderRequests(input(run(), now));
+    expect(byId(reqs, 'g1:checkin-2026-11-09')?.content.title).toBe('Your 20 zeros could use you');
+    expect(byId(reqs, 'g1:morning-2026-11-10')?.content.title).toBe('19 zeros and holding on');
+    expect(byId(reqs, 'g1:morning-2026-11-15')?.content).toMatchObject({
+      title: 'Your 14 zeros are packing their bags',
+      body: "We're sad to see them go. A Yes keeps them, or start over whenever you're ready. Did you stick to your goal yesterday?",
+    });
+    expect(byId(reqs, 'g1:checkin-2026-11-16')?.content).toMatchObject({
+      title: 'Last call for your 14 zeros',
+      body: "Miss this one and they reset. We'd be sad to see them go, but you can always start over. Tap to answer.",
+    });
+  });
+
+  it('never warns about zeros nobody has', () => {
+    const reqs = reminderRequests(input(newGoal(), at(DAY0, '12:00')));
+    const said = reqs.map((r) => `${r.content.title} ${r.content.body}`).join('\n');
+    expect(said).not.toMatch(/\d zeros?|free days|last call|reset|slip/i);
+    expect(said).toContain('Knock knock');
+  });
+
+  it("doesn't name the goal unless asked, and says which goal with several", () => {
+    const quiet = reminderRequests(input(run(), now));
+    expect(JSON.stringify(quiet)).not.toContain('Stop drinking');
+
+    const shown = reminderRequests(input(run(), now, { showGoal: true }));
+    expect(byId(shown, 'g1:morning-2026-11-05')?.content.body).toContain('Did you stick to “Stop drinking” yesterday?');
+    expect(byId(shown, 'g1:checkin-2026-11-05')?.content.body).not.toContain('Stop drinking');
+
+    const second = { ...run(), goalId: 'g2', goal: 'Run' };
+    const several = reminderRequests(input([run(), second], now));
+    const r = several.find((x) => x.content.data.goalId === 'g2' && x.content.data.day === '2026-11-05' && x.content.data.kind === 'checkin');
+    expect(r?.content.body).toBe("It's been asking about you. Come say hi. Tap to answer for your second goal.");
+  });
+
+  it('says the same thing when rescheduled later in the absence', () => {
+    const first = reminderRequests(input(run(), now));
+    const later = at('2026-11-06', '12:00');
+    const again = reminderRequests(input(run(), later));
+    for (const r of again) expect(byId(first, r.identifier)?.content).toEqual(r.content);
+  });
+
+  it('reads differently from one notification to the next', () => {
+    const titles = reminderRequests(input(run(), now)).map((r) => r.content.title);
+    const lapsing = titles.slice(6); // after days 1 to 3
+    for (let i = 1; i < lapsing.length; i++) expect(lapsing[i]).not.toBe(lapsing[i - 1]);
+  });
+
+  it('fits a lock screen at any count, for every line, however it ends', () => {
+    const endings = ['Did you stick to your second goal yesterday?', 'Tap to answer for your second goal.'];
+    for (const stage of ['encourage', 'warning', 'slipping', 'last-call'] as const) {
+      for (const zeros of [1, 2, 9999]) {
+        for (let missedInRow = 4; missedInRow < 16; missedInRow++) {
+          for (const kind of ['checkin', 'morning'] as const) {
+            const { title, line } = lapseLine({ stage, missedInRow, zeros }, kind);
+            expect(title.length).toBeLessThanOrEqual(LOCK_SCREEN_TITLE);
+            for (const end of endings) expect(`${line} ${end}`.length).toBeLessThanOrEqual(LOCK_SCREEN_BODY);
+          }
+        }
+      }
+    }
+  });
+
+  it('gets the grammar right for a single zero', () => {
+    const line = (stage: 'warning' | 'slipping' | 'last-call', turn: 'checkin' | 'morning') =>
+      lapseLine({ stage, missedInRow: 8, zeros: 1 }, turn);
+    expect(line('warning', 'checkin')).toEqual({
+      title: 'Your 1 zero is getting nervous',
+      line: "Free days are almost up. After that it slips away, then resets. You can always start over, but we'd love to keep it.",
+    });
+    expect(line('warning', 'morning')).toEqual({
+      title: 'Your 1 zero took a vote',
+      line: "It wants you back before the free days run out. We'd be sad to see it go.",
+    });
+    expect(line('slipping', 'morning').title).toBe('1 zero and holding on');
+    expect(line('last-call', 'checkin')).toEqual({
+      title: 'Last call for your 1 zero',
+      line: "Miss this one and it resets. We'd be sad to see it go, but you can always start over.",
+    });
+    expect(line('last-call', 'morning')).toEqual({
+      title: 'Your 1 zero is packing its bags',
+      line: "We're sad to see it go. A Yes keeps it, or start over whenever you're ready.",
+    });
+  });
+
+  it('never shames, and never counts the days', () => {
+    const words: string[] = [];
+    for (const stage of ['encourage', 'warning', 'slipping', 'last-call'] as const) {
+      for (let missedInRow = 4; missedInRow < 16; missedInRow++) {
+        for (const kind of ['checkin', 'morning'] as const) {
+          const { title, line } = lapseLine({ stage, missedInRow, zeros: 5 }, kind);
+          words.push(title, line);
+        }
+      }
+    }
+    const said = words.join('\n');
+    expect(said).not.toMatch(/fail|lazy|shame|disappoint|gave up|give up|excuse|\bdrink|sober/i);
+    expect(said).not.toMatch(/\d+ (days|weeks)|a week/i);
+    expect(ENCOURAGE_LINES.map((l) => l.title).join()).not.toMatch(/\d/);
   });
 });
 

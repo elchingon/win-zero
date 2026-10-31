@@ -33,6 +33,13 @@ Notifications are **local** (scheduled on device; no push server needed for v1):
 - While a day is unanswered, send 2 reminders per day (evening check-in + morning reminder).
 - Pre-schedule reminders for every window up to the one whose miss would reset the streak (section 3), at most 14 windows ahead. That reset lands at midnight after the next day, so the next day's evening check-in still goes out: answering then keeps the streak. On every check-in or app open, cancel and reschedule.
 - Every notification opens the app on Home.
+- As check-in days go unanswered, the reminders' words change. Day N is the Nth unanswered check-in day in a row; a Not today starts the count over. The wording stays supportive and funny, never shaming, and never counts days.
+  - Days 1–3: the plain question.
+  - Day 4 on: **encourage**, playful lines about the game.
+  - Day 7, with zeros: **warning**, the free days are ending, then zeros slip away and reset. We'd be sad to see them go, and they can always start over.
+  - Day 8 on, with zeros: **slipping**, each missed day takes a zero and a Yes stops it.
+  - When the next miss to land would leave 0 zeros: **last call**. A shield absorbing the final isn't one.
+  - With no zeros held, reminders stay on encourage until they pause.
 - Reminders stop once a run of missed days resets the streak (section 3). After that, send one gentle re-engagement notification per week (setting, default on). Any answer brings daily reminders back.
 
 ## 3. Streak rules (the rules engine)
