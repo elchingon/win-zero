@@ -19,7 +19,7 @@ import {
   primaryRound,
   useApp,
 } from '@/store';
-import { cancelMove, confirmMoveByHand, openPlus, sendMoveOut } from '@/transfer/send';
+import { cancelMove, confirmMoveByHand, openPlus, openPlusStore, sendMoveOut } from '@/transfer/send';
 import { colors, fonts, space, type } from '@/theme/tokens';
 import { Card, Eyebrow, Fine } from '@/ui/bits';
 import { TopBar } from '@/ui/Brand';
@@ -35,6 +35,7 @@ import { FirstRoundTip } from '@/ui/home/FirstRoundTip';
 import { HistoryCalendar } from '@/ui/home/HistoryCalendar';
 import { moveCardFor, moveCheckAt } from '@/ui/home/moved';
 import { MoveCheckCard, MovedCard } from '@/ui/home/MovedCard';
+import { PlusPromoCard, PlusPromoToggle } from '@/ui/home/PlusPromo';
 import { ReadyRoundCard } from '@/ui/home/ReadyRoundCard';
 import { RejectionBanner } from '@/ui/home/RejectionBanner';
 import { RemindersCard } from '@/ui/home/RemindersCard';
@@ -45,7 +46,7 @@ import { useHomeRouting } from '@/ui/home/useHomeRouting';
 import { Screen } from '@/ui/Screen';
 import { useDeviceCalendar } from '@/ui/useDevice';
 import { useReminderPermission } from '@/ui/useReminderPermission';
-import { FEATURES } from '@/variant';
+import { FEATURES, PLUS_OFFERED } from '@/variant';
 
 // Development builds only: Metro folds __DEV__ to false in production and drops the require.
 const DemoControls: ComponentType | null = __DEV__
@@ -92,6 +93,7 @@ function HomeScreen({ goal }: { goal: GoalState }) {
   const reminderCardHiddenUntil = useApp((s) => s.reminderCardHiddenUntil);
   const moveOut = useApp((s) => s.moveOut);
   const [retrying, setRetrying] = useState(false);
+  const [plusOpen, setPlusOpen] = useState(false);
   const reminders = useReminderPermission();
   const { h24, firstWeekday } = useDeviceCalendar();
 
@@ -164,9 +166,14 @@ function HomeScreen({ goal }: { goal: GoalState }) {
       ) : null}
 
       <View style={styles.goal}>
-        <Eyebrow header>{goalEyebrow(goal, firstWeekday)}</Eyebrow>
+        <View style={styles.goalHead}>
+          <Eyebrow header>{goalEyebrow(goal, firstWeekday)}</Eyebrow>
+          {PLUS_OFFERED ? <PlusPromoToggle open={plusOpen} onPress={() => setPlusOpen((was) => !was)} /> : null}
+        </View>
         <Text style={type.goal}>{goal.goal}</Text>
       </View>
+
+      {PLUS_OFFERED && plusOpen ? <PlusPromoCard onGet={openPlusStore} onMove={() => router.push('/move')} /> : null}
 
       <Stats goal={goal} today={today} />
 
@@ -228,5 +235,6 @@ function HomeScreen({ goal }: { goal: GoalState }) {
 
 const styles = StyleSheet.create({
   goal: { gap: space.xs },
+  goalHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.md },
   cardTitle: { fontFamily: fonts.bodyBold, fontSize: 17, color: colors.fg },
 });
