@@ -35,15 +35,18 @@ export async function sendMoveOut(store: AppStore = appStore): Promise<MoveOutRe
   const result = await transport.send(id, payload);
   if (result === 'opened') return result;
   undo();
-  if (result === 'not-installed' && PLUS_STORE_URL) openPage(PLUS_STORE_URL);
+  if (result === 'not-installed') openPlusStore();
   return result;
+}
+
+/** Open Win Zero Plus's store page. */
+export function openPlusStore(): void {
+  if (PLUS_STORE_URL) openPage(PLUS_STORE_URL);
 }
 
 /** Open Win Zero Plus, or its store page when it isn't on the phone. */
 export function openPlus(): void {
-  openOr(`${PEER.scheme}://`, () => {
-    if (PLUS_STORE_URL) openPage(PLUS_STORE_URL);
-  });
+  openOr(`${PEER.scheme}://`, openPlusStore);
 }
 
 /** Win Zero: the user says the move finished. Reminders stop here, as when Plus confirms. */
