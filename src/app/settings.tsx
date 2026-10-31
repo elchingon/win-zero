@@ -1,7 +1,7 @@
 // Settings: goal wording, times (through the engine, so an open window is respected),
 // sound / haptics / weekly nudge, reminder permission, how it works, support, accessibility
-// switches that change the app for whoever turns them on, about (privacy policy, help, email, the
-// move to Win Zero Plus once it's on the store, version), and erase.
+// switches that change the app for whoever turns them on, about (privacy policy, help, email,
+// version), and erase. Once Win Zero Plus is on the store, Win Zero links to it and offers the move.
 // Win Zero Plus adds check-in days and more goals, each with its own screen once there are
 // several, and its games, themes and app icons (SPEC 9).
 import Constants from 'expo-constants';
@@ -12,6 +12,7 @@ import { Platform, StyleSheet, Text, View } from 'react-native';
 import type { ReminderPermission } from '@/notifications/permissions';
 import { appStore, isMovedOut, primaryGoal, useApp } from '@/store';
 import { colors, space, type } from '@/theme/tokens';
+import { openPlusStore } from '@/transfer/send';
 import { Card, Eyebrow, Fine, Row, shared, ToggleRow } from '@/ui/bits';
 import { useSystemBoldText } from '@/ui/a11y';
 import { TopBar } from '@/ui/Brand';
@@ -22,7 +23,8 @@ import { GoalFields } from '@/ui/settings/GoalFields';
 import { APP_LINKS, callSupportLine, emailSupport, openPage, SUPPORT_LINE } from '@/ui/support';
 import { boldAtLaunch } from '@/ui/useAppFonts';
 import { useReminderPermission } from '@/ui/useReminderPermission';
-import { APP_NAME, FEATURES, PLUS_STORE_URL } from '@/variant';
+import { PLUS_PITCH } from '@/ui/home/PlusPromo';
+import { APP_NAME, PLUS_APP_NAME, PLUS_OFFERED } from '@/variant';
 
 // Development builds only: Metro folds __DEV__ to false in production and drops the require.
 const DebugSection: ComponentType | null = __DEV__
@@ -43,8 +45,6 @@ const APP_LABEL = APP_VERSION ? `${APP_NAME} ${APP_VERSION}` : APP_NAME;
 /** From the environment; a build without them leaves their rows out (see APP_LINKS). */
 const PRIVACY_URL = APP_LINKS.privacy;
 const SUPPORT_URL = APP_LINKS.support;
-/** Win Zero offers the move once Win Zero Plus is on the store for this platform (SPEC 9). */
-const MOVE_OFFERED = FEATURES.moveOut && PLUS_STORE_URL !== null;
 
 const PERMISSION_WORDS: Record<ReminderPermission, string> = {
   granted: 'On',
@@ -147,6 +147,28 @@ export default function Settings() {
 
       {PlusSettings ? <PlusSettings.PlusSections /> : null}
 
+      {PLUS_OFFERED && !moved ? (
+        <View style={shared.section}>
+          <Eyebrow header>{PLUS_APP_NAME}</Eyebrow>
+          <View style={shared.list}>
+            <Row
+              label={`Get ${PLUS_APP_NAME}`}
+              detail={PLUS_PITCH}
+              right={<Text style={styles.call}>Open</Text>}
+              hint={`Opens ${PLUS_APP_NAME}'s store page`}
+              onPress={openPlusStore}
+            />
+            <Row
+              label={`Move to ${PLUS_APP_NAME}`}
+              detail="Bring your goal, history and rewards to the Plus app on this phone."
+              right={<Text style={styles.call}>Read</Text>}
+              hint="Explains what moves, before anything happens"
+              onPress={() => router.push('/move')}
+            />
+          </View>
+        </View>
+      ) : null}
+
       <View style={shared.section}>
         <Eyebrow header>Accessibility</Eyebrow>
         <View style={shared.list}>
@@ -200,15 +222,6 @@ export default function Settings() {
             hint={`Starts an email to ${APP_NAME} support`}
             onPress={() => emailSupport(APP_LABEL)}
           />
-          {MOVE_OFFERED && !moved ? (
-            <Row
-              label="Move to Win Zero Plus"
-              detail="Bring your goal, history and rewards to the Plus app on this phone."
-              right={<Text style={styles.call}>Read</Text>}
-              hint="Explains what moves, before anything happens"
-              onPress={() => router.push('/move')}
-            />
-          ) : null}
         </View>
         <Fine>{APP_LABEL} · © 2026 E7 Systems</Fine>
       </View>

@@ -73,7 +73,7 @@ export const PEER: Peer = IS_PLUS ? FREE_PEER : PLUS_PEER;
 
 /**
  * Win Zero Plus's store page on this platform, once Plus is on the store: until then Win Zero
- * doesn't offer the move. Set like the privacy page (.env locally, each profile's env in eas.json).
+ * doesn't offer Plus. Set like the privacy page (.env locally, each profile's env in eas.json).
  */
 export const PLUS_STORE_URL: string | null =
   Platform.select({
@@ -81,3 +81,6 @@ export const PLUS_STORE_URL: string | null =
     ios: linkFrom(process.env.EXPO_PUBLIC_PLUS_STORE_URL_IOS),
     android: linkFrom(process.env.EXPO_PUBLIC_PLUS_STORE_URL_ANDROID),
   }) ?? null;
+
+/** Win Zero offers Plus, and the move to it, once Plus is on the store for this platform (SPEC 9). */
+export const PLUS_OFFERED = FEATURES.moveOut && PLUS_STORE_URL !== null;

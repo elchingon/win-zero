@@ -1,6 +1,6 @@
-// Win Zero's side of the move to Win Zero Plus (SPEC 9), with Plus's store page set: the row in
-// Settings › About, the Move screen and what each send leads to, and Home once moved or still
-// waiting. The handover itself is mocked here (src/transfer tests it).
+// Win Zero's side of Win Zero Plus (SPEC 9), with Plus's store page set: Home's Plus card, the rows
+// in Settings, the Move screen and what each send leads to, and Home once moved or still waiting.
+// The handover itself is mocked here (src/transfer tests it).
 import './env/plusOnStore';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -91,7 +91,42 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-describe('Settings › About', () => {
+describe('Home’s Plus card', () => {
+  const toggle = () => screen.getByRole('button', { name: 'What Win Zero Plus adds' });
+
+  it('stays closed until the "+" opens it, and the "+" closes it again', async () => {
+    await open('/');
+    expect(screen.queryByText('Get more with Win Zero Plus')).not.toBeOnTheScreen();
+    await fireEvent.press(toggle());
+    expect(screen.getByText('Get more with Win Zero Plus')).toBeOnTheScreen();
+    expect(screen.getByText('Play as many bonus rounds as you want')).toBeOnTheScreen();
+    expect(screen.getByText('Track up to 3 goals, on the days you choose')).toBeOnTheScreen();
+    expect(screen.getByText('Play 5 kinds of games')).toBeOnTheScreen();
+    await fireEvent.press(toggle());
+    expect(screen.queryByText('Get more with Win Zero Plus')).not.toBeOnTheScreen();
+  });
+
+  it('leads to Plus’s store page, and to the move for someone who has it', async () => {
+    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    const app = await open('/');
+    await fireEvent.press(toggle());
+    await fireEvent.press(screen.getByRole('button', { name: 'See Win Zero Plus' }));
+    expect(openURL).toHaveBeenCalledWith(STORE_URL);
+    await fireEvent.press(screen.getByRole('button', { name: 'Already have it? Move your progress' }));
+    expect(app.pathname()).toBe('/move');
+    expect(send).not.toHaveBeenCalled();
+  });
+});
+
+describe('Settings › Win Zero Plus', () => {
+  it('links to Plus’s store page', async () => {
+    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    await open('/settings');
+    expect(screen.getByRole('header', { name: 'Win Zero Plus' })).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: /Get Win Zero Plus/ }));
+    expect(openURL).toHaveBeenCalledWith(STORE_URL);
+  });
+
   it('offers the move, and explains it before anything happens', async () => {
     const app = await open('/settings');
     await fireEvent.press(screen.getByRole('button', { name: /Move to Win Zero Plus/ }));
@@ -101,8 +136,9 @@ describe('Settings › About', () => {
     expect(send).not.toHaveBeenCalled();
   });
 
-  it('doesn’t offer it again once moved', async () => {
+  it('doesn’t offer Plus or the move again once moved', async () => {
     await open('/settings', { moveOut: { ...sentAgo(1), status: 'moved' } });
+    expect(screen.queryByText('Get Win Zero Plus')).not.toBeOnTheScreen();
     expect(screen.queryByText('Move to Win Zero Plus')).not.toBeOnTheScreen();
   });
 });

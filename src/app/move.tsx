@@ -1,6 +1,6 @@
-// Win Zero: moving to Win Zero Plus (SPEC 9), from Settings › About. What moves and what happens
-// after, before anything does; then the move itself. Win Zero Plus has this route too, and leaves
-// it for Home.
+// Win Zero: moving to Win Zero Plus (SPEC 9), from Settings or Home's Plus card. What moves and what
+// happens after, before anything does; then the move itself. Win Zero Plus has this route too, and
+// leaves it for Home.
 import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -13,7 +13,7 @@ import { Button, LinkButton } from '@/ui/Button';
 import { Screen } from '@/ui/Screen';
 import { emailSupport } from '@/ui/support';
 import { cancelMove, sendMoveOut, type MoveOutResult } from '@/transfer/send';
-import { FEATURES, PLUS_STORE_URL } from '@/variant';
+import { PLUS_OFFERED } from '@/variant';
 
 const WHAT_MOVES = [
   'Your goal and every day of its history',
@@ -33,7 +33,7 @@ const AFTER: Record<MoveOutResult, string> = {
 export default function Move() {
   const hasGoal = useApp((s) => s.goals.length > 0);
   const moved = useApp(isMovedOut);
-  if (!FEATURES.moveOut || PLUS_STORE_URL === null || !hasGoal || moved) return <Redirect href="/" />;
+  if (!PLUS_OFFERED || !hasGoal || moved) return <Redirect href="/" />;
   return <MoveScreen />;
 }
 

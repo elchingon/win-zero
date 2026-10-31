@@ -1,7 +1,7 @@
 // Render the existing game identity with Skia and the app's bundled Bungee font.
 // No generated artwork or additional dependencies. Run: node scripts/gen-brand.mjs
 // `--variant plus` delegates to the Gold Edition generator in gen-brand-plus.mjs.
-// assets/brand/ is the free app's, and the website publishes from it: the free set never changes.
+// assets/brand/ is the free app's; keep Android launcher sizing separate from iOS and web art.
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
@@ -120,6 +120,22 @@ function mark(canvas, size, monochrome = false) {
     monochrome ? '#FFFFFF' : color('flare'), monochrome ? 0 : size * 0.008);
 }
 
+function androidMark(canvas, size, monochrome = false) {
+  // Match the zero in gen-brand-plus.mjs: its adaptive 0 + mark is 54% of the canvas,
+  // with a gap of 8% and a plus of 50% of the zero's height. Center the free zero alone.
+  // Use Plus's 1000-unit font and canvas scaling so glyph hinting also matches.
+  const font = new kit.Font(face, 1000);
+  const { left, top, right, bottom } = measure(font, '0');
+  font.delete();
+  const scale = (size * 0.54) / ((right - left) + (bottom - top) * (0.08 + 0.5));
+  canvas.save();
+  canvas.translate(size / 2, size / 2);
+  canvas.scale(scale, scale);
+  text(canvas, '0', 1000, 0, 0,
+    monochrome ? '#FFFFFF' : color('flare'), monochrome ? 0 : 1000 * 0.008 / 0.74);
+  canvas.restore();
+}
+
 function launchMark(canvas, size, monochrome = false) {
   // Same proportions, stroke and highlight as game/ZeroRing.tsx.
   const ry = size * 0.285, rx = ry * 0.72, stroke = ry * 0.3;
@@ -162,9 +178,9 @@ render('ios-icon-tinted.png', 1024, 1024, (c) => {
 });
 opaque('ios-icon-tinted.png', 0);
 render('google-play-icon.png', 512, 512, (c) => { backdrop(c, 512, 512); mark(c, 512); });
-render('android-foreground.png', 1024, 1024, (c) => mark(c, 1024), true);
+render('android-foreground.png', 1024, 1024, (c) => androidMark(c, 1024), true);
 render('android-background.png', 1024, 1024, (c) => backdrop(c, 1024, 1024));
-render('android-monochrome.png', 1024, 1024, (c) => mark(c, 1024, true), true);
+render('android-monochrome.png', 1024, 1024, (c) => androidMark(c, 1024, true), true);
 render('favicon.png', 64, 64, (c) => { backdrop(c, 64, 64); mark(c, 64); });
 render('splash-mark.png', 1024, 1024, (c) => launchMark(c, 1024), true);
 // The Android status-bar icon: the same white zero, filling the canvas so it reads at 24 dp

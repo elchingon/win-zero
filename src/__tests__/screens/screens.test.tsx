@@ -59,6 +59,18 @@ async function open(path: string, opts: { goal?: GoalState; day?: string; time?:
   return { pathname: () => app.getPathname() };
 }
 
+/** The screen's text from top to bottom, to check what comes before what. */
+function textsInOrder(): string[] {
+  const texts: string[] = [];
+  const walk = (node: unknown): void => {
+    if (typeof node === 'string') texts.push(node);
+    else if (Array.isArray(node)) node.forEach(walk);
+    else if (node && typeof node === 'object' && 'children' in node) walk(node.children);
+  };
+  walk(screen.toJSON());
+  return texts;
+}
+
 /** Answered Yes through 10-14, so 10-15's check-in is open at 21:00 on 10-15. */
 const twoDays = () => yesDays(newGoal({ tz: tz() }), DAY0, 2, tz());
 
@@ -318,6 +330,24 @@ describe('Home', () => {
     await open('/', { goal: twoDays() });
     expect(screen.getByText('Did you stick to “Stop drinking” today?')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Yes, I did' })).toBeOnTheScreen();
+  });
+
+  it('leads with an open check-in, above the goal and the numbers', async () => {
+    await open('/', { goal: twoDays() });
+    const order = textsInOrder();
+    const question = order.findIndex((t) => t.startsWith('Did you stick to'));
+    expect(question).toBeGreaterThan(-1);
+    expect(question).toBeLessThan(order.indexOf('Daily goal'));
+    expect(order.indexOf('Daily goal')).toBeLessThan(order.indexOf('Current streak'));
+  });
+
+  it('leads with having checked in, above the goal and the numbers', async () => {
+    await open('/', { goal: twoDays(), time: '19:00' });
+    const order = textsInOrder();
+    const checkedIn = order.indexOf("You've checked in.");
+    expect(checkedIn).toBeGreaterThan(-1);
+    expect(checkedIn).toBeLessThan(order.indexOf('Daily goal'));
+    expect(order.indexOf('Daily goal')).toBeLessThan(order.indexOf('Current streak'));
   });
 
   it('celebrates a Yes from where it was tapped, and opens the round once the screen is covered', async () => {

@@ -75,13 +75,13 @@ Sources: [App information](https://developer.apple.com/help/app-store-connect/re
 
 ### App Review notes (paste into "Notes")
 Fill in Win Zero Plus's Apple ID (App Store Connect → Win Zero Plus → App Information) before
-pasting. Win Zero 1.2 is submitted once Win Zero Plus is live, so its Move row opens a working page.
+pasting. Win Zero 1.2 is submitted once Win Zero Plus is live, so its links to Plus open a working page.
 ```
 Win Zero needs no account. To see the main flow quickly:
 1. Open the app and enter any goal. Set the check-in time to a time that has already passed today. Today's check-in then opens right away on Home.
 2. Tap "Yes, I did" to play the round: tap or hold anywhere to fire. Clearing the last zero shows the celebration and the result sheet.
 3. Notifications (optional): allow them in Setup or Settings. Each day's check-in arrives at the chosen time as a notification with Yes / Not today buttons.
-4. Settings > About > "Move to Win Zero Plus" (optional): moves the user's goal, history and rewards into Win Zero Plus, our separate paid app (Apple ID <PLUS_APPLE_ID>), which adds more goals, check-in days and extra games. Win Zero stays complete and free, with no in-app purchases or ads, and mentions Plus nowhere else. The move happens on the device, through an App Group the two apps share; nothing goes to a server. Without Win Zero Plus installed, Move opens its App Store page.
+4. Settings > Win Zero Plus > "Move to Win Zero Plus" (optional): moves the user's goal, history and rewards into Win Zero Plus, our separate paid app (Apple ID <PLUS_APPLE_ID>), which adds more goals, check-in days and extra games. Win Zero stays complete and free, with no in-app purchases or ads. It offers Plus in only two places: that Settings section, which also links to the store page, and a small "+" beside the goal on Home, which opens a card listing what Plus adds. The move happens on the device, through an App Group the two apps share; nothing goes to a server. Without Win Zero Plus installed, Move opens its App Store page.
 Goals and check-ins are stored locally. Notifications are scheduled locally; no app server is required. System backups are managed by the OS. Privacy and support links open our website in the browser.
 ```
 

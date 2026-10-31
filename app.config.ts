@@ -14,7 +14,7 @@ export type Variant = 'free' | 'plus';
 export const PLUS = {
   name: 'Win Zero Plus',
   /** Plus's own marketing version; app.json's belongs to the free app. */
-  version: '1.2.2',
+  version: '1.2.3',
   scheme: 'winzeroplus',
   id: 'com.e7systems.winzeroplus',
 } as const;

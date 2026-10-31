@@ -127,4 +127,12 @@ describe('what each app offers (SPEC 9)', () => {
     process.env.EXPO_PUBLIC_PLUS_STORE_URL_IOS = ' https://apps.apple.com/app/id1 ';
     expect(load(undefined).PLUS_STORE_URL).toBe('https://apps.apple.com/app/id1');
   });
+
+  it('offers Plus only in Win Zero, once its store page is set', () => {
+    delete process.env.EXPO_PUBLIC_PLUS_STORE_URL_IOS;
+    expect(load(undefined).PLUS_OFFERED).toBe(false);
+    process.env.EXPO_PUBLIC_PLUS_STORE_URL_IOS = 'https://apps.apple.com/app/id1';
+    expect(load(undefined).PLUS_OFFERED).toBe(true);
+    expect(load('plus').PLUS_OFFERED).toBe(false);
+  });
 });

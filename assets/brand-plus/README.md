@@ -2,7 +2,7 @@
 
 The approved Plus identity uses an amber gold zero (`#FFB52E`) and a white plus on midnight navy (`#0D1130`). On white/light backgrounds, the plus is solid navy. The plus and zero share a horizontal centerline. Logo text is centered below the mark: **WIN ZERO**, then **PLUS** in gold. Typeface: the app's bundled Bungee.
 
-All files in this folder belong to **Win Zero Plus**. Regular Win Zero and the website continue to use `assets/brand/`.
+All files in this folder belong to **Win Zero Plus**. Regular Win Zero and the website continue to use `assets/brand/`. One exception: Win Zero shows `icon.png` on Home's Plus card (`src/ui/home/PlusPromo.tsx`), to show which app it means.
 
 ## App and store icons
 

@@ -76,6 +76,18 @@ describe('Win Zero', () => {
     expect(screen.queryByText(/free games/)).not.toBeOnTheScreen();
   });
 
+  it('says nothing of Win Zero Plus in Settings until its store page is set', async () => {
+    await open('/settings');
+    expect(screen.queryByText('Get Win Zero Plus')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Move to Win Zero Plus')).not.toBeOnTheScreen();
+  });
+
+  it('says nothing of Win Zero Plus on Home until its store page is set', async () => {
+    await open('/');
+    expect(screen.getByText('Daily goal')).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'What Win Zero Plus adds' })).not.toBeOnTheScreen();
+  });
+
   it('sets up a goal for every day, with no days to choose', async () => {
     await open('/setup', null);
     expect(screen.queryByRole('checkbox')).not.toBeOnTheScreen();
