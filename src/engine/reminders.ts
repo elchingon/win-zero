@@ -16,7 +16,21 @@ export const REENGAGE_EVERY_DAYS = 7;
 /** Weekly nudges to schedule ahead after a reset. More are added whenever the app opens. */
 export const REENGAGE_NUDGE_COUNT = 8;
 
+/** From this unanswered check-in day in a row, reminders get more encouraging. */
+export const LAPSE_ENCOURAGE_FROM = 4;
+
 export type ReminderKind = 'checkin' | 'morning' | 'reengage';
+
+export type LapseStage = 'encourage' | 'warning' | 'slipping' | 'last-call';
+
+/** How far along a run of unanswered days a reminder lands (SPEC 2). */
+export interface Lapse {
+  stage: LapseStage;
+  /** Which miss in a row this reminder's day would be. */
+  missedInRow: number;
+  /** The streak when the reminder fires. */
+  zeros: number;
+}
 
 export interface PlannedReminder {
   at: Date;
@@ -28,6 +42,20 @@ export interface PlannedReminder {
    * so this one shouldn't answer for its own day.
    */
   earlier?: DayKey;
+  /** Set once enough days in a row have gone unanswered. */
+  lapse?: Lapse;
+}
+
+/**
+ * Which stage of a lapse a reminder belongs to, or null while it's still an ordinary one.
+ * `lastZeroNext`: the next miss to land would leave the streak at 0.
+ */
+export function lapseStage(missedInRow: number, zeros: number, lastZeroNext: boolean): LapseStage | null {
+  if (zeros > 0 && lastZeroNext) return 'last-call';
+  if (missedInRow < LAPSE_ENCOURAGE_FROM) return null;
+  if (zeros > 0 && missedInRow > MISSED_GRACE_DAYS) return 'slipping';
+  if (zeros > 0 && missedInRow === MISSED_GRACE_DAYS) return 'warning';
+  return 'encourage';
 }
 
 export interface ReminderOptions {
@@ -59,34 +87,52 @@ export interface DailyPlan {
  *   arrives before that reset lands at midnight; answering then keeps the streak. Nothing
  *   after that, nor while reminders are paused.
  * - A check-in that arrives while the goal day before is still open is marked `earlier`.
+ * - Each reminder carries its `lapse`, read from the same projection.
  */
 export function planDaily(state: GoalState, now: Date): DailyPlan {
   const t = now.getTime();
   const out: PlannedReminder[] = [];
   const first = firstUnsettledDay(state);
 
-  const pushCheckIn = (w: CheckInWindow, prev: CheckInWindow | null) => {
-    if (w.opensAt.getTime() <= t) return;
-    const checkIn: PlannedReminder = { at: w.opensAt, kind: 'checkin', day: w.day };
-    if (prev && prev.closesAt.getTime() > w.opensAt.getTime()) checkIn.earlier = prev.day;
-    out.push(checkIn);
-  };
-
   let lastDaily: DayKey | null = null;
   let prev: CheckInWindow | null = null;
   let projected = state;
+  /** The streak before `prev`'s miss: what's held while `prev` is still open. */
+  let zerosWhilePrevOpen = state.streak;
+
+  /** `streakIfMissed`: the streak after the miss of the window this reminder is for. */
+  const lapseAt = (at: Date, streakIfMissed: number): Pick<PlannedReminder, 'lapse'> => {
+    const prevOpen = prev !== null && prev.closesAt.getTime() > at.getTime();
+    const zeros = prevOpen ? zerosWhilePrevOpen : projected.streak;
+    const nextStreak = prevOpen ? projected.streak : streakIfMissed;
+    const missedInRow = projected.consecutiveMissed + 1;
+    const stage = lapseStage(missedInRow, zeros, nextStreak === 0);
+    return stage ? { lapse: { stage, missedInRow, zeros } } : {};
+  };
+
+  const pushCheckIn = (w: CheckInWindow, streakIfMissed: number) => {
+    if (w.opensAt.getTime() <= t) return;
+    const checkIn: PlannedReminder = { at: w.opensAt, kind: 'checkin', day: w.day };
+    if (prev && prev.closesAt.getTime() > w.opensAt.getTime()) checkIn.earlier = prev.day;
+    out.push({ ...checkIn, ...lapseAt(w.opensAt, streakIfMissed) });
+  };
+
   for (let i = 0, day = first; i < REMINDER_MAX_WINDOWS && !projected.paused; i++, day = nextGoalDay(state, day)) {
     const w = windowFor(state, day);
-    pushCheckIn(w, prev);
-    if (w.remindAt && w.remindAt.getTime() > t) out.push({ at: w.remindAt, kind: 'morning', day: w.day });
-    projected = applyMissed(projected, { day: w.day, at: w.closesAt, tz: w.tz }).state;
+    const missed = applyMissed(projected, { day: w.day, at: w.closesAt, tz: w.tz }).state;
+    pushCheckIn(w, missed.streak);
+    if (w.remindAt && w.remindAt.getTime() > t) {
+      out.push({ at: w.remindAt, kind: 'morning', day: w.day, ...lapseAt(w.remindAt, missed.streak) });
+    }
+    zerosWhilePrevOpen = projected.streak;
+    projected = missed;
     lastDaily = w.day;
     prev = w;
   }
   // The goal day after the reset day may open before the reset lands: then its check-in is the last one.
   if (projected.paused && !state.paused && prev) {
     const w = windowFor(state, nextGoalDay(state, prev.day));
-    if (w.opensAt.getTime() < prev.closesAt.getTime()) pushCheckIn(w, prev);
+    if (w.opensAt.getTime() < prev.closesAt.getTime()) pushCheckIn(w, projected.streak);
   }
   const lastDay = (state.paused ? pausedOnDay(state) : lastDaily) ?? addDays(first, -1);
   return { reminders: out, lastDay };
