@@ -1689,6 +1689,42 @@ a {
   color: var(--teal);
 }
 
+/* A milestone's celebration on Home: the quote, then what the round earned, each in its own panel. */
+.celebration-quote {
+  margin: 0;
+  font-size: 19px;
+  line-height: 24px;
+  font-weight: 700;
+  color: var(--fg);
+}
+
+.celebration-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 2px solid var(--amber);
+  border-radius: 14px;
+}
+
+.celebration-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 19px;
+  line-height: 24px;
+  font-weight: 700;
+  color: var(--fg);
+}
+
+.celebration-panel-title svg {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  fill: var(--amber);
+}
+
 /* The Weapon credit question before a round: the weapons on offer scroll, the buttons stay put. */
 .popup-title {
   margin: 0;

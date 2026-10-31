@@ -15,6 +15,7 @@ import { DemoControls } from '../demo/DemoControls';
 import { Arsenal } from '../home/Arsenal';
 import { CheckInCard } from '../home/CheckInCard';
 import { CreditsCard } from '../home/CreditsCard';
+import { Celebrations } from '../home/Celebrations';
 import { FirstRoundTip } from '../home/FirstRoundTip';
 import { HistoryCalendar } from '../home/HistoryCalendar';
 import { Stats } from '../home/Stats';
@@ -181,6 +182,7 @@ function HomeScreen({ goal }: { goal: GoalState }) {
       <DemoControls />
 
       <FirstRoundTip />
+      <Celebrations />
     </Screen>
   );
 }

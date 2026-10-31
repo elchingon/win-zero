@@ -4,13 +4,14 @@
 // their hints, a bonus round, and the Weapon credit question before a round.
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { weaponById } from '@/engine';
+import { weaponById, type WeaponId } from '@/engine';
 import { YES_ROUTE_MS } from '@/game/yes';
 import { primaryGoal, primaryRound } from '@/store/select';
 import { WEAPON_PROMPT } from '@/ui/copy/credits';
 
+import { yesCelebration } from './celebrate';
 import { routes } from './router';
 import { appStore } from './store';
 
@@ -87,6 +88,57 @@ describe('the app on the web', () => {
     fireEvent.click(screen.getByRole('button', { name: "Let's go" }));
     expect(screen.queryByRole('dialog', { name: 'Day one, done.' })).toBeNull();
     expect(appStore.getState().tipsSeen).toEqual(['first-round']);
+  });
+
+  describe('celebrations back on Home', () => {
+    /** The latest round: played, on `n` zeros, having earned `rewards`. */
+    const playedRound = (n: number, rewards: { bomb?: boolean; shield?: boolean; weapons?: WeaponId[] }) =>
+      act(() => {
+        const [slot] = appStore.getState().goals;
+        if (!slot) throw new Error('No goal');
+        const round = {
+          day: slot.goal.firstDay,
+          n,
+          rewards: { bomb: false, shield: false, shieldCapped: false, weapons: [], credits: [], ...rewards },
+          borrowed: [],
+          played: true,
+        };
+        appStore.setState({ goals: [{ ...slot, goal: { ...slot.goal, shields: 1, bombs: 6 }, round }] });
+      });
+
+    it('opens Day 7 with the shield and the chime, and Escape closes it for good', async () => {
+      await setUp('Read 20 minutes');
+      const cue = vi.spyOn(yesCelebration, 'cue');
+      playedRound(7, { shield: true });
+      const tip = await screen.findByRole('dialog', { name: 'Congratulations on Day 7!' });
+      expect(cue).toHaveBeenCalledTimes(1);
+      expect(tip.textContent).toContain('“Success is the sum of small efforts, repeated day in and day out.”');
+      expect(tip.textContent).toContain('You earned a shield');
+      expect(tip.textContent).toContain('your shield steps in and your streak stays');
+      expect(tip.querySelector('svg path')).toBeTruthy();
+      fireEvent.keyDown(window, { key: 'Escape' });
+      expect(screen.queryByRole('dialog', { name: 'Congratulations on Day 7!' })).toBeNull();
+      expect(appStore.getState().tipsSeen).toEqual(['day-7']);
+      cue.mockRestore();
+    });
+
+    it('opens Day 30 with what it earned, and its button closes it', async () => {
+      await setUp('Read 20 minutes');
+      playedRound(30, { bomb: true, weapons: ['chain'] });
+      const tip = await screen.findByRole('dialog', { name: 'Congratulations on Day 30!' });
+      expect(tip.textContent).toContain('New weapon: Chain Zapper');
+      expect(tip.textContent).toContain('Bomb earned');
+      expect(tip.textContent).not.toContain('New theme');
+      fireEvent.click(screen.getByRole('button', { name: 'Keep going' }));
+      expect(screen.queryByRole('dialog', { name: 'Congratulations on Day 30!' })).toBeNull();
+      expect(appStore.getState().tipsSeen).toEqual(['day-30']);
+    });
+
+    it('stays out when the round earned nothing new', async () => {
+      await setUp('Read 20 minutes');
+      playedRound(7, {});
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
   });
 
   it('explains each credit behind its hint, with the ways already earned marked', async () => {
