@@ -341,11 +341,13 @@ describe('Home', () => {
     expect(order.indexOf('Daily goal')).toBeLessThan(order.indexOf('Current streak'));
   });
 
-  it('keeps the goal and the numbers first once checked in', async () => {
+  it('leads with having checked in, above the goal and the numbers', async () => {
     await open('/', { goal: twoDays(), time: '19:00' });
     const order = textsInOrder();
-    expect(order.indexOf('Current streak')).toBeGreaterThan(order.indexOf('Daily goal'));
-    expect(order.indexOf("You've checked in.")).toBeGreaterThan(order.indexOf('Current streak'));
+    const checkedIn = order.indexOf("You've checked in.");
+    expect(checkedIn).toBeGreaterThan(-1);
+    expect(checkedIn).toBeLessThan(order.indexOf('Daily goal'));
+    expect(order.indexOf('Daily goal')).toBeLessThan(order.indexOf('Current streak'));
   });
 
   it('celebrates a Yes from where it was tapped, and opens the round once the screen is covered', async () => {

@@ -1,4 +1,4 @@
-// Home: an open check-in first, then the goal, the numbers, when the next check-in comes, credits and the
+// Home: an open check-in or when the next one comes, then the goal, the numbers, credits and the
 // bonus round, the arsenal, and the history calendar, with a tip after the first round. Once Win Zero has moved to Win Zero Plus
 // (SPEC 9), only where the goals went. Win Zero Plus has its own Home (src/plus/home), with one
 // goal or several.
@@ -163,7 +163,19 @@ function HomeScreen({ goal }: { goal: GoalState }) {
             onNotToday={onNotToday}
           />
         </>
-      ) : null}
+      ) : goal.history.length === 0 ? (
+        <Card>
+          <Text style={styles.cardTitle}>You&apos;re all set.</Text>
+          <Text style={type.lede}>Your first check-in is {nextWhen}.</Text>
+        </Card>
+      ) : (
+        <Card>
+          <Text style={styles.cardTitle}>
+            {goal.history.at(-1)?.result === 'yes' ? "You've checked in." : 'Thanks for checking in.'}
+          </Text>
+          <Text style={type.lede}>Your next check-in is {nextWhen}.</Text>
+        </Card>
+      )}
 
       <View style={styles.goal}>
         <View style={styles.goalHead}>
@@ -184,20 +196,6 @@ function HomeScreen({ goal }: { goal: GoalState }) {
       <RejectionBanner />
 
       {unplayed ? <ReadyRoundCard round={unplayed} goalId={goal.goalId} /> : null}
-
-      {pending ? null : goal.history.length === 0 ? (
-        <Card>
-          <Text style={styles.cardTitle}>You&apos;re all set.</Text>
-          <Text style={type.lede}>Your first check-in is {nextWhen}.</Text>
-        </Card>
-      ) : (
-        <Card>
-          <Text style={styles.cardTitle}>
-            {goal.history.at(-1)?.result === 'yes' ? "You've checked in." : 'Thanks for checking in.'}
-          </Text>
-          <Text style={type.lede}>Your next check-in is {nextWhen}.</Text>
-        </Card>
-      )}
 
       {remindersCardVisible(reminders.permission, reminderCardHiddenUntil, now) ? (
         <RemindersCard
