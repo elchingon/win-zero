@@ -96,7 +96,7 @@ const WORDS: Record<CelebrationId, { quote: string; lines: (day: number) => stri
       }`,
   },
   'day-30': {
-    quote: '“We are what we repeatedly do.”',
+    quote: "You didn't just do it once. You completed your goal for 30 days. That's not just a streak, that's a personality trait now.",
     lines: (day) => [`${day} zeros down. This is more than a good run now. It's who you're becoming, one check-in at a time.`],
     closing: (c) => `${KEEP_GOING}. Hard days may still come, and you've already shown you can get through them.${nextWeapon(c)}`,
   },
