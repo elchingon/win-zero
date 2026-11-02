@@ -3,7 +3,8 @@
 // URL scheme, and every icon and splash file either names must exist. Both must be in the App
 // Group a move between them goes through on iPhone (SPEC 9), and only Plus has alternate icons.
 // Only Plus pins its variant in its Xcode project (plugins/xcode-variant.js), so an Xcode build of
-// Plus bundles Plus's JavaScript.
+// Plus bundles Plus's JavaScript. Both adopt the scene life cycle (plugins/scene-lifecycle.js), without
+// which iOS 27 stops either app at launch.
 // Run: npm run check:variants
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -15,6 +16,7 @@ const APP_GROUP = 'group.com.e7systems.winzero';
 
 const ICON_PLUGIN = './modules/app-icons/app.plugin.js';
 const VARIANT_PLUGIN = './plugins/xcode-variant.js';
+const SCENE_PLUGIN = './plugins/scene-lifecycle.js';
 const EXPECTED = {
   free: { name: 'Win Zero', id: 'com.e7systems.winzero', scheme: 'winzero', brand: './assets/brand/', icons: 0, pinned: false },
   plus: { name: 'Win Zero Plus', id: 'com.e7systems.winzeroplus', scheme: 'winzeroplus', brand: './assets/brand-plus/', icons: 7, pinned: true },
@@ -57,8 +59,9 @@ for (const [variant, want] of Object.entries(EXPECTED)) {
   if (!groups.includes(APP_GROUP)) problems.push(`${variant}: ios.entitlements has no App Group ${APP_GROUP}`);
   const icons = alternateIcons(c);
   check('alternate icons', icons.length, want.icons);
-  const pinned = (c.plugins ?? []).some((p) => (Array.isArray(p) ? p[0] : p) === VARIANT_PLUGIN);
-  check(`${VARIANT_PLUGIN} in plugins`, pinned, want.pinned);
+  const hasPlugin = (name) => (c.plugins ?? []).some((p) => (Array.isArray(p) ? p[0] : p) === name);
+  check(`${VARIANT_PLUGIN} in plugins`, hasPlugin(VARIANT_PLUGIN), want.pinned);
+  check(`${SCENE_PLUGIN} in plugins`, hasPlugin(SCENE_PLUGIN), true);
   const assets = assetPaths(c);
   if (assets.length === 0) problems.push(`${variant}: no art found in the config`);
   for (const p of assets) {

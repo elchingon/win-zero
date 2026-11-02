@@ -110,6 +110,7 @@
         }
       ],
       "expo-asset",
+      "./plugins/scene-lifecycle.js",
       [
         "expo-build-properties",
         {
