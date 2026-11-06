@@ -50,8 +50,8 @@ export const APPS: Record<AppId, AppInfo> = {
     priceUsd: '0',
     icon: '/icon-512.png',
     stores: {
-      'app-store': { url: 'https://apps.apple.com/app/id6823793298', live: false },
-      'google-play': { url: 'https://play.google.com/store/apps/details?id=com.e7systems.winzero', live: false },
+      'app-store': { url: 'https://apps.apple.com/app/id6823793298', live: true },
+      'google-play': { url: 'https://play.google.com/store/apps/details?id=com.e7systems.winzero', live: true },
     },
   },
   plus: {
@@ -62,8 +62,8 @@ export const APPS: Record<AppId, AppInfo> = {
     priceUsd: '4.99',
     icon: '/icon-plus-512.png',
     stores: {
-      'app-store': { url: 'https://apps.apple.com/app/id6826679382', live: false },
-      'google-play': { url: 'https://play.google.com/store/apps/details?id=com.e7systems.winzeroplus', live: false },
+      'app-store': { url: 'https://apps.apple.com/app/id6826679382', live: true },
+      'google-play': { url: 'https://play.google.com/store/apps/details?id=com.e7systems.winzeroplus', live: true },
     },
   },
 };
