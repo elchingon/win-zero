@@ -6,7 +6,7 @@ import { router } from 'expo-router';
 import { useState, type ComponentType } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { dayKeyAt, openedAtSetup } from '@/engine';
+import { comebackCount, dayKeyAt, historyStats, isFirstCheckIn, type DayKey, type GoalState } from '@/engine';
 import type { Point } from '@/game/yes';
 import { formatWhen } from '@/lib/format';
 import { appStore, arsenalBestOf, arsenalStreakOf, canAddGoal, gameModeOf, useApp } from '@/store';
@@ -27,7 +27,7 @@ import { ReadyRoundCard } from '@/ui/home/ReadyRoundCard';
 import { RejectionBanner } from '@/ui/home/RejectionBanner';
 import { RemindersCard } from '@/ui/home/RemindersCard';
 import { remindersCardVisible } from '@/ui/home/remindersOff';
-import { Stats } from '@/ui/home/Stats';
+import { Stats, type ExtraStat } from '@/ui/home/Stats';
 import { useBoundaryRefresh } from '@/ui/home/useBoundaryRefresh';
 import { useHomeRouting } from '@/ui/home/useHomeRouting';
 import { Screen } from '@/ui/Screen';
@@ -35,7 +35,7 @@ import { useDeviceCalendar } from '@/ui/useDevice';
 import { useReminderPermission } from '@/ui/useReminderPermission';
 import { FEATURES } from '@/variant';
 
-import { GOAL_COPY, HOME_COPY } from '../copy';
+import { CALENDAR_NOTES, GOAL_COPY, HEAD_START_COPY, HOME_COPY, STATS_COPY } from '../copy';
 import { CallButton } from '../ui/CallButton';
 import { GoalPicker } from './GoalPicker';
 import { HomeTabs, type HomeTab } from './HomeTabs';
@@ -106,7 +106,7 @@ export function PlusHome() {
 
       {open.map(({ slot: { goal }, window }) => (
         <View key={`${goal.goalId}:${window.day}`} style={styles.checkIn}>
-          {goal.history.length === 0 && window.day === goal.firstDay && openedAtSetup(goal) ? (
+          {isFirstCheckIn(goal, window.day) ? (
             <Text style={type.lede}>Today counts: your first check-in is open now.</Text>
           ) : null}
           <CheckInCard
@@ -171,7 +171,7 @@ export function PlusHome() {
             </View>
           </View>
 
-          <Stats goal={shown.goal} today={today} />
+          <Stats goal={shown.goal} today={today} extra={plusStats(shown.goal, today)} />
 
           <HistoryCalendar
             key={shown.goal.goalId}
@@ -180,6 +180,7 @@ export function PlusHome() {
             pendingDay={shownPending?.day ?? null}
             firstWeekday={firstWeekday}
             restDays={FEATURES.schedules}
+            notes={CALENDAR_NOTES}
           />
         </>
       ) : (
@@ -192,10 +193,19 @@ export function PlusHome() {
 
       {DemoControls ? <DemoControls /> : null}
 
-      <FirstRoundTip />
+      <FirstRoundTip afterHeadStart={HEAD_START_COPY.tip} />
       <Celebrations />
     </Screen>
   );
+}
+
+/** Plus's own tiles under a goal's stats: its comebacks, and its head start if it had one. */
+function plusStats(goal: GoalState, today: DayKey): ExtraStat[] {
+  const { headStartDays } = historyStats(goal, today);
+  return [
+    { label: STATS_COPY.comebacks, value: String(comebackCount(goal)) },
+    ...(headStartDays > 0 ? [{ label: STATS_COPY.headStart, value: String(headStartDays) }] : []),
+  ];
 }
 
 const styles = StyleSheet.create({

@@ -10,8 +10,8 @@ import { fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 import { AccessibilityInfo } from 'react-native';
 
 import HomeScreen from '@/app/index';
-import { addDays, resolve, type GoalState } from '@/engine';
-import { at, DAY0, newGoal, yesDays } from '@/engine/__tests__/fixtures';
+import { addDays, createGoalWithHeadStart, resolve, type GoalState } from '@/engine';
+import { answerDay, at, DAY0, newGoal, notTodays, yesDays } from '@/engine/__tests__/fixtures';
 import { SECRET_TAP_GAP_MS } from '@/plus/home/secretTaps';
 import { appStore, slotById, type GoalSlot, type RoundRecord } from '@/store';
 import { DEFAULT_PERSISTED } from '@/store/migrate';
@@ -355,5 +355,44 @@ describe("Home's first-round tip", () => {
     await fireEvent.press(screen.getByRole('button', { name: "Let's go" }));
     expect(screen.queryByRole('header', { name: 'Day one, done.' })).not.toBeOnTheScreen();
     expect(appStore.getState().tipsSeen).toEqual(['first-round']);
+  });
+});
+
+describe('a head start and comebacks on Home (SPEC 9)', () => {
+  const headStart = (n: number, time = '21:00') =>
+    createGoalWithHeadStart({ goalId: 'g1', goal: 'Run', headStart: n, now: at('2026-10-15', time, tz()), tz: tz() });
+
+  it("says today counts after a head start, and marks the head start's days", async () => {
+    await open([slot(headStart(3))]);
+    expect(screen.getByText('Today counts: your first check-in is open now.')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Oct 14: Head start')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Oct 12: Head start')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Head start: 3')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Comebacks: 0')).toBeOnTheScreen();
+  });
+
+  it('marks a comeback on the calendar, and counts it', async () => {
+    // Three Yeses, three Not todays, then a Yes on 10-19.
+    const goal = answerDay(notTodays(yesDays(newGoal({ tz: tz() }), DAY0, 3, tz()), '2026-10-16', 3, tz()), '2026-10-19', 'yes', { tz: tz() }).state;
+    await open([slot(goal)], { day: '2026-10-19', time: '22:00' });
+    expect(screen.getByLabelText('Oct 19, today: Comeback')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Oct 15: Yes')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Comebacks: 1')).toBeOnTheScreen();
+    expect(screen.queryByLabelText(/^Head start:/)).not.toBeOnTheScreen();
+  });
+
+  it("opens the first-round tip as a first check-in, not day one, after a head start", async () => {
+    const goal = answerDay(headStart(5), '2026-10-15', 'yes', { tz: tz() }).state;
+    const round: RoundRecord = {
+      day: '2026-10-15',
+      n: 6,
+      rewards: { bomb: false, shield: false, shieldCapped: false, weapons: [], credits: [] },
+      borrowed: [],
+      played: true,
+    };
+    await open([{ ...slot(goal), round }], { time: '22:00' });
+    expect(screen.getByRole('header', { name: 'First check-in, done.' })).toBeOnTheScreen();
+    expect(screen.getByText(/^You came in already on a roll/)).toBeOnTheScreen();
+    expect(screen.queryByText(/A journey of a thousand miles/)).not.toBeOnTheScreen();
   });
 });

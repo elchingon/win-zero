@@ -18,7 +18,7 @@ import { TimeField } from '@/ui/TimeField';
 import { useDeviceCalendar } from '@/ui/useDevice';
 import { APP_NAME } from '@/variant';
 
-// Win Zero Plus only: check-in days and a way to Past goals (SPEC 9). The literal comparison folds
+// Win Zero Plus only: check-in days, a head start and a way to Past goals (SPEC 9). The literal comparison folds
 // per file, so Win Zero's bundle leaves it out, and Win Zero's goal checks in every day.
 const PlusGoals: typeof import('@/plus/goals') | null =
   process.env.EXPO_PUBLIC_APP_VARIANT === 'plus'
@@ -35,9 +35,13 @@ export default function Setup() {
   const [checkInTime, setCheckInTime] = useState(DEFAULT_CHECK_IN_TIME);
   const [morningTime, setMorningTime] = useState(DEFAULT_MORNING_TIME);
   const [days, setDays] = useState<Weekday[]>([...EVERY_DAY]);
+  const [headStartText, setHeadStartText] = useState('');
+  const headStartMax = useApp((s) => s.limits.headStartMax);
   const [busy, setBusy] = useState(false);
   /** Chosen days in Win Zero Plus; Win Zero's goal checks in every day. */
   const chosenDays = PlusGoals ? days : undefined;
+  /** Days already done (Win Zero Plus), or null while what's typed isn't a number of them. */
+  const headStart = PlusGoals ? PlusGoals.headStartFrom(headStartText, headStartMax) : 0;
   // The rules and the goal's label follow the days as they're picked, below them.
   const everyDay = !chosenDays || chosenDays.length === EVERY_DAY.length;
   const ruleList = rules(APP_NAME, { everyDay });
@@ -45,12 +49,12 @@ export default function Setup() {
 
   if (hasGoal && !busy) return <Redirect href="/" />;
 
-  const goalOk = goal.trim().length > 0;
+  const goalOk = goal.trim().length > 0 && headStart !== null;
 
   const finish = async (askPermission: boolean) => {
     setBusy(true);
     if (askPermission) await requestReminderPermission();
-    const r = addGoal({ goal, checkInTime, morningTime, days: chosenDays });
+    const r = addGoal({ goal, checkInTime, morningTime, days: chosenDays, headStart: headStart ?? 0 });
     if (r.ok) {
       feedback.success();
       router.replace('/');
@@ -143,6 +147,7 @@ export default function Setup() {
           hint="Only if you haven't answered by then: the next morning, or later the same day if it's after check-in time."
         />
         {PlusGoals ? <PlusGoals.ChooseDays days={days} onChange={setDays} /> : null}
+        {PlusGoals ? <PlusGoals.HeadStartField value={headStartText} onChange={setHeadStartText} days={days} /> : null}
         <Button
           label="Start my streak"
           onPress={() => setStep('reminders')}

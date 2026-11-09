@@ -17,7 +17,7 @@ import { HistoryCalendar } from '@/ui/home/HistoryCalendar';
 import { Screen } from '@/ui/Screen';
 import { useDeviceCalendar } from '@/ui/useDevice';
 
-import { PAST_COPY } from '../copy';
+import { CALENDAR_NOTES, PAST_COPY } from '../copy';
 import { Accomplishments } from '../goals/Accomplishments';
 import { leave } from '../nav';
 
@@ -60,7 +60,7 @@ export function PastGoal() {
         </Text>
       </View>
       <Accomplishments goal={goal} lastDay={archivedDay} />
-      <HistoryCalendar goal={goal} today={archivedDay} pendingDay={null} firstWeekday={firstWeekday} restDays />
+      <HistoryCalendar goal={goal} today={archivedDay} pendingDay={null} firstWeekday={firstWeekday} restDays notes={CALENDAR_NOTES} />
       {armed ? (
         <Card style={styles.confirm}>
           <Text style={styles.confirmTitle}>{PAST_COPY.deleteTitle(goal.goal)}</Text>

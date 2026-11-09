@@ -1,5 +1,5 @@
 // Add a goal (SPEC 9): another goal beside the first, up to this app's limit, with its own wording,
-// times and check-in days. The first goal comes from Setup.
+// times, check-in days and head start. The first goal comes from Setup.
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -16,6 +16,7 @@ import { TimeField } from '@/ui/TimeField';
 import { useDeviceCalendar } from '@/ui/useDevice';
 
 import { ADD_GOAL_COPY } from '../copy';
+import { HeadStartField, headStartFrom } from '../goals/HeadStartField';
 import { ChooseDays } from '../goals/WeekdayPicker';
 import { leave } from '../nav';
 
@@ -27,14 +28,17 @@ export function AddGoal() {
   const [checkInTime, setCheckInTime] = useState(DEFAULT_CHECK_IN_TIME);
   const [morningTime, setMorningTime] = useState(DEFAULT_MORNING_TIME);
   const [days, setDays] = useState<Weekday[]>([...EVERY_DAY]);
+  const [headStartText, setHeadStartText] = useState('');
+  const headStartMax = useApp((s) => s.limits.headStartMax);
   const [added, setAdded] = useState(false);
-  const goalOk = goal.trim().length > 0;
+  const headStart = headStartFrom(headStartText, headStartMax);
+  const goalOk = goal.trim().length > 0 && headStart !== null;
 
   // Leaving after the goal went in: the slot it took isn't "full" news.
   if (added) return null;
 
   const add = () => {
-    const r = appStore.getState().addGoal({ goal, checkInTime, morningTime, days });
+    const r = appStore.getState().addGoal({ goal, checkInTime, morningTime, days, headStart: headStart ?? 0 });
     if (!r.ok) return;
     feedback.success();
     setAdded(true);
@@ -82,6 +86,7 @@ export function AddGoal() {
               hint="Only if you haven't answered by then: the next morning, or later the same day if it's after check-in time."
             />
             <ChooseDays days={days} onChange={setDays} />
+            <HeadStartField value={headStartText} onChange={setHeadStartText} days={days} />
             <Button
               label={ADD_GOAL_COPY.add}
               onPress={add}

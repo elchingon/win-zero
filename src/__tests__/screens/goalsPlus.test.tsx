@@ -158,6 +158,46 @@ describe('Setup in Win Zero Plus', () => {
   });
 });
 
+describe('a head start (SPEC 9)', () => {
+  it('starts a goal from Setup with the days already done, saying what it starts with', async () => {
+    await open('/setup', []);
+    await fireEvent.changeText(screen.getByLabelText('Your daily goal'), 'Run');
+    await fireEvent.press(screen.getByRole('button', { name: '14' }));
+    expect(
+      screen.getByText(
+        'You start with 14 zeros, 2 bombs and 2 shields. Your first Yes makes 15. It opens the Twin Barrel, the Scatter Gun and the Rocket.',
+      ),
+    ).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Start my streak' }));
+    await fireEvent.press(screen.getByText('Not now'));
+    const goal = primaryGoal(appStore.getState())!;
+    expect(goal).toMatchObject({ streak: 14, bestStreak: 14, bombs: 2, shields: 2, lastSettledDay: '2026-10-14' });
+    expect(goal.history.every((e) => e.headStart)).toBe(true);
+    expect(appStore.getState().credits.balance).toEqual({ game: 0, weapon: 0 });
+  });
+
+  it('turns down what isn’t a number of days, up to 30', async () => {
+    await open('/setup', []);
+    await fireEvent.changeText(screen.getByLabelText('Your daily goal'), 'Run');
+    await fireEvent.changeText(screen.getByLabelText('Days already done'), '31');
+    expect(screen.getByText('A whole number from 0 to 30.')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Start my streak' })).toBeDisabled();
+    await fireEvent.changeText(screen.getByLabelText('Days already done'), '');
+    expect(screen.getByRole('button', { name: 'Start my streak' })).toBeEnabled();
+    expect(screen.queryByText(/^You start with/)).not.toBeOnTheScreen();
+  });
+
+  it('names a theme a head start of 30 opens', async () => {
+    await open('/add-goal');
+    await fireEvent.changeText(screen.getByLabelText('Your goal'), 'Run');
+    await fireEvent.changeText(screen.getByLabelText('Days already done'), '30');
+    // The first goal's two Yeses already opened the Pea Shooter; nothing past 3 is open yet.
+    expect(screen.getByText(/It opens the Twin Barrel, the Scatter Gun, the Rocket, the Chain Zapper and the Ember theme\.$/)).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Add goal' }));
+    expect(appStore.getState().goals[1]?.goal).toMatchObject({ streak: 30, bombs: 6, shields: 3 });
+  });
+});
+
 describe("a goal's check-in days in Settings", () => {
   it('saves new days, and says when they start', async () => {
     await open('/settings');

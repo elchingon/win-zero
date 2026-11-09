@@ -75,6 +75,30 @@ export const DAYS_COPY = {
   lastDay: 'At least one day stays on',
 } as const;
 
+export const HEAD_START_COPY = {
+  label: 'Days already done',
+  hint: (max: number) =>
+    `Already doing this? Count the days in a row you've done it, up to ${max}. They go in as Yes days, and stay that way.`,
+  invalid: (max: number) => `A whole number from 0 to ${max}.`,
+  /** The chip for no head start. */
+  none: 'None',
+  /** What it starts the goal with: 'You start with 12 zeros, 2 bombs and a shield. Your first Yes makes 13.' */
+  preview: (gear: string, first: number) => `You start with ${gear}. Your first Yes makes ${first}.`,
+  /** What it opens beyond what's open already: 'It opens the Rocket and the Ember theme.' */
+  opens: (what: string) => `It opens ${what}.`,
+  /** The first-round tip's opening, for a goal that came in with one: its first check-in isn't day one. */
+  tip: {
+    title: 'First check-in, done.',
+    line: 'You came in already on a roll, and now it counts here too. Keep it going.',
+  },
+} as const;
+
+/** The history calendar's words for the Yeses Win Zero Plus marks apart. */
+export const CALENDAR_NOTES = { headStart: 'Head start', comeback: 'Comeback' } as const;
+
+/** Plus's own tiles on a goal's stats. */
+export const STATS_COPY = { comebacks: 'Comebacks', headStart: 'Head start' } as const;
+
 export const GOALS_COPY = {
   title: 'Goals',
   add: 'Add a goal',
