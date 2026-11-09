@@ -19,7 +19,7 @@ const VARIANT_PLUGIN = './plugins/xcode-variant.js';
 const SCENE_PLUGIN = './plugins/scene-lifecycle.js';
 const EXPECTED = {
   free: { name: 'Win Zero', id: 'com.e7systems.winzero', scheme: 'winzero', brand: './assets/brand/', icons: 0, pinned: false },
-  plus: { name: 'Win Zero Plus', id: 'com.e7systems.winzeroplus', scheme: 'winzeroplus', brand: './assets/brand-plus/', icons: 7, pinned: true },
+  plus: { name: 'Win Zero Plus', id: 'com.e7systems.winzeroplus', scheme: 'winzeroplus', brand: './assets/brand-plus/', icons: 8, pinned: true },
 };
 
 /** The alternate icons a config gives the app-icons plugin: none without it. */

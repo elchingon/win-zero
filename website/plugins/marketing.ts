@@ -105,10 +105,12 @@ const price = (app: AppInfo) => `US$${app.priceUsd}`;
 const isLive = (id: AppId, store: StoreId) => APPS[id].stores[store].live;
 const liveUrls = (id: AppId) => STORE_IDS.filter((s) => isLive(id, s)).map((s) => APPS[id].stores[s].url);
 
+/** Plus's themes: the ones it comes with, those a best run earns, and those a comeback earns (Phoenix). */
 function themes({ engine }: Facts) {
-  const fromStart = engine.THEMES.filter((t) => t.source !== 'earned').map((t) => t.name);
+  const fromStart = engine.THEMES.filter((t) => t.source === 'free' || t.source === 'included').map((t) => t.name);
   const earned = engine.THEMES.filter((t) => t.source === 'earned');
-  return { all: engine.THEMES, fromStart, earned };
+  const comeback = engine.THEMES.filter((t) => t.source === 'comeback').map((t) => t.name);
+  return { all: engine.THEMES, fromStart, earned, comeback, toEarn: earned.length + comeback.length };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -207,7 +209,7 @@ export function compareHtml(facts: Facts): string {
   const days = (l: LimitsModule.Limits) => (l.weekdaySchedules ? 'Every day, weekdays or any mix' : 'Every day');
   const games = (l: LimitsModule.Limits) => (l.modesEnabled ? list(engine.MODES.map((m) => m.name)) : shooter.name);
   const looks = (l: LimitsModule.Limits) =>
-    l.themesEnabled ? `${capital(words(t.all.length))}: ${words(t.fromStart.length)} included, ${words(t.earned.length)} to earn` : 'Classic';
+    l.themesEnabled ? `${capital(words(t.all.length))}: ${words(t.fromStart.length)} included, ${words(t.toEarn)} to earn` : 'Classic';
   const icons = (l: LimitsModule.Limits) => (l.iconsEnabled ? 'One for each theme' : 'One');
   const rows: [string, string, string][] = [
     ['Price', 'Free', `${price(APPS.plus)}, once`],
@@ -282,12 +284,13 @@ export function gamesHtml({ engine }: Facts): string {
   return `<ul class="unlocks games">\n${items.join('\n')}\n</ul>`;
 }
 
-/** Plus's themes: the ones it comes with, then the ones earned by a best run. */
+/** Plus's themes: the ones it comes with, then the ones earned by a best run, then by a comeback. */
 export function themesHtml(facts: Facts): string {
   const t = themes(facts);
   const items = [
     ...t.fromStart.map((name) => `<li><span class="day">Included</span> <span class="weapon">${escape(name)}</span></li>`),
     ...t.earned.map((th) => `<li><span class="day">Day ${th.unlockAt}</span> <span class="weapon">${escape(th.name)}</span></li>`),
+    ...t.comeback.map((name) => `<li><span class="day">Comeback</span> <span class="weapon">${escape(name)}</span></li>`),
   ];
   return `<ul class="unlocks">\n${items.join('\n')}\n</ul>`;
 }
@@ -389,8 +392,8 @@ export function plusFaqs(facts: Facts): Faq[] {
         `All ${words(engine.MODES.length)} games are open from the start, each with its first power-up. The other ` +
         `${words(shooter.tiers.length - 1)} in each game unlock as your best run grows, and stay unlocked. ` +
         `${list(t.fromStart)} are yours from the start, and ${list(t.earned.map((th) => th.name))} are earned at a ` +
-        `best run of ${list(t.earned.map((th) => String(th.unlockAt)))} days. Bombs, shields and credits come from ` +
-        'check-ins and are never sold.',
+        `best run of ${list(t.earned.map((th) => String(th.unlockAt)))} days. ${list(t.comeback)} is earned by ` +
+        'coming back after starting over. Bombs, shields and credits come from check-ins and are never sold.',
     },
     {
       q: 'Will Win Zero stay free?',
@@ -515,7 +518,7 @@ export function llmsTxt(facts: Facts): string {
     `- Rewards: ${words(engine.WEAPONS.length)} weapons unlock as the best run grows (${list(engine.WEAPONS.map((w) => `${w.name} at day ${w.unlockAt}`))}), ` +
       `a bomb every ${engine.BOMB_EVERY} days, and a shield every ${engine.SHIELD_EVERY} (up to ${engine.SHIELD_CAP} held).`,
     `- Plus games: ${list(engine.MODES.map((m) => m.name))}. Plus themes: ${list(t.fromStart)} from the start; ` +
-      `${list(t.earned.map((th) => `${th.name} at a best run of ${th.unlockAt} days`))}.`,
+      `${list([...t.earned.map((th) => `${th.name} at a best run of ${th.unlockAt} days`), ...t.comeback.map((name) => `${name} for coming back after starting over`)])}.`,
     '- Win Zero users can move their goal, history, streak, rewards and credits to Plus on the same phone, without a server.',
     '- A browser version at https://winzero.app/play has the check-in, rules, rewards and round, without reminders.',
     '- Support with drinking, drugs or mental health (US): the SAMHSA National Helpline, 1-800-662-4357, free, confidential and open 24/7.',

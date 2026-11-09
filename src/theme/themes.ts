@@ -57,4 +57,10 @@ export const THEME_LOOKS: Readonly<Record<ThemeId, ThemeLook>> = {
     shots: ['#FFD24D', '#F3E3B0', '#FF8F6B'],
     fillGlow: ['#FFD24D', '#B9770A'],
   },
+  // Rising from the ashes: crimson and gold flame with a violet glow, apart from Ember's oranges.
+  phoenix: {
+    palette: ['#FF4D7A', '#FFC23D', '#B98CFF', '#FFF1E6'],
+    shots: ['#FF4D7A', '#B98CFF', '#FFC23D'],
+    fillGlow: ['#FF4D7A', '#8B3DFF'],
+  },
 };

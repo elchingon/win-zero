@@ -88,7 +88,7 @@ describe('the comparison', () => {
     expect(html).toContain('<th scope="row">Goals at a time</th><td>One</td><td>Up to three</td>');
     expect(html).toContain(`<td>${list(engine.MODES.map((m) => m.name))}</td>`);
     expect(html).toContain(`<td>US$${APPS.plus.priceUsd}, once</td>`);
-    expect(html).toContain('<td>Seven: four included, three to earn</td>');
+    expect(html).toContain('<td>Eight: four included, four to earn</td>');
   });
 });
 
@@ -130,6 +130,7 @@ describe('the FAQs', () => {
     expect(missed?.a).toContain('On every seventh slip');
     const earn = plusFaqs(facts).find((f) => f.q === 'What do I earn as I play?');
     expect(earn?.a).toContain('Ember, Aurora and Gold Year are earned at a best run of 30, 180 and 365 days');
+    expect(earn?.a).toContain('Phoenix is earned by coming back after starting over');
   });
 });
 

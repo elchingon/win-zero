@@ -21,6 +21,8 @@ import { ICON_COPY } from '../copy';
 import { MiniIcon } from '../ui/MiniIcon';
 
 const nameOf = (icon: AppIconDef) => (icon.theme ? themeById(icon.theme).name : APP_NAME);
+/** Phoenix's icon opens with a comeback after a reset, not a best streak. */
+const onComeback = (icon: AppIconDef) => icon.theme !== null && themeById(icon.theme).source === 'comeback';
 
 export function AppIconSection() {
   const best = useApp(arsenalBestOf);
@@ -74,7 +76,11 @@ export function AppIconSection() {
                 key={icon.id}
                 accessibilityRole="radio"
                 accessibilityState={{ checked, disabled: locked }}
-                accessibilityLabel={locked ? `${spoken}. ${ICON_COPY.opensWith(name, icon.unlockAt)}` : spoken}
+                accessibilityLabel={
+                  locked
+                    ? `${spoken}. ${onComeback(icon) ? ICON_COPY.opensWithComeback(name) : ICON_COPY.opensWith(name, icon.unlockAt)}`
+                    : spoken
+                }
                 accessibilityHint={locked || checked ? undefined : 'Puts this icon on your home screen'}
                 disabled={locked}
                 onPress={() => choose(icon)}
@@ -86,7 +92,9 @@ export function AppIconSection() {
                 <Text style={[styles.name, checked && styles.nameOn]} numberOfLines={2}>
                   {name}
                 </Text>
-                {locked ? <Text style={styles.opens}>{ICON_COPY.opensAt(icon.unlockAt)}</Text> : null}
+                {locked ? (
+                  <Text style={styles.opens}>{onComeback(icon) ? ICON_COPY.opensOnComeback : ICON_COPY.opensAt(icon.unlockAt)}</Text>
+                ) : null}
               </Pressable>
             );
           })}

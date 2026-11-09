@@ -1,11 +1,11 @@
 // Themes (SPEC 9). Win Zero Plus recolors the round and Home's drifting zeros in the theme picked
 // in Settings › Themes; Win Zero, and the website, are always Classic. Four themes come with Plus,
 // and three are earned by the shared best streak (the arsenal's reach), which never goes down, so
-// an earned theme is never lost. A comeback theme opens once any goal has come back after a reset
-// (comeback.ts), which is never lost either. The colors live in theme/themes.ts; this is only which
+// an earned theme is never lost. Phoenix, the comeback theme, opens once any goal has come back
+// after a reset (comeback.ts), which is never lost either. The colors live in theme/themes.ts; this is only which
 // and when.
 
-export type ThemeId = 'classic' | 'neon' | 'mono' | 'pastel' | 'ember' | 'aurora' | 'gold';
+export type ThemeId = 'classic' | 'neon' | 'mono' | 'pastel' | 'ember' | 'aurora' | 'gold' | 'phoenix';
 
 /**
  * Classic is every app's; the included themes come with Plus; the earned ones need a best streak,
@@ -45,6 +45,8 @@ export const THEMES: readonly ThemeDef[] = [
   { id: 'ember', name: 'Ember', source: 'earned', unlockAt: THEME_UNLOCK_EMBER },
   { id: 'aurora', name: 'Aurora', source: 'earned', unlockAt: THEME_UNLOCK_AURORA },
   { id: 'gold', name: 'Gold Year', source: 'earned', unlockAt: THEME_UNLOCK_GOLD },
+  // Last, so a theme added later never renames a saved pick or an icon (app.config.ts PLUS_ICONS).
+  { id: 'phoenix', name: 'Phoenix', source: 'comeback', unlockAt: THEME_FROM_START },
 ];
 
 export const THEME_IDS: readonly ThemeId[] = THEMES.map((t) => t.id);

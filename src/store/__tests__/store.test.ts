@@ -1772,6 +1772,26 @@ describe('the comeback mark (SPEC 9)', () => {
     expect(store.getState().cameBack).toBe(true);
   });
 
+  it('opens Phoenix, named on the round that came back, and only in Win Zero Plus', async () => {
+    const { store, setTime } = harness({ limits: PLUS_LIMITS });
+    await ready(store);
+    store.setState(oneGoal(afterReset()));
+    expect(store.getState().setTheme('phoenix')).toBe(false);
+    setTime('2026-10-23', '21:00');
+    store.getState().answer(gid(store), 'yes');
+    expect(primaryRound(store.getState())?.unlocks).toEqual(['phoenix']);
+    expect(store.getState().setTheme('phoenix')).toBe(true);
+    expect(themeOf(store.getState())).toBe('phoenix');
+
+    const free = harness();
+    await ready(free.store);
+    free.store.setState(oneGoal(afterReset()));
+    free.setTime('2026-10-23', '21:00');
+    free.store.getState().answer(gid(free.store), 'yes');
+    expect(primaryRound(free.store.getState())).not.toHaveProperty('unlocks');
+    expect(themeOf(free.store.getState())).toBe('classic');
+  });
+
   it('stays when the goal goes, and goes only with Erase all data', async () => {
     const { store, setTime } = harness({ limits: PLUS_LIMITS });
     await ready(store);

@@ -54,7 +54,14 @@ describe('available icons', () => {
     expect(last(THEME_UNLOCK_AURORA - 1)).toBe('ember');
     expect(last(THEME_UNLOCK_AURORA)).toBe('aurora');
     expect(last(THEME_UNLOCK_GOLD - 1)).toBe('aurora');
-    expect(ids(availableIcons(reach(THEME_UNLOCK_GOLD), PLUS))).toEqual(APP_ICON_IDS);
+    expect(ids(availableIcons(reach(THEME_UNLOCK_GOLD), PLUS))).toEqual(APP_ICON_IDS.filter((id) => id !== 'phoenix'));
+  });
+
+  it('opens Phoenix’s icon with the theme, after a comeback', () => {
+    expect(ids(availableIcons({ best: 0, cameBack: true }, PLUS)).at(-1)).toBe('phoenix');
+    expect(ids(availableIcons({ best: THEME_UNLOCK_GOLD, cameBack: true }, PLUS))).toEqual(APP_ICON_IDS);
+    expect(keptIcon('phoenix', reach(400), PLUS)).toBe('default');
+    expect(keptIcon('phoenix', { best: 0, cameBack: true }, PLUS)).toBe('phoenix');
   });
 
   it('follows the available themes at every best streak, and only grows', () => {

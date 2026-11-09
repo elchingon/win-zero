@@ -41,6 +41,9 @@ export const THEMES_COPY = {
   opensAt: (best: number) => `Opens at a best streak of ${best}`,
   /** An earned theme, once it's open. */
   earnedAt: (best: number) => `Earned at a best streak of ${best}`,
+  /** Phoenix, before and after a comeback after a reset opens it. */
+  opensOnComeback: 'Opens when you come back after starting over',
+  earnedOnComeback: 'Earned by coming back after starting over',
 } as const;
 
 export const ICON_COPY = {
@@ -50,8 +53,12 @@ export const ICON_COPY = {
   spoken: (name: string) => `${name} icon`,
   /** On a locked icon's tile. */
   opensAt: (best: number) => `Opens at ${best}`,
+  /** On Phoenix's tile while it's locked. */
+  opensOnComeback: 'After a comeback',
   /** Read out for a locked icon. */
   opensWith: (theme: string, best: number) => `Opens with ${theme}, at a best streak of ${best}.`,
+  /** Read out for Phoenix's icon while it's locked. */
+  opensWithComeback: (theme: string) => `Opens with ${theme}, when you come back after starting over.`,
   confirmTitle: (name: string) => `Switch to the ${name} icon?`,
   /** Android closes the app if it was opened from the icon being replaced. */
   confirmBody: (app: string) => `${app} may close to make the change. Open it again from the new icon.`,

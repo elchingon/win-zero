@@ -23,9 +23,11 @@ const FREE = { themesEnabled: false };
 const PLUS = { themesEnabled: true };
 const ids = (themes: readonly { id: ThemeId }[]) => themes.map((t) => t.id);
 const reach = (best: number, cameBack = false): ThemeReach => ({ best, cameBack });
+/** Every theme a best streak alone opens: all but Phoenix. */
+const BY_BEST = THEME_IDS.filter((id) => id !== 'phoenix');
 
 describe('themes (SPEC 9)', () => {
-  it('matches the SPEC: Classic, three included, three earned by best streak', () => {
+  it('matches the SPEC: Classic, three included, three earned by best streak, one by a comeback', () => {
     expect(THEMES.map((t) => [t.id, t.name, t.source, t.unlockAt])).toEqual([
       ['classic', 'Classic', 'free', 0],
       ['neon', 'Neon Arcade', 'included', 0],
@@ -34,6 +36,7 @@ describe('themes (SPEC 9)', () => {
       ['ember', 'Ember', 'earned', 30],
       ['aurora', 'Aurora', 'earned', 180],
       ['gold', 'Gold Year', 'earned', 365],
+      ['phoenix', 'Phoenix', 'comeback', 0],
     ]);
     expect([THEME_FROM_START, THEME_UNLOCK_EMBER, THEME_UNLOCK_AURORA, THEME_UNLOCK_GOLD]).toEqual([0, 30, 180, 365]);
     expect(THEME_IDS).toEqual(THEMES.map((t) => t.id));
@@ -63,7 +66,14 @@ describe('available themes', () => {
     expect(ids(availableThemes(reach(THEME_UNLOCK_AURORA - 1), PLUS)).at(-1)).toBe('ember');
     expect(ids(availableThemes(reach(THEME_UNLOCK_AURORA), PLUS)).at(-1)).toBe('aurora');
     expect(ids(availableThemes(reach(THEME_UNLOCK_GOLD - 1), PLUS)).at(-1)).toBe('aurora');
-    expect(ids(availableThemes(reach(THEME_UNLOCK_GOLD), PLUS))).toEqual(THEME_IDS);
+    expect(ids(availableThemes(reach(THEME_UNLOCK_GOLD), PLUS))).toEqual(BY_BEST);
+  });
+
+  it('opens Phoenix with a comeback after a reset, at any best streak', () => {
+    expect(ids(availableThemes(reach(10_000), PLUS))).not.toContain('phoenix');
+    expect(ids(availableThemes(reach(0, true), PLUS))).toEqual(['classic', 'neon', 'mono', 'pastel', 'phoenix']);
+    expect(ids(availableThemes(reach(THEME_UNLOCK_GOLD, true), PLUS))).toEqual(THEME_IDS);
+    expect(ids(availableThemes(reach(400, true), FREE))).toEqual(['classic']);
   });
 
   it('only ever grows as the best streak does', () => {
@@ -73,7 +83,7 @@ describe('available themes', () => {
       expect(now.slice(0, before.length)).toEqual(before);
       before = now;
     }
-    expect(before).toEqual(THEME_IDS);
+    expect(before).toEqual(BY_BEST);
   });
 });
 
@@ -100,6 +110,18 @@ describe('newly unlocked themes', () => {
     expect(ids(newlyUnlockedThemes(reach(0), reach(365), PLUS))).toEqual(['ember', 'aurora', 'gold']);
   });
 
+  it('names Phoenix when the first comeback after a reset opens it, once', () => {
+    expect(ids(newlyUnlockedThemes(reach(40), reach(41, true), PLUS))).toEqual(['phoenix']);
+    expect(ids(newlyUnlockedThemes(reach(29), reach(30, true), PLUS))).toEqual(['ember', 'phoenix']);
+    expect(newlyUnlockedThemes(reach(40, true), reach(41, true), PLUS)).toEqual([]);
+    expect(newlyUnlockedThemes(reach(40), reach(41, true), FREE)).toEqual([]);
+  });
+
+  it('keeps Phoenix on as the pick only once it is earned', () => {
+    expect(equippedTheme('phoenix', reach(400), PLUS)).toBe('classic');
+    expect(equippedTheme('phoenix', reach(0, true), PLUS)).toBe('phoenix');
+  });
+
   it('announces nothing without a rise past an unlock, for included themes, or in Win Zero', () => {
     expect(newlyUnlockedThemes(reach(30), reach(30), PLUS)).toEqual([]);
     expect(newlyUnlockedThemes(reach(30), reach(31), PLUS)).toEqual([]);
@@ -109,8 +131,8 @@ describe('newly unlocked themes', () => {
   });
 });
 
-describe('a comeback theme', () => {
-  const comeback: ThemeDef = { id: 'classic', name: 'Comeback', source: 'comeback', unlockAt: THEME_FROM_START };
+describe('the comeback theme, Phoenix', () => {
+  const comeback: ThemeDef = themeById('phoenix');
 
   it('opens with a comeback after a reset, at any best streak', () => {
     expect(themeOpen(comeback, reach(10_000))).toBe(false);

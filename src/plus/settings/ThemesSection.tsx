@@ -1,5 +1,5 @@
 // Settings › Themes (SPEC 9): the colors of the round and of Home's drifting zeros. The earned
-// themes show the best streak that opens them, never a price.
+// themes show the best streak that opens them, and Phoenix the comeback that does, never a price.
 import { StyleSheet, View } from 'react-native';
 
 import { availableThemes, THEMES, type ThemeId } from '@/engine';
@@ -34,8 +34,16 @@ export function ThemesSection() {
       <View style={shared.list} accessibilityRole="radiogroup">
         {THEMES.map((t) => {
           const locked = !open.some((o) => o.id === t.id);
-          const earned = t.source === 'earned';
-          const detail = !earned ? undefined : locked ? THEMES_COPY.opensAt(t.unlockAt) : THEMES_COPY.earnedAt(t.unlockAt);
+          const detail =
+            t.source === 'earned'
+              ? locked
+                ? THEMES_COPY.opensAt(t.unlockAt)
+                : THEMES_COPY.earnedAt(t.unlockAt)
+              : t.source === 'comeback'
+                ? locked
+                  ? THEMES_COPY.opensOnComeback
+                  : THEMES_COPY.earnedOnComeback
+                : undefined;
           return (
             <ChoiceRow
               key={t.id}
