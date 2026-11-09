@@ -1,7 +1,8 @@
 // What each app allows (SPEC 9). The store takes these as a parameter: shared code never asks which
 // app it's in. The free app and the website keep one goal that checks in every day, play the
 // Shooter in Classic colors, and keep their own icon.
-import { HEAD_START_MAX } from '@/engine';
+// Relative, as the website's build plugins read this file without the app's path aliases.
+import { HEAD_START_MAX } from '../engine/headStart';
 
 export interface Limits {
   /** Goals at once; archived goals don't count. */
