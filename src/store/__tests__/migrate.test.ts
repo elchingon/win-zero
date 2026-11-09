@@ -264,3 +264,27 @@ describe('the comeback mark (SPEC 9)', () => {
     expect(normalizePersisted({ goals: [{ goal: yesDays(newGoal(), DAY0, 9) }] }).cameBack).toBe(false);
   });
 });
+
+describe('comebacks and the win-back round (SPEC 9)', () => {
+  const round = (extra: object) => ({
+    goals: [{ goal: yesDays(newGoal(), DAY0, 3), round: { day: '2026-10-15', n: 3, rewards: {}, borrowed: [], played: true, ...extra } }],
+  });
+  const comebackOf = (raw: unknown) => normalizePersisted(raw).goals[0]?.round?.comeback;
+
+  it("keeps a round's comeback, and takes one it can't read as already welcomed back", () => {
+    expect(comebackOf(round({ comeback: { before: 9, reset: true, seen: false } }))).toEqual({ before: 9, reset: true, seen: false });
+    expect(comebackOf(round({ comeback: {} }))).toEqual({ before: 0, reset: false, seen: true });
+    expect(comebackOf(round({ comeback: 'yes' }))).toBeUndefined();
+    expect(normalizePersisted(round({})).goals[0]?.round).not.toHaveProperty('comeback');
+  });
+
+  it('keeps a win-back round to play, and drops one it cannot read', () => {
+    const winBack = { goalId: 'g1', day: '2026-10-25', n: 9, borrowed: ['rocket', 'nope'], played: false };
+    expect(normalizePersisted({ winBack }).winBack).toEqual({ ...winBack, borrowed: ['rocket'] });
+    expect(normalizePersisted({ winBack: { ...winBack, played: undefined } }).winBack?.played).toBe(false);
+    expect(normalizePersisted({}).winBack).toBeNull();
+    for (const bad of [{ ...winBack, n: 0 }, { ...winBack, day: 'soon' }, { ...winBack, goalId: 4 }, 'x']) {
+      expect(normalizePersisted({ winBack: bad }).winBack).toBeNull();
+    }
+  });
+});

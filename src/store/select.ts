@@ -13,7 +13,7 @@ import {
 } from '@/engine';
 
 import type { Limits } from './limits';
-import type { GoalSlot, PersistedState, RoundRecord } from './types';
+import type { GoalSlot, PersistedState, RoundRecord, WinBackRound } from './types';
 
 type Goals = Pick<PersistedState, 'goals'>;
 
@@ -78,4 +78,37 @@ export function celebrationSlot(s: Pick<PersistedState, 'goals' | 'tipsSeen'>): 
       return due !== null && !s.tipsSeen.includes(due.id);
     }) ?? null
   );
+}
+
+/**
+ * The goal Home's welcome back follows (Win Zero Plus, SPEC 9): the first whose latest round was a
+ * comeback, played and not yet welcomed back.
+ */
+export function comebackSlot(s: Pick<PersistedState, 'goals'>): GoalSlot | null {
+  return s.goals.find((slot) => slot.round?.played && slot.round.comeback && !slot.round.comeback.seen) ?? null;
+}
+
+/**
+ * The win-back round waiting on Home (Win Zero Plus, SPEC 9): not yet played, once the welcome back
+ * that gives it has been seen or its round has gone.
+ */
+export function winBackWaiting(s: Pick<PersistedState, 'goals' | 'winBack'>): WinBackRound | null {
+  const w = s.winBack;
+  if (!w || w.played) return null;
+  const round = slotById(s, w.goalId)?.round;
+  return round?.day === w.day && round.comeback && !round.comeback.seen ? null : w;
+}
+
+/** A popup on Home, one at a time (SPEC 6, 9). */
+export type HomePopup = 'first-round' | 'comeback' | 'celebration';
+
+/**
+ * The popup Home shows next, if any: the first day's tip, then a welcome back, then a milestone's
+ * celebration. Each waits for the ones before it, so they never open over each other.
+ */
+export function homePopupOf(s: Pick<PersistedState, 'goals' | 'archived' | 'tipsSeen'>): HomePopup | null {
+  if (firstRoundTipSlot(s)) return 'first-round';
+  if (comebackSlot(s)) return 'comeback';
+  if (celebrationSlot(s)) return 'celebration';
+  return null;
 }

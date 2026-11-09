@@ -34,6 +34,7 @@ import {
   spendBomb as spendGoalBomb,
   spendCredit,
   weaponCreditOffer,
+  winBackSize,
   type Answer,
   type AnswerResult,
   type ClockTime,
@@ -164,6 +165,10 @@ export interface AppState extends PersistedState {
   startBonusRound: (n: number) => boolean;
   /** The bonus round's last zero went. */
   finishBonusRound: () => void;
+  /** Win Zero Plus: a comeback's welcome back on Home, for `goalId`'s round of `day`, was closed. */
+  seeComeback: (goalId: string, day: DayKey) => void;
+  /** Win Zero Plus: the win-back round's last zero went. */
+  finishWinBack: () => void;
   /**
    * Win Zero Plus's secret: a free Game credit (SECRET_GAME_CREDITS) for three quick taps on Home's
    * count, as often as found. The new Game balance, or null where this app has no such secret (Limits).
@@ -275,6 +280,7 @@ function persisted(s: AppState): PersistedState & LegacyCopy {
     prefs: s.prefs,
     credits: s.credits,
     bonus: s.bonus,
+    winBack: s.winBack,
     reminderCardHiddenUntil: s.reminderCardHiddenUntil,
     tipsSeen: s.tipsSeen,
     cameBack: s.cameBack,
@@ -473,6 +479,14 @@ export function createAppStore(deps: StoreDeps) {
               };
               const themesEnabled = limits.themesEnabled;
               const unlocks = newlyUnlockedThemes(before, after, { themesEnabled }).map((t) => t.id);
+              // A comeback (SPEC 9) is welcomed back on Home and gives a win-back round, unless
+              // one is still waiting to be played. Win Zero has neither.
+              const comeback = limits.comebacks ? comebackAt(r.state) : null;
+              const waiting = get().winBack;
+              const winBack =
+                comeback && !(waiting && !waiting.played)
+                  ? { goalId, day, n: winBackSize(comeback), borrowed: [], played: false }
+                  : waiting;
               setSlot(
                 goalId,
                 r.state,
@@ -490,6 +504,7 @@ export function createAppStore(deps: StoreDeps) {
                     borrowed: [],
                     played: false,
                     ...(unlocks.length > 0 ? { unlocks } : {}),
+                    ...(comeback ? { comeback: { before: comeback.before, reset: comeback.reset, seen: false } } : {}),
                   },
                 },
                 {
@@ -497,6 +512,7 @@ export function createAppStore(deps: StoreDeps) {
                   weapon: newest ? newest.id : get().weapon,
                   credits: earned.wallet,
                   cameBack: after.cameBack,
+                  winBack,
                   notices: without(notices, goalId),
                   route: source === 'notification' ? null : { path: '/play', goalId },
                   rejection: null,
@@ -579,6 +595,19 @@ export function createAppStore(deps: StoreDeps) {
             if (bonus && !bonus.played) set({ bonus: { ...bonus, played: true } });
           },
 
+          seeComeback: (goalId, day) => {
+            const slot = slotOf(goalId);
+            const round = slot?.round;
+            if (slot && round?.day === day && round.comeback && !round.comeback.seen) {
+              setSlot(goalId, slot.goal, { round: { ...round, comeback: { ...round.comeback, seen: true } } });
+            }
+          },
+
+          finishWinBack: () => {
+            const { winBack } = get();
+            if (winBack && !winBack.played) set({ winBack: { ...winBack, played: true } });
+          },
+
           giftCredit: () => {
             const { hydrated, goals, credits } = get();
             if (!hydrated || goals.length === 0 || !limits.secretCredits) return null;
@@ -588,16 +617,17 @@ export function createAppStore(deps: StoreDeps) {
           },
 
           borrowWeapon: (target, id) => {
-            const { hydrated, goals, credits, bonus } = get();
+            const { hydrated, goals, credits, bonus, winBack } = get();
             if (!hydrated || goals.length === 0) return false;
             const slot = target.round === 'daily' ? slotOf(target.goalId) : null;
-            const record = target.round === 'daily' ? (slot?.round ?? null) : bonus;
+            const record = target.round === 'daily' ? (slot?.round ?? null) : target.round === 'bonus' ? bonus : winBack;
             if (!record || record.played) return false;
             if (!weaponCreditOffer(credits, reach(), record.borrowed).some((w) => w.id === id)) return false;
             const borrowed = [...record.borrowed, id];
             const spent = spendCredit(credits, 'weapon');
             if (slot?.round) setSlot(slot.goal.goalId, slot.goal, { round: { ...slot.round, borrowed } }, { credits: spent });
-            else if (bonus) set({ credits: spent, bonus: { ...bonus, borrowed } });
+            else if (target.round === 'bonus' && bonus) set({ credits: spent, bonus: { ...bonus, borrowed } });
+            else if (target.round === 'winback' && winBack) set({ credits: spent, winBack: { ...winBack, borrowed } });
             return true;
           },
 
