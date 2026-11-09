@@ -79,10 +79,15 @@ export function isBonusSize(n: number): boolean {
 
 /**
  * Check-ins answered Yes in a row, through the latest settled day. Any other day (a Not today, a
- * shielded day, a missed day) starts it over. Unlike the streak, it never slides.
+ * shielded day, a missed day) starts it over. Unlike the streak, it never slides. A head start's
+ * days (headStart.ts) weren't check-ins, so the count stops at them.
  */
 export function yesInRow(state: GoalState): number {
   let n = 0;
-  for (let i = state.history.length - 1; i >= 0 && state.history[i]?.result === 'yes'; i--) n++;
+  for (let i = state.history.length - 1; i >= 0; i--) {
+    const e = state.history[i];
+    if (e?.result !== 'yes' || e.headStart) break;
+    n++;
+  }
   return n;
 }

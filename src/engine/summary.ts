@@ -78,8 +78,10 @@ export function notTodayPreview(state: GoalState): NotTodayPreview {
 }
 
 export interface HistoryStats {
-  /** Every day answered Yes. */
+  /** Every day answered Yes, a head start's days among them. */
   yesDays: number;
+  /** The days a head start counted (headStart.ts), which are among `yesDays`. */
+  headStartDays: number;
   /** Days answered Yes in the month `today` falls in. */
   yesThisMonth: number;
   /**
@@ -95,11 +97,13 @@ export function historyStats(state: GoalState, today: DayKey): HistoryStats {
   const { history, bestStreak } = state;
   const month = today.slice(0, 7); // 'YYYY-MM'
   let yesDays = 0;
+  let headStartDays = 0;
   let yesThisMonth = 0;
   let peak = -1;
   history.forEach((e, i) => {
     if (e.result !== 'yes') return;
     yesDays++;
+    if (e.headStart) headStartDays++;
     if (e.day.startsWith(month)) yesThisMonth++;
     if (bestStreak > 0 && e.streakAfter === bestStreak) peak = i;
   });
@@ -112,5 +116,5 @@ export function historyStats(state: GoalState, today: DayKey): HistoryStats {
     const first = history.slice(start, peak + 1).find((e) => e.result === 'yes');
     if (first) bestRun = { from: first.day, to: to.day };
   }
-  return { yesDays, yesThisMonth, bestRun };
+  return { yesDays, headStartDays, yesThisMonth, bestRun };
 }
