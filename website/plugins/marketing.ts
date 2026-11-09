@@ -211,10 +211,16 @@ export function compareHtml(facts: Facts): string {
   const looks = (l: LimitsModule.Limits) =>
     l.themesEnabled ? `${capital(words(t.all.length))}: ${words(t.fromStart.length)} included, ${words(t.toEarn)} to earn` : 'Classic';
   const icons = (l: LimitsModule.Limits) => (l.iconsEnabled ? 'One for each theme' : 'One');
+  const headStart = (l: LimitsModule.Limits) => (l.headStartMax > 0 ? `Up to ${l.headStartMax} days` : NO);
+  const comebacks = (l: LimitsModule.Limits) => (l.comebacks ? YES : NO);
+  const pastGoals = (l: LimitsModule.Limits) => (l.maxGoals > 1 ? YES : NO);
   const rows: [string, string, string][] = [
     ['Price', 'Free', `${price(APPS.plus)}, once`],
     ['Goals at a time', goals(free), goals(plus)],
     ['Check-in days', days(free), days(plus)],
+    ['Start with days already done', headStart(free), headStart(plus)],
+    ['A win-back round when you come back', comebacks(free), comebacks(plus)],
+    ['Past goals, with what each accomplished', pastGoals(free), pastGoals(plus)],
     ['Arcade games', games(free), games(plus)],
     ['Power-ups', `${capital(words(engine.WEAPONS.length))} weapons`, `${capital(words(shooter.tiers.length))} in each game`],
     ['Color themes', looks(free), looks(plus)],
@@ -396,6 +402,28 @@ export function plusFaqs(facts: Facts): Faq[] {
         'coming back after starting over. Bombs, shields and credits come from check-ins and are never sold.',
     },
     {
+      q: 'Can I count days I had already done?',
+      a:
+        `Yes. When you start a goal, you can count up to ${limits.PLUS_LIMITS.headStartMax} days you've already done. ` +
+        'They go in as Yes days, so the streak, best run, bombs and shields start where you really are, and the ' +
+        'calendar marks them as your head start. Credits still come only from check-ins.',
+    },
+    {
+      q: 'What happens when I come back after a few hard days?',
+      a:
+        `A Yes after ${words(engine.COMEBACK_MIN_GAP)} or more check-ins without one is a comeback, and Plus welcomes ` +
+        'you back. You get a free win-back round of the zeros you had before, to play whenever you like, and your ' +
+        `comebacks are counted with the rest of your progress. Coming back after starting over earns the ${list(t.comeback)} ` +
+        'theme. The streak follows the same gentle rules as always.',
+    },
+    {
+      q: 'What happens to a goal when I am done with it?',
+      a:
+        `Once a goal has reached ${engine.ARCHIVE_MIN_BEST} zeros, you can archive it. It stops its reminders and frees ` +
+        'its slot, and Past goals keeps what it accomplished: its best run and when, Yes days, comebacks, milestones ' +
+        'and its calendar. A goal short of that can be deleted instead. Weapons and themes it unlocked stay yours.',
+    },
+    {
       q: 'Will Win Zero stay free?',
       a:
         'Yes. Win Zero stays complete and free: one goal, every streak rule, the full arsenal and the ' +
@@ -519,6 +547,9 @@ export function llmsTxt(facts: Facts): string {
       `a bomb every ${engine.BOMB_EVERY} days, and a shield every ${engine.SHIELD_EVERY} (up to ${engine.SHIELD_CAP} held).`,
     `- Plus games: ${list(engine.MODES.map((m) => m.name))}. Plus themes: ${list(t.fromStart)} from the start; ` +
       `${list([...t.earned.map((th) => `${th.name} at a best run of ${th.unlockAt} days`), ...t.comeback.map((name) => `${name} for coming back after starting over`)])}.`,
+    `- Plus can start a goal with up to ${limits.PLUS_LIMITS.headStartMax} days already done, welcomes a Yes after ` +
+      `${words(engine.COMEBACK_MIN_GAP)} or more check-ins without one with a free win-back round, and keeps archived goals ` +
+      'under Past goals with what each accomplished.',
     '- Win Zero users can move their goal, history, streak, rewards and credits to Plus on the same phone, without a server.',
     '- A browser version at https://winzero.app/play has the check-in, rules, rewards and round, without reminders.',
     '- Support with drinking, drugs or mental health (US): the SAMHSA National Helpline, 1-800-662-4357, free, confidential and open 24/7.',
