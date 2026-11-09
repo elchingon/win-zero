@@ -2,6 +2,7 @@
 // process.env.EXPO_PUBLIC_APP_VARIANT === 'plus', so Win Zero's bundle leaves it out.
 export { SETTINGS_COPY } from '../copy';
 export { DaysField } from '../goals/DaysField';
+export { RemoveGoal } from '../goals/RemoveGoal';
 export { GoalsGroup } from './GoalsGroup';
 export { GoalsList } from './GoalsList';
 export { PlusSections } from './PlusSections';

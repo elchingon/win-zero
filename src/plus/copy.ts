@@ -82,7 +82,7 @@ export const GOALS_COPY = {
   addDetail: (max: number) => `Up to ${max}, each with its own check-ins and streak.`,
   /** With room for `n` more. */
   addMore: (n: number) => (n === 1 ? '1 more fits.' : `${n} more fit.`),
-  full: (max: number) => `All ${max} goals are in use. Archive one to add another.`,
+  full: (max: number) => `All ${max} goals are in use. Archive or delete one to add another.`,
 } as const;
 
 export const ADD_GOAL_COPY = {
@@ -91,7 +91,7 @@ export const ADD_GOAL_COPY = {
   field: 'Your goal',
   placeholder: "Something you'll do, or stop doing",
   add: 'Add goal',
-  full: (max: number) => `All ${max} goals are in use. Archive one in Settings to make room for a new one.`,
+  full: (max: number) => `All ${max} goals are in use. Archive or delete one in Settings to make room for a new one.`,
   back: 'Back to Settings',
 } as const;
 
@@ -117,10 +117,28 @@ export const ARCHIVE_COPY = {
   link: 'Archive this goal',
   hint: 'Asks first. Its history stays under Past goals.',
   title: (goal: string) => `Archive “${goal}”?`,
+  /** What it reached, on the card that asks: 'Best run 41 days · 63 Yes days'. */
+  reached: (best: string, yes: string) => `Best run ${best} · ${yes}`,
   body: 'Its reminders stop and its slot frees up. Its history stays under Past goals, and what it unlocked stays yours.',
   confirm: 'Archive goal',
   cancel: 'Keep it',
 } as const;
+
+/** A goal that can't be archived yet (best run short of ARCHIVE_MIN_BEST) can be deleted. */
+export const DELETE_COPY = {
+  link: 'Delete this goal',
+  hint: 'Asks first',
+  /** Under the link: why there's no Archive yet. */
+  why: (min: number) =>
+    `Once a goal reaches ${min} zeros, it can be archived and keep its history under Past goals. Until then, it can be deleted.`,
+  title: (goal: string) => `Delete “${goal}”?`,
+  body: "Its history leaves this phone and can't come back. What it unlocked stays yours.",
+  confirm: 'Delete goal',
+  cancel: 'Keep it',
+} as const;
+
+/** On the card that asks, when the goal is the only one. */
+export const LAST_GOAL_COPY = "It's your only goal, so you'll set up a new one next.";
 
 export const PAST_COPY = {
   title: 'Past goals',
@@ -128,7 +146,11 @@ export const PAST_COPY = {
   count: (n: number) => (n === 1 ? '1 goal' : `${n} goals`),
   lede: (max: number) => `Goals you've archived keep their history here. They have no reminders, and don't count toward your ${max}.`,
   none: 'No past goals.',
+  /** Settings' row with none yet. */
+  noneYet: (min: number) => `None yet. A goal that reaches ${min} zeros can come here when you’re done with it.`,
   view: 'View',
+  /** Settings' row, and Setup's link. */
+  openHint: "Opens the goals you've archived",
   rowHint: "Opens this goal's history",
   /** Under its name: 'Archived Oct 3 · best run 41 days'. */
   detail: (day: string, best: string) => `Archived ${day} · best run ${best}`,

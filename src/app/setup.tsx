@@ -18,9 +18,8 @@ import { TimeField } from '@/ui/TimeField';
 import { useDeviceCalendar } from '@/ui/useDevice';
 import { APP_NAME } from '@/variant';
 
-
-// Win Zero Plus only: check-in days (SPEC 9). The literal comparison folds per file, so Win Zero's
-// bundle leaves it out, and Win Zero's goal checks in every day.
+// Win Zero Plus only: check-in days and a way to Past goals (SPEC 9). The literal comparison folds
+// per file, so Win Zero's bundle leaves it out, and Win Zero's goal checks in every day.
 const PlusGoals: typeof import('@/plus/goals') | null =
   process.env.EXPO_PUBLIC_APP_VARIANT === 'plus'
     ? // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -99,7 +98,7 @@ export default function Setup() {
 
   return (
     <Screen>
-      <TopBar />
+      <TopBar right={PlusGoals ? <PlusGoals.PastGoalsLink /> : undefined} />
       <Text style={type.h1} accessibilityRole="header">
         Every day you win, there&apos;s <Em>one more zero</Em> to shoot.
       </Text>

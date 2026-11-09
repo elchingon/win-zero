@@ -44,8 +44,10 @@ export function PastGoal() {
     feedback.press();
     const s = appStore.getState();
     if (!s.deleteArchivedGoal(goal.goalId)) return;
-    if (appStore.getState().archived.length > 0) leave();
-    else router.dismissTo('/settings');
+    const after = appStore.getState();
+    if (after.archived.length > 0) leave();
+    // The last past goal gone: back to Settings, or with no goal at all, Home, which starts Setup.
+    else router.dismissTo(after.goals.length > 0 ? '/settings' : '/');
   };
 
   return (

@@ -1,23 +1,22 @@
-// One of several goals (SPEC 9): its wording, times, check-in days and lock-screen name, and
-// archiving it, which asks first. Its history then waits under Past goals.
+// One goal (SPEC 9): its wording, times, check-in days and, with several, lock-screen name, and
+// archiving or deleting it, which asks first. An archived goal's history then waits under Past goals.
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { appStore, slotById, useApp } from '@/store';
-import { colors, space, type } from '@/theme/tokens';
-import { Card, Eyebrow, Fine } from '@/ui/bits';
+import { space, type } from '@/theme/tokens';
+import { Eyebrow } from '@/ui/bits';
 import { TopBar } from '@/ui/Brand';
-import { Button, LinkButton } from '@/ui/Button';
-import { feedback } from '@/ui/feedback';
+import { LinkButton } from '@/ui/Button';
 import { goalEyebrow } from '@/ui/copy/goals';
 import { Screen } from '@/ui/Screen';
 import { GoalFields } from '@/ui/settings/GoalFields';
 import { useDeviceCalendar } from '@/ui/useDevice';
 
-import { ARCHIVE_COPY } from '../copy';
 import { AliasField } from '../goals/AliasField';
 import { DaysField } from '../goals/DaysField';
+import { RemoveGoal } from '../goals/RemoveGoal';
 import { leave } from '../nav';
 
 export function Goal() {
@@ -25,9 +24,8 @@ export function Goal() {
   const goal = useApp((s) => (id ? (slotById(s, id)?.goal ?? null) : null));
   const several = useApp((s) => s.goals.length > 1);
   const { firstWeekday } = useDeviceCalendar();
-  const [armed, setArmed] = useState(false);
   // A link to a goal that isn't here (an old one): back to Settings. A goal this screen archives
-  // goes while it leaves, and that's no reason to redirect.
+  // or deletes goes while it leaves, and that's no reason to redirect.
   const [known] = useState(() => (id ? slotById(appStore.getState(), id) !== null : false));
   useFocusEffect(
     useCallback(() => {
@@ -36,11 +34,6 @@ export function Goal() {
   );
 
   if (!goal) return null;
-
-  const archive = () => {
-    feedback.press();
-    if (appStore.getState().archiveGoal(goal.goalId)) leave();
-  };
 
   return (
     <Screen>
@@ -54,26 +47,11 @@ export function Goal() {
       <GoalFields key={goal.goalId} goal={goal} />
       <DaysField key={`${goal.goalId}-days`} goal={goal} />
       {several ? <AliasField key={`${goal.goalId}-alias`} goal={goal} /> : null}
-      {several && armed ? (
-        <Card style={styles.confirm}>
-          <Text style={styles.confirmTitle}>{ARCHIVE_COPY.title(goal.goal)}</Text>
-          <Fine>{ARCHIVE_COPY.body}</Fine>
-          <View style={styles.confirmRow}>
-            <Button label={ARCHIVE_COPY.confirm} onPress={archive} silent style={styles.flex} />
-            <Button variant="ghost" label={ARCHIVE_COPY.cancel} onPress={() => setArmed(false)} style={styles.flex} />
-          </View>
-        </Card>
-      ) : several ? (
-        <LinkButton label={ARCHIVE_COPY.link} accessibilityHint={ARCHIVE_COPY.hint} onPress={() => setArmed(true)} />
-      ) : null}
+      <RemoveGoal key={`${goal.goalId}-remove`} goal={goal} />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   title: { gap: space.xs },
-  confirm: { borderColor: colors.line, gap: space.md },
-  confirmTitle: { ...type.question },
-  confirmRow: { flexDirection: 'row', gap: space.md },
-  flex: { flex: 1 },
 });

@@ -1,8 +1,10 @@
-// Settings › Goals (SPEC 9): adding a goal, under any goals listed above it, and the past goals.
+// Settings › Goals (SPEC 9): adding a goal, under any goals listed above it, and the past goals,
+// with a word on how a goal gets there while there are none.
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { ARCHIVE_MIN_BEST } from '@/engine';
 import { useApp } from '@/store';
 import { colors, type } from '@/theme/tokens';
 import { Eyebrow, Row, shared } from '@/ui/bits';
@@ -35,10 +37,12 @@ export function GoalsGroup({ children }: { children?: ReactNode }) {
             label={PAST_COPY.title}
             detail={PAST_COPY.count(past)}
             right={<Text style={styles.call}>{PAST_COPY.view}</Text>}
-            hint="Opens the goals you've archived"
+            hint={PAST_COPY.openHint}
             onPress={() => router.push('/past-goals')}
           />
-        ) : null}
+        ) : (
+          <Row label={PAST_COPY.title} detail={PAST_COPY.noneYet(ARCHIVE_MIN_BEST)} />
+        )}
       </View>
     </View>
   );
