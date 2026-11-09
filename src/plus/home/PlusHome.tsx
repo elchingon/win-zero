@@ -1,7 +1,8 @@
 // Win Zero Plus's Home (SPEC 9), with one goal or several: rounds ready to play, then the open
-// check-ins (the one that opened first, first), then when the others check in next. Below them,
-// two tabs: Goals, where a picker chooses whose numbers and history calendar show, and Game, with
-// the shared credits and arsenal. After the first round, a tip.
+// check-ins (the one that opened first, first), then when the others check in next, and a waiting
+// win-back round. Below them, two tabs: Goals, where a picker chooses whose numbers and history
+// calendar show, and Game, with the shared credits and arsenal. After the first round, a tip; after
+// a comeback's, a welcome back; after a milestone's, a celebration.
 import { router } from 'expo-router';
 import { useState, type ComponentType } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -40,6 +41,8 @@ import { CallButton } from '../ui/CallButton';
 import { GoalPicker } from './GoalPicker';
 import { HomeTabs, type HomeTab } from './HomeTabs';
 import { homeCards } from './order';
+import { WelcomeBack } from './WelcomeBack';
+import { WinBackCard } from './WinBackCard';
 
 // Development builds only: Metro folds __DEV__ to false in production and drops the require.
 const DemoControls: ComponentType | null = __DEV__
@@ -132,6 +135,8 @@ export function PlusHome() {
         </Card>
       ) : null}
 
+      <WinBackCard />
+
       {remindersCardVisible(reminders.permission, reminderCardHiddenUntil, now) ? (
         <RemindersCard
           denied={reminders.permission === 'denied'}
@@ -194,6 +199,7 @@ export function PlusHome() {
       {DemoControls ? <DemoControls /> : null}
 
       <FirstRoundTip afterHeadStart={HEAD_START_COPY.tip} />
+      <WelcomeBack />
       <Celebrations />
     </Screen>
   );

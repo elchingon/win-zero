@@ -1,6 +1,7 @@
 // A hint's popup: a title, what the hint says, and Got it, in the card that pops up over a dimmed
 // screen (Popup). A real Modal, so it covers the whole screen from inside a scrolling one. Tapping
 // outside the card or Android's back button closes it too, and a screen reader starts at the title.
+// An `action` puts a button of its own above the close one.
 import { useRef, type ReactNode } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, useWindowDimensions } from 'react-native';
 
@@ -17,9 +18,10 @@ export function HintPopup(props: {
   title: string;
   onClose: () => void;
   closeLabel?: string;
+  action?: { label: string; onPress: () => void };
   children: ReactNode;
 }) {
-  const { visible, title, onClose, closeLabel = 'Got it', children } = props;
+  const { visible, title, onClose, closeLabel = 'Got it', action, children } = props;
   const heading = useRef<Text>(null);
   const { height } = useWindowDimensions();
   return (
@@ -32,7 +34,8 @@ export function HintPopup(props: {
           <ScrollView style={{ maxHeight: height * BODY_MAX_HEIGHT }} contentContainerStyle={styles.body}>
             {children}
           </ScrollView>
-          <Button label={closeLabel} onPress={onClose} />
+          {action ? <Button label={action.label} onPress={action.onPress} /> : null}
+          <Button variant={action ? 'ghost' : undefined} label={closeLabel} onPress={onClose} />
         </Popup>
       ) : null}
     </Modal>

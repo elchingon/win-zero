@@ -108,6 +108,53 @@ export const COMEBACK_CHEERS: readonly string[] = [
   "Look who's back. Let's keep this going.",
 ];
 
+/**
+ * Home's welcome back (SPEC 9), once a comeback's round has been played: a quote about getting back
+ * up, then why coming back counts, and the win-back round. Never how long they were away.
+ */
+export const WELCOME_COPY = {
+  title: 'Welcome back.',
+  /** One per comeback, by its day. */
+  quotes: [
+    '“Fall seven times, stand up eight.”',
+    '“Our greatest glory is not in never falling, but in rising every time we fall.”',
+    '“It does not matter how slowly you go, as long as you do not stop.”',
+  ],
+  lines: (reset: boolean) => [
+    'Coming back is the bravest part of any goal, and you just did it.',
+    reset
+      ? 'Starting over takes more than starting did. Your new run is on the board.'
+      : 'Your streak is climbing again, one check-in at a time.',
+  ],
+  winBack: {
+    title: 'Win-back round',
+    line: (n: string) => `A free round of ${n} zeros, as many as you came back from. Blast them for fun: your streak stays as it is.`,
+  },
+  /** When an earlier comeback's win-back round still waits. */
+  waiting: 'Your win-back round from before is still waiting on Home.',
+  phoenix: {
+    title: (name: string) => `New theme: ${name}`,
+    line: 'Earned only by coming back after starting over. It’s yours for good, with its own app icon.',
+  },
+  play: 'Play the win-back round',
+  later: 'Later',
+  close: 'Keep going',
+} as const;
+
+/** The win-back round's own name, in the round and on its sheet. */
+export const WIN_BACK_WORDS = {
+  hud: 'COMEBACK',
+  eyebrow: 'Win-back round',
+  lede: "Win-back round: your streak and rewards don't change.",
+} as const;
+
+/** Home's card while a win-back round waits to be played. */
+export const WIN_BACK_COPY = {
+  title: (n: string) => `Win-back round: ${n} zeros`,
+  lede: 'A comeback’s gift. Your streak stays as it is, whatever happens in the round.',
+  play: 'Play it',
+} as const;
+
 /** The history calendar's words for the Yeses Win Zero Plus marks apart. */
 export const CALENDAR_NOTES = { headStart: 'Head start', comeback: 'Comeback' } as const;
 

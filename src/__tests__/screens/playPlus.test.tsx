@@ -235,3 +235,24 @@ describe("a comeback's round (SPEC 9)", () => {
     expect(shown(COMEBACK_CHEERS)).toEqual([]);
   });
 });
+
+describe('the win-back round (SPEC 9)', () => {
+  const winBack = { goalId: 'g1', day: '2026-10-15', n: 9, borrowed: [], played: false };
+
+  it('plays as a bonus round, under its own name, and is played once its last zero goes', async () => {
+    appStore.setState({ winBack });
+    await open('/play?round=winback');
+    expect(screen.getByRole('header', { name: 'Pick your game' })).toBeOnTheScreen();
+    await pickLast();
+    expect(mockRounds.at(-1)?.n).toBe(9);
+    expect(screen.getByText('COMEBACK')).toBeOnTheScreen();
+    await act(() => mockCanvas.clear());
+    expect(appStore.getState().winBack?.played).toBe(true);
+    expect(appStore.getState().goals[0]?.round?.played).toBe(false);
+  });
+
+  it('goes Home without one', async () => {
+    await open('/play?round=winback');
+    expect(mockRounds).toHaveLength(0);
+  });
+});

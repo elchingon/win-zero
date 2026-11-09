@@ -3,10 +3,11 @@
 // sheet over the fill. A real round is the one the latest Yes earned (its rewards are already
 // banked, and only revealed here); Replay plays it again in place, with
 // no effect on the streak. /play?round=bonus plays the bonus round a Game credit paid for, which
-// changes nothing either. Before a round not yet played, Win Zero Plus asks which game to play it
-// in (SPEC 9), and a player holding a Weapon credit is asked whether to borrow a weapon they
-// haven't unlocked for it. Every round plays in the game mode and theme picked (in Settings, or
-// for the game, before the round), which in Win Zero are always the Shooter and Classic.
+// changes nothing either, and in Win Zero Plus /play?round=winback the win-back round a comeback
+// gave, played the same way (SPEC 9). Before a round not yet played, Win Zero Plus asks which game
+// to play it in (SPEC 9), and a player holding a Weapon credit is asked whether to borrow a weapon
+// they haven't unlocked for it. Every round plays in the game mode and theme picked (in Settings,
+// or for the game, before the round), which in Win Zero are always the Shooter and Classic.
 // Development builds, and release builds made with EXPO_PUBLIC_PERF_BUILD=1 (eas build
 // --profile perf), can open /play?practice=N to play any N with every weapon and a frame
 // meter, and nothing about the streak changes. In Win Zero Plus, /play?practice=N&theme=<id>
@@ -36,7 +37,7 @@ import { CheerPopup } from '@/game/CheerPopup';
 import { makeCues } from '@/game/cues';
 import { GameCanvas, type FrameStats, type GameHandle, type RoundSetup } from '@/game/GameCanvas';
 import { Hud } from '@/game/Hud';
-import { hudLabel, replayMode, revealedCredits, roundOverlay } from '@/game/result';
+import { hudLabel, replayMode, revealedCredits, roundOverlay, type RoundWords } from '@/game/result';
 import { ResultSheet, type ResultMode } from '@/game/ResultSheet';
 import { useSfx } from '@/game/sfx';
 import type { Report } from '@/game/sim/types';
@@ -111,6 +112,8 @@ export default function Play() {
         />
       ) : round === 'bonus' ? (
         <BonusStoreRound />
+      ) : PlusPlay && round === 'winback' ? (
+        <WinBackStoreRound words={PlusPlay.WIN_BACK_WORDS} />
       ) : (
         <StoreRound goalId={goal} />
       )}
@@ -162,6 +165,38 @@ function BonusStoreRound() {
   );
   return PlusPlay ? <PlusPlay.ModeGate fresh={!bonus.played}>{round}</PlusPlay.ModeGate> : round;
 }
+
+const WIN_BACK: CreditRound = { round: 'winback' };
+
+/**
+ * Win Zero Plus: a comeback's win-back round (SPEC 9), played as a bonus round is, under its own
+ * name. Its words come from Plus, so Win Zero's bundle has none.
+ */
+function WinBackStoreRound({ words }: { words: RoundWords }) {
+  const [winBack] = useState(() => appStore.getState().winBack);
+  const best = useApp(arsenalBestOf);
+  const hasGoal = useApp((s) => s.goals.length > 0);
+  if (!winBack || !hasGoal) return <Redirect href="/" />;
+  const round = (
+    <WeaponCreditGate target={WIN_BACK} fresh={!winBack.played} best={best} borrowed={winBack.borrowed}>
+      {(borrowed) => (
+        <Round
+          initialMode="bonus"
+          goalId={null}
+          n={winBack.n}
+          best={best}
+          record={null}
+          borrowed={borrowed}
+          words={words}
+          onFinish={finishWinBack}
+        />
+      )}
+    </WeaponCreditGate>
+  );
+  return PlusPlay ? <PlusPlay.ModeGate fresh={!winBack.played}>{round}</PlusPlay.ModeGate> : round;
+}
+
+const finishWinBack = () => appStore.getState().finishWinBack();
 
 /**
  * Before a round not yet played: while a Weapon credit could lend it a weapon, ask, then start the
@@ -238,8 +273,12 @@ function Round(props: {
   theme?: ThemeId;
   /** A practice round's game mode, from its link; otherwise the equipped one. */
   gameMode?: ModeId;
+  /** A bonus round's own name (Win Zero Plus's win-back round). */
+  words?: RoundWords;
+  /** A bonus round's last zero went: the bonus round's own, unless given. */
+  onFinish?: () => void;
 }) {
-  const { initialMode, goalId, n, best, record, borrowed, theme, gameMode: linkMode } = props;
+  const { initialMode, goalId, n, best, record, borrowed, theme, gameMode: linkMode, words, onFinish } = props;
   // Replay turns a real round into a replay.
   const [mode, setMode] = useState(initialMode);
   const { width, height } = useWindowDimensions();
@@ -316,8 +355,8 @@ function Round(props: {
   useEffect(() => {
     if (!over) return;
     if (mode === 'real' && goalId && record) appStore.getState().finishRound(goalId, record.day);
-    if (mode === 'bonus') appStore.getState().finishBonusRound();
-  }, [over, mode, goalId, record]);
+    if (mode === 'bonus') (onFinish ?? appStore.getState().finishBonusRound)();
+  }, [over, mode, goalId, record, onFinish]);
 
   // The encouragement arrives with a fanfare and a light tap; a Game credit with the Yes chime.
   useEffect(() => {
@@ -387,7 +426,16 @@ function Round(props: {
         onFrameStats={mode === 'practice' ? setStats : undefined}
       />
       {overlay === 'sheet' ? (
-        <ResultSheet n={n} mode={mode} goalId={goalId} record={record} gameMode={gameMode} onBack={toBase} onReplay={replay} />
+        <ResultSheet
+          n={n}
+          mode={mode}
+          goalId={goalId}
+          record={record}
+          gameMode={gameMode}
+          words={words}
+          onBack={toBase}
+          onReplay={replay}
+        />
       ) : overlay === 'cheer' ? (
         <CheerPopup
           onDismiss={dismissCheer}
@@ -399,7 +447,7 @@ function Round(props: {
         <Hud
           left={left}
           total={n}
-          label={hudLabel(mode, n)}
+          label={words?.hud ?? hudLabel(mode, n)}
           mode={gameMode}
           autoFire={autoFire}
           tierName={modeTier(gameMode, weapon.id)}

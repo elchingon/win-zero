@@ -396,3 +396,58 @@ describe('a head start and comebacks on Home (SPEC 9)', () => {
     expect(screen.queryByText(/A journey of a thousand miles/)).not.toBeOnTheScreen();
   });
 });
+
+describe('the welcome back after a comeback (SPEC 9)', () => {
+  // Nine Yeses through 10-21, three Not todays, then the Yes on 10-25 that came back.
+  const cameBack = () =>
+    answerDay(notTodays(yesDays(newGoal({ tz: tz() }), DAY0, 9, tz()), '2026-10-22', 3, tz()), '2026-10-25', 'yes', { tz: tz() }).state;
+  const round = (played: boolean, reset = false): RoundRecord => ({
+    day: '2026-10-25',
+    n: 7,
+    rewards: { bomb: false, shield: false, shieldCapped: false, weapons: [], credits: [] },
+    borrowed: [],
+    played,
+    comeback: { before: 9, reset, seen: false },
+  });
+  const winBack = { goalId: 'g1', day: '2026-10-25', n: 9, borrowed: [], played: false };
+  const at25 = { day: '2026-10-25', time: '22:00' };
+
+  it('waits until the comeback round has been played', async () => {
+    appStore.setState({ winBack });
+    await open([{ ...slot(cameBack()), round: round(false) }], at25);
+    expect(screen.queryByRole('header', { name: 'Welcome back.' })).not.toBeOnTheScreen();
+    expect(screen.queryByText(/^Win-back round:/)).not.toBeOnTheScreen();
+  });
+
+  it('welcomes back, and plays the win-back round from it', async () => {
+    appStore.setState({ winBack });
+    const app = await open([{ ...slot(cameBack()), round: round(true) }], at25);
+    expect(screen.getByRole('header', { name: 'Welcome back.' })).toBeOnTheScreen();
+    expect(screen.getByText(/^Coming back is the bravest part/)).toBeOnTheScreen();
+    expect(screen.getByText(/^A free round of 9 zeros/)).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Play the win-back round' }));
+    expect(app.pathname()).toBe('/play');
+    expect(app.params()).toMatchObject({ round: 'winback' });
+    expect(slotById(appStore.getState(), 'g1')?.round?.comeback?.seen).toBe(true);
+  });
+
+  it('leaves the win-back round waiting on Home for later', async () => {
+    appStore.setState({ winBack });
+    const app = await open([{ ...slot(cameBack()), round: round(true) }], at25);
+    await fireEvent.press(screen.getByRole('button', { name: 'Later' }));
+    expect(screen.queryByRole('header', { name: 'Welcome back.' })).not.toBeOnTheScreen();
+    expect(screen.getByText('Win-back round: 9 zeros')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Play it' }));
+    expect(app.params()).toMatchObject({ round: 'winback' });
+  });
+
+  it('after a reset, says starting over counts, and points to a win-back round still waiting', async () => {
+    appStore.setState({ winBack: { ...winBack, day: '2026-10-01' } });
+    await open([{ ...slot(cameBack()), round: round(true, true) }], at25);
+    expect(screen.getByText(/^Starting over takes more than starting did/)).toBeOnTheScreen();
+    expect(screen.getByText('Your win-back round from before is still waiting on Home.')).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Play the win-back round' })).not.toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Keep going' }));
+    expect(screen.queryByRole('header', { name: 'Welcome back.' })).not.toBeOnTheScreen();
+  });
+});
