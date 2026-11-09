@@ -12,7 +12,7 @@ import {
   availableThemes,
   canArchive,
   claimCredits,
-  createGoal,
+  createGoalWithHeadStart,
   EMPTY_WALLET,
   giftCredits,
   isBonusSize,
@@ -88,7 +88,7 @@ export interface StoreDeps {
 
 export type AddGoalResult =
   | { ok: true; goalId: string }
-  | { ok: false; reason: 'not-ready' | 'empty-goal' | 'full' | 'days-not-allowed' };
+  | { ok: false; reason: 'not-ready' | 'empty-goal' | 'full' | 'days-not-allowed' | 'head-start-not-allowed' };
 export type EditResult = { ok: true } | { ok: false; reason: 'no-goal' | 'empty-goal' | 'days-not-allowed' | 'no-days' };
 export type ImportResult = ImportOutcome | { ok: false; reason: 'not-ready' };
 
@@ -120,13 +120,15 @@ export interface AppState extends PersistedState {
   refresh: () => ResolveEvent[];
   /**
    * Set up a goal, after the others. Turned down when the app's goals are full (Limits), or for
-   * check-in days the app doesn't offer.
+   * check-in days or a head start the app doesn't offer.
    */
   addGoal: (input: {
     goal: string;
     checkInTime: ClockTime;
     morningTime: ClockTime;
     days?: readonly number[];
+    /** Days already done (engine/headStart.ts), up to Limits.headStartMax. Credits come only from check-ins. */
+    headStart?: number;
   }) => AddGoalResult;
   /**
    * Set a goal aside: its history is kept to read, its reminders stop, and its slot is free. Only
@@ -385,7 +387,7 @@ export function createAppStore(deps: StoreDeps) {
             return events;
           },
 
-          addGoal: ({ goal, checkInTime, morningTime, days }) => {
+          addGoal: ({ goal, checkInTime, morningTime, days, headStart = 0 }) => {
             const s = get();
             if (!s.hydrated) return { ok: false, reason: 'not-ready' };
             if (!goal.trim()) return { ok: false, reason: 'empty-goal' };
@@ -393,12 +395,16 @@ export function createAppStore(deps: StoreDeps) {
             if (days !== undefined && !limits.weekdaySchedules && days.length !== 7) {
               return { ok: false, reason: 'days-not-allowed' };
             }
-            const state = createGoal({
+            if (!Number.isInteger(headStart) || headStart < 0 || headStart > limits.headStartMax) {
+              return { ok: false, reason: 'head-start-not-allowed' };
+            }
+            const state = createGoalWithHeadStart({
               goalId: deps.makeId(),
               goal,
               checkInTime,
               morningTime,
               days,
+              headStart,
               now: now(),
               tz: timeZone(),
             });

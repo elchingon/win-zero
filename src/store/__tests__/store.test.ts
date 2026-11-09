@@ -1690,3 +1690,59 @@ describe('several goals (SPEC 9)', () => {
     expect(store.getState()).toMatchObject({ goals: [], archived: [], arsenalBest: 5, credits, bonus });
   });
 });
+
+describe('a head start (SPEC 9)', () => {
+  const add = (store: AppStore, headStart: number, goal = 'Stop drinking') =>
+    store.getState().addGoal({ goal, checkInTime: '20:00', morningTime: '09:00', headStart });
+
+  it('is turned down where the app offers none', async () => {
+    const free = harness();
+    await ready(free.store);
+    expect(add(free.store, 5)).toEqual({ ok: false, reason: 'head-start-not-allowed' });
+    expect(add(free.store, 0)).toMatchObject({ ok: true });
+    expect(primaryGoal(free.store.getState())?.history).toEqual([]);
+  });
+
+  it('is a whole number of days up to the most the app offers', async () => {
+    const plus = harness({ limits: PLUS_LIMITS });
+    await ready(plus.store);
+    expect(add(plus.store, PLUS_LIMITS.headStartMax + 1)).toEqual({ ok: false, reason: 'head-start-not-allowed' });
+    expect(add(plus.store, 2.5)).toEqual({ ok: false, reason: 'head-start-not-allowed' });
+    expect(add(plus.store, -1)).toEqual({ ok: false, reason: 'head-start-not-allowed' });
+    expect(plus.store.getState().goals).toEqual([]);
+  });
+
+  it('opens what a run that long would, and pays no credit for it', async () => {
+    const { store } = harness({ limits: PLUS_LIMITS });
+    await ready(store);
+    expect(add(store, THEME_UNLOCK_EMBER)).toMatchObject({ ok: true });
+    expect(primaryGoal(store.getState())).toMatchObject({ streak: 30, bestStreak: 30, bombs: 6, shields: 3 });
+    expect(arsenalBestOf(store.getState())).toBe(30);
+    expect(store.getState().setTheme('ember')).toBe(true);
+    store.getState().selectWeapon('chain');
+    expect(store.getState().weapon).toBe('chain');
+    expect(store.getState().credits).toEqual(EMPTY_WALLET);
+  });
+
+  it('makes the first Yes one more zero, with rewards only above the run it counted', async () => {
+    const { store, setTime } = harness({ limits: PLUS_LIMITS });
+    await ready(store);
+    add(store, 13); // bombs at 5 and 10, a shield at 7
+    setTime(DAY0, '21:00');
+    store.getState().answer(gid(store), 'yes');
+    const round = primaryRound(store.getState());
+    expect(round).toMatchObject({ n: 14, rewards: { bomb: false, shield: true, weapons: ['rocket'] } });
+    // Credits for check-ins only: the first Yes, and 3 zeros; nothing for Yeses in a row yet.
+    expect(round?.rewards.credits.map((c) => c.key)).toEqual(['first-yes', 'zeros-3']);
+  });
+
+  it("still shows the first day's tip after the first Yes's round", async () => {
+    const { store, setTime } = harness({ limits: PLUS_LIMITS });
+    await ready(store);
+    add(store, 5);
+    setTime(DAY0, '21:00');
+    store.getState().answer(gid(store), 'yes');
+    store.getState().finishRound(gid(store), DAY0);
+    expect(firstRoundTipSlot(store.getState())?.goal.goalId).toBe(gid(store));
+  });
+});

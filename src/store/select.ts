@@ -1,7 +1,16 @@
 // Reading goals out of the store's state (SPEC 9), shared with the website. The free app and the
 // website show one goal, the first. Every selector returns something already in the state, or a
 // number, so a React selector never sees a fresh object and re-renders for nothing.
-import { arsenalReach, celebrationFor, equippedMode, equippedTheme, type GoalState, type ModeId, type ThemeId } from '@/engine';
+import {
+  arsenalReach,
+  celebrationFor,
+  equippedMode,
+  equippedTheme,
+  isHeadStart,
+  type GoalState,
+  type ModeId,
+  type ThemeId,
+} from '@/engine';
 
 import type { Limits } from './limits';
 import type { GoalSlot, PersistedState, RoundRecord } from './types';
@@ -47,13 +56,13 @@ export const isMovedOut = (s: Pick<PersistedState, 'moveOut'>): boolean => s.mov
 /**
  * The goal Home's first-round tip follows (SPEC 6): the one with the install's only Yes, once its
  * round has been played, until the tip is closed. A second Yes, on any goal, here or archived,
- * means the first day has passed.
+ * means the first day has passed. A head start's days (engine/headStart.ts) weren't check-ins.
  */
 export function firstRoundTipSlot(s: Pick<PersistedState, 'goals' | 'archived' | 'tipsSeen'>): GoalSlot | null {
   if (s.tipsSeen.includes('first-round')) return null;
   let yeses = 0;
   for (const goal of [...s.goals.map((slot) => slot.goal), ...s.archived.map((a) => a.goal)]) {
-    for (const entry of goal.history) if (entry.result === 'yes' && ++yeses > 1) return null;
+    for (const entry of goal.history) if (entry.result === 'yes' && !isHeadStart(entry) && ++yeses > 1) return null;
   }
   return yeses === 1 ? (s.goals.find((slot) => slot.round?.played) ?? null) : null;
 }
