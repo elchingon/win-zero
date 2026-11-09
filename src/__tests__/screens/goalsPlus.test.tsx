@@ -15,8 +15,8 @@ import PastGoalScreen from '@/app/past-goal';
 import PastGoalsScreen from '@/app/past-goals';
 import SettingsScreen from '@/app/settings';
 import SetupScreen from '@/app/setup';
-import { latestScheduleEntry, type GoalState } from '@/engine';
-import { at, DAY0, newGoal, yesDays } from '@/engine/__tests__/fixtures';
+import { createGoalWithHeadStart, latestScheduleEntry, type GoalState } from '@/engine';
+import { at, DAY0, newGoal, notTodays, yesDays } from '@/engine/__tests__/fixtures';
 import { appStore, primaryGoal } from '@/store';
 import { DEFAULT_PERSISTED } from '@/store/migrate';
 
@@ -269,11 +269,20 @@ describe('archiving, and Past goals', () => {
 
     await fireEvent.press(screen.getByRole('button', { name: /^Past goals/ }));
     expect(app.pathname()).toBe('/past-goals');
-    expect(screen.getByText('Archived Oct 15 · best run 7 days')).toBeOnTheScreen();
+    expect(screen.getByText('Best run 7 days · 7 Yes days · archived Oct 15')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Past goals: 1')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Yes days: 7')).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('button', { name: /^Run/ }));
     expect(app.pathname()).toBe('/past-goal');
     expect(screen.getByRole('header', { name: 'Run' })).toBeOnTheScreen();
     expect(screen.getByLabelText('Best run: 7 days, Oct 8 to Oct 14')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Check-ins: 7')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Days on this goal: 8, Oct 8 – Oct 15')).toBeOnTheScreen();
+    expect(
+      screen.getByLabelText(
+        'Milestones: Reached Day 7. Not reached: Day 14, Day 30, Day 60, Day 100, Day 180 and Day 365.',
+      ),
+    ).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: /Save/ })).not.toBeOnTheScreen();
     expect(screen.queryByLabelText('Goal')).not.toBeOnTheScreen();
   });
@@ -341,6 +350,24 @@ describe('archiving, and Past goals', () => {
     });
     await fireEvent.press(screen.getByRole('button', { name: 'Past goals' }));
     expect(app.pathname()).toBe('/past-goals');
+  });
+
+  it("shows a past goal's head start, comebacks and the milestones its best run reached", async () => {
+    // A head start of 12, three Not todays (10-08 .. 10-10) down to 9, then Yes on 10-11 .. 10-14 up to 13.
+    const start = createGoalWithHeadStart({
+      goalId: 'g3',
+      goal: 'Read',
+      headStart: 12,
+      now: at('2026-10-08', '12:00', tz()),
+      tz: tz(),
+    });
+    const goal = yesDays(notTodays(start, '2026-10-08', 3, tz()), '2026-10-11', 4, tz());
+    appStore.setState({ archived: [{ goal, archivedAt: at('2026-10-15', '12:00', tz()).toISOString() }] });
+    await open('/past-goal?id=g3');
+    expect(screen.getByLabelText('Yes days: 16, 12 from a head start')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Check-ins: 7')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Comebacks: 1')).toBeOnTheScreen();
+    expect(screen.getByLabelText(/^Milestones: Reached Day 7\. Not reached: Day 14/)).toBeOnTheScreen();
   });
 
   it('says so when there are no past goals', async () => {

@@ -152,8 +152,24 @@ export const PAST_COPY = {
   /** Settings' row, and Setup's link. */
   openHint: "Opens the goals you've archived",
   rowHint: "Opens this goal's history",
-  /** Under its name: 'Archived Oct 3 · best run 41 days'. */
-  detail: (day: string, best: string) => `Archived ${day} · best run ${best}`,
+  /** Under its name: 'Best run 41 days · 63 Yes days · archived Oct 3'. */
+  detail: (best: string, yes: string, day: string) => `Best run ${best} · ${yes} · archived ${day}`,
+  /** Over the list: every past goal added up. */
+  totals: { goals: 'Past goals', yesDays: 'Yes days', bestRun: 'Best run', comebacks: 'Comebacks' },
+  /** One past goal's numbers. */
+  stats: {
+    bestRun: 'Best run',
+    yesDays: 'Yes days',
+    headStart: (n: number) => `${n} from a head start`,
+    answered: 'Check-ins',
+    comebacks: 'Comebacks',
+    shieldsUsed: 'Shields used',
+    days: 'Days on this goal',
+  },
+  milestones: 'Milestones',
+  /** Read out for the milestones row: 'Reached Day 7, Day 14 and Day 30. Not reached: Day 60 …'. */
+  milestonesSpoken: (reached: string, rest: string) =>
+    `${reached ? `Reached ${reached}.` : 'None reached.'}${rest ? ` Not reached: ${rest}.` : ''}`,
   archived: (day: string) => `Archived ${day}`,
   deleteLink: 'Delete for good',
   deleteHint: 'Asks first',

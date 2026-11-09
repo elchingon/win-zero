@@ -1,5 +1,5 @@
-// One past goal (SPEC 9): read-only, its numbers and history as they were when it was archived.
-// Delete for good is offered here and nowhere else, and asks first. Weapons and themes it
+// One past goal (SPEC 9): read-only, what it accomplished and its history, as they were when it was
+// archived. Delete for good is offered here and nowhere else, and asks first. Weapons and themes it
 // unlocked stay (the store keeps its best in arsenalBest).
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
@@ -14,11 +14,11 @@ import { TopBar } from '@/ui/Brand';
 import { Button, LinkButton } from '@/ui/Button';
 import { feedback } from '@/ui/feedback';
 import { HistoryCalendar } from '@/ui/home/HistoryCalendar';
-import { Stats } from '@/ui/home/Stats';
 import { Screen } from '@/ui/Screen';
 import { useDeviceCalendar } from '@/ui/useDevice';
 
 import { PAST_COPY } from '../copy';
+import { Accomplishments } from '../goals/Accomplishments';
 import { leave } from '../nav';
 
 export function PastGoal() {
@@ -59,7 +59,7 @@ export function PastGoal() {
           {goal.goal}
         </Text>
       </View>
-      <Stats goal={goal} today={archivedDay} />
+      <Accomplishments goal={goal} lastDay={archivedDay} />
       <HistoryCalendar goal={goal} today={archivedDay} pendingDay={null} firstWeekday={firstWeekday} restDays />
       {armed ? (
         <Card style={styles.confirm}>

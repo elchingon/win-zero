@@ -50,6 +50,7 @@ const DemoControls: ComponentType | null = __DEV__
 export function PlusHome() {
   const slots = useApp((s) => s.goals);
   const roomy = useApp(canAddGoal);
+  const pastGoals = useApp((s) => s.archived.length > 0);
   const best = useApp(arsenalBestOf);
   const streak = useApp(arsenalStreakOf);
   const pick = useApp((s) => s.weapon);
@@ -155,6 +156,7 @@ export function PlusHome() {
             picked={shown.goal.goalId}
             onPick={setPicked}
             onAdd={roomy ? () => router.push('/add-goal') : undefined}
+            onPast={pastGoals ? () => router.push('/past-goals') : undefined}
           />
 
           <View style={styles.goal}>

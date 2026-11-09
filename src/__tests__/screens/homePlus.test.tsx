@@ -37,6 +37,7 @@ const ROUTES = {
   setup: () => null,
   goal: () => null,
   'add-goal': () => null,
+  'past-goals': () => null,
 };
 
 const tz = () => appStore.getState().timeZone();
@@ -170,6 +171,18 @@ describe('Home with one goal in Win Zero Plus', () => {
     const app = await open([slot(twoDays())]);
     await fireEvent.press(screen.getByRole('button', { name: 'Add goal' }));
     expect(app.pathname()).toBe('/add-goal');
+  });
+
+  it('opens Past goals from beside Your goals, once there are some', async () => {
+    appStore.setState({ archived: [{ goal: { ...twoDays(), goalId: 'old' }, archivedAt: at(DAY0, '12:00', tz()).toISOString() }] });
+    const app = await open([slot(twoDays())]);
+    await fireEvent.press(screen.getByRole('button', { name: 'Past goals' }));
+    expect(app.pathname()).toBe('/past-goals');
+  });
+
+  it('leaves out Past goals while there are none', async () => {
+    await open([slot(twoDays())]);
+    expect(screen.queryByRole('button', { name: 'Past goals' })).not.toBeOnTheScreen();
   });
 
   it('names the days of a goal that skips some, and asks about reminders without "each day"', async () => {
