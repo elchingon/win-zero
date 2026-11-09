@@ -93,6 +93,21 @@ export const HEAD_START_COPY = {
   },
 } as const;
 
+/**
+ * The encouragement over a comeback's round (SPEC 9), in place of the usual cheer: coming back is
+ * the brave part. Never how long they were away, and nothing that frames the gap as a failure.
+ */
+export const COMEBACK_CHEERS: readonly string[] = [
+  "You came back. That's the hardest part, and you did it.",
+  "Starting again takes guts. You've got plenty.",
+  'Welcome back. The zeros missed you.',
+  'Every comeback starts with one check-in. This was it.',
+  "You didn't give up on yourself. That's what counts.",
+  'Back in the game, and right on target.',
+  'Falling down is part of it. Getting back up is all you.',
+  "Look who's back. Let's keep this going.",
+];
+
 /** The history calendar's words for the Yeses Win Zero Plus marks apart. */
 export const CALENDAR_NOTES = { headStart: 'Head start', comeback: 'Comeback' } as const;
 

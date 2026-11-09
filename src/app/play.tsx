@@ -62,8 +62,8 @@ import { CrashScreen } from '@/ui/CrashScreen';
 import { CreditPopup } from '@/ui/CreditPopup';
 import { FEATURES } from '@/variant';
 
-// Win Zero Plus only: the game picker before a round (SPEC 9). The literal comparison folds per
-// file, so Win Zero's bundle leaves it out.
+// Win Zero Plus only: the game picker before a round, and a comeback's own cheers (SPEC 9). The
+// literal comparison folds per file, so Win Zero's bundle leaves it out.
 const PlusPlay: typeof import('@/plus/play') | null =
   process.env.EXPO_PUBLIC_APP_VARIANT === 'plus'
     ? // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -389,7 +389,10 @@ function Round(props: {
       {overlay === 'sheet' ? (
         <ResultSheet n={n} mode={mode} goalId={goalId} record={record} gameMode={gameMode} onBack={toBase} onReplay={replay} />
       ) : overlay === 'cheer' ? (
-        <CheerPopup onDismiss={dismissCheer} />
+        <CheerPopup
+          onDismiss={dismissCheer}
+          next={PlusPlay && record?.comeback && mode === 'real' ? PlusPlay.nextComebackCheer : undefined}
+        />
       ) : overlay === 'credit' ? (
         <CreditPopup news={creditReveal(earned, gameCredits)} onDismiss={dismissCredit} />
       ) : (
