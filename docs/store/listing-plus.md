@@ -31,7 +31,7 @@ Habit tracker, goals & games
 Track up to three habits on the days you choose. Play five arcade games and earn themes as you progress. Pay once, with no ads, subscription or account.
 ```
 
-### Description (4000 max): 3078
+### Description (4000 max): 3382
 ```
 Track up to three habits on your own schedule, and turn each Yes into an arcade round. Win Zero Plus is a habit tracker with daily reminders, five games, and themes to earn as your best streak grows.
 
@@ -40,7 +40,8 @@ Read more, take a walk, or work toward another goal you choose. Each goal has it
 UP TO THREE GOALS
 • Track up to three goals, each with its own check-in time, reminder, streak, best run, bombs, shields and history.
 • Home shows what's open now and what's up next, with each goal's stats and calendar a tap away.
-• Done with a goal? Archive it. Its history waits under Past goals.
+• Already doing it? Start a goal with up to 30 days you've done, so your streak starts where you really are.
+• Done with a goal? Archive it, and Past goals keeps what it accomplished: its best run, milestones and comebacks.
 
 CHECK-IN DAYS
 • Pick the days each goal checks in: every day, weekdays, or any mix.
@@ -52,12 +53,13 @@ FIVE ARCADE GAMES
 • No game can be lost: no lives, no timers. Clear the last zero for the big finish.
 
 THEMES AND APP ICONS
-• Seven color themes for your rounds and the zeros on Home. Classic, Neon Arcade, Mono CRT and Pastel are yours from the start; Ember, Aurora and Gold Year are earned at a best run of 30, 180 and 365 days.
+• Eight color themes for your rounds and the zeros on Home. Classic, Neon Arcade, Mono CRT and Pastel are yours from the start; Ember, Aurora and Gold Year are earned at a best run of 30, 180 and 365 days, and Phoenix by coming back after starting over.
 • An app icon to match each theme.
 
 GENTLE STREAK RULES
 • Every Yes adds one to that goal's streak. Not today usually subtracts one; on every seventh slip without a Yes, a shield protects the remaining streak or it resets.
 • The first 7 missed check-ins in a row cost nothing. Later misses count as slips. Rest days never count as misses.
+• Back after a few hard days? You're welcomed back with a free win-back round of the zeros you had.
 • Earn bombs, shields and credits through check-ins. Credits play bonus rounds or let you try a locked power-up for one round; they are never sold.
 
 MOVING FROM WIN ZERO
@@ -129,7 +131,7 @@ Win Zero Plus: Habit Tracker
 Track 3 habits on your schedule. Turn check-ins into 5 arcade games. Pay once.
 ```
 
-### Full description (4000 max): 3267
+### Full description (4000 max): 3571
 ```
 Track up to three habits on your own schedule, and turn each Yes into an arcade round. Win Zero Plus is a habit tracker with daily reminders, five games, and themes to earn as your best streak grows.
 
@@ -138,7 +140,8 @@ Read more, take a walk, or work toward another goal you choose. Each goal has it
 UP TO THREE GOALS
 • Track up to three goals, each with its own check-in time, reminder, streak, best run, bombs, shields and history.
 • Home shows what's open now and what's up next, with each goal's stats and calendar a tap away.
-• Done with a goal? Archive it. Its history waits under Past goals.
+• Already doing it? Start a goal with up to 30 days you've done, so your streak starts where you really are.
+• Done with a goal? Archive it, and Past goals keeps what it accomplished: its best run, milestones and comebacks.
 
 CHECK-IN DAYS
 • Pick the days each goal checks in: every day, weekdays, or any mix.
@@ -150,12 +153,13 @@ FIVE ARCADE GAMES
 • No game can be lost: no lives, no timers. Clear the last zero for the big finish.
 
 THEMES AND APP ICONS
-• Seven color themes for your rounds and the zeros on Home. Classic, Neon Arcade, Mono CRT and Pastel are yours from the start; Ember, Aurora and Gold Year are earned at a best run of 30, 180 and 365 days.
+• Eight color themes for your rounds and the zeros on Home. Classic, Neon Arcade, Mono CRT and Pastel are yours from the start; Ember, Aurora and Gold Year are earned at a best run of 30, 180 and 365 days, and Phoenix by coming back after starting over.
 • An app icon to match each theme.
 
 GENTLE STREAK RULES
 • Every Yes adds one to that goal's streak. Not today usually subtracts one; on every seventh slip without a Yes, a shield protects the remaining streak or it resets.
 • The first 7 missed check-ins in a row cost nothing. Later misses count as slips. Rest days never count as misses.
+• Back after a few hard days? You're welcomed back with a free win-back round of the zeros you had.
 • Earn bombs, shields and credits through check-ins. Credits play bonus rounds or let you try a locked power-up for one round; they are never sold.
 
 MOVING FROM WIN ZERO

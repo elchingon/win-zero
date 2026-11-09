@@ -48,20 +48,21 @@ is not a purchased random reward, wager or competition.
 
 ### In-app purchases
 **None.** All features are included in the upfront purchase; some power-ups, themes and icons
-still require streak progress. There is no additional paid unlock.
+still require streak progress (and Phoenix a comeback). There is no additional paid unlock.
 
 ### App Review notes (paste into "Notes")
 These explain the functional differences and disclose Home's secret. They do not guarantee
 acceptance under Apple's guideline 4.3(a), which prohibits multiple Bundle IDs of the same app.
 Google also has a repetitive-content policy. See `review.md` before committing to the release date.
 ```
-Win Zero Plus needs no account. One upfront purchase includes all features, with no in-app purchases. All five games are playable from the start. Power-ups unlock with best streak; four themes are available immediately, with Ember at 30, Aurora at 180 and Gold Year at 365. Matching theme icons unlock at the same milestones.
+Win Zero Plus needs no account. One upfront purchase includes all features, with no in-app purchases. All five games are playable from the start. Power-ups unlock with best streak; four themes are available immediately, with Ember at 30, Aurora at 180 and Gold Year at 365, and Phoenix after a comeback (a Yes after the streak has reset). Matching theme icons unlock with their themes. A new goal can count up to 30 days already done ("Days already done"), which is the quickest way to see later power-ups and Ember: these are progress the user reports, never a purchase.
 
 How it relates to Win Zero: Win Zero (Apple ID 6823793298) is our free daily check-in app with a small arcade round. It is complete on its own: one goal, checked in every day, and one game. Win Zero Plus is a separate, paid edition with features Win Zero doesn't have:
 - up to 3 goals, each with its own reminders, streak and history, and Past goals for archived ones
 - check-in days for each goal (for example Mon, Wed, Fri), with rest days in between
 - four more games besides the Shooter (Catch, Orbit, Slice and Breaker), picked before each round
-- seven color themes, with matching alternate app icons
+- eight color themes, with matching alternate app icons
+- a head start of days already done, a free win-back round after a comeback, and Past goals that keep what each goal accomplished
 Win Zero offers an optional one-way move of a user's data into Plus (Win Zero: Settings > About). It happens on the device through an App Group the two apps share (group.com.e7systems.winzero); nothing goes to a server. Plus can be reviewed without Win Zero installed.
 
 To see Plus quickly:
