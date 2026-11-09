@@ -150,6 +150,11 @@ export interface PersistedState {
   reminderCardHiddenUntil: IsoInstant | null;
   /** The tips on Home already shown and closed, each shown once. */
   tipsSeen: TipId[];
+  /**
+   * A goal has come back after a reset (engine/comeback.ts), here or archived or since deleted:
+   * Win Zero Plus's comeback theme is open. Never goes back, short of Erase all data.
+   */
+  cameBack: boolean;
   /** Development builds only: simulated time travel. Production builds ignore it. */
   devClockOffsetMs: number;
   /** Win Zero: its move to Win Zero Plus, from the first try until it's cancelled or the user stays. */

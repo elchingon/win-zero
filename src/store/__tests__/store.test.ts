@@ -1146,6 +1146,7 @@ describe('persistence', () => {
       bonus: s.bonus,
       reminderCardHiddenUntil: s.reminderCardHiddenUntil,
       tipsSeen: s.tipsSeen,
+      cameBack: s.cameBack,
       devClockOffsetMs: s.devClockOffsetMs,
       moveOut: s.moveOut,
       imports: s.imports,
@@ -1174,6 +1175,7 @@ describe('persistence', () => {
         'archived',
         'arsenalBest',
         'bonus',
+        'cameBack',
         'credits',
         'devClockOffsetMs',
         'gameMode',
@@ -1744,5 +1746,54 @@ describe('a head start (SPEC 9)', () => {
     store.getState().answer(gid(store), 'yes');
     store.getState().finishRound(gid(store), DAY0);
     expect(firstRoundTipSlot(store.getState())?.goal.goalId).toBe(gid(store));
+  });
+});
+
+describe('the comeback mark (SPEC 9)', () => {
+  const afterReset = () => notTodays(yesDays(newGoal(), DAY0, 3), '2026-10-16', 7); // the 7th, 10-22, resets
+
+  it('is set by a Yes after a reset, not by one after a shorter gap', async () => {
+    const { store, setTime } = harness({ limits: PLUS_LIMITS });
+    await ready(store);
+    store.setState(oneGoal(notTodays(yesDays(newGoal(), DAY0, 3), '2026-10-16', 3)));
+    setTime('2026-10-19', '21:00');
+    store.getState().answer(gid(store), 'yes');
+    expect(store.getState().cameBack).toBe(false);
+
+    store.setState(oneGoal(afterReset()));
+    setTime('2026-10-23', '21:00');
+    store.getState().answer(gid(store), 'yes');
+    expect(store.getState().cameBack).toBe(true);
+  });
+
+  it('stays when the goal goes, and goes only with Erase all data', async () => {
+    const { store, setTime } = harness({ limits: PLUS_LIMITS });
+    await ready(store);
+    store.setState(oneGoal(afterReset()));
+    setTime('2026-10-23', '21:00');
+    store.getState().answer(gid(store), 'yes');
+    expect(store.getState().deleteGoal(gid(store))).toBe(true);
+    expect(store.getState().cameBack).toBe(true);
+    store.getState().erase();
+    expect(store.getState().cameBack).toBe(false);
+  });
+
+  it('is found when a goal that came back is removed or moved in', async () => {
+    const { store, setTime } = harness({ limits: PLUS_LIMITS });
+    await ready(store);
+    setTime('2026-10-24', '12:00');
+    const goal = answerDay(afterReset(), '2026-10-23', 'yes').state;
+    store.setState(oneGoal(goal));
+    expect(store.getState().deleteGoal(goal.goalId)).toBe(true);
+    expect(store.getState().cameBack).toBe(true);
+
+    store.setState({ cameBack: false });
+    const r = store.getState().importMove((current) => ({
+      ok: true,
+      state: { ...current, goals: [{ goal, round: null, seenThrough: null }] },
+      replaced: [],
+    }));
+    expect(r.ok).toBe(true);
+    expect(store.getState().cameBack).toBe(true);
   });
 });

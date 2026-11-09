@@ -3,6 +3,7 @@
 // field by field, keeping everything still valid. Saved data is only ever upgraded or kept as
 // is: a goal is dropped only when it can't be read at all, and the store backs it up first.
 import {
+  cameBackAfterReset,
   claimCredits,
   CREDIT_KINDS,
   EMPTY_WALLET,
@@ -58,6 +59,7 @@ export const DEFAULT_PERSISTED: PersistedState = {
   bonus: null,
   reminderCardHiddenUntil: null,
   tipsSeen: [],
+  cameBack: false,
   devClockOffsetMs: 0,
   moveOut: null,
   imports: {},
@@ -289,6 +291,8 @@ export function normalizePersisted(raw: unknown): PersistedState {
     bonus: normalizeBonus(r.bonus),
     reminderCardHiddenUntil: instantOrNull(r.reminderCardHiddenUntil),
     tipsSeen: tipIds(r.tipsSeen),
+    // Added with comebacks (SPEC 9): a comeback after a reset from before then counts too.
+    cameBack: bool(r.cameBack, false) || [...goals, ...archived].some((g) => cameBackAfterReset(g.goal)),
     devClockOffsetMs: typeof offset === 'number' && Number.isFinite(offset) ? offset : 0,
     moveOut: normalizeMoveOut(r.moveOut),
     imports: normalizeImports(r.imports),

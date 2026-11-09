@@ -10,8 +10,10 @@ import {
   arsenalReach,
   availableModes,
   availableThemes,
+  cameBackAfterReset,
   canArchive,
   claimCredits,
+  comebackAt,
   createGoalWithHeadStart,
   EMPTY_WALLET,
   giftCredits,
@@ -40,6 +42,7 @@ import {
   type ModeId,
   type ThemeId,
   type ResolveEvent,
+  type ThemeReach,
   type TimeZone,
   type WeaponId,
 } from '@/engine';
@@ -274,6 +277,7 @@ function persisted(s: AppState): PersistedState & LegacyCopy {
     bonus: s.bonus,
     reminderCardHiddenUntil: s.reminderCardHiddenUntil,
     tipsSeen: s.tipsSeen,
+    cameBack: s.cameBack,
     devClockOffsetMs: s.devClockOffsetMs,
     moveOut: s.moveOut,
     imports: s.imports,
@@ -306,6 +310,8 @@ export function createAppStore(deps: StoreDeps) {
           get().hydrated ? (get().goals.find((s) => s.goal.goalId === goalId) ?? null) : null;
         /** How far the shared arsenal reaches now. */
         const reach = () => arsenalReach(get().arsenalBest, get().goals.map((s) => s.goal));
+        /** How far the player has come, for the themes. */
+        const themeReach = (): ThemeReach => ({ best: reach(), cameBack: get().cameBack });
 
         /** News of a goal's missed days after its seen mark, through its latest settled day. */
         const missedNews = (slot: GoalSlot): PendingNotice | null => {
@@ -343,6 +349,7 @@ export function createAppStore(deps: StoreDeps) {
           return {
             goals: s.goals.filter((g) => g.goal.goalId !== goalId),
             arsenalBest: Math.max(s.arsenalBest, goal.bestStreak),
+            cameBack: s.cameBack || cameBackAfterReset(goal),
             notices: without(s.notices, goalId),
             route: s.route?.goalId === goalId ? null : s.route,
             rejection: s.rejection?.goalId === goalId ? null : s.rejection,
@@ -446,8 +453,8 @@ export function createAppStore(deps: StoreDeps) {
             const slot = slotOf(goalId);
             if (!slot) return null;
             const at = now();
-            const before = reach();
-            const r = answerCheckIn(slot.goal, { answer: ans, day, arsenalBest: before }, at, timeZone());
+            const before = themeReach();
+            const r = answerCheckIn(slot.goal, { answer: ans, day, arsenalBest: before.best }, at, timeZone());
             const { notices } = get();
             if (!r.ok) {
               setSlot(goalId, r.state, {}, { rejection: { reason: r.reason, goalId }, undo: null });
@@ -457,10 +464,13 @@ export function createAppStore(deps: StoreDeps) {
               const earned = claimCredits(get().credits, { type: 'yes', goal: r.state });
               // Earned themes this Yes opened, for the result sheet (SPEC 9). Left off the round
               // when there are none, so a round saved by Win Zero keeps its shape.
-              const after = arsenalReach(
-                get().arsenalBest,
-                get().goals.map((other) => (other.goal.goalId === goalId ? r.state : other.goal)),
-              );
+              const after: ThemeReach = {
+                best: arsenalReach(
+                  get().arsenalBest,
+                  get().goals.map((other) => (other.goal.goalId === goalId ? r.state : other.goal)),
+                ),
+                cameBack: before.cameBack || comebackAt(r.state)?.reset === true,
+              };
               const themesEnabled = limits.themesEnabled;
               const unlocks = newlyUnlockedThemes(before, after, { themesEnabled }).map((t) => t.id);
               setSlot(
@@ -486,6 +496,7 @@ export function createAppStore(deps: StoreDeps) {
                   // A newly unlocked weapon equips itself; otherwise the player's pick stands.
                   weapon: newest ? newest.id : get().weapon,
                   credits: earned.wallet,
+                  cameBack: after.cameBack,
                   notices: without(notices, goalId),
                   route: source === 'notification' ? null : { path: '/play', goalId },
                   rejection: null,
@@ -604,7 +615,7 @@ export function createAppStore(deps: StoreDeps) {
 
           setTheme: (id) => {
             if (!get().hydrated) return false;
-            if (!availableThemes(reach(), { themesEnabled: limits.themesEnabled }).some((t) => t.id === id)) return false;
+            if (!availableThemes(themeReach(), { themesEnabled: limits.themesEnabled }).some((t) => t.id === id)) return false;
             set({ theme: id });
             return true;
           },
@@ -719,7 +730,9 @@ export function createAppStore(deps: StoreDeps) {
             const mine = <T extends { goalId: string }>(x: T | null): T | null => (x && replaced.has(x.goalId) ? null : x);
             let { notices } = s;
             for (const id of replaced) notices = without(notices, id);
-            set({ ...outcome.state, notices, route: mine(s.route), rejection: mine(s.rejection), undo: mine(s.undo) });
+            const { goals, archived } = outcome.state;
+            const cameBack = s.cameBack || [...goals, ...archived].some((g) => cameBackAfterReset(g.goal));
+            set({ ...outcome.state, cameBack, notices, route: mine(s.route), rejection: mine(s.rejection), undo: mine(s.undo) });
             get().refresh();
             return outcome;
           },

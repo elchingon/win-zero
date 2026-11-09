@@ -29,7 +29,8 @@ export function AppIconSection() {
   const [supported, setSupported] = useState(true);
   const [armed, setArmed] = useState<AppIconDef | null>(null);
   const [failed, setFailed] = useState(false);
-  const open = availableIcons(best, { iconsEnabled });
+  const cameBack = useApp((s) => s.cameBack);
+  const open = availableIcons({ best, cameBack }, { iconsEnabled });
 
   // The icon can change outside this screen (Erase, or the debug chips), so read it again on the way in.
   const read = useCallback(() => {

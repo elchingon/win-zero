@@ -25,7 +25,8 @@ export function ThemesSection() {
   const best = useApp(arsenalBestOf);
   const themesEnabled = useApp((s) => s.limits.themesEnabled);
   const theme = useApp(themeOf);
-  const open = availableThemes(best, { themesEnabled });
+  const cameBack = useApp((s) => s.cameBack);
+  const open = availableThemes({ best, cameBack }, { themesEnabled });
   return (
     <View style={shared.section}>
       <Eyebrow header>{THEMES_COPY.title}</Eyebrow>

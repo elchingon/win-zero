@@ -44,8 +44,8 @@ export const gameModeOf = (s: Pick<PersistedState, 'goals' | 'arsenalBest' | 'ga
   equippedMode(s.gameMode, arsenalBestOf(s), { modesEnabled: s.limits.modesEnabled });
 
 /** The theme this app draws the round and Home's zeros in: the saved pick while it's offered and earned, otherwise Classic. */
-export const themeOf = (s: Pick<PersistedState, 'goals' | 'arsenalBest' | 'theme'> & { limits: Limits }): ThemeId =>
-  equippedTheme(s.theme, arsenalBestOf(s), { themesEnabled: s.limits.themesEnabled });
+export const themeOf = (s: Pick<PersistedState, 'goals' | 'arsenalBest' | 'cameBack' | 'theme'> & { limits: Limits }): ThemeId =>
+  equippedTheme(s.theme, { best: arsenalBestOf(s), cameBack: s.cameBack }, { themesEnabled: s.limits.themesEnabled });
 
 /** Another goal fits under this app's limit. */
 export const canAddGoal = (s: Goals & { limits: Limits }): boolean => s.goals.length < s.limits.maxGoals;

@@ -3,7 +3,7 @@
 import { describe, expect, it } from '@jest/globals';
 
 import { EMPTY_WALLET, MODE_IDS, THEME_IDS } from '@/engine';
-import { DAY0, newGoal, yesDays } from '@/engine/__tests__/fixtures';
+import { answerDay, DAY0, newGoal, notTodays, yesDays } from '@/engine/__tests__/fixtures';
 
 import { applyUpgrades, hasUnreadableGoal, migratePersisted, normalizePersisted, type Upgrade } from '../migrate';
 
@@ -245,5 +245,22 @@ describe('migratePersisted', () => {
     expect(normalizePersisted(v3).goals).toEqual([{ goal, round, seenThrough: '2026-10-14' }]);
     // Already at version 3: nothing runs again.
     expect(migratePersisted(v3, 3)).toBe(v3);
+  });
+});
+
+describe('the comeback mark (SPEC 9)', () => {
+  // Three Yeses, seven Not todays (the last one a reset), then a Yes: a comeback after a reset.
+  const cameBack = () => answerDay(notTodays(yesDays(newGoal(), DAY0, 3), '2026-10-16', 7), '2026-10-23', 'yes').state;
+
+  it('is kept as saved, and off by default', () => {
+    expect(normalizePersisted({}).cameBack).toBe(false);
+    expect(normalizePersisted({ cameBack: true }).cameBack).toBe(true);
+    expect(normalizePersisted({ cameBack: 'yes' }).cameBack).toBe(false);
+  });
+
+  it('is found in the history of goals saved before there was one, here or archived', () => {
+    expect(normalizePersisted({ goals: [{ goal: cameBack() }] }).cameBack).toBe(true);
+    expect(normalizePersisted({ archived: [{ goal: cameBack(), archivedAt: '2026-10-24T00:00:00.000Z' }] }).cameBack).toBe(true);
+    expect(normalizePersisted({ goals: [{ goal: yesDays(newGoal(), DAY0, 9) }] }).cameBack).toBe(false);
   });
 });

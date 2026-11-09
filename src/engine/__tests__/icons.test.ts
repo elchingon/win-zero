@@ -16,11 +16,13 @@ import {
   THEME_UNLOCK_EMBER,
   THEME_UNLOCK_GOLD,
   THEMES,
+  type ThemeReach,
 } from '../themes';
 
 const FREE = { iconsEnabled: false };
 const PLUS = { iconsEnabled: true };
 const ids = (icons: readonly { id: AppIconId }[]) => icons.map((i) => i.id);
+const reach = (best: number): ThemeReach => ({ best, cameBack: false });
 
 describe('app icons (SPEC 9)', () => {
   it('is the app’s own icon and one per theme, each opening with its theme', () => {
@@ -38,28 +40,28 @@ describe('app icons (SPEC 9)', () => {
 
 describe('available icons', () => {
   it('is only the app’s own in Win Zero, at any streak', () => {
-    for (const best of [0, 30, 365, 10_000]) expect(ids(availableIcons(best, FREE))).toEqual(['default']);
+    for (const best of [0, 30, 365, 10_000]) expect(ids(availableIcons(reach(best), FREE))).toEqual(['default']);
   });
 
   it('offers Plus its own icon, Classic’s and the included themes’ from the start', () => {
-    expect(ids(availableIcons(0, PLUS))).toEqual(['default', 'classic', 'neon', 'mono', 'pastel']);
+    expect(ids(availableIcons(reach(0), PLUS))).toEqual(['default', 'classic', 'neon', 'mono', 'pastel']);
   });
 
   it('opens each earned theme’s icon at the same best streak as the theme', () => {
-    const last = (best: number) => ids(availableIcons(best, PLUS)).at(-1);
+    const last = (best: number) => ids(availableIcons(reach(best), PLUS)).at(-1);
     expect(last(THEME_UNLOCK_EMBER - 1)).toBe('pastel');
     expect(last(THEME_UNLOCK_EMBER)).toBe('ember');
     expect(last(THEME_UNLOCK_AURORA - 1)).toBe('ember');
     expect(last(THEME_UNLOCK_AURORA)).toBe('aurora');
     expect(last(THEME_UNLOCK_GOLD - 1)).toBe('aurora');
-    expect(ids(availableIcons(THEME_UNLOCK_GOLD, PLUS))).toEqual(APP_ICON_IDS);
+    expect(ids(availableIcons(reach(THEME_UNLOCK_GOLD), PLUS))).toEqual(APP_ICON_IDS);
   });
 
   it('follows the available themes at every best streak, and only grows', () => {
-    let before = ids(availableIcons(0, PLUS));
+    let before = ids(availableIcons(reach(0), PLUS));
     for (let best = 0; best <= 400; best++) {
-      const now = ids(availableIcons(best, PLUS));
-      expect(now).toEqual(['default', ...availableThemes(best, { themesEnabled: true }).map((t) => t.id)]);
+      const now = ids(availableIcons(reach(best), PLUS));
+      expect(now).toEqual(['default', ...availableThemes(reach(best), { themesEnabled: true }).map((t) => t.id)]);
       expect(now.slice(0, before.length)).toEqual(before);
       before = now;
     }
@@ -68,21 +70,21 @@ describe('available icons', () => {
 
 describe('the icon to keep', () => {
   it('keeps an icon that is still available', () => {
-    expect(keptIcon('default', 0, PLUS)).toBe('default');
-    expect(keptIcon('neon', 0, PLUS)).toBe('neon');
-    expect(keptIcon('gold', THEME_UNLOCK_GOLD, PLUS)).toBe('gold');
+    expect(keptIcon('default', reach(0), PLUS)).toBe('default');
+    expect(keptIcon('neon', reach(0), PLUS)).toBe('neon');
+    expect(keptIcon('gold', reach(THEME_UNLOCK_GOLD), PLUS)).toBe('gold');
   });
 
   it('goes back to the app’s own icon when one isn’t earned, or in Win Zero', () => {
-    expect(keptIcon('ember', THEME_UNLOCK_EMBER - 1, PLUS)).toBe('default');
-    expect(keptIcon('gold', THEME_UNLOCK_GOLD - 1, PLUS)).toBe('default');
-    for (const id of APP_ICON_IDS) expect(keptIcon(id, 400, FREE)).toBe('default');
+    expect(keptIcon('ember', reach(THEME_UNLOCK_EMBER - 1), PLUS)).toBe('default');
+    expect(keptIcon('gold', reach(THEME_UNLOCK_GOLD - 1), PLUS)).toBe('default');
+    for (const id of APP_ICON_IDS) expect(keptIcon(id, reach(400), FREE)).toBe('default');
   });
 
   it('after Erase all data (best 0), puts back the earned icons and keeps the included ones', () => {
-    expect(keptIcon('gold', 0, PLUS)).toBe('default');
-    expect(keptIcon('aurora', 0, PLUS)).toBe('default');
-    expect(keptIcon('neon', 0, PLUS)).toBe('neon');
-    expect(keptIcon('classic', 0, PLUS)).toBe('classic');
+    expect(keptIcon('gold', reach(0), PLUS)).toBe('default');
+    expect(keptIcon('aurora', reach(0), PLUS)).toBe('default');
+    expect(keptIcon('neon', reach(0), PLUS)).toBe('neon');
+    expect(keptIcon('classic', reach(0), PLUS)).toBe('classic');
   });
 });
