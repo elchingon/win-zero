@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from '@jest/globals';
 
 import {
   addDays,
+  ARCHIVE_MIN_BEST,
   BONUS_MAX_N,
   CELEBRATIONS,
   celebrationFor,
@@ -22,7 +23,7 @@ import {
   type CreditWallet,
   type ModeId,
 } from '@/engine';
-import { answerDay, at, DAY0, DENVER, newGoal, TOKYO, yesDays } from '@/engine/__tests__/fixtures';
+import { answerDay, at, DAY0, DENVER, newGoal, notTodays, TOKYO, yesDays } from '@/engine/__tests__/fixtures';
 
 import {
   createAppStore,
@@ -1633,18 +1634,59 @@ describe('several goals (SPEC 9)', () => {
     expect(totalBombs(store.getState())).toBe(5);
   });
 
-  it('archiving clears what was waiting for that goal only', async () => {
+  it.each<[string, number, 'archiveGoal' | 'deleteGoal']>([
+    ['archiving', 7, 'archiveGoal'],
+    ['deleting', 3, 'deleteGoal'],
+  ])('%s clears what was waiting for that goal only', async (_, run, remove) => {
     const { store, setTime } = harness({ limits: PLUS_LIMITS });
     await ready(store);
-    add(store, 'Stop drinking');
-    add(store, 'Run');
-    const [a, b] = [idOf(store, 0), idOf(store, 1)];
-    setTime(DAY0, '21:00');
-    store.getState().answer(a, 'not-today');
-    store.getState().answer(b, 'yes');
-    store.getState().archiveGoal(a);
+    store.setState({
+      goals: [
+        { goal: { ...yesDays(newGoal(), DAY0, run), goalId: 'a' }, round: null, seenThrough: null },
+        { goal: { ...yesDays(newGoal(), DAY0, run), goalId: 'b' }, round: null, seenThrough: null },
+      ],
+    });
+    setTime(addDays(DAY0, run), '21:00');
+    store.getState().answer('a', 'not-today');
+    store.getState().answer('b', 'yes');
+    expect(store.getState()[remove]('a')).toBe(true);
     expect(store.getState().notices).toEqual({});
-    expect(store.getState().route).toEqual({ path: '/play', goalId: b });
+    expect(store.getState().route).toEqual({ path: '/play', goalId: 'b' });
     expect(canAddGoal(store.getState())).toBe(true);
+  });
+
+  it('archives a goal once its best run reached ARCHIVE_MIN_BEST, and deletes one only below it', async () => {
+    const { store } = harness({ limits: PLUS_LIMITS });
+    await ready(store);
+    const slid = notTodays(yesDays(newGoal(), DAY0, ARCHIVE_MIN_BEST), addDays(DAY0, ARCHIVE_MIN_BEST), 3);
+    expect(slid.streak).toBeLessThan(ARCHIVE_MIN_BEST);
+    store.setState({
+      goals: [
+        { goal: { ...yesDays(newGoal(), DAY0, ARCHIVE_MIN_BEST - 1), goalId: 'short' }, round: null, seenThrough: null },
+        { goal: { ...slid, goalId: 'slid' }, round: null, seenThrough: null },
+      ],
+    });
+    expect(store.getState().archiveGoal('short')).toBe(false);
+    expect(store.getState().deleteGoal('slid')).toBe(false);
+    expect(store.getState().goals).toHaveLength(2);
+
+    expect(store.getState().deleteGoal('short')).toBe(true);
+    expect(store.getState().archived).toEqual([]);
+    expect(store.getState().arsenalBest).toBe(ARCHIVE_MIN_BEST - 1);
+    expect(store.getState().archiveGoal('slid')).toBe(true);
+    expect(store.getState().archived.map((a) => a.goal.goalId)).toEqual(['slid']);
+    expect(store.getState().goals).toEqual([]);
+    expect(store.getState().deleteGoal('slid')).toBe(false);
+    expect(store.getState().deleteGoal('nobody')).toBe(false);
+  });
+
+  it('removing the last goal keeps the credits, the arsenal and a waiting bonus round', async () => {
+    const { store } = harness({ limits: PLUS_LIMITS });
+    await ready(store);
+    const credits = { balance: { game: 2, weapon: 1 }, claimed: ['first-yes'] };
+    const bonus = { n: 50, borrowed: [], played: false };
+    store.setState({ ...oneGoal({ ...yesDays(newGoal(), DAY0, 5), goalId: 'only' }), credits, bonus });
+    expect(store.getState().deleteGoal('only')).toBe(true);
+    expect(store.getState()).toMatchObject({ goals: [], archived: [], arsenalBest: 5, credits, bonus });
   });
 });

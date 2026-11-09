@@ -243,7 +243,8 @@ describe('several goals in Settings', () => {
 });
 
 describe('archiving, and Past goals', () => {
-  const run = () => ({ ...yesDays(newGoal({ tz: tz() }), DAY0, 2, tz()), goalId: 'g2', goal: 'Run' });
+  // A week of Yeses, 10-08 .. 10-14: enough to archive.
+  const run = () => ({ ...yesDays(newGoal({ day: '2026-10-08', tz: tz() }), '2026-10-08', 7, tz()), goalId: 'g2', goal: 'Run' });
 
   it('archives a goal only after asking, and lists it under Past goals, read-only', async () => {
     const app = await open('/settings', [twoDays(), run()]);
@@ -268,11 +269,11 @@ describe('archiving, and Past goals', () => {
 
     await fireEvent.press(screen.getByRole('button', { name: /^Past goals/ }));
     expect(app.pathname()).toBe('/past-goals');
-    expect(screen.getByText('Archived Oct 15 · best run 2 days')).toBeOnTheScreen();
+    expect(screen.getByText('Archived Oct 15 · best run 7 days')).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('button', { name: /^Run/ }));
     expect(app.pathname()).toBe('/past-goal');
     expect(screen.getByRole('header', { name: 'Run' })).toBeOnTheScreen();
-    expect(screen.getByLabelText('Best run: 2 days, Oct 13 to Oct 14')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Best run: 7 days, Oct 8 to Oct 14')).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: /Save/ })).not.toBeOnTheScreen();
     expect(screen.queryByLabelText('Goal')).not.toBeOnTheScreen();
   });

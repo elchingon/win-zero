@@ -10,6 +10,7 @@ import {
   arsenalReach,
   availableModes,
   availableThemes,
+  canArchive,
   claimCredits,
   createGoal,
   EMPTY_WALLET,
@@ -127,8 +128,16 @@ export interface AppState extends PersistedState {
     morningTime: ClockTime;
     days?: readonly number[];
   }) => AddGoalResult;
-  /** Set a goal aside: its history is kept to read, its reminders stop, and its slot is free. */
+  /**
+   * Set a goal aside: its history is kept to read, its reminders stop, and its slot is free. Only
+   * a goal whose best run reached ARCHIVE_MIN_BEST; one that hasn't is deleted instead.
+   */
   archiveGoal: (goalId: string) => boolean;
+  /**
+   * Remove a goal that can't be archived yet, for good: its reminders stop and its slot is free.
+   * Weapons it unlocked stay (arsenalBest). A goal that can be archived goes that way instead.
+   */
+  deleteGoal: (goalId: string) => boolean;
   /** Remove an archived goal for good. Weapons it unlocked stay (arsenalBest). */
   deleteArchivedGoal: (goalId: string) => boolean;
   /** Answer a goal's check-in: `day` when it comes from a notification, otherwise the open window. */
@@ -322,6 +331,23 @@ export function createAppStore(deps: StoreDeps) {
           if (slot && (slot.seenThrough === null || day > slot.seenThrough)) setSlot(goalId, slot.goal, { seenThrough: day });
         };
 
+        /**
+         * A goal's slot going, archived or deleted: what waited for it alone goes too, and the
+         * arsenal keeps what it reached.
+         */
+        const leaving = (goal: GoalState): Partial<AppState> => {
+          const s = get();
+          const { goalId } = goal;
+          return {
+            goals: s.goals.filter((g) => g.goal.goalId !== goalId),
+            arsenalBest: Math.max(s.arsenalBest, goal.bestStreak),
+            notices: without(s.notices, goalId),
+            route: s.route?.goalId === goalId ? null : s.route,
+            rejection: s.rejection?.goalId === goalId ? null : s.rejection,
+            undo: s.undo?.goalId === goalId ? null : s.undo,
+          };
+        };
+
         /** Run a goal edit through the engine, or say why not. */
         const edit = (goalId: string, change: (goal: GoalState) => GoalState): EditResult => {
           const slot = slotOf(goalId);
@@ -385,19 +411,17 @@ export function createAppStore(deps: StoreDeps) {
 
           archiveGoal: (goalId) => {
             const slot = slotOf(goalId);
-            if (!slot) return false;
+            if (!slot || !canArchive(slot.goal)) return false;
             const at = now();
             const goal = resolve(slot.goal, at, timeZone()).state;
-            const s = get();
-            set({
-              goals: s.goals.filter((g) => g.goal.goalId !== goalId),
-              archived: [...s.archived, { goal, archivedAt: at.toISOString() }],
-              arsenalBest: Math.max(s.arsenalBest, goal.bestStreak),
-              notices: without(s.notices, goalId),
-              route: s.route?.goalId === goalId ? null : s.route,
-              rejection: s.rejection?.goalId === goalId ? null : s.rejection,
-              undo: s.undo?.goalId === goalId ? null : s.undo,
-            });
+            set({ ...leaving(goal), archived: [...get().archived, { goal, archivedAt: at.toISOString() }] });
+            return true;
+          },
+
+          deleteGoal: (goalId) => {
+            const slot = slotOf(goalId);
+            if (!slot || canArchive(slot.goal)) return false;
+            set(leaving(slot.goal));
             return true;
           },
 
