@@ -104,8 +104,8 @@ function Arrival({ delivery }: { delivery: PendingImport }) {
           },
         }}
       >
-        Win Zero Plus has room for {plan.maxGoals} goals, and all {plan.maxGoals} are in use. Archive one in Settings, then
-        start the move again from Win Zero.
+        Win Zero Plus has room for {plan.maxGoals} goals, and all {plan.maxGoals} are in use. Archive or delete one in
+        Settings, then start the move again from Win Zero.
       </Message>
     );
   }

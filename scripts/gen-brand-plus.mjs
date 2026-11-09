@@ -226,6 +226,8 @@ const THEME_ICONS = {
   // Gold Year, the year's prize, is a gold field (palette[3] → palette[0] → the glow's edge) with a
   // navy mark, the brand's mark for light backgrounds, so it can't pass for the navy Plus icon.
   gold: { zero: '#FFD24D', plus: '#F3E3B0', glow: ['#FFD24D', '#B9770A'], field: ['#FFFDF4', '#FFD24D', '#B9770A'] },
+  // Phoenix, earned by coming back after a reset.
+  phoenix: { zero: '#FF4D7A', plus: '#B98CFF', glow: ['#FF4D7A', '#8B3DFF'] },
 };
 /** The fill's glow behind the mark, like the round's celebration: alphas at the middle and edge, and its reach. */
 const FILL_GLOW_MIDDLE = 0.34;

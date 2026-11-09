@@ -10,8 +10,8 @@ import { fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 import { AccessibilityInfo } from 'react-native';
 
 import HomeScreen from '@/app/index';
-import { addDays, resolve, type GoalState } from '@/engine';
-import { at, DAY0, newGoal, yesDays } from '@/engine/__tests__/fixtures';
+import { addDays, createGoalWithHeadStart, resolve, type GoalState } from '@/engine';
+import { answerDay, at, DAY0, newGoal, notTodays, yesDays } from '@/engine/__tests__/fixtures';
 import { SECRET_TAP_GAP_MS } from '@/plus/home/secretTaps';
 import { appStore, slotById, type GoalSlot, type RoundRecord } from '@/store';
 import { DEFAULT_PERSISTED } from '@/store/migrate';
@@ -37,6 +37,7 @@ const ROUTES = {
   setup: () => null,
   goal: () => null,
   'add-goal': () => null,
+  'past-goals': () => null,
 };
 
 const tz = () => appStore.getState().timeZone();
@@ -170,6 +171,18 @@ describe('Home with one goal in Win Zero Plus', () => {
     const app = await open([slot(twoDays())]);
     await fireEvent.press(screen.getByRole('button', { name: 'Add goal' }));
     expect(app.pathname()).toBe('/add-goal');
+  });
+
+  it('opens Past goals from beside Your goals, once there are some', async () => {
+    appStore.setState({ archived: [{ goal: { ...twoDays(), goalId: 'old' }, archivedAt: at(DAY0, '12:00', tz()).toISOString() }] });
+    const app = await open([slot(twoDays())]);
+    await fireEvent.press(screen.getByRole('button', { name: 'Past goals' }));
+    expect(app.pathname()).toBe('/past-goals');
+  });
+
+  it('leaves out Past goals while there are none', async () => {
+    await open([slot(twoDays())]);
+    expect(screen.queryByRole('button', { name: 'Past goals' })).not.toBeOnTheScreen();
   });
 
   it('names the days of a goal that skips some, and asks about reminders without "each day"', async () => {
@@ -342,5 +355,99 @@ describe("Home's first-round tip", () => {
     await fireEvent.press(screen.getByRole('button', { name: "Let's go" }));
     expect(screen.queryByRole('header', { name: 'Day one, done.' })).not.toBeOnTheScreen();
     expect(appStore.getState().tipsSeen).toEqual(['first-round']);
+  });
+});
+
+describe('a head start and comebacks on Home (SPEC 9)', () => {
+  const headStart = (n: number, time = '21:00') =>
+    createGoalWithHeadStart({ goalId: 'g1', goal: 'Run', headStart: n, now: at('2026-10-15', time, tz()), tz: tz() });
+
+  it("says today counts after a head start, and marks the head start's days", async () => {
+    await open([slot(headStart(3))]);
+    expect(screen.getByText('Today counts: your first check-in is open now.')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Oct 14: Head start')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Oct 12: Head start')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Head start: 3')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Comebacks: 0')).toBeOnTheScreen();
+  });
+
+  it('marks a comeback on the calendar, and counts it', async () => {
+    // Three Yeses, three Not todays, then a Yes on 10-19.
+    const goal = answerDay(notTodays(yesDays(newGoal({ tz: tz() }), DAY0, 3, tz()), '2026-10-16', 3, tz()), '2026-10-19', 'yes', { tz: tz() }).state;
+    await open([slot(goal)], { day: '2026-10-19', time: '22:00' });
+    expect(screen.getByLabelText('Oct 19, today: Comeback')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Oct 15: Yes')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Comebacks: 1')).toBeOnTheScreen();
+    expect(screen.queryByLabelText(/^Head start:/)).not.toBeOnTheScreen();
+  });
+
+  it("opens the first-round tip as a first check-in, not day one, after a head start", async () => {
+    const goal = answerDay(headStart(5), '2026-10-15', 'yes', { tz: tz() }).state;
+    const round: RoundRecord = {
+      day: '2026-10-15',
+      n: 6,
+      rewards: { bomb: false, shield: false, shieldCapped: false, weapons: [], credits: [] },
+      borrowed: [],
+      played: true,
+    };
+    await open([{ ...slot(goal), round }], { time: '22:00' });
+    expect(screen.getByRole('header', { name: 'First check-in, done.' })).toBeOnTheScreen();
+    expect(screen.getByText(/^You came in already on a roll/)).toBeOnTheScreen();
+    expect(screen.queryByText(/A journey of a thousand miles/)).not.toBeOnTheScreen();
+  });
+});
+
+describe('the welcome back after a comeback (SPEC 9)', () => {
+  // Nine Yeses through 10-21, three Not todays, then the Yes on 10-25 that came back.
+  const cameBack = () =>
+    answerDay(notTodays(yesDays(newGoal({ tz: tz() }), DAY0, 9, tz()), '2026-10-22', 3, tz()), '2026-10-25', 'yes', { tz: tz() }).state;
+  const round = (played: boolean, reset = false): RoundRecord => ({
+    day: '2026-10-25',
+    n: 7,
+    rewards: { bomb: false, shield: false, shieldCapped: false, weapons: [], credits: [] },
+    borrowed: [],
+    played,
+    comeback: { before: 9, reset, seen: false },
+  });
+  const winBack = { goalId: 'g1', day: '2026-10-25', n: 9, borrowed: [], played: false };
+  const at25 = { day: '2026-10-25', time: '22:00' };
+
+  it('waits until the comeback round has been played', async () => {
+    appStore.setState({ winBack });
+    await open([{ ...slot(cameBack()), round: round(false) }], at25);
+    expect(screen.queryByRole('header', { name: 'Welcome back.' })).not.toBeOnTheScreen();
+    expect(screen.queryByText(/^Win-back round:/)).not.toBeOnTheScreen();
+  });
+
+  it('welcomes back, and plays the win-back round from it', async () => {
+    appStore.setState({ winBack });
+    const app = await open([{ ...slot(cameBack()), round: round(true) }], at25);
+    expect(screen.getByRole('header', { name: 'Welcome back.' })).toBeOnTheScreen();
+    expect(screen.getByText(/^Coming back is the bravest part/)).toBeOnTheScreen();
+    expect(screen.getByText(/^A free round of 9 zeros/)).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Play the win-back round' }));
+    expect(app.pathname()).toBe('/play');
+    expect(app.params()).toMatchObject({ round: 'winback' });
+    expect(slotById(appStore.getState(), 'g1')?.round?.comeback?.seen).toBe(true);
+  });
+
+  it('leaves the win-back round waiting on Home for later', async () => {
+    appStore.setState({ winBack });
+    const app = await open([{ ...slot(cameBack()), round: round(true) }], at25);
+    await fireEvent.press(screen.getByRole('button', { name: 'Later' }));
+    expect(screen.queryByRole('header', { name: 'Welcome back.' })).not.toBeOnTheScreen();
+    expect(screen.getByText('Win-back round: 9 zeros')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Play it' }));
+    expect(app.params()).toMatchObject({ round: 'winback' });
+  });
+
+  it('after a reset, says starting over counts, and points to a win-back round still waiting', async () => {
+    appStore.setState({ winBack: { ...winBack, day: '2026-10-01' } });
+    await open([{ ...slot(cameBack()), round: round(true, true) }], at25);
+    expect(screen.getByText(/^Starting over takes more than starting did/)).toBeOnTheScreen();
+    expect(screen.getByText('Your win-back round from before is still waiting on Home.')).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Play the win-back round' })).not.toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Keep going' }));
+    expect(screen.queryByRole('header', { name: 'Welcome back.' })).not.toBeOnTheScreen();
   });
 });

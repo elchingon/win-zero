@@ -15,8 +15,8 @@ import PastGoalScreen from '@/app/past-goal';
 import PastGoalsScreen from '@/app/past-goals';
 import SettingsScreen from '@/app/settings';
 import SetupScreen from '@/app/setup';
-import { latestScheduleEntry, type GoalState } from '@/engine';
-import { at, DAY0, newGoal, yesDays } from '@/engine/__tests__/fixtures';
+import { createGoalWithHeadStart, latestScheduleEntry, type GoalState } from '@/engine';
+import { at, DAY0, newGoal, notTodays, yesDays } from '@/engine/__tests__/fixtures';
 import { appStore, primaryGoal } from '@/store';
 import { DEFAULT_PERSISTED } from '@/store/migrate';
 
@@ -117,13 +117,13 @@ describe('adding a goal', () => {
 
   it('says plainly in Settings when the goals are full', async () => {
     await open('/settings', three());
-    expect(screen.getByText('All 3 goals are in use. Archive one to add another.')).toBeOnTheScreen();
+    expect(screen.getByText('All 3 goals are in use. Archive or delete one to add another.')).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: /^Add a goal/ })).not.toBeOnTheScreen();
   });
 
   it('says so kindly, with nothing to fill in, if Add a goal opens anyway', async () => {
     await open('/add-goal', three());
-    expect(screen.getByText('All 3 goals are in use. Archive one in Settings to make room for a new one.')).toBeOnTheScreen();
+    expect(screen.getByText('All 3 goals are in use. Archive or delete one in Settings to make room for a new one.')).toBeOnTheScreen();
     expect(screen.queryByLabelText('Your goal')).not.toBeOnTheScreen();
   });
 });
@@ -155,6 +155,46 @@ describe('Setup in Win Zero Plus', () => {
     await untick('Monday', 'Wednesday', 'Friday');
     await fireEvent.press(screen.getByRole('button', { name: 'Start my streak' }));
     expect(screen.getByText(/so today counts/)).toBeOnTheScreen();
+  });
+});
+
+describe('a head start (SPEC 9)', () => {
+  it('starts a goal from Setup with the days already done, saying what it starts with', async () => {
+    await open('/setup', []);
+    await fireEvent.changeText(screen.getByLabelText('Your daily goal'), 'Run');
+    await fireEvent.press(screen.getByRole('button', { name: '14' }));
+    expect(
+      screen.getByText(
+        'You start with 14 zeros, 2 bombs and 2 shields. Your first Yes makes 15. It opens the Twin Barrel, the Scatter Gun and the Rocket.',
+      ),
+    ).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Start my streak' }));
+    await fireEvent.press(screen.getByText('Not now'));
+    const goal = primaryGoal(appStore.getState())!;
+    expect(goal).toMatchObject({ streak: 14, bestStreak: 14, bombs: 2, shields: 2, lastSettledDay: '2026-10-14' });
+    expect(goal.history.every((e) => e.headStart)).toBe(true);
+    expect(appStore.getState().credits.balance).toEqual({ game: 0, weapon: 0 });
+  });
+
+  it('turns down what isn’t a number of days, up to 30', async () => {
+    await open('/setup', []);
+    await fireEvent.changeText(screen.getByLabelText('Your daily goal'), 'Run');
+    await fireEvent.changeText(screen.getByLabelText('Days already done'), '31');
+    expect(screen.getByText('A whole number from 0 to 30.')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Start my streak' })).toBeDisabled();
+    await fireEvent.changeText(screen.getByLabelText('Days already done'), '');
+    expect(screen.getByRole('button', { name: 'Start my streak' })).toBeEnabled();
+    expect(screen.queryByText(/^You start with/)).not.toBeOnTheScreen();
+  });
+
+  it('names a theme a head start of 30 opens', async () => {
+    await open('/add-goal');
+    await fireEvent.changeText(screen.getByLabelText('Your goal'), 'Run');
+    await fireEvent.changeText(screen.getByLabelText('Days already done'), '30');
+    // The first goal's two Yeses already opened the Pea Shooter; nothing past 3 is open yet.
+    expect(screen.getByText(/It opens the Twin Barrel, the Scatter Gun, the Rocket, the Chain Zapper and the Ember theme\.$/)).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Add goal' }));
+    expect(appStore.getState().goals[1]?.goal).toMatchObject({ streak: 30, bombs: 6, shields: 3 });
   });
 });
 
@@ -243,7 +283,8 @@ describe('several goals in Settings', () => {
 });
 
 describe('archiving, and Past goals', () => {
-  const run = () => ({ ...yesDays(newGoal({ tz: tz() }), DAY0, 2, tz()), goalId: 'g2', goal: 'Run' });
+  // A week of Yeses, 10-08 .. 10-14: enough to archive.
+  const run = () => ({ ...yesDays(newGoal({ day: '2026-10-08', tz: tz() }), '2026-10-08', 7, tz()), goalId: 'g2', goal: 'Run' });
 
   it('archives a goal only after asking, and lists it under Past goals, read-only', async () => {
     const app = await open('/settings', [twoDays(), run()]);
@@ -268,11 +309,20 @@ describe('archiving, and Past goals', () => {
 
     await fireEvent.press(screen.getByRole('button', { name: /^Past goals/ }));
     expect(app.pathname()).toBe('/past-goals');
-    expect(screen.getByText('Archived Oct 15 · best run 2 days')).toBeOnTheScreen();
+    expect(screen.getByText('Best run 7 days · 7 Yes days · archived Oct 15')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Past goals: 1')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Yes days: 7')).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('button', { name: /^Run/ }));
     expect(app.pathname()).toBe('/past-goal');
     expect(screen.getByRole('header', { name: 'Run' })).toBeOnTheScreen();
-    expect(screen.getByLabelText('Best run: 2 days, Oct 13 to Oct 14')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Best run: 7 days, Oct 8 to Oct 14')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Check-ins: 7')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Days on this goal: 8, Oct 8 – Oct 15')).toBeOnTheScreen();
+    expect(
+      screen.getByLabelText(
+        'Milestones: Reached Day 7. Not reached: Day 14, Day 30, Day 60, Day 100, Day 180 and Day 365.',
+      ),
+    ).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: /Save/ })).not.toBeOnTheScreen();
     expect(screen.queryByLabelText('Goal')).not.toBeOnTheScreen();
   });
@@ -290,14 +340,74 @@ describe('archiving, and Past goals', () => {
     await fireEvent.press(screen.getByRole('button', { name: 'Delete for good' }));
     expect(appStore.getState().archived).toHaveLength(0);
     expect(appStore.getState().arsenalBest).toBe(30);
-    // The last one gone: back to Settings, with no Past goals row.
+    // The last one gone: back to Settings, where Past goals says how a goal gets there.
     expect(app.pathname()).toBe('/settings');
     expect(screen.queryByRole('button', { name: /^Past goals/ })).not.toBeOnTheScreen();
+    expect(screen.getByText(/^None yet\. A goal that reaches 7 zeros/)).toBeOnTheScreen();
   });
 
-  it('offers no Archive with a single goal, as in Win Zero', async () => {
-    await open('/goal?id=g1');
+  it('offers to delete a goal short of 7 zeros, not archive it, and says why', async () => {
+    const app = await open('/goal?id=g2', [twoDays(), { ...twoDays(), goalId: 'g2', goal: 'Run' }]);
     expect(screen.queryByRole('button', { name: 'Archive this goal' })).not.toBeOnTheScreen();
+    expect(screen.getByText(/^Once a goal reaches 7 zeros, it can be archived/)).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Delete this goal' }));
+    expect(screen.getByText('Delete “Run”?')).toBeOnTheScreen();
+    expect(screen.queryByText(/your only goal/)).not.toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Keep it' }));
+    expect(appStore.getState().goals).toHaveLength(2);
+    await fireEvent.press(screen.getByRole('button', { name: 'Delete this goal' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Delete goal' }));
+    expect(appStore.getState().goals.map((g) => g.goal.goalId)).toEqual(['g1']);
+    expect(appStore.getState().archived).toEqual([]);
+    expect(app.pathname()).toBe('/settings');
+  });
+
+  it('deletes the only goal from Settings after asking, and goes Home to start again', async () => {
+    const app = await open('/settings');
+    await fireEvent.press(screen.getByRole('button', { name: 'Delete this goal' }));
+    expect(screen.getByText("It's your only goal, so you'll set up a new one next.")).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Delete goal' }));
+    expect(appStore.getState().goals).toEqual([]);
+    expect(app.pathname()).toBe('/');
+  });
+
+  it('archives the only goal once it reached 7, saying what it reached', async () => {
+    const app = await open('/goal?id=g2', [run()]);
+    await fireEvent.press(screen.getByRole('button', { name: 'Archive this goal' }));
+    expect(screen.getByText('Best run 7 days · 7 Yes days')).toBeOnTheScreen();
+    expect(screen.getByText("It's your only goal, so you'll set up a new one next.")).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Archive goal' }));
+    expect(appStore.getState().goals).toEqual([]);
+    expect(appStore.getState().archived.map((a) => a.goal.goal)).toEqual(['Run']);
+    expect(app.pathname()).toBe('/');
+  });
+
+  it('leads from Setup to Past goals once there are some', async () => {
+    const app = await open('/setup', []);
+    expect(screen.queryByRole('button', { name: 'Past goals' })).not.toBeOnTheScreen();
+    await act(async () => {
+      appStore.setState({ archived: [{ goal: run(), archivedAt: at(DAY0, '12:00', tz()).toISOString() }] });
+    });
+    await fireEvent.press(screen.getByRole('button', { name: 'Past goals' }));
+    expect(app.pathname()).toBe('/past-goals');
+  });
+
+  it("shows a past goal's head start, comebacks and the milestones its best run reached", async () => {
+    // A head start of 12, three Not todays (10-08 .. 10-10) down to 9, then Yes on 10-11 .. 10-14 up to 13.
+    const start = createGoalWithHeadStart({
+      goalId: 'g3',
+      goal: 'Read',
+      headStart: 12,
+      now: at('2026-10-08', '12:00', tz()),
+      tz: tz(),
+    });
+    const goal = yesDays(notTodays(start, '2026-10-08', 3, tz()), '2026-10-11', 4, tz());
+    appStore.setState({ archived: [{ goal, archivedAt: at('2026-10-15', '12:00', tz()).toISOString() }] });
+    await open('/past-goal?id=g3');
+    expect(screen.getByLabelText('Yes days: 16, 12 from a head start')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Check-ins: 7')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Comebacks: 1')).toBeOnTheScreen();
+    expect(screen.getByLabelText(/^Milestones: Reached Day 7\. Not reached: Day 14/)).toBeOnTheScreen();
   });
 
   it('says so when there are no past goals', async () => {

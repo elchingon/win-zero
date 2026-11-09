@@ -12,9 +12,11 @@ import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-librar
 import PlayScreen from '@/app/play';
 import { PLAYABLE_MODES, THEME_UNLOCK_EMBER } from '@/engine';
 import { DAY0, newGoal, yesDays } from '@/engine/__tests__/fixtures';
-import { appStore, type RoundRecord } from '@/store';
+import { COMEBACK_CHEERS } from '@/plus/copy';
+import { appStore, primaryRound, type RoundRecord } from '@/store';
 import { DEFAULT_PERSISTED } from '@/store/migrate';
 import { THEME_LOOKS, type ThemeLook } from '@/theme/themes';
+import { CHEERS } from '@/ui/copy/cheers';
 import { WEAPON_PROMPT } from '@/ui/copy/credits';
 import { MODE_COPY } from '@/ui/copy/modes';
 
@@ -22,13 +24,21 @@ jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock
 jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
 const mockRounds: { n: number; mode?: string; look: ThemeLook }[] = [];
+/** Clears the round on the canvas: its last zero goes, and the fill lands. */
+const mockCanvas: { clear: () => void } = { clear: () => {} };
 jest.mock('@/game/GameCanvas', () => {
   const { createElement } = require('react');
   const { Text } = require('react-native');
   return {
-    GameCanvas: (props: { round: { n: number; mode?: string }; look: ThemeLook }) => {
-      mockRounds.push({ ...props.round, look: props.look });
-      return createElement(Text, null, `Canvas: ${props.round.n} zeros`);
+    GameCanvas: (props: { round: { n: number; mode?: string; seed: number }; look: ThemeLook; onReport: (r: object) => void }) => {
+      const { round, onReport } = props;
+      mockRounds.push({ ...round, look: props.look });
+      mockCanvas.clear = () => {
+        const counts = { shots: 0, hits: 0, kills: 0, armoredKills: 0, blasts: 0, bombs: 0, bounces: 0, swishes: 0 };
+        onReport({ seed: round.seed, dirty: true, valueLeft: 0, ...counts, final: true, showResult: false });
+        onReport({ seed: round.seed, dirty: true, valueLeft: 0, ...counts, final: false, showResult: true });
+      };
+      return createElement(Text, null, `Canvas: ${round.n} zeros`);
     },
   };
 });
@@ -198,5 +208,51 @@ describe('a bonus round with several goals (SPEC 9)', () => {
     await open('/play?round=bonus');
     await pickLast();
     expect(screen.getByRole('button', { name: 'Bomb, 5 left' })).toBeOnTheScreen();
+  });
+});
+
+describe("a comeback's round (SPEC 9)", () => {
+  const clear = () => act(() => mockCanvas.clear());
+  /** The lines of `lines` on screen. */
+  const shown = (lines: readonly string[]) => lines.filter((line) => screen.queryByText(line) !== null);
+
+  it('cheers the comeback with its own words, the first time it is played', async () => {
+    const round = { ...dayRound, comeback: { before: 9, reset: false, seen: false } };
+    appStore.setState({ goals: [{ goal, round, seenThrough: null }] });
+    await open('/play');
+    await pickLast();
+    await clear();
+    expect(primaryRound(appStore.getState())?.played).toBe(true);
+    expect(shown(COMEBACK_CHEERS)).toHaveLength(1);
+    expect(shown(CHEERS)).toEqual([]);
+  });
+
+  it('cheers any other round as usual', async () => {
+    await open('/play');
+    await pickLast();
+    await clear();
+    expect(shown(CHEERS)).toHaveLength(1);
+    expect(shown(COMEBACK_CHEERS)).toEqual([]);
+  });
+});
+
+describe('the win-back round (SPEC 9)', () => {
+  const winBack = { goalId: 'g1', day: '2026-10-15', n: 9, borrowed: [], played: false };
+
+  it('plays as a bonus round, under its own name, and is played once its last zero goes', async () => {
+    appStore.setState({ winBack });
+    await open('/play?round=winback');
+    expect(screen.getByRole('header', { name: 'Pick your game' })).toBeOnTheScreen();
+    await pickLast();
+    expect(mockRounds.at(-1)?.n).toBe(9);
+    expect(screen.getByText('COMEBACK')).toBeOnTheScreen();
+    await act(() => mockCanvas.clear());
+    expect(appStore.getState().winBack?.played).toBe(true);
+    expect(appStore.getState().goals[0]?.round?.played).toBe(false);
+  });
+
+  it('goes Home without one', async () => {
+    await open('/play?round=winback');
+    expect(mockRounds).toHaveLength(0);
   });
 });

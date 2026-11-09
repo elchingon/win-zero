@@ -88,7 +88,8 @@ describe('the comparison', () => {
     expect(html).toContain('<th scope="row">Goals at a time</th><td>One</td><td>Up to three</td>');
     expect(html).toContain(`<td>${list(engine.MODES.map((m) => m.name))}</td>`);
     expect(html).toContain(`<td>US$${APPS.plus.priceUsd}, once</td>`);
-    expect(html).toContain('<td>Seven: four included, three to earn</td>');
+    expect(html).toContain('<td>Eight: four included, four to earn</td>');
+    expect(html).toMatch(/<th scope="row">Start with days already done<\/th><td>.*No.*<\/td><td>Up to 30 days<\/td>/);
   });
 });
 
@@ -128,8 +129,13 @@ describe('the FAQs', () => {
     const missed = homeFaqs(facts).find((f) => f.q.startsWith('What happens if I miss'));
     expect(missed?.a).toContain(`The first ${engine.MISSED_GRACE_DAYS} missed check-ins`);
     expect(missed?.a).toContain('On every seventh slip');
+    const faqs = plusFaqs(facts);
+    expect(faqs.find((f) => f.q === 'Can I count days I had already done?')?.a).toContain('count up to 30 days');
+    expect(faqs.find((f) => f.q.startsWith('What happens when I come back'))?.a).toContain('A Yes after three or more');
+    expect(faqs.find((f) => f.q.startsWith('What happens to a goal'))?.a).toContain('reached 7 zeros');
     const earn = plusFaqs(facts).find((f) => f.q === 'What do I earn as I play?');
     expect(earn?.a).toContain('Ember, Aurora and Gold Year are earned at a best run of 30, 180 and 365 days');
+    expect(earn?.a).toContain('Phoenix is earned by coming back after starting over');
   });
 });
 

@@ -131,8 +131,8 @@ export function formatCount(n: number): string {
   return n.toLocaleString('en-US');
 }
 
-/** A whole number from 1 to `max`, typed as plain digits, or null. */
-export function parseCount(text: string, max: number): number | null {
+/** A whole number from `min` (1 unless given) to `max`, typed as plain digits, or null. */
+export function parseCount(text: string, max: number, min = 1): number | null {
   const n = Number(text);
-  return /^\d+$/.test(text) && n >= 1 && n <= max ? n : null;
+  return /^\d+$/.test(text) && n >= min && n <= max ? n : null;
 }

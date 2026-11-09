@@ -105,10 +105,12 @@ const price = (app: AppInfo) => `US$${app.priceUsd}`;
 const isLive = (id: AppId, store: StoreId) => APPS[id].stores[store].live;
 const liveUrls = (id: AppId) => STORE_IDS.filter((s) => isLive(id, s)).map((s) => APPS[id].stores[s].url);
 
+/** Plus's themes: the ones it comes with, those a best run earns, and those a comeback earns (Phoenix). */
 function themes({ engine }: Facts) {
-  const fromStart = engine.THEMES.filter((t) => t.source !== 'earned').map((t) => t.name);
+  const fromStart = engine.THEMES.filter((t) => t.source === 'free' || t.source === 'included').map((t) => t.name);
   const earned = engine.THEMES.filter((t) => t.source === 'earned');
-  return { all: engine.THEMES, fromStart, earned };
+  const comeback = engine.THEMES.filter((t) => t.source === 'comeback').map((t) => t.name);
+  return { all: engine.THEMES, fromStart, earned, comeback, toEarn: earned.length + comeback.length };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -207,12 +209,18 @@ export function compareHtml(facts: Facts): string {
   const days = (l: LimitsModule.Limits) => (l.weekdaySchedules ? 'Every day, weekdays or any mix' : 'Every day');
   const games = (l: LimitsModule.Limits) => (l.modesEnabled ? list(engine.MODES.map((m) => m.name)) : shooter.name);
   const looks = (l: LimitsModule.Limits) =>
-    l.themesEnabled ? `${capital(words(t.all.length))}: ${words(t.fromStart.length)} included, ${words(t.earned.length)} to earn` : 'Classic';
+    l.themesEnabled ? `${capital(words(t.all.length))}: ${words(t.fromStart.length)} included, ${words(t.toEarn)} to earn` : 'Classic';
   const icons = (l: LimitsModule.Limits) => (l.iconsEnabled ? 'One for each theme' : 'One');
+  const headStart = (l: LimitsModule.Limits) => (l.headStartMax > 0 ? `Up to ${l.headStartMax} days` : NO);
+  const comebacks = (l: LimitsModule.Limits) => (l.comebacks ? YES : NO);
+  const pastGoals = (l: LimitsModule.Limits) => (l.maxGoals > 1 ? YES : NO);
   const rows: [string, string, string][] = [
     ['Price', 'Free', `${price(APPS.plus)}, once`],
     ['Goals at a time', goals(free), goals(plus)],
     ['Check-in days', days(free), days(plus)],
+    ['Start with days already done', headStart(free), headStart(plus)],
+    ['A win-back round when you come back', comebacks(free), comebacks(plus)],
+    ['Past goals, with what each accomplished', pastGoals(free), pastGoals(plus)],
     ['Arcade games', games(free), games(plus)],
     ['Power-ups', `${capital(words(engine.WEAPONS.length))} weapons`, `${capital(words(shooter.tiers.length))} in each game`],
     ['Color themes', looks(free), looks(plus)],
@@ -282,12 +290,13 @@ export function gamesHtml({ engine }: Facts): string {
   return `<ul class="unlocks games">\n${items.join('\n')}\n</ul>`;
 }
 
-/** Plus's themes: the ones it comes with, then the ones earned by a best run. */
+/** Plus's themes: the ones it comes with, then the ones earned by a best run, then by a comeback. */
 export function themesHtml(facts: Facts): string {
   const t = themes(facts);
   const items = [
     ...t.fromStart.map((name) => `<li><span class="day">Included</span> <span class="weapon">${escape(name)}</span></li>`),
     ...t.earned.map((th) => `<li><span class="day">Day ${th.unlockAt}</span> <span class="weapon">${escape(th.name)}</span></li>`),
+    ...t.comeback.map((name) => `<li><span class="day">Comeback</span> <span class="weapon">${escape(name)}</span></li>`),
   ];
   return `<ul class="unlocks">\n${items.join('\n')}\n</ul>`;
 }
@@ -389,8 +398,30 @@ export function plusFaqs(facts: Facts): Faq[] {
         `All ${words(engine.MODES.length)} games are open from the start, each with its first power-up. The other ` +
         `${words(shooter.tiers.length - 1)} in each game unlock as your best run grows, and stay unlocked. ` +
         `${list(t.fromStart)} are yours from the start, and ${list(t.earned.map((th) => th.name))} are earned at a ` +
-        `best run of ${list(t.earned.map((th) => String(th.unlockAt)))} days. Bombs, shields and credits come from ` +
-        'check-ins and are never sold.',
+        `best run of ${list(t.earned.map((th) => String(th.unlockAt)))} days. ${list(t.comeback)} is earned by ` +
+        'coming back after starting over. Bombs, shields and credits come from check-ins and are never sold.',
+    },
+    {
+      q: 'Can I count days I had already done?',
+      a:
+        `Yes. When you start a goal, you can count up to ${limits.PLUS_LIMITS.headStartMax} days you've already done. ` +
+        'They go in as Yes days, so the streak, best run, bombs and shields start where you really are, and the ' +
+        'calendar marks them as your head start. Credits still come only from check-ins.',
+    },
+    {
+      q: 'What happens when I come back after a few hard days?',
+      a:
+        `A Yes after ${words(engine.COMEBACK_MIN_GAP)} or more check-ins without one is a comeback, and Plus welcomes ` +
+        'you back. You get a free win-back round of the zeros you had before, to play whenever you like, and your ' +
+        `comebacks are counted with the rest of your progress. Coming back after starting over earns the ${list(t.comeback)} ` +
+        'theme. The streak follows the same gentle rules as always.',
+    },
+    {
+      q: 'What happens to a goal when I am done with it?',
+      a:
+        `Once a goal has reached ${engine.ARCHIVE_MIN_BEST} zeros, you can archive it. It stops its reminders and frees ` +
+        'its slot, and Past goals keeps what it accomplished: its best run and when, Yes days, comebacks, milestones ' +
+        'and its calendar. A goal short of that can be deleted instead. Weapons and themes it unlocked stay yours.',
     },
     {
       q: 'Will Win Zero stay free?',
@@ -515,7 +546,10 @@ export function llmsTxt(facts: Facts): string {
     `- Rewards: ${words(engine.WEAPONS.length)} weapons unlock as the best run grows (${list(engine.WEAPONS.map((w) => `${w.name} at day ${w.unlockAt}`))}), ` +
       `a bomb every ${engine.BOMB_EVERY} days, and a shield every ${engine.SHIELD_EVERY} (up to ${engine.SHIELD_CAP} held).`,
     `- Plus games: ${list(engine.MODES.map((m) => m.name))}. Plus themes: ${list(t.fromStart)} from the start; ` +
-      `${list(t.earned.map((th) => `${th.name} at a best run of ${th.unlockAt} days`))}.`,
+      `${list([...t.earned.map((th) => `${th.name} at a best run of ${th.unlockAt} days`), ...t.comeback.map((name) => `${name} for coming back after starting over`)])}.`,
+    `- Plus can start a goal with up to ${limits.PLUS_LIMITS.headStartMax} days already done, welcomes a Yes after ` +
+      `${words(engine.COMEBACK_MIN_GAP)} or more check-ins without one with a free win-back round, and keeps archived goals ` +
+      'under Past goals with what each accomplished.',
     '- Win Zero users can move their goal, history, streak, rewards and credits to Plus on the same phone, without a server.',
     '- A browser version at https://winzero.app/play has the check-in, rules, rewards and round, without reminders.',
     '- Support with drinking, drugs or mental health (US): the SAMHSA National Helpline, 1-800-662-4357, free, confidential and open 24/7.',

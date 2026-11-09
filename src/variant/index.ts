@@ -44,6 +44,10 @@ export const FEATURES = {
   altIcons: LIMITS.iconsEnabled,
   /** Home's secret: three quick taps on the Game credits count give one free (LIMITS). */
   secretCredits: LIMITS.secretCredits,
+  /** A new goal can count days already done (LIMITS). */
+  headStart: LIMITS.headStartMax > 0,
+  /** Comebacks are welcomed back, with a win-back round and the Phoenix theme (LIMITS). */
+  comebacks: LIMITS.comebacks,
 } as const;
 
 /** On iPhone, the folder only the two apps share (an App Group, in app.json): a move waits there. */

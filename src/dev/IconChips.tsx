@@ -19,13 +19,16 @@ const appIcon: typeof import('@/plus/appIcon') | null =
     : null;
 
 const nameOf = (icon: AppIconDef) => (icon.theme ? themeById(icon.theme).name : APP_NAME);
+/** What opens a locked icon: a best streak, or for Phoenix's, a comeback. */
+const untilOf = (icon: AppIconDef) => (icon.theme && themeById(icon.theme).source === 'comeback' ? 'a comeback' : icon.unlockAt);
 
 export function IconChips() {
   const best = useApp(arsenalBestOf);
   const [current, setCurrent] = useState<AppIconId | null>(null);
   const [supported, setSupported] = useState(true);
   const [note, setNote] = useState<string | null>(null);
-  const open = availableIcons(best, { iconsEnabled: LIMITS.iconsEnabled });
+  const cameBack = useApp((s) => s.cameBack);
+  const open = availableIcons({ best, cameBack }, { iconsEnabled: LIMITS.iconsEnabled });
 
   // What the home screen shows, read again whenever the app comes back.
   const read = useCallback(() => {
@@ -59,7 +62,7 @@ export function IconChips() {
           {APP_ICONS.map((icon) => (
             <Chip
               key={icon.id}
-              label={open.some((i) => i.id === icon.id) ? nameOf(icon) : `${nameOf(icon)} · locked until ${icon.unlockAt}`}
+              label={open.some((i) => i.id === icon.id) ? nameOf(icon) : `${nameOf(icon)} · locked until ${untilOf(icon)}`}
               selected={current === icon.id}
               onPress={() => pick(icon.id)}
             />

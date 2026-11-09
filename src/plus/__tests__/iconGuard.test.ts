@@ -65,6 +65,15 @@ describe('the icon guard', () => {
     expect(await currentIcon()).toBe('default');
   });
 
+  it('puts back the app’s own icon when Erase un-earns Phoenix', async () => {
+    const h = await plusAt(0);
+    h.store.setState({ cameBack: true });
+    await setIcon('phoenix');
+    h.store.getState().erase();
+    await settle();
+    expect(await currentIcon()).toBe('default');
+  });
+
   it('follows the debug Jump to day when it rebuilds a shorter run', async () => {
     const h = await withGoal(yesDays(newGoal(), DAY0, 3), { limits: PLUS_LIMITS, dev: true });
     h.store.setState({ arsenalBest: THEME_UNLOCK_GOLD });

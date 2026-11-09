@@ -67,6 +67,18 @@ export interface RoundRecord {
   played: boolean;
   /** Earned themes this Yes opened (Win Zero Plus), for the result sheet. Absent when none. */
   unlocks?: ThemeId[];
+  /** The Yes was a comeback (Win Zero Plus, engine/comeback.ts), welcomed back on Home. Absent when not. */
+  comeback?: RoundComeback;
+}
+
+/** A comeback, as its round keeps it for Home's welcome back. */
+export interface RoundComeback {
+  /** The streak it came back from. */
+  before: number;
+  /** It came back after a reset. */
+  reset: boolean;
+  /** The welcome back has been shown and closed. */
+  seen: boolean;
 }
 
 /**
@@ -80,8 +92,24 @@ export interface BonusRound {
   played: boolean;
 }
 
-/** The round a Weapon credit lends to: a goal's day's round, or the bonus round. */
-export type CreditRound = { round: 'daily'; goalId: string } | { round: 'bonus' };
+/**
+ * A win-back round (Win Zero Plus, SPEC 9): a comeback's gift of the zeros its goal came back from,
+ * played like a bonus round, so nothing about the streak or rewards changes. Kept until played,
+ * through its goal's next days and its goal going, so it's never lost to a closed app.
+ */
+export interface WinBackRound {
+  /** The goal that came back. */
+  goalId: string;
+  /** The comeback's day. */
+  day: DayKey;
+  n: number;
+  /** Weapons not yet unlocked that a Weapon credit lent this round. */
+  borrowed: WeaponId[];
+  played: boolean;
+}
+
+/** The round a Weapon credit lends to: a goal's day's round, the bonus round, or the win-back round. */
+export type CreditRound = { round: 'daily'; goalId: string } | { round: 'bonus' } | { round: 'winback' };
 
 /** One goal, with what belongs to it alone: the round its latest Yes earned, and the news shown. */
 export interface GoalSlot {
@@ -146,10 +174,17 @@ export interface PersistedState {
   /** Game and Weapon credits. They outlive a goal; Erase all data clears them with everything else. */
   credits: CreditWallet;
   bonus: BonusRound | null;
+  /** Win Zero Plus: the latest comeback's win-back round. */
+  winBack: WinBackRound | null;
   /** "Not now" on Home's reminders-off card hides it until then. */
   reminderCardHiddenUntil: IsoInstant | null;
   /** The tips on Home already shown and closed, each shown once. */
   tipsSeen: TipId[];
+  /**
+   * A goal has come back after a reset (engine/comeback.ts), here or archived or since deleted:
+   * Win Zero Plus's comeback theme is open. Never goes back, short of Erase all data.
+   */
+  cameBack: boolean;
   /** Development builds only: simulated time travel. Production builds ignore it. */
   devClockOffsetMs: number;
   /** Win Zero: its move to Win Zero Plus, from the first try until it's cancelled or the user stays. */

@@ -1,12 +1,14 @@
 // One month of check-ins: yes / not today / shielded / missed, with misses after a long-break
-// reset muted as "paused", and (Win Zero Plus, SPEC 9) rest days between chosen check-in days.
-// Browsable from the first goal day to today.
+// reset muted as "paused", and (Win Zero Plus, SPEC 9) rest days between chosen check-in days, and
+// a head start's days and comebacks among the Yeses. Browsable from the first goal day to today.
 import { useMemo, useState } from 'react';
 import { AccessibilityInfo, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
   calendarMark,
+  comebackAt,
   isEveryDay,
+  isHeadStart,
   isRestDay,
   settledDays,
   type CalendarMark,
@@ -19,9 +21,11 @@ import { colors, fonts, fontScale, space } from '@/theme/tokens';
 import { Eyebrow, shared } from '@/ui/bits';
 import { MIN_TARGET, targetInset } from '@/ui/target';
 
-type Mark = CalendarMark | 'pending' | 'rest';
+/** Yeses marked apart (Win Zero Plus): a head start's days, and comebacks (engine/comeback.ts). */
+export type CalendarNote = 'headStart' | 'comeback';
+type Mark = CalendarMark | 'pending' | 'rest' | CalendarNote;
 
-const MARK_WORDS: Record<Mark, string> = {
+const MARK_WORDS: Record<Exclude<Mark, CalendarNote>, string> = {
   yes: 'Yes',
   no: 'Not today',
   shielded: 'Shielded',
@@ -33,9 +37,16 @@ const MARK_WORDS: Record<Mark, string> = {
 
 const LEGEND: Mark[] = ['yes', 'no', 'shielded', 'missed', 'paused'];
 
-/** A day's mark. Shielded has a dot inside its ring, so it isn't told from Yes by color alone. */
+/**
+ * A day's mark. Shielded has a dot inside its ring, so it isn't told from Yes by color alone; a
+ * comeback has a diamond, and a head start's day a dashed ring.
+ */
 export function MarkGlyph({ mark }: { mark: Mark }) {
-  return <View style={glyphs[mark]}>{mark === 'shielded' ? <View style={glyphs.shieldDot} /> : null}</View>;
+  return (
+    <View style={glyphs[mark]}>
+      {mark === 'shielded' ? <View style={glyphs.shieldDot} /> : mark === 'comeback' ? <View style={glyphs.spark} /> : null}
+    </View>
+  );
 }
 
 export function HistoryCalendar(props: {
@@ -45,8 +56,10 @@ export function HistoryCalendar(props: {
   firstWeekday: number;
   /** Mark rest days (SPEC 9): only where goals can check in on chosen days. */
   restDays?: boolean;
+  /** Mark a head start's days and comebacks, named in these words (Win Zero Plus, SPEC 9). */
+  notes?: Readonly<Record<CalendarNote, string>>;
 }) {
-  const { goal, today, pendingDay, firstWeekday, restDays = false } = props;
+  const { goal, today, pendingDay, firstWeekday, restDays = false, notes } = props;
   const first = monthOf(goal.firstDay);
   const last = monthOf(today);
   const [month, setMonth] = useState(last);
@@ -55,13 +68,31 @@ export function HistoryCalendar(props: {
   const marks = useMemo(() => new Map(goal.history.map((e) => [e.day, calendarMark(e)])), [goal.history]);
   const weeks = useMemo(() => monthGrid(shown, firstWeekday), [shown, firstWeekday]);
 
+  // A head start's days and comebacks, marked apart from the other Yeses.
+  const noted = useMemo(() => {
+    if (!notes) return null;
+    const m = new Map<DayKey, CalendarNote>();
+    goal.history.forEach((e, i) => {
+      if (isHeadStart(e)) m.set(e.day, 'headStart');
+      else if (comebackAt(goal, i)) m.set(e.day, 'comeback');
+    });
+    return m;
+  }, [notes, goal]);
+
   // History decides up to the last settled day: a day there with no entry was a rest day.
   const settled = useMemo(() => (restDays ? settledDays(goal) : null), [restDays, goal]);
-  const legend = restDays && !isEveryDay(goal) ? [...LEGEND, 'rest' as const] : LEGEND;
+  const kinds = new Set(noted?.values());
+  const legend: Mark[] = [
+    ...LEGEND,
+    ...(restDays && !isEveryDay(goal) ? ['rest' as const] : []),
+    ...(['headStart', 'comeback'] as const).filter((n) => kinds.has(n)),
+  ];
+  const words = (m: Mark) => (m === 'headStart' || m === 'comeback' ? (notes?.[m] ?? MARK_WORDS.yes) : MARK_WORDS[m]);
 
   /** A day before the goal began, or after today, shows no mark of its own. */
   const isOutside = (day: DayKey) => day < goal.firstDay || day > today;
   const markOf = (day: DayKey): Mark | null =>
+    noted?.get(day) ??
     marks.get(day) ??
     (day === pendingDay ? 'pending' : settled && !isOutside(day) && isRestDay(goal, day, settled) ? 'rest' : null);
 
@@ -126,7 +157,7 @@ export function HistoryCalendar(props: {
                   accessible={!outside}
                   accessibilityElementsHidden={outside}
                   importantForAccessibility={outside ? 'no-hide-descendants' : 'yes'}
-                  accessibilityLabel={`${formatDayShort(day)}${day === today ? ', today' : ''}${mark ? `: ${MARK_WORDS[mark]}` : ''}`}
+                  accessibilityLabel={`${formatDayShort(day)}${day === today ? ', today' : ''}${mark ? `: ${words(mark)}` : ''}`}
                 >
                   <Text style={[styles.date, day === today && styles.today]} maxFontSizeMultiplier={fontScale.calendarDate}>
                     {Number(day.slice(8))}
@@ -144,7 +175,7 @@ export function HistoryCalendar(props: {
         {legend.map((m) => (
           <View key={m} style={styles.legendItem}>
             <MarkGlyph mark={m} />
-            <Text style={styles.legendText}>{MARK_WORDS[m]}</Text>
+            <Text style={styles.legendText}>{words(m)}</Text>
           </View>
         ))}
       </View>
@@ -168,6 +199,16 @@ const glyphs = StyleSheet.create({
     justifyContent: 'center',
   },
   shieldDot: { width: 4, height: 6, borderRadius: '50%', backgroundColor: colors.teal },
+  headStart: { ...ring, borderWidth: 2, borderStyle: 'dashed', borderColor: colors.amber },
+  comeback: {
+    ...ring,
+    borderWidth: 3,
+    borderColor: colors.amber,
+    boxShadow: `0 0 6px ${colors.amber}99`,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  spark: { width: 4, height: 4, backgroundColor: colors.fg, transform: [{ rotate: '45deg' }] },
   missed: { width: 8, height: 8, borderRadius: 4, borderWidth: 1.5, borderColor: colors.flare },
   paused: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.edge },
   pending: { ...ring, borderWidth: 1.5, borderColor: colors.amber, opacity: 0.6 },

@@ -1,13 +1,14 @@
 // Home's celebrations after a milestone's round (SPEC 6): a quote, congratulations, what the round
 // earned in its own panels, and a push to keep going. Each shows once, when Home is back in front:
 // Home stays mounted under the round, and the popup is a Modal, which would otherwise open over it.
-// The chime and haptic are the Yes celebration's, played by the overlay at the root.
+// The chime and haptic are the Yes celebration's, played by the overlay at the root. Home's popups
+// come one at a time (homePopupOf), this one after the others.
 import { useIsFocused } from 'expo-router';
 import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { celebrationFor } from '@/engine';
-import { appStore, arsenalBestOf, celebrationSlot, gameModeOf, useApp } from '@/store';
+import { appStore, arsenalBestOf, celebrationSlot, gameModeOf, homePopupOf, useApp } from '@/store';
 import { colors, radii, space, type } from '@/theme/tokens';
 import { yesCelebration } from '@/ui/celebrate';
 import { celebrationCopy } from '@/ui/copy/celebrations';
@@ -20,9 +21,10 @@ export function Celebrations() {
   const slot = useApp(celebrationSlot);
   const best = useApp(arsenalBestOf);
   const gameMode = useApp(gameModeOf);
+  const turn = useApp(homePopupOf) === 'celebration';
   const focused = useIsFocused();
 
-  const celebration = slot?.round && focused ? celebrationFor(slot.round) : null;
+  const celebration = slot?.round && focused && turn ? celebrationFor(slot.round) : null;
   const id = celebration?.id ?? null;
   const tip =
     celebration && slot?.round

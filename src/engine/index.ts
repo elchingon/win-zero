@@ -1,10 +1,13 @@
 // Win Zero rules engine: pure functions, no React or Expo. `now` and the device time zone
 // are always passed in.
+export * from './accomplishments';
 export * from './celebrations';
+export * from './comeback';
 export * from './creditRewards';
 export * from './credits';
 export * from './dates';
 export * from './goalDays';
+export * from './headStart';
 export * from './modes';
 export * from './reminders';
 export * from './resolve';

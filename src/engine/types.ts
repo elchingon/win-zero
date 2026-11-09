@@ -50,6 +50,11 @@ export interface HistoryEntry {
   reset?: true;
   /** A miss after a missed-day reset. It counts toward nothing. */
   paused?: true;
+  /**
+   * A Yes for a day done before the goal was set up, counted by its head start (SPEC 9, headStart.ts).
+   * `at` is when the goal was set up.
+   */
+  headStart?: true;
 }
 
 export interface GoalState {

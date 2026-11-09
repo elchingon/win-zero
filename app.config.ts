@@ -27,7 +27,7 @@ const PLUS_BRAND = './assets/brand-plus/';
  * assets/brand-plus/icons/<theme>/ by npm run gen:brand:plus; the app-icons module switches between
  * them. Never rename or remove one once it has shipped: a phone showing it would lose its launcher entry.
  */
-export const PLUS_ICONS = ['classic', 'neon', 'mono', 'pastel', 'ember', 'aurora', 'gold'] as const;
+export const PLUS_ICONS = ['classic', 'neon', 'mono', 'pastel', 'ember', 'aurora', 'gold', 'phoenix'] as const;
 
 function plusIcon(name: string) {
   const dir = `${PLUS_BRAND}icons/${name}/`;

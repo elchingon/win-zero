@@ -3,7 +3,7 @@
 import { describe, expect, it } from '@jest/globals';
 
 import { EMPTY_WALLET, MODE_IDS, THEME_IDS } from '@/engine';
-import { DAY0, newGoal, yesDays } from '@/engine/__tests__/fixtures';
+import { answerDay, DAY0, newGoal, notTodays, yesDays } from '@/engine/__tests__/fixtures';
 
 import { applyUpgrades, hasUnreadableGoal, migratePersisted, normalizePersisted, type Upgrade } from '../migrate';
 
@@ -245,5 +245,46 @@ describe('migratePersisted', () => {
     expect(normalizePersisted(v3).goals).toEqual([{ goal, round, seenThrough: '2026-10-14' }]);
     // Already at version 3: nothing runs again.
     expect(migratePersisted(v3, 3)).toBe(v3);
+  });
+});
+
+describe('the comeback mark (SPEC 9)', () => {
+  // Three Yeses, seven Not todays (the last one a reset), then a Yes: a comeback after a reset.
+  const cameBack = () => answerDay(notTodays(yesDays(newGoal(), DAY0, 3), '2026-10-16', 7), '2026-10-23', 'yes').state;
+
+  it('is kept as saved, and off by default', () => {
+    expect(normalizePersisted({}).cameBack).toBe(false);
+    expect(normalizePersisted({ cameBack: true }).cameBack).toBe(true);
+    expect(normalizePersisted({ cameBack: 'yes' }).cameBack).toBe(false);
+  });
+
+  it('is found in the history of goals saved before there was one, here or archived', () => {
+    expect(normalizePersisted({ goals: [{ goal: cameBack() }] }).cameBack).toBe(true);
+    expect(normalizePersisted({ archived: [{ goal: cameBack(), archivedAt: '2026-10-24T00:00:00.000Z' }] }).cameBack).toBe(true);
+    expect(normalizePersisted({ goals: [{ goal: yesDays(newGoal(), DAY0, 9) }] }).cameBack).toBe(false);
+  });
+});
+
+describe('comebacks and the win-back round (SPEC 9)', () => {
+  const round = (extra: object) => ({
+    goals: [{ goal: yesDays(newGoal(), DAY0, 3), round: { day: '2026-10-15', n: 3, rewards: {}, borrowed: [], played: true, ...extra } }],
+  });
+  const comebackOf = (raw: unknown) => normalizePersisted(raw).goals[0]?.round?.comeback;
+
+  it("keeps a round's comeback, and takes one it can't read as already welcomed back", () => {
+    expect(comebackOf(round({ comeback: { before: 9, reset: true, seen: false } }))).toEqual({ before: 9, reset: true, seen: false });
+    expect(comebackOf(round({ comeback: {} }))).toEqual({ before: 0, reset: false, seen: true });
+    expect(comebackOf(round({ comeback: 'yes' }))).toBeUndefined();
+    expect(normalizePersisted(round({})).goals[0]?.round).not.toHaveProperty('comeback');
+  });
+
+  it('keeps a win-back round to play, and drops one it cannot read', () => {
+    const winBack = { goalId: 'g1', day: '2026-10-25', n: 9, borrowed: ['rocket', 'nope'], played: false };
+    expect(normalizePersisted({ winBack }).winBack).toEqual({ ...winBack, borrowed: ['rocket'] });
+    expect(normalizePersisted({ winBack: { ...winBack, played: undefined } }).winBack?.played).toBe(false);
+    expect(normalizePersisted({}).winBack).toBeNull();
+    for (const bad of [{ ...winBack, n: 0 }, { ...winBack, day: 'soon' }, { ...winBack, goalId: 4 }, 'x']) {
+      expect(normalizePersisted({ winBack: bad }).winBack).toBeNull();
+    }
   });
 });

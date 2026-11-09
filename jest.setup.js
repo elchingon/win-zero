@@ -11,7 +11,7 @@ jest.mock('./src/ui/home/CelebrationMark', () => ({ CelebrationMark: () => null 
 // Win Zero Plus's app-icons module is native: a stand-in that remembers the icon, and refuses a
 // name the app doesn't have, as the real one does.
 jest.mock('./modules/app-icons', () => {
-  const NAMES = ['classic', 'neon', 'mono', 'pastel', 'ember', 'aurora', 'gold'];
+  const NAMES = ['classic', 'neon', 'mono', 'pastel', 'ember', 'aurora', 'gold', 'phoenix'];
   let icon = null;
   return {
     __esModule: true,

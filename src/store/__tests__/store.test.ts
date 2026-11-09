@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from '@jest/globals';
 
 import {
   addDays,
+  ARCHIVE_MIN_BEST,
   BONUS_MAX_N,
   CELEBRATIONS,
   celebrationFor,
@@ -19,10 +20,11 @@ import {
   THEME_UNLOCK_AURORA,
   THEME_UNLOCK_EMBER,
   THEME_UNLOCK_GOLD,
+  WIN_BACK_MIN_ZEROS,
   type CreditWallet,
   type ModeId,
 } from '@/engine';
-import { answerDay, at, DAY0, DENVER, newGoal, TOKYO, yesDays } from '@/engine/__tests__/fixtures';
+import { answerDay, at, DAY0, DENVER, newGoal, notTodays, TOKYO, yesDays } from '@/engine/__tests__/fixtures';
 
 import {
   createAppStore,
@@ -41,8 +43,10 @@ import {
   arsenalBestOf,
   canAddGoal,
   celebrationSlot,
+  comebackSlot,
   firstRoundTipSlot,
   gameModeOf,
+  homePopupOf,
   isMovedOut,
   primaryGoal,
   primaryRound,
@@ -50,6 +54,7 @@ import {
   slotById,
   themeOf,
   totalBombs,
+  winBackWaiting,
 } from '../select';
 
 beforeEach(async () => {
@@ -1145,6 +1150,8 @@ describe('persistence', () => {
       bonus: s.bonus,
       reminderCardHiddenUntil: s.reminderCardHiddenUntil,
       tipsSeen: s.tipsSeen,
+      cameBack: s.cameBack,
+      winBack: s.winBack,
       devClockOffsetMs: s.devClockOffsetMs,
       moveOut: s.moveOut,
       imports: s.imports,
@@ -1173,6 +1180,7 @@ describe('persistence', () => {
         'archived',
         'arsenalBest',
         'bonus',
+        'cameBack',
         'credits',
         'devClockOffsetMs',
         'gameMode',
@@ -1184,6 +1192,7 @@ describe('persistence', () => {
         'theme',
         'tipsSeen',
         'weapon',
+        'winBack',
         // Version 2's fields, copied from the first goal for a build still on it.
         'goal',
         'round',
@@ -1633,18 +1642,293 @@ describe('several goals (SPEC 9)', () => {
     expect(totalBombs(store.getState())).toBe(5);
   });
 
-  it('archiving clears what was waiting for that goal only', async () => {
+  it.each<[string, number, 'archiveGoal' | 'deleteGoal']>([
+    ['archiving', 7, 'archiveGoal'],
+    ['deleting', 3, 'deleteGoal'],
+  ])('%s clears what was waiting for that goal only', async (_, run, remove) => {
     const { store, setTime } = harness({ limits: PLUS_LIMITS });
     await ready(store);
-    add(store, 'Stop drinking');
-    add(store, 'Run');
-    const [a, b] = [idOf(store, 0), idOf(store, 1)];
-    setTime(DAY0, '21:00');
-    store.getState().answer(a, 'not-today');
-    store.getState().answer(b, 'yes');
-    store.getState().archiveGoal(a);
+    store.setState({
+      goals: [
+        { goal: { ...yesDays(newGoal(), DAY0, run), goalId: 'a' }, round: null, seenThrough: null },
+        { goal: { ...yesDays(newGoal(), DAY0, run), goalId: 'b' }, round: null, seenThrough: null },
+      ],
+    });
+    setTime(addDays(DAY0, run), '21:00');
+    store.getState().answer('a', 'not-today');
+    store.getState().answer('b', 'yes');
+    expect(store.getState()[remove]('a')).toBe(true);
     expect(store.getState().notices).toEqual({});
-    expect(store.getState().route).toEqual({ path: '/play', goalId: b });
+    expect(store.getState().route).toEqual({ path: '/play', goalId: 'b' });
     expect(canAddGoal(store.getState())).toBe(true);
+  });
+
+  it('archives a goal once its best run reached ARCHIVE_MIN_BEST, and deletes one only below it', async () => {
+    const { store } = harness({ limits: PLUS_LIMITS });
+    await ready(store);
+    const slid = notTodays(yesDays(newGoal(), DAY0, ARCHIVE_MIN_BEST), addDays(DAY0, ARCHIVE_MIN_BEST), 3);
+    expect(slid.streak).toBeLessThan(ARCHIVE_MIN_BEST);
+    store.setState({
+      goals: [
+        { goal: { ...yesDays(newGoal(), DAY0, ARCHIVE_MIN_BEST - 1), goalId: 'short' }, round: null, seenThrough: null },
+        { goal: { ...slid, goalId: 'slid' }, round: null, seenThrough: null },
+      ],
+    });
+    expect(store.getState().archiveGoal('short')).toBe(false);
+    expect(store.getState().deleteGoal('slid')).toBe(false);
+    expect(store.getState().goals).toHaveLength(2);
+
+    expect(store.getState().deleteGoal('short')).toBe(true);
+    expect(store.getState().archived).toEqual([]);
+    expect(store.getState().arsenalBest).toBe(ARCHIVE_MIN_BEST - 1);
+    expect(store.getState().archiveGoal('slid')).toBe(true);
+    expect(store.getState().archived.map((a) => a.goal.goalId)).toEqual(['slid']);
+    expect(store.getState().goals).toEqual([]);
+    expect(store.getState().deleteGoal('slid')).toBe(false);
+    expect(store.getState().deleteGoal('nobody')).toBe(false);
+  });
+
+  it('removing the last goal keeps the credits, the arsenal and a waiting bonus round', async () => {
+    const { store } = harness({ limits: PLUS_LIMITS });
+    await ready(store);
+    const credits = { balance: { game: 2, weapon: 1 }, claimed: ['first-yes'] };
+    const bonus = { n: 50, borrowed: [], played: false };
+    store.setState({ ...oneGoal({ ...yesDays(newGoal(), DAY0, 5), goalId: 'only' }), credits, bonus });
+    expect(store.getState().deleteGoal('only')).toBe(true);
+    expect(store.getState()).toMatchObject({ goals: [], archived: [], arsenalBest: 5, credits, bonus });
+  });
+});
+
+describe('a head start (SPEC 9)', () => {
+  const add = (store: AppStore, headStart: number, goal = 'Stop drinking') =>
+    store.getState().addGoal({ goal, checkInTime: '20:00', morningTime: '09:00', headStart });
+
+  it('is turned down where the app offers none', async () => {
+    const free = harness();
+    await ready(free.store);
+    expect(add(free.store, 5)).toEqual({ ok: false, reason: 'head-start-not-allowed' });
+    expect(add(free.store, 0)).toMatchObject({ ok: true });
+    expect(primaryGoal(free.store.getState())?.history).toEqual([]);
+  });
+
+  it('is a whole number of days up to the most the app offers', async () => {
+    const plus = harness({ limits: PLUS_LIMITS });
+    await ready(plus.store);
+    expect(add(plus.store, PLUS_LIMITS.headStartMax + 1)).toEqual({ ok: false, reason: 'head-start-not-allowed' });
+    expect(add(plus.store, 2.5)).toEqual({ ok: false, reason: 'head-start-not-allowed' });
+    expect(add(plus.store, -1)).toEqual({ ok: false, reason: 'head-start-not-allowed' });
+    expect(plus.store.getState().goals).toEqual([]);
+  });
+
+  it('opens what a run that long would, and pays no credit for it', async () => {
+    const { store } = harness({ limits: PLUS_LIMITS });
+    await ready(store);
+    expect(add(store, THEME_UNLOCK_EMBER)).toMatchObject({ ok: true });
+    expect(primaryGoal(store.getState())).toMatchObject({ streak: 30, bestStreak: 30, bombs: 6, shields: 3 });
+    expect(arsenalBestOf(store.getState())).toBe(30);
+    expect(store.getState().setTheme('ember')).toBe(true);
+    store.getState().selectWeapon('chain');
+    expect(store.getState().weapon).toBe('chain');
+    expect(store.getState().credits).toEqual(EMPTY_WALLET);
+  });
+
+  it('makes the first Yes one more zero, with rewards only above the run it counted', async () => {
+    const { store, setTime } = harness({ limits: PLUS_LIMITS });
+    await ready(store);
+    add(store, 13); // bombs at 5 and 10, a shield at 7
+    setTime(DAY0, '21:00');
+    store.getState().answer(gid(store), 'yes');
+    const round = primaryRound(store.getState());
+    expect(round).toMatchObject({ n: 14, rewards: { bomb: false, shield: true, weapons: ['rocket'] } });
+    // Credits for check-ins only: the first Yes, and 3 zeros; nothing for Yeses in a row yet.
+    expect(round?.rewards.credits.map((c) => c.key)).toEqual(['first-yes', 'zeros-3']);
+  });
+
+  it("still shows the first day's tip after the first Yes's round", async () => {
+    const { store, setTime } = harness({ limits: PLUS_LIMITS });
+    await ready(store);
+    add(store, 5);
+    setTime(DAY0, '21:00');
+    store.getState().answer(gid(store), 'yes');
+    store.getState().finishRound(gid(store), DAY0);
+    expect(firstRoundTipSlot(store.getState())?.goal.goalId).toBe(gid(store));
+  });
+});
+
+describe('the comeback mark (SPEC 9)', () => {
+  const afterReset = () => notTodays(yesDays(newGoal(), DAY0, 3), '2026-10-16', 7); // the 7th, 10-22, resets
+
+  it('is set by a Yes after a reset, not by one after a shorter gap', async () => {
+    const { store, setTime } = harness({ limits: PLUS_LIMITS });
+    await ready(store);
+    store.setState(oneGoal(notTodays(yesDays(newGoal(), DAY0, 3), '2026-10-16', 3)));
+    setTime('2026-10-19', '21:00');
+    store.getState().answer(gid(store), 'yes');
+    expect(store.getState().cameBack).toBe(false);
+
+    store.setState(oneGoal(afterReset()));
+    setTime('2026-10-23', '21:00');
+    store.getState().answer(gid(store), 'yes');
+    expect(store.getState().cameBack).toBe(true);
+  });
+
+  it('opens Phoenix, named on the round that came back, and only in Win Zero Plus', async () => {
+    const { store, setTime } = harness({ limits: PLUS_LIMITS });
+    await ready(store);
+    store.setState(oneGoal(afterReset()));
+    expect(store.getState().setTheme('phoenix')).toBe(false);
+    setTime('2026-10-23', '21:00');
+    store.getState().answer(gid(store), 'yes');
+    expect(primaryRound(store.getState())?.unlocks).toEqual(['phoenix']);
+    expect(store.getState().setTheme('phoenix')).toBe(true);
+    expect(themeOf(store.getState())).toBe('phoenix');
+
+    const free = harness();
+    await ready(free.store);
+    free.store.setState(oneGoal(afterReset()));
+    free.setTime('2026-10-23', '21:00');
+    free.store.getState().answer(gid(free.store), 'yes');
+    expect(primaryRound(free.store.getState())).not.toHaveProperty('unlocks');
+    expect(themeOf(free.store.getState())).toBe('classic');
+  });
+
+  it('stays when the goal goes, and goes only with Erase all data', async () => {
+    const { store, setTime } = harness({ limits: PLUS_LIMITS });
+    await ready(store);
+    store.setState(oneGoal(afterReset()));
+    setTime('2026-10-23', '21:00');
+    store.getState().answer(gid(store), 'yes');
+    expect(store.getState().deleteGoal(gid(store))).toBe(true);
+    expect(store.getState().cameBack).toBe(true);
+    store.getState().erase();
+    expect(store.getState().cameBack).toBe(false);
+  });
+
+  it('is found when a goal that came back is removed or moved in', async () => {
+    const { store, setTime } = harness({ limits: PLUS_LIMITS });
+    await ready(store);
+    setTime('2026-10-24', '12:00');
+    const goal = answerDay(afterReset(), '2026-10-23', 'yes').state;
+    store.setState(oneGoal(goal));
+    expect(store.getState().deleteGoal(goal.goalId)).toBe(true);
+    expect(store.getState().cameBack).toBe(true);
+
+    store.setState({ cameBack: false });
+    const r = store.getState().importMove((current) => ({
+      ok: true,
+      state: { ...current, goals: [{ goal, round: null, seenThrough: null }] },
+      replaced: [],
+    }));
+    expect(r.ok).toBe(true);
+    expect(store.getState().cameBack).toBe(true);
+  });
+});
+
+describe('comebacks (SPEC 9)', () => {
+  // Nine Yeses, then three Not todays (10-22 .. 10-24): a Yes on 10-25 comes back from 9.
+  const away = () => notTodays(yesDays(newGoal(), DAY0, 9), '2026-10-22', 3);
+  const comeBack = async (opts: { limits?: typeof PLUS_LIMITS } = { limits: PLUS_LIMITS }) => {
+    const h = harness(opts);
+    await ready(h.store);
+    h.store.setState(oneGoal(away()));
+    h.setTime('2026-10-25', '21:00');
+    h.store.getState().answer(gid(h.store), 'yes');
+    return h;
+  };
+
+  it('a comeback round is welcomed back and gives a win-back round of the zeros it came back from', async () => {
+    const { store } = await comeBack();
+    expect(primaryRound(store.getState())).toMatchObject({ n: 7, comeback: { before: 9, reset: false, seen: false } });
+    expect(store.getState().winBack).toEqual({ goalId: gid(store), day: '2026-10-25', n: 9, borrowed: [], played: false });
+  });
+
+  it('is nothing in Win Zero: the round keeps its shape and there is no win-back', async () => {
+    const { store } = await comeBack({});
+    expect(primaryRound(store.getState())).not.toHaveProperty('comeback');
+    expect(store.getState().winBack).toBeNull();
+  });
+
+  it('welcomes back once the round is played, and offers the win-back once that is closed', async () => {
+    const { store } = await comeBack();
+    expect(comebackSlot(store.getState())).toBeNull();
+    expect(winBackWaiting(store.getState())).toBeNull();
+    store.getState().finishRound(gid(store), '2026-10-25');
+    expect(comebackSlot(store.getState())?.goal.goalId).toBe(gid(store));
+    store.getState().seeComeback(gid(store), '2026-10-24');
+    expect(comebackSlot(store.getState())).not.toBeNull();
+    store.getState().seeComeback(gid(store), '2026-10-25');
+    expect(comebackSlot(store.getState())).toBeNull();
+    expect(winBackWaiting(store.getState())).toMatchObject({ n: 9, played: false });
+    store.getState().finishWinBack();
+    expect(store.getState().winBack?.played).toBe(true);
+    expect(winBackWaiting(store.getState())).toBeNull();
+  });
+
+  it('keeps a win-back waiting when the round goes, or its goal does', async () => {
+    const { store, setTime } = await comeBack();
+    setTime('2026-10-28', '12:00');
+    store.getState().refresh(); // 10-26 missed: the round has gone
+    expect(primaryRound(store.getState())).toBeNull();
+    expect(winBackWaiting(store.getState())).toMatchObject({ n: 9 });
+    expect(store.getState().archiveGoal(gid(store))).toBe(true);
+    expect(winBackWaiting(store.getState())).toMatchObject({ n: 9 });
+  });
+
+  it('keeps the win-back still waiting through a later comeback, and replaces one played', async () => {
+    const { store, setTime } = await comeBack();
+    store.setState(oneGoal(notTodays(primaryGoal(store.getState())!, '2026-10-26', 3)));
+    setTime('2026-10-29', '21:00');
+    store.getState().answer(gid(store), 'yes'); // a second comeback, from the 7 of 10-25
+    expect(primaryRound(store.getState())?.comeback).toMatchObject({ before: 7 });
+    expect(store.getState().winBack).toMatchObject({ day: '2026-10-25', n: 9 });
+
+    store.getState().finishWinBack();
+    store.setState(oneGoal(notTodays(primaryGoal(store.getState())!, '2026-10-30', 3)));
+    setTime('2026-11-02', '21:00');
+    store.getState().answer(gid(store), 'yes'); // a third, from 5: a win-back of the fewest zeros
+    expect(store.getState().winBack).toMatchObject({ day: '2026-11-02', n: WIN_BACK_MIN_ZEROS, played: false });
+  });
+
+  it('lends one locked weapon to the win-back round for a Weapon credit', async () => {
+    const { store } = await comeBack();
+    store.setState({ credits: { balance: { game: 0, weapon: 2 }, claimed: [] } });
+    expect(store.getState().borrowWeapon({ round: 'winback' }, 'rocket')).toBe(true);
+    expect(store.getState().borrowWeapon({ round: 'winback' }, 'chain')).toBe(false);
+    expect(store.getState().winBack?.borrowed).toEqual(['rocket']);
+    expect(store.getState().credits.balance.weapon).toBe(1);
+    store.getState().finishWinBack();
+    store.setState({ winBack: { ...store.getState().winBack!, borrowed: [] } });
+    expect(store.getState().borrowWeapon({ round: 'winback' }, 'rocket')).toBe(false);
+  });
+});
+
+describe("Home's popups, one at a time (SPEC 6, 9)", () => {
+  it("shows the first day's tip before the Day 7 celebration a head start of 6 brings with it", async () => {
+    const { store, setTime } = harness({ limits: PLUS_LIMITS });
+    await ready(store);
+    store.getState().addGoal({ goal: 'Run', checkInTime: '20:00', morningTime: '09:00', headStart: 6 });
+    setTime(DAY0, '21:00');
+    store.getState().answer(gid(store), 'yes');
+    expect(homePopupOf(store.getState())).toBeNull();
+    store.getState().finishRound(gid(store), DAY0);
+    expect(homePopupOf(store.getState())).toBe('first-round');
+    store.getState().seeTip('first-round');
+    expect(homePopupOf(store.getState())).toBe('celebration');
+    store.getState().seeTip('day-7');
+    expect(homePopupOf(store.getState())).toBeNull();
+  });
+
+  it('shows a welcome back before the celebration the same Yes earned', async () => {
+    const { store, setTime } = harness({ limits: PLUS_LIMITS });
+    await ready(store);
+    // Six Yeses, three free missed days, then the Yes that makes 7.
+    store.setState({ ...oneGoal(yesDays(newGoal(), DAY0, 6)), tipsSeen: ['first-round'] });
+    setTime('2026-10-23', '21:00');
+    store.getState().answer(gid(store), 'yes', '2026-10-22');
+    store.getState().finishRound(gid(store), '2026-10-22');
+    expect(primaryRound(store.getState())).toMatchObject({ n: 7, rewards: { shield: true }, comeback: { seen: false } });
+    expect(homePopupOf(store.getState())).toBe('comeback');
+    store.getState().seeComeback(gid(store), '2026-10-22');
+    expect(homePopupOf(store.getState())).toBe('celebration');
   });
 });

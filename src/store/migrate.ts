@@ -3,6 +3,7 @@
 // field by field, keeping everything still valid. Saved data is only ever upgraded or kept as
 // is: a goal is dropped only when it can't be read at all, and the store backs it up first.
 import {
+  cameBackAfterReset,
   claimCredits,
   CREDIT_KINDS,
   EMPTY_WALLET,
@@ -30,9 +31,11 @@ import {
   type MoveOut,
   type PersistedState,
   type Prefs,
+  type RoundComeback,
   type RoundRecord,
   type RoundRewards,
   type TipId,
+  type WinBackRound,
 } from './types';
 
 export const DEFAULT_PREFS: Prefs = {
@@ -56,8 +59,10 @@ export const DEFAULT_PERSISTED: PersistedState = {
   prefs: DEFAULT_PREFS,
   credits: EMPTY_WALLET,
   bonus: null,
+  winBack: null,
   reminderCardHiddenUntil: null,
   tipsSeen: [],
+  cameBack: false,
   devClockOffsetMs: 0,
   moveOut: null,
   imports: {},
@@ -190,7 +195,21 @@ function normalizeRound(v: unknown): RoundRecord | null {
   const round: RoundRecord = { day, n: v.n, rewards, borrowed: weaponIds(v.borrowed), played: bool(v.played, true) };
   // Added with Win Zero Plus's themes (SPEC 9); left off when there are none, as it's saved.
   const unlocks = themeIds(v.unlocks);
-  return unlocks.length > 0 ? { ...round, unlocks } : round;
+  const comeback = normalizeComeback(v.comeback);
+  return { ...round, ...(unlocks.length > 0 ? { unlocks } : {}), ...(comeback ? { comeback } : {}) };
+}
+
+/** Added with comebacks (SPEC 9). When in doubt, already seen: a welcome back never pops up twice. */
+function normalizeComeback(v: unknown): RoundComeback | null {
+  if (!isRecord(v)) return null;
+  return { before: count(v.before, 0), reset: bool(v.reset, false), seen: bool(v.seen, true) };
+}
+
+/** A comeback's win-back round. When in doubt it's still there to play, as a bonus round is. */
+function normalizeWinBack(v: unknown): WinBackRound | null {
+  if (!isRecord(v) || typeof v.goalId !== 'string' || typeof v.n !== 'number' || !isBonusSize(v.n)) return null;
+  const day = dayOrNull(v.day);
+  return day ? { goalId: v.goalId, day, n: v.n, borrowed: weaponIds(v.borrowed), played: bool(v.played, false) } : null;
 }
 
 /** A paid-for bonus round. When in doubt it's still there to play: the credit was spent. */
@@ -287,8 +306,11 @@ export function normalizePersisted(raw: unknown): PersistedState {
     },
     credits: normalizeWallet(r.credits),
     bonus: normalizeBonus(r.bonus),
+    winBack: normalizeWinBack(r.winBack),
     reminderCardHiddenUntil: instantOrNull(r.reminderCardHiddenUntil),
     tipsSeen: tipIds(r.tipsSeen),
+    // Added with comebacks (SPEC 9): a comeback after a reset from before then counts too.
+    cameBack: bool(r.cameBack, false) || [...goals, ...archived].some((g) => cameBackAfterReset(g.goal)),
     devClockOffsetMs: typeof offset === 'number' && Number.isFinite(offset) ? offset : 0,
     moveOut: normalizeMoveOut(r.moveOut),
     imports: normalizeImports(r.imports),

@@ -1,19 +1,32 @@
 // Themes (SPEC 9). Win Zero Plus recolors the round and Home's drifting zeros in the theme picked
 // in Settings › Themes; Win Zero, and the website, are always Classic. Four themes come with Plus,
 // and three are earned by the shared best streak (the arsenal's reach), which never goes down, so
-// an earned theme is never lost. The colors live in theme/themes.ts; this is only which and when.
+// an earned theme is never lost. Phoenix, the comeback theme, opens once any goal has come back
+// after a reset (comeback.ts), which is never lost either. The colors live in theme/themes.ts; this is only which
+// and when.
 
-export type ThemeId = 'classic' | 'neon' | 'mono' | 'pastel' | 'ember' | 'aurora' | 'gold';
+export type ThemeId = 'classic' | 'neon' | 'mono' | 'pastel' | 'ember' | 'aurora' | 'gold' | 'phoenix';
 
-/** Classic is every app's; the included themes come with Plus; the earned ones need a best streak. */
-export type ThemeSource = 'free' | 'included' | 'earned';
+/**
+ * Classic is every app's; the included themes come with Plus; the earned ones need a best streak,
+ * and a comeback theme a comeback after a reset.
+ */
+export type ThemeSource = 'free' | 'included' | 'earned' | 'comeback';
 
 export interface ThemeDef {
   id: ThemeId;
   name: string;
   source: ThemeSource;
-  /** The best streak that opens the theme. */
+  /** The best streak that opens an earned theme; THEME_FROM_START for the others. */
   unlockAt: number;
+}
+
+/** How far the player has come, for which themes are open. */
+export interface ThemeReach {
+  /** The shared arsenal's reach (weapons.ts arsenalReach). */
+  best: number;
+  /** A goal has come back after a reset (comeback.ts cameBackAfterReset). */
+  cameBack: boolean;
 }
 
 /** The free game's look (SPEC 7), and every app's fallback. */
@@ -32,6 +45,8 @@ export const THEMES: readonly ThemeDef[] = [
   { id: 'ember', name: 'Ember', source: 'earned', unlockAt: THEME_UNLOCK_EMBER },
   { id: 'aurora', name: 'Aurora', source: 'earned', unlockAt: THEME_UNLOCK_AURORA },
   { id: 'gold', name: 'Gold Year', source: 'earned', unlockAt: THEME_UNLOCK_GOLD },
+  // Last, so a theme added later never renames a saved pick or an icon (app.config.ts PLUS_ICONS).
+  { id: 'phoenix', name: 'Phoenix', source: 'comeback', unlockAt: THEME_FROM_START },
 ];
 
 export const THEME_IDS: readonly ThemeId[] = THEMES.map((t) => t.id);
@@ -51,18 +66,23 @@ export function themeById(id: ThemeId): ThemeDef {
   return t;
 }
 
-/** The themes a player can pick: just Classic in Win Zero; in Plus, every theme open at `best`. */
-export function availableThemes(best: number, { themesEnabled }: ThemeOptions): ThemeDef[] {
+/** True when `t` is open at `reach`, wherever themes are offered. */
+export function themeOpen(t: ThemeDef, reach: ThemeReach): boolean {
+  return t.source === 'comeback' ? reach.cameBack : t.unlockAt <= reach.best;
+}
+
+/** The themes a player can pick: just Classic in Win Zero; in Plus, every theme open at `reach`. */
+export function availableThemes(reach: ThemeReach, { themesEnabled }: ThemeOptions): ThemeDef[] {
   if (!themesEnabled) return [themeById(DEFAULT_THEME)];
-  return THEMES.filter((t) => t.unlockAt <= best);
+  return THEMES.filter((t) => themeOpen(t, reach));
 }
 
 /** The player's pick while it's available, otherwise Classic. */
-export function equippedTheme(pick: ThemeId | null, best: number, opts: ThemeOptions): ThemeId {
-  return pick && availableThemes(best, opts).some((t) => t.id === pick) ? pick : DEFAULT_THEME;
+export function equippedTheme(pick: ThemeId | null, reach: ThemeReach, opts: ThemeOptions): ThemeId {
+  return pick && availableThemes(reach, opts).some((t) => t.id === pick) ? pick : DEFAULT_THEME;
 }
 
-/** Earned themes that open when the shared best goes from `prevBest` to `nextBest`, for the result sheet. */
-export function newlyUnlockedThemes(prevBest: number, nextBest: number, opts: ThemeOptions): ThemeDef[] {
-  return availableThemes(nextBest, opts).filter((t) => t.source === 'earned' && t.unlockAt > prevBest);
+/** Earned and comeback themes that open going from `prev` to `next`, for the result sheet. */
+export function newlyUnlockedThemes(prev: ThemeReach, next: ThemeReach, opts: ThemeOptions): ThemeDef[] {
+  return availableThemes(next, opts).filter((t) => (t.source === 'earned' || t.source === 'comeback') && !themeOpen(t, prev));
 }

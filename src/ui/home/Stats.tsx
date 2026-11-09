@@ -1,12 +1,19 @@
 // Home's numbers: the streak, the best run (and when it was), Yes days in all and this month,
-// bombs and shields.
+// bombs and shields, and any more the app adds (Win Zero Plus: comebacks).
 import { StyleSheet, View } from 'react-native';
 
 import { historyStats, SHIELD_CAP, type DayKey, type GoalState } from '@/engine';
 import { formatDayRange, plural } from '@/lib/format';
 import { StatTile } from '@/ui/bits';
 
-export function Stats({ goal, today }: { goal: GoalState; today: DayKey }) {
+/** A tile of its own, after the others. */
+export interface ExtraStat {
+  label: string;
+  value: string;
+  caption?: string;
+}
+
+export function Stats({ goal, today, extra = [] }: { goal: GoalState; today: DayKey; extra?: readonly ExtraStat[] }) {
   const { yesDays, yesThisMonth, bestRun } = historyStats(goal, today);
   return (
     <View style={styles.grid}>
@@ -42,6 +49,13 @@ export function Stats({ goal, today }: { goal: GoalState; today: DayKey }) {
           accessibilityLabel={`Shields: ${goal.shields} of ${SHIELD_CAP}`}
         />
       </View>
+      {extra.length > 0 ? (
+        <View style={styles.row}>
+          {extra.map((x) => (
+            <StatTile key={x.label} label={x.label} value={x.value} caption={x.caption} />
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 }

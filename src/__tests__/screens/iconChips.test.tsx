@@ -13,7 +13,7 @@ import { DEFAULT_PERSISTED } from '@/store/migrate';
 
 import AppIcons from '../../../modules/app-icons';
 
-const LABELS = ['Win Zero Plus', 'Classic', 'Neon Arcade', 'Mono CRT', 'Pastel', 'Ember', 'Aurora', 'Gold Year'];
+const LABELS = ['Win Zero Plus', 'Classic', 'Neon Arcade', 'Mono CRT', 'Pastel', 'Ember', 'Aurora', 'Gold Year', 'Phoenix'];
 
 beforeEach(async () => {
   await AsyncStorage.clear();
@@ -27,7 +27,7 @@ async function show() {
 }
 
 describe('the debug icon chips', () => {
-  it('lists every icon, marking the three not earned at a best of 0, with the app’s own selected', async () => {
+  it('lists every icon, marking the four not earned at a best of 0, with the app’s own selected', async () => {
     await show();
     expect(screen.getByText('App icon')).toBeTruthy();
     for (const label of ['Win Zero Plus', 'Classic', 'Neon Arcade', 'Mono CRT', 'Pastel']) {
@@ -36,6 +36,7 @@ describe('the debug icon chips', () => {
     expect(screen.getByText('Ember · locked until 30')).toBeTruthy();
     expect(screen.getByText('Aurora · locked until 180')).toBeTruthy();
     expect(screen.getByText('Gold Year · locked until 365')).toBeTruthy();
+    expect(screen.getByText('Phoenix · locked until a comeback')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Win Zero Plus' }).props.accessibilityState).toMatchObject({ selected: true });
   });
 
@@ -55,8 +56,8 @@ describe('the debug icon chips', () => {
     expect(await AppIcons.getIconAsync()).toBe('gold');
   });
 
-  it('marks nothing as locked at a best of 365', async () => {
-    appStore.setState({ arsenalBest: THEME_UNLOCK_GOLD });
+  it('marks nothing as locked at a best of 365, after a comeback', async () => {
+    appStore.setState({ arsenalBest: THEME_UNLOCK_GOLD, cameBack: true });
     await show();
     for (const label of LABELS) expect(screen.getByText(label)).toBeTruthy();
     expect(screen.queryByText(/locked/)).toBeNull();

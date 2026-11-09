@@ -17,7 +17,7 @@ import { Em, Eyebrow } from '@/ui/bits';
 import { Button, LinkButton } from '@/ui/Button';
 import { APP_NAME, FEATURES } from '@/variant';
 
-import { resultLines, sheetEyebrow, type ResultMode } from './result';
+import { resultLines, sheetEyebrow, type ResultMode, type RoundWords } from './result';
 import { milestoneShareText, shareMilestone } from './share';
 
 export type { ResultMode } from './result';
@@ -39,10 +39,12 @@ export function ResultSheet(props: {
   record: RoundRecord | null;
   /** The game the round was played in. The Shooter when absent. */
   gameMode?: ModeId;
+  /** A bonus round's own name (Win Zero Plus's win-back round). */
+  words?: RoundWords;
   onBack: () => void;
   onReplay: () => void;
 }) {
-  const { n, mode, goalId, record, gameMode, onBack, onReplay } = props;
+  const { n, mode, goalId, record, gameMode, words, onBack, onReplay } = props;
   // A round that earned something can be shared; practice rounds earn nothing.
   const shareText = mode !== 'practice' && record ? milestoneShareText(record.n, record.rewards, APP_NAME, gameMode) : null;
   const goal = useApp((s) => (goalId ? (slotById(s, goalId)?.goal ?? null) : null));
@@ -64,7 +66,7 @@ export function ResultSheet(props: {
     return () => clearTimeout(id);
   }, []);
 
-  const lines = resultLines(n, mode, record, goal, credits, best, { gameMode, icons: FEATURES.altIcons });
+  const lines = words ? [{ text: words.lede }] : resultLines(n, mode, record, goal, credits, best, { gameMode, icons: FEATURES.altIcons });
 
   return (
     <Animated.View
@@ -78,7 +80,7 @@ export function ResultSheet(props: {
           <LinearGradient start={vec(0, 0)} end={vec(0, height)} colors={SCRIM} positions={SCRIM_STOPS} />
         </Rect>
       </Canvas>
-      <Eyebrow>{sheetEyebrow(mode, n, goal)}</Eyebrow>
+      <Eyebrow>{words?.eyebrow ?? sheetEyebrow(mode, n, goal)}</Eyebrow>
       <Text ref={header} style={type.h2} accessibilityRole="header" maxFontSizeMultiplier={fontScale.overlay}>
         <Em>{formatCount(n)}</Em> {n === 1 ? 'zero' : 'zeros'} down
       </Text>

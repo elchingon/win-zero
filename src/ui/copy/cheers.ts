@@ -38,14 +38,15 @@ function shuffled(lines: readonly string[], random: () => number): string[] {
 /**
  * The next line, each call: every line once in a random order, then a fresh shuffle. A new
  * shuffle never opens with the line the last one ended on, so no line shows twice in a row.
+ * `lines` are CHEERS unless given (Win Zero Plus deals its comeback lines this way).
  */
-export function cheerDeck(random: () => number = Math.random): () => string {
+export function cheerDeck(random: () => number = Math.random, lines: readonly string[] = CHEERS): () => string {
   let deck: string[] = [];
   let next = 0;
   return () => {
     if (next >= deck.length) {
       const last = deck[deck.length - 1];
-      deck = shuffled(CHEERS, random);
+      deck = shuffled(lines, random);
       if (deck.length > 1 && deck[0] === last) [deck[0], deck[1]] = [deck[1]!, deck[0]!];
       next = 0;
     }

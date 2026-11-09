@@ -1,10 +1,19 @@
 // Reading goals out of the store's state (SPEC 9), shared with the website. The free app and the
 // website show one goal, the first. Every selector returns something already in the state, or a
 // number, so a React selector never sees a fresh object and re-renders for nothing.
-import { arsenalReach, celebrationFor, equippedMode, equippedTheme, type GoalState, type ModeId, type ThemeId } from '@/engine';
+import {
+  arsenalReach,
+  celebrationFor,
+  equippedMode,
+  equippedTheme,
+  isHeadStart,
+  type GoalState,
+  type ModeId,
+  type ThemeId,
+} from '@/engine';
 
 import type { Limits } from './limits';
-import type { GoalSlot, PersistedState, RoundRecord } from './types';
+import type { GoalSlot, PersistedState, RoundRecord, WinBackRound } from './types';
 
 type Goals = Pick<PersistedState, 'goals'>;
 
@@ -35,8 +44,8 @@ export const gameModeOf = (s: Pick<PersistedState, 'goals' | 'arsenalBest' | 'ga
   equippedMode(s.gameMode, arsenalBestOf(s), { modesEnabled: s.limits.modesEnabled });
 
 /** The theme this app draws the round and Home's zeros in: the saved pick while it's offered and earned, otherwise Classic. */
-export const themeOf = (s: Pick<PersistedState, 'goals' | 'arsenalBest' | 'theme'> & { limits: Limits }): ThemeId =>
-  equippedTheme(s.theme, arsenalBestOf(s), { themesEnabled: s.limits.themesEnabled });
+export const themeOf = (s: Pick<PersistedState, 'goals' | 'arsenalBest' | 'cameBack' | 'theme'> & { limits: Limits }): ThemeId =>
+  equippedTheme(s.theme, { best: arsenalBestOf(s), cameBack: s.cameBack }, { themesEnabled: s.limits.themesEnabled });
 
 /** Another goal fits under this app's limit. */
 export const canAddGoal = (s: Goals & { limits: Limits }): boolean => s.goals.length < s.limits.maxGoals;
@@ -47,13 +56,13 @@ export const isMovedOut = (s: Pick<PersistedState, 'moveOut'>): boolean => s.mov
 /**
  * The goal Home's first-round tip follows (SPEC 6): the one with the install's only Yes, once its
  * round has been played, until the tip is closed. A second Yes, on any goal, here or archived,
- * means the first day has passed.
+ * means the first day has passed. A head start's days (engine/headStart.ts) weren't check-ins.
  */
 export function firstRoundTipSlot(s: Pick<PersistedState, 'goals' | 'archived' | 'tipsSeen'>): GoalSlot | null {
   if (s.tipsSeen.includes('first-round')) return null;
   let yeses = 0;
   for (const goal of [...s.goals.map((slot) => slot.goal), ...s.archived.map((a) => a.goal)]) {
-    for (const entry of goal.history) if (entry.result === 'yes' && ++yeses > 1) return null;
+    for (const entry of goal.history) if (entry.result === 'yes' && !isHeadStart(entry) && ++yeses > 1) return null;
   }
   return yeses === 1 ? (s.goals.find((slot) => slot.round?.played) ?? null) : null;
 }
@@ -69,4 +78,37 @@ export function celebrationSlot(s: Pick<PersistedState, 'goals' | 'tipsSeen'>): 
       return due !== null && !s.tipsSeen.includes(due.id);
     }) ?? null
   );
+}
+
+/**
+ * The goal Home's welcome back follows (Win Zero Plus, SPEC 9): the first whose latest round was a
+ * comeback, played and not yet welcomed back.
+ */
+export function comebackSlot(s: Pick<PersistedState, 'goals'>): GoalSlot | null {
+  return s.goals.find((slot) => slot.round?.played && slot.round.comeback && !slot.round.comeback.seen) ?? null;
+}
+
+/**
+ * The win-back round waiting on Home (Win Zero Plus, SPEC 9): not yet played, once the welcome back
+ * that gives it has been seen or its round has gone.
+ */
+export function winBackWaiting(s: Pick<PersistedState, 'goals' | 'winBack'>): WinBackRound | null {
+  const w = s.winBack;
+  if (!w || w.played) return null;
+  const round = slotById(s, w.goalId)?.round;
+  return round?.day === w.day && round.comeback && !round.comeback.seen ? null : w;
+}
+
+/** A popup on Home, one at a time (SPEC 6, 9). */
+export type HomePopup = 'first-round' | 'comeback' | 'celebration';
+
+/**
+ * The popup Home shows next, if any: the first day's tip, then a welcome back, then a milestone's
+ * celebration. Each waits for the ones before it, so they never open over each other.
+ */
+export function homePopupOf(s: Pick<PersistedState, 'goals' | 'archived' | 'tipsSeen'>): HomePopup | null {
+  if (firstRoundTipSlot(s)) return 'first-round';
+  if (comebackSlot(s)) return 'comeback';
+  if (celebrationSlot(s)) return 'celebration';
+  return null;
 }

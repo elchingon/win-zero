@@ -33,6 +33,16 @@ export function replayMode(mode: ResultMode): ResultMode {
   return mode === 'real' ? 'replay' : mode;
 }
 
+/**
+ * A bonus round under a name of its own (Win Zero Plus's win-back round, SPEC 9): the HUD's label,
+ * the sheet's eyebrow, and the sheet's line in place of the bonus round's.
+ */
+export interface RoundWords {
+  hud: string;
+  eyebrow: string;
+  lede: string;
+}
+
 /** The HUD's label: 'DAY 30', 'BONUS' or 'PRACTICE'. */
 export function hudLabel(mode: ResultMode, n: number): string {
   if (mode === 'practice') return 'PRACTICE';

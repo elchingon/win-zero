@@ -2,6 +2,7 @@
 // rows, history stats.
 import { describe, expect, it } from '@jest/globals';
 
+import { createGoalWithHeadStart } from '../headStart';
 import { resolve } from '../resolve';
 import { calendarMark, historyStats, missDigest, notTodayPreview } from '../summary';
 import { arsenal, equippedWeapon } from '../weapons';
@@ -12,6 +13,15 @@ describe('missDigest', () => {
     expect(missDigest(newGoal(), null)).toBeNull();
     const s = notTodays(yesDays(newGoal(), DAY0, 5), '2026-10-18', 1); // answered days only
     expect(missDigest(s, null)).toBeNull();
+    const start = createGoalWithHeadStart({ goalId: 'g1', goal: 'Stop drinking', now: at(DAY0, '12:00'), tz: DENVER, headStart: 5 });
+    expect(missDigest(start, null)).toBeNull();
+  });
+
+  it('starts from the streak a head start made', () => {
+    const start = createGoalWithHeadStart({ goalId: 'g1', goal: 'Stop drinking', now: at(DAY0, '12:00'), tz: DENVER, headStart: 10 });
+    // Nine misses, DAY0 .. 10-21: seven free, then two slips.
+    const s = resolve(start, at('2026-10-23', '00:30'), DENVER).state;
+    expect(missDigest(s, start.lastSettledDay)).toMatchObject({ days: 9, lost: 2, streakBefore: 10, streak: 8 });
   });
 
   it('reports free misses with nothing lost', () => {
@@ -138,15 +148,16 @@ describe('arsenal and the equipped weapon', () => {
 
 describe('historyStats', () => {
   it('is all zeros before the first Yes', () => {
-    expect(historyStats(newGoal(), DAY0)).toEqual({ yesDays: 0, yesThisMonth: 0, bestRun: null });
+    expect(historyStats(newGoal(), DAY0)).toEqual({ yesDays: 0, headStartDays: 0, yesThisMonth: 0, bestRun: null });
     const noted = notTodays(newGoal(), DAY0, 2); // Not today at streak 0
-    expect(historyStats(noted, '2026-10-14')).toEqual({ yesDays: 0, yesThisMonth: 0, bestRun: null });
+    expect(historyStats(noted, '2026-10-14')).toEqual({ yesDays: 0, headStartDays: 0, yesThisMonth: 0, bestRun: null });
   });
 
   it('counts Yes days, this month, and dates the best run', () => {
     const s = yesDays(newGoal(), DAY0, 5); // 10-13 .. 10-17
     expect(historyStats(s, '2026-10-20')).toEqual({
       yesDays: 5,
+      headStartDays: 0,
       yesThisMonth: 5,
       bestRun: { from: DAY0, to: '2026-10-17' },
     });
@@ -160,6 +171,7 @@ describe('historyStats', () => {
     expect(s.bestStreak).toBe(6);
     expect(historyStats(s, '2026-10-21')).toEqual({
       yesDays: 7,
+      headStartDays: 0,
       yesThisMonth: 7,
       bestRun: { from: DAY0, to: '2026-10-21' },
     });
@@ -184,8 +196,19 @@ describe('historyStats', () => {
     expect(historyStats(s, '2026-12-01')).toMatchObject({ yesThisMonth: 0 });
   });
 
+  it("counts a head start's days among the Yes days, and dates the best run from its first", () => {
+    const start = createGoalWithHeadStart({ goalId: 'g1', goal: 'Stop drinking', now: at(DAY0, '12:00'), tz: DENVER, headStart: 4 });
+    const s = yesDays(start, DAY0, 2); // 10-09 .. 10-12 head start, then 10-13 and 10-14
+    expect(historyStats(s, '2026-10-14')).toEqual({
+      yesDays: 6,
+      headStartDays: 4,
+      yesThisMonth: 6,
+      bestRun: { from: '2026-10-09', to: '2026-10-14' },
+    });
+  });
+
   it("leaves the dates out when history doesn't show the best (data from elsewhere)", () => {
     const s = { ...yesDays(newGoal(), DAY0, 3), bestStreak: 40 };
-    expect(historyStats(s, '2026-10-15')).toEqual({ yesDays: 3, yesThisMonth: 3, bestRun: null });
+    expect(historyStats(s, '2026-10-15')).toEqual({ yesDays: 3, headStartDays: 0, yesThisMonth: 3, bestRun: null });
   });
 });

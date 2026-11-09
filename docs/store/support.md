@@ -129,13 +129,31 @@ account. Win Zero stays free and complete.
   off, a reminder calls a goal by its **Lock-screen name** if you set one, or by its place ("your
   second goal").
 
+### A head start
+
+- **Already doing it?** When you start a goal, **Days already done** counts up to 30 days you did
+  before. They go in as Yes days, so the streak, best run, bombs and shields start where you really
+  are, and the calendar marks them with a dashed ring.
+- Credits still come only from check-ins, and a head start can't be changed later.
+
 ### Archive, Past goals and Delete for good
 
-- To make room, open a goal from **Settings** and tap **Archive this goal**. Its reminders stop and
-  its slot frees up. With one goal, you change its wording instead.
-- Archived goals wait under **Settings → Past goals**, read-only, with their history.
+- **Done with a goal?** Open it (from **Settings**, or **Edit** on Home) and tap **Archive this
+  goal**. Its reminders stop and its slot frees up. That's open once the goal's best run has
+  reached 7 zeros; before that, **Delete this goal** removes it instead. Both ask first, and both
+  work with one goal too: you'll set up a new one next.
+- Archived goals wait under **Past goals** (in Settings, and beside **Your goals** on Home), with what
+  each accomplished: its best run, Yes days, check-ins, comebacks, shields used, milestones and
+  calendar.
 - **Delete for good** is only there, in Past goals. It asks first, and a deleted goal can't come
   back. Weapons and themes it unlocked stay yours.
+
+### Comebacks
+
+- A Yes after 3 or more check-ins without one is a **comeback**. Its round cheers you back, and on
+  Home, **Welcome back** offers a free **win-back round** of the zeros you had before. Play it then
+  or later: it waits on Home, and it never changes your streak.
+- Coming back after starting over (a reset) earns the **Phoenix** theme and its app icon, for good.
 
 ### Games
 
@@ -149,8 +167,8 @@ account. Win Zero stays free and complete.
 
 - **Settings → Themes** recolors your rounds and the zeros drifting on Home. Classic, Neon Arcade,
   Mono CRT and Pastel come with Plus.
-- Ember opens at a best streak of 30, Aurora at 180 and Gold Year at 365. Once open, a theme is
-  yours for good.
+- Ember opens at a best streak of 30, Aurora at 180 and Gold Year at 365, and Phoenix when you come
+  back after starting over. Once open, a theme is yours for good.
 
 ### App icon
 
@@ -181,7 +199,8 @@ Good to know:
 - **"Did your move finish?"** If Win Zero doesn't hear back from Plus within about 10 minutes, it
   asks. Tap **Try again** to open Plus on the same move, or **Yes, stop reminders here** if your goals
   arrived. A move delivered twice adds its credits once.
-- **Plus already has 3 goals?** It asks you to make room first: archive one, then move again.
+- **Plus already has 3 goals?** It asks you to make room first: archive or delete one, then move
+  again.
 - **Plus already has that goal?** It asks which copy to keep, suggesting the one answered most
   recently.
 - **Win Zero Plus isn't installed yet?** The move opens its store page, and nothing changes in Win

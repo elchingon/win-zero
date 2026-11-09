@@ -25,6 +25,7 @@ import {
   type CreditWallet,
 } from '../credits';
 import { addDays } from '../dates';
+import { createGoalWithHeadStart } from '../headStart';
 import { answer } from '../resolve';
 import type { GoalState, TimeZone } from '../types';
 import { answerDay, at, DAY0, DENVER, iso, LA, newGoal, notTodays, SANTIAGO, TOKYO, yesDays } from './fixtures';
@@ -409,5 +410,44 @@ describe('credit rewards while traveling', () => {
     if (!r.ok) throw new Error(r.reason);
     expect(r.state.history.at(-2)).toMatchObject({ day: '2026-10-15', result: 'missed' });
     expect(creditsEarned({ type: 'yes', goal: r.state }, ['first-yes', 'zeros-2']).map((g) => g.key)).toEqual(['comeback']);
+  });
+});
+
+describe('credit rewards after a head start (SPEC 9)', () => {
+  const headStart = (n: number) =>
+    createGoalWithHeadStart({ goalId: 'g1', goal: 'Stop drinking', now: at(DAY0, '12:00'), tz: DENVER, headStart: n });
+
+  it("doesn't count a head start's days as Yeses in a row", () => {
+    const s = headStart(5);
+    expect(yesInRow(s)).toBe(0);
+    expect(yesInRow(answerDay(s, DAY0, 'yes').state)).toBe(1);
+  });
+
+  it('pays nothing for setting up a goal with a head start', () => {
+    expect(creditsEarned({ type: 'goal', goal: headStart(30) }, [])).toEqual([]);
+  });
+
+  it('pays the runs in a row for real check-ins only', () => {
+    // Head start 6: the first Yes makes 7 zeros but only 1 in a row. The 7th Yes in a row pays.
+    const six = yesRun(headStart(6), EMPTY_WALLET, DAY0, 7);
+    expect(six.log).toEqual([
+      `${DAY0} first-yes`,
+      `${DAY0} zeros-3`,
+      '2026-10-15 yes-run-3',
+      '2026-10-19 yes-every-7',
+    ]);
+    expect(six.state.streak).toBe(13);
+  });
+
+  it("doesn't pay every 30 in a row on the Yes that makes 30 zeros after a head start of 29", () => {
+    const r = claimYes(headStart(29), claimedAllBut('none'), DAY0);
+    expect(r.state.streak).toBe(30);
+    expect(r.keys).toEqual([]);
+  });
+
+  it('still pays the comeback credit after a head start and a missed day', () => {
+    const r = claimYes(headStart(5), claimedAllBut('comeback'), '2026-10-14', { late: true });
+    expect(r.state.history.at(-2)).toMatchObject({ day: DAY0, result: 'missed' });
+    expect(r.keys).toEqual(['comeback']);
   });
 });
