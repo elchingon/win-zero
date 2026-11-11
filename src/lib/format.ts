@@ -75,6 +75,11 @@ export function formatDayShort(day: DayKey): string {
   return `${MONTHS[(m ?? 1) - 1]?.slice(0, 3)} ${d}`;
 }
 
+/** 'Sun, Nov 22'. */
+export function formatDayWithWeekday(day: DayKey): string {
+  return `${WEEKDAYS[weekdayOf(day)]?.slice(0, 3)}, ${formatDayShort(day)}`;
+}
+
 /**
  * 'Oct 2 – Oct 15'. Years show when the range isn't all in `today`'s year:
  * 'Dec 28, 2025 – Jan 3, 2026'. Screen readers get `sep` ' to ' rather than a dash.

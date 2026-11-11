@@ -10,7 +10,7 @@ import { fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 import { AccessibilityInfo } from 'react-native';
 
 import HomeScreen from '@/app/index';
-import { addDays, createGoalWithHeadStart, resolve, type GoalState } from '@/engine';
+import { addDays, createGoalWithHeadStart, resolve, startBreak, type GoalState } from '@/engine';
 import { answerDay, at, DAY0, newGoal, notTodays, yesDays } from '@/engine/__tests__/fixtures';
 import { SECRET_TAP_GAP_MS } from '@/plus/home/secretTaps';
 import { appStore, slotById, type GoalSlot, type RoundRecord } from '@/store';
@@ -285,13 +285,34 @@ describe('Home with several goals', () => {
     expect(screen.queryByRole('button', { name: 'Add goal' })).not.toBeOnTheScreen();
   });
 
+  it('says which goal is on a break, and when check-ins come back, with Resume now', async () => {
+    const read = { ...another('g3', 'Read', 2) };
+    const r = startBreak(read, '2026-10-21', at('2026-10-15', '12:00', tz()), tz());
+    if (!r.ok) throw new Error(r.reason);
+    await open([slot(twoDays()), slot(r.state)], { time: '12:00' });
+    expect(screen.getByText('“Read” is on a break through Wed, Oct 21. Check-ins come back Oct 22 at 20:00.')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Resume now' }));
+    expect(appStore.getState().goals[1]?.goal.breaks).toBeUndefined();
+    expect(screen.getByText('Read: today at 20:00')).toBeOnTheScreen();
+  });
+
+  it("marks a break's days on the calendar, ones to come too", async () => {
+    const r = startBreak(twoDays(), '2026-10-20', at('2026-10-15', '12:00', tz()), tz());
+    if (!r.ok) throw new Error(r.reason);
+    await open([slot(r.state)], { time: '12:00' });
+    expect(screen.getByLabelText('Oct 15, today: On a break')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Oct 14: Yes')).toBeOnTheScreen();
+    // The legend names it; each day already says its own mark.
+    expect(screen.getByText('On a break', { includeHiddenElements: true })).toBeOnTheScreen();
+  });
+
   it('says which goals have paused reminders', async () => {
     const later = at('2026-11-30', '12:00', tz());
     const read = { ...another('g3', 'Read', 2) };
     const paused = resolve(read, later, tz()).state;
     expect(paused.paused).toBe(true);
     await open([slot(resolve(twoDays(), later, tz()).state), slot(paused)], { day: '2026-11-30', time: '12:00' });
-    expect(screen.getByText(/^Reminders for “Read” are paused after a long break\./)).toBeOnTheScreen();
+    expect(screen.getByText(/^Reminders for “Read” are paused after a long stretch without a check-in\./)).toBeOnTheScreen();
     expect(screen.getByText(/^Reminders for “Stop drinking” are paused/)).toBeOnTheScreen();
   });
 

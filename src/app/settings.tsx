@@ -95,6 +95,7 @@ export default function Settings() {
         <>
           <GoalFields key={goal.goalId} goal={goal} />
           {PlusSettings ? <PlusSettings.DaysField key={`${goal.goalId}-days`} goal={goal} /> : null}
+          {PlusSettings ? <PlusSettings.BreakField key={`${goal.goalId}-break`} goal={goal} /> : null}
           {PlusSettings ? <PlusSettings.RemoveGoal key={`${goal.goalId}-remove`} goal={goal} /> : null}
           {PlusSettings ? <PlusSettings.GoalsGroup /> : null}
         </>

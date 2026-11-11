@@ -79,4 +79,11 @@ describe('How it works in Win Zero Plus', () => {
     expect(screen.getByRole('header', { name: 'The daily question' })).toBeOnTheScreen();
     expect(screen.queryByText(/Rest days/)).not.toBeOnTheScreen();
   });
+
+  it('explains breaks, after missed check-ins', async () => {
+    await open('/how-it-works', [newGoal({ tz: tz() })]);
+    const headers = screen.getAllByRole('header').map((h) => h.props.accessibilityLabel ?? h.props.children);
+    expect(headers.indexOf('Taking a break')).toBe(headers.indexOf('Missed check-ins') + 1);
+    expect(screen.getByText(/A goal can take a break of up to 14 days/)).toBeOnTheScreen();
+  });
 });

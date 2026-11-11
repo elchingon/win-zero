@@ -8,6 +8,7 @@ import {
   formatDayRange,
   formatDays,
   formatDayShort,
+  formatDayWithWeekday,
   formatMonth,
   formatUntil,
   formatWhen,
@@ -52,6 +53,8 @@ describe('format', () => {
 
   it('formats short days, months and plurals', () => {
     expect(formatDayShort('2026-10-03')).toBe('Oct 3');
+    expect(formatDayWithWeekday('2026-11-22')).toBe('Sun, Nov 22');
+    expect(formatDayWithWeekday('2026-10-13')).toBe('Tue, Oct 13');
     expect(formatDayRange('2026-10-02', '2026-10-15', '2026-11-20')).toBe('Oct 2 – Oct 15');
     expect(formatDayRange('2026-10-02', '2026-10-15', '2026-11-20', ' to ')).toBe('Oct 2 to Oct 15');
     expect(formatDayRange('2026-10-02', '2026-10-02', '2026-10-02')).toBe('Oct 2');

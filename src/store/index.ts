@@ -27,7 +27,7 @@ export function useApp<T>(selector: (state: AppState) => T): T {
 }
 
 export { REMINDER_CARD_HIDE_MS, UNDO_MS, UNDO_MS_SCREEN_READER } from './createAppStore';
-export type { AddGoalResult, AppState, AppStore, EditResult } from './createAppStore';
+export type { AddGoalResult, AppState, AppStore, BreakEditResult, EditResult } from './createAppStore';
 export { startLifecycle, whenHydrated } from './lifecycle';
 export type { Limits } from './limits';
 export * from './select';

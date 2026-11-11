@@ -129,7 +129,7 @@ export function howItWorks({
         ...only(!everyDay, 'Rest days have no check-in, so nothing is gained or lost on them.'),
         ...only(
           notifications,
-          "If a long break starts a fresh run, daily reminders pause. With Weekly nudge on in Settings, you'll get one gentle reminder a week. Answering any check-in brings daily reminders back.",
+          "If a long stretch without check-ins starts a fresh run, daily reminders pause. With Weekly nudge on in Settings, you'll get one gentle reminder a week. Answering any check-in brings daily reminders back.",
         ),
       ],
     },

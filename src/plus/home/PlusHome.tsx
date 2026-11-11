@@ -9,7 +9,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { comebackCount, dayKeyAt, historyStats, isFirstCheckIn, type DayKey, type GoalState } from '@/engine';
 import type { Point } from '@/game/yes';
-import { formatWhen } from '@/lib/format';
+import { formatDayWithWeekday, formatWhen, relativeDay } from '@/lib/format';
 import { appStore, arsenalBestOf, arsenalStreakOf, canAddGoal, gameModeOf, useApp } from '@/store';
 import { colors, fonts, space, type } from '@/theme/tokens';
 import { Card, Eyebrow, Fine } from '@/ui/bits';
@@ -36,7 +36,7 @@ import { useDeviceCalendar } from '@/ui/useDevice';
 import { useReminderPermission } from '@/ui/useReminderPermission';
 import { FEATURES } from '@/variant';
 
-import { CALENDAR_NOTES, GOAL_COPY, HEAD_START_COPY, HOME_COPY, STATS_COPY } from '../copy';
+import { BREAK_COPY, CALENDAR_NOTES, GOAL_COPY, HEAD_START_COPY, HOME_COPY, STATS_COPY } from '../copy';
 import { CallButton } from '../ui/CallButton';
 import { GoalPicker } from './GoalPicker';
 import { HomeTabs, type HomeTab } from './HomeTabs';
@@ -127,11 +127,25 @@ export function PlusHome() {
       {later.length > 0 ? (
         <Card>
           <Text style={styles.cardTitle}>{open.length === 0 ? HOME_COPY.caughtUp : HOME_COPY.upNext}</Text>
-          {later.map(({ slot: { goal }, next }) => (
-            <Text key={goal.goalId} style={type.lede}>
-              {HOME_COPY.nextCheckIn(goal.goal, formatWhen(next.opensAt, now, tz, h24))}
-            </Text>
-          ))}
+          {later.map(({ slot: { goal }, next, onBreak }) =>
+            onBreak ? (
+              <View key={goal.goalId} style={styles.onBreak}>
+                <Text style={type.lede}>
+                  {onBreak.when === 'on'
+                    ? HOME_COPY.onBreak(goal.goal, formatDayWithWeekday(onBreak.break.to), formatWhen(next.opensAt, now, tz, h24))
+                    : HOME_COPY.breakAhead(goal.goal, relativeDay(onBreak.break.from, today), formatDayWithWeekday(onBreak.break.to))}
+                </Text>
+                <CallButton
+                  label={onBreak.when === 'on' ? BREAK_COPY.resume : BREAK_COPY.cancel}
+                  onPress={() => appStore.getState().endBreak(goal.goalId)}
+                />
+              </View>
+            ) : (
+              <Text key={goal.goalId} style={type.lede}>
+                {HOME_COPY.nextCheckIn(goal.goal, formatWhen(next.opensAt, now, tz, h24))}
+              </Text>
+            ),
+          )}
         </Card>
       ) : null}
 
@@ -186,6 +200,7 @@ export function PlusHome() {
             firstWeekday={firstWeekday}
             restDays={FEATURES.schedules}
             notes={CALENDAR_NOTES}
+            breaks={CALENDAR_NOTES.break}
           />
         </>
       ) : (
@@ -216,6 +231,8 @@ function plusStats(goal: GoalState, today: DayKey): ExtraStat[] {
 
 const styles = StyleSheet.create({
   checkIn: { gap: space.xxl },
+  // Resume now sits under the line it acts on.
+  onBreak: { alignItems: 'flex-start' },
   goal: { gap: space.xs },
   // Edit sits on the title's first line, however many it wraps to.
   title: { flexDirection: 'row', alignItems: 'baseline', gap: space.md },

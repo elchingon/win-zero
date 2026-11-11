@@ -1,6 +1,7 @@
-// One month of check-ins: yes / not today / shielded / missed, with misses after a long-break
-// reset muted as "paused", and (Win Zero Plus, SPEC 9) rest days between chosen check-in days, and
-// a head start's days and comebacks among the Yeses. Browsable from the first goal day to today.
+// One month of check-ins: yes / not today / shielded / missed, with misses after a missed-day
+// reset muted as "paused", and (Win Zero Plus, SPEC 9) rest days between chosen check-in days, a
+// break's days, and a head start's days and comebacks among the Yeses. Browsable from the first
+// goal day to today; a break's days still to come show too.
 import { useMemo, useState } from 'react';
 import { AccessibilityInfo, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -10,6 +11,7 @@ import {
   isEveryDay,
   isHeadStart,
   isRestDay,
+  onBreak,
   settledDays,
   type CalendarMark,
   type DayKey,
@@ -23,9 +25,9 @@ import { MIN_TARGET, targetInset } from '@/ui/target';
 
 /** Yeses marked apart (Win Zero Plus): a head start's days, and comebacks (engine/comeback.ts). */
 export type CalendarNote = 'headStart' | 'comeback';
-type Mark = CalendarMark | 'pending' | 'rest' | CalendarNote;
+type Mark = CalendarMark | 'pending' | 'rest' | 'break' | CalendarNote;
 
-const MARK_WORDS: Record<Exclude<Mark, CalendarNote>, string> = {
+const MARK_WORDS: Record<Exclude<Mark, CalendarNote | 'break'>, string> = {
   yes: 'Yes',
   no: 'Not today',
   shielded: 'Shielded',
@@ -39,12 +41,21 @@ const LEGEND: Mark[] = ['yes', 'no', 'shielded', 'missed', 'paused'];
 
 /**
  * A day's mark. Shielded has a dot inside its ring, so it isn't told from Yes by color alone; a
- * comeback has a diamond, and a head start's day a dashed ring.
+ * comeback has a diamond, a head start's day a dashed ring, and a break's day two bars.
  */
 export function MarkGlyph({ mark }: { mark: Mark }) {
   return (
     <View style={glyphs[mark]}>
-      {mark === 'shielded' ? <View style={glyphs.shieldDot} /> : mark === 'comeback' ? <View style={glyphs.spark} /> : null}
+      {mark === 'shielded' ? (
+        <View style={glyphs.shieldDot} />
+      ) : mark === 'comeback' ? (
+        <View style={glyphs.spark} />
+      ) : mark === 'break' ? (
+        <>
+          <View style={glyphs.bar} />
+          <View style={glyphs.bar} />
+        </>
+      ) : null}
     </View>
   );
 }
@@ -58,8 +69,10 @@ export function HistoryCalendar(props: {
   restDays?: boolean;
   /** Mark a head start's days and comebacks, named in these words (Win Zero Plus, SPEC 9). */
   notes?: Readonly<Record<CalendarNote, string>>;
+  /** Mark a break's days, named in these words (Win Zero Plus, SPEC 9). */
+  breaks?: string;
 }) {
-  const { goal, today, pendingDay, firstWeekday, restDays = false, notes } = props;
+  const { goal, today, pendingDay, firstWeekday, restDays = false, notes, breaks } = props;
   const first = monthOf(goal.firstDay);
   const last = monthOf(today);
   const [month, setMonth] = useState(last);
@@ -85,16 +98,24 @@ export function HistoryCalendar(props: {
   const legend: Mark[] = [
     ...LEGEND,
     ...(restDays && !isEveryDay(goal) ? ['rest' as const] : []),
+    ...(breaks && goal.breaks?.length ? ['break' as const] : []),
     ...(['headStart', 'comeback'] as const).filter((n) => kinds.has(n)),
   ];
-  const words = (m: Mark) => (m === 'headStart' || m === 'comeback' ? (notes?.[m] ?? MARK_WORDS.yes) : MARK_WORDS[m]);
+  const words = (m: Mark) =>
+    m === 'break' ? (breaks ?? '') : m === 'headStart' || m === 'comeback' ? (notes?.[m] ?? MARK_WORDS.yes) : MARK_WORDS[m];
 
   /** A day before the goal began, or after today, shows no mark of its own. */
   const isOutside = (day: DayKey) => day < goal.firstDay || day > today;
   const markOf = (day: DayKey): Mark | null =>
     noted?.get(day) ??
     marks.get(day) ??
-    (day === pendingDay ? 'pending' : settled && !isOutside(day) && isRestDay(goal, day, settled) ? 'rest' : null);
+    (day === pendingDay
+      ? 'pending'
+      : breaks && onBreak(goal, day)
+        ? 'break'
+        : settled && !isOutside(day) && isRestDay(goal, day, settled)
+          ? 'rest'
+          : null);
 
   /** Show another month, and tell a screen reader what's in it. */
   const go = (to: MonthKey) => {
@@ -213,6 +234,8 @@ const glyphs = StyleSheet.create({
   paused: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.edge },
   pending: { ...ring, borderWidth: 1.5, borderColor: colors.amber, opacity: 0.6 },
   rest: { width: 8, height: 2, borderRadius: 1, backgroundColor: colors.edge },
+  break: { flexDirection: 'row', gap: 3, height: 10, alignItems: 'center' },
+  bar: { width: 2.5, height: 10, borderRadius: 1, backgroundColor: colors.edge },
 });
 
 const styles = StyleSheet.create({

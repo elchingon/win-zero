@@ -527,5 +527,6 @@ describe('How it works', () => {
     ]) {
       expect(screen.getByRole('header', { name })).toBeOnTheScreen();
     }
+    expect(screen.queryByRole('header', { name: 'Taking a break' })).not.toBeOnTheScreen();
   });
 });

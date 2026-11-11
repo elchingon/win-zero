@@ -1,5 +1,5 @@
-// One goal (SPEC 9): its wording, times, check-in days and, with several, lock-screen name, and
-// archiving or deleting it, which asks first. An archived goal's history then waits under Past goals.
+// One goal (SPEC 9): its wording, times, check-in days, a break and, with several, lock-screen name,
+// and archiving or deleting it, which asks first. An archived goal's history then waits under Past goals.
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -15,6 +15,7 @@ import { GoalFields } from '@/ui/settings/GoalFields';
 import { useDeviceCalendar } from '@/ui/useDevice';
 
 import { AliasField } from '../goals/AliasField';
+import { BreakField } from '../goals/BreakField';
 import { DaysField } from '../goals/DaysField';
 import { RemoveGoal } from '../goals/RemoveGoal';
 import { leave } from '../nav';
@@ -46,6 +47,7 @@ export function Goal() {
       </View>
       <GoalFields key={goal.goalId} goal={goal} />
       <DaysField key={`${goal.goalId}-days`} goal={goal} />
+      <BreakField key={`${goal.goalId}-break`} goal={goal} />
       {several ? <AliasField key={`${goal.goalId}-alias`} goal={goal} /> : null}
       <RemoveGoal key={`${goal.goalId}-remove`} goal={goal} />
     </Screen>

@@ -229,6 +229,57 @@ describe("a goal's check-in days in Settings", () => {
   });
 });
 
+describe('taking a break (SPEC 9)', () => {
+  const breaks = () => primaryGoal(appStore.getState())?.breaks;
+
+  it('takes one from Settings, says when check-ins come back, and resumes', async () => {
+    await open('/settings', [twoDays()], '12:00');
+    await fireEvent.changeText(screen.getByLabelText('Days off'), '7');
+    expect(screen.getByText(/^It starts today and runs through Wed, Oct 21\. Check-ins come back Oct 22 at 20:00\./)).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Take a break' }));
+    expect(breaks()).toEqual([{ from: '2026-10-15', to: '2026-10-21' }]);
+    expect(screen.getByText(/^On a break through Wed, Oct 21\. Rest up/)).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Save end date' })).not.toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Resume now' }));
+    expect(breaks()).toBeUndefined();
+    expect(screen.queryByText(/^On a break/)).not.toBeOnTheScreen();
+  });
+
+  it("starts tomorrow while today's check-in is open, and says to answer it", async () => {
+    await open('/settings');
+    await fireEvent.press(screen.getByRole('button', { name: '1 week' }));
+    expect(screen.getByText(/^It starts tomorrow and runs through Thu, Oct 22\./)).toBeOnTheScreen();
+    expect(screen.getByText('The check-in open now stays open, so answer it as usual.')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Take a break' }));
+    expect(breaks()).toEqual([{ from: '2026-10-16', to: '2026-10-22' }]);
+    expect(screen.getByText('A break starts tomorrow and runs through Thu, Oct 22.')).toBeOnTheScreen();
+  });
+
+  it('moves its end, turns down more than 14 days, and cancels one not started', async () => {
+    await open('/settings');
+    await fireEvent.changeText(screen.getByLabelText('Days off'), '15');
+    expect(screen.getByText('A whole number from 1 to 14.')).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Take a break' })).not.toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: '3 days' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Take a break' }));
+    expect(breaks()).toEqual([{ from: '2026-10-16', to: '2026-10-18' }]);
+    await fireEvent.changeText(screen.getByLabelText('Days off'), '5');
+    await fireEvent.press(screen.getByRole('button', { name: 'Save end date' }));
+    expect(breaks()).toEqual([{ from: '2026-10-16', to: '2026-10-20' }]);
+    await fireEvent.press(screen.getByRole('button', { name: 'Cancel break' }));
+    expect(breaks()).toBeUndefined();
+  });
+
+  it("is on each goal's own screen", async () => {
+    const run = { ...newGoal({ tz: tz() }), goalId: 'g2', goal: 'Run' };
+    await open('/goal?id=g2', [twoDays(), run], '12:00');
+    await fireEvent.press(screen.getByRole('button', { name: '2 weeks' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Take a break' }));
+    expect(appStore.getState().goals[1]?.goal.breaks).toEqual([{ from: '2026-10-15', to: '2026-10-28' }]);
+    expect(appStore.getState().goals[0]?.goal.breaks).toBeUndefined();
+  });
+});
+
 describe('several goals in Settings', () => {
   const two = () => [twoDays(), { ...newGoal({ tz: tz(), days: [1, 3, 5], checkInTime: '07:00' }), goalId: 'g2', goal: 'Run' }];
 

@@ -72,6 +72,7 @@ describe('Win Zero', () => {
     expect(headers).toEqual(['Win Zero', 'Settings', 'Accessibility', 'About']);
     expect(screen.queryByRole('radio')).not.toBeOnTheScreen();
     expect(screen.queryByText('Check-in days')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Take a break')).not.toBeOnTheScreen();
     expect(screen.queryByText(/Add a goal/)).not.toBeOnTheScreen();
     expect(screen.queryByText(/free games/)).not.toBeOnTheScreen();
   });

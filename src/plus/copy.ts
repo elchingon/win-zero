@@ -82,6 +82,58 @@ export const DAYS_COPY = {
   lastDay: 'At least one day stays on',
 } as const;
 
+/** Taking a break (SPEC 9, engine/breaks.ts): days off, with no check-in and nothing lost. */
+export const BREAK_COPY = {
+  label: 'Take a break',
+  hint: (max: number) =>
+    `Traveling or unwell? Take up to ${max} days off. No check-ins, no reminders, and nothing slips. Your zeros wait right here.`,
+  daysLabel: 'Days off',
+  invalid: (max: number) => `A whole number from 1 to ${max}.`,
+  /** The chips, by length in days. */
+  presets: [
+    { days: 3, label: '3 days' },
+    { days: 7, label: '1 week' },
+    { days: 14, label: '2 weeks' },
+  ],
+  /** Before one starts: 'It starts tomorrow and runs through Sun, Nov 22.' */
+  preview: (from: string, until: string) => `It starts ${from} and runs through ${until}.`,
+  /** While a check-in is open: the break starts after it. */
+  openFirst: 'The check-in open now stays open, so answer it as usual.',
+  /** Misses already counting go on counting after it. */
+  missesCarry: 'Check-ins missed just before it still count toward the free ones when it ends.',
+  /** 'Check-ins come back Monday at 8:00 PM.' */
+  back: (when: string) => `Check-ins come back ${when}.`,
+  start: 'Take a break',
+  on: (until: string) => `On a break through ${until}. Rest up: your zeros will be right here.`,
+  ahead: (from: string, until: string) => `A break starts ${from} and runs through ${until}.`,
+  over: (until: string) => `Your break ended ${until}.`,
+  /** Moving its end: the days counted from its first. */
+  changeHint: 'Count from its first day. It can end yesterday at the earliest.',
+  save: 'Save end date',
+  resume: 'Resume now',
+  cancel: 'Cancel break',
+  saved: 'Saved.',
+  /** Why a change didn't go through. */
+  reasons: {
+    'too-long': (max: number) => `A break lasts at most ${max} days.`,
+    'in-the-past': 'Days already over stay as they are, so it can end yesterday at the earliest.',
+    'already-on-break': 'This goal is already on a break.',
+    'no-break': "This goal isn't on a break now.",
+    'check-in-open': "That check-in is already open, so the break can't start then.",
+    'ends-before-start': 'A break needs at least one day.',
+    'invalid-day': 'Pick how many days.',
+  },
+  /** How it works, in Plus. */
+  howItWorks: {
+    title: 'Taking a break',
+    body: (max: number) => [
+      `Traveling or unwell? A goal can take a break of up to ${max} days, from its screen. It starts from the next check-in that hasn't opened yet.`,
+      'Break days have no check-in and no reminders, and nothing is gained or lost on them. Missed check-ins from just before a break still count when it ends.',
+      "Its end can move until the check-in after it opens: come back early with Resume now, or add days. After that check-in, a new break can start.",
+    ],
+  },
+} as const;
+
 export const HEAD_START_COPY = {
   label: 'Days already done',
   hint: (max: number) =>
@@ -163,7 +215,7 @@ export const WIN_BACK_COPY = {
 } as const;
 
 /** The history calendar's words for the Yeses Win Zero Plus marks apart. */
-export const CALENDAR_NOTES = { headStart: 'Head start', comeback: 'Comeback' } as const;
+export const CALENDAR_NOTES = { headStart: 'Head start', comeback: 'Comeback', break: 'On a break' } as const;
 
 /** Plus's own tiles on a goal's stats. */
 export const STATS_COPY = { comebacks: 'Comebacks', headStart: 'Head start' } as const;
@@ -284,6 +336,9 @@ export const HOME_COPY = {
   upNext: 'Up next',
   /** 'Run: Monday at 7:00 AM'. */
   nextCheckIn: (goal: string, when: string) => `${goal}: ${when}`,
+  /** In place of a goal's next check-in while it's on a break, or one is coming. */
+  onBreak: (goal: string, until: string, when: string) => `“${goal}” is on a break through ${until}. Check-ins come back ${when}.`,
+  breakAhead: (goal: string, from: string, until: string) => `“${goal}” takes a break from ${from} through ${until}.`,
   paused: (goal: string) =>
-    `Reminders for “${goal}” are paused after a long break. Check in whenever you're ready and they'll pick back up.`,
+    `Reminders for “${goal}” are paused after a long stretch without a check-in. Check in whenever you're ready and they'll pick back up.`,
 } as const;

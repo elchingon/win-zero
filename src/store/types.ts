@@ -27,7 +27,7 @@ export const MOVE_ID_PATTERN = /^[A-Za-z0-9-]{1,64}$/;
 export interface Prefs {
   sound: boolean;
   haptics: boolean;
-  /** Weekly nudge after a long break (SPEC 2). */
+  /** Weekly nudge after a long stretch without a check-in (SPEC 2). */
   reengage: boolean;
   /** Reminders name the goal ("Did you stick to “Stop drinking” today?"). Off keeps it private. */
   goalInReminders: boolean;

@@ -208,7 +208,7 @@ function HomeScreen({ goal }: { goal: GoalState }) {
       ) : null}
 
       {goal.paused ? (
-        <Fine>Reminders are paused after a long break. Check in whenever you&apos;re ready and they&apos;ll pick back up.</Fine>
+        <Fine>Reminders are paused after a long stretch without a check-in. Check in whenever you&apos;re ready and they&apos;ll pick back up.</Fine>
       ) : null}
 
       <CreditsCard best={best} credits={credits} bonus={bonus} onStartBonus={startBonus} onPlayBonus={playBonus} />
