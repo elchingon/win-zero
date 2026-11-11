@@ -1561,6 +1561,46 @@ describe('several goals (SPEC 9)', () => {
     expect(plus.store.getState().setCheckInDays('nobody', [1])).toEqual({ ok: false, reason: 'no-goal' });
   });
 
+  it('offers breaks only where the app does', async () => {
+    const free = harness();
+    await ready(free.store);
+    add(free.store, 'Run');
+    const freeId = idOf(free.store, 0);
+    expect(free.store.getState().startBreak(freeId, addDays(DAY0, 3))).toEqual({ ok: false, reason: 'breaks-not-allowed' });
+    expect(free.store.getState().endBreak(freeId)).toEqual({ ok: false, reason: 'breaks-not-allowed' });
+
+    const { store, setTime } = harness({ limits: PLUS_LIMITS });
+    await ready(store);
+    add(store, 'Run');
+    const id = idOf(store, 0);
+    expect(store.getState().startBreak('nobody', addDays(DAY0, 3))).toEqual({ ok: false, reason: 'no-goal' });
+    expect(store.getState().startBreak(id, addDays(DAY0, 20))).toEqual({ ok: false, reason: 'too-long' });
+    expect(store.getState().startBreak(id, addDays(DAY0, 4))).toEqual({ ok: true });
+    expect(store.getState().goals[0]?.goal.breaks).toEqual([{ from: DAY0, to: addDays(DAY0, 4) }]);
+    expect(store.getState().startBreak(id, addDays(DAY0, 6))).toEqual({ ok: false, reason: 'already-on-break' });
+    expect(store.getState().setBreakEnd(id, addDays(DAY0, 6))).toEqual({ ok: true });
+    setTime(addDays(DAY0, 3), '12:00');
+    expect(store.getState().endBreak(id)).toEqual({ ok: true });
+    expect(store.getState().goals[0]?.goal.breaks).toEqual([{ from: DAY0, to: addDays(DAY0, 2) }]);
+    expect(pendingWindow(store.getState().goals[0]!.goal, at(addDays(DAY0, 3), '20:30'))?.day).toBe(addDays(DAY0, 3));
+  });
+
+  it("ends a goal's undo when it takes a break, which the undo would take back", async () => {
+    const { store, setTime } = harness({ limits: PLUS_LIMITS });
+    await ready(store);
+    add(store, 'Run');
+    add(store, 'Read');
+    const [a, b] = [idOf(store, 0), idOf(store, 1)];
+    setTime(DAY0, '20:30');
+    store.getState().answer(a, 'not-today');
+    expect(store.getState().startBreak(b, addDays(DAY0, 3))).toEqual({ ok: true });
+    expect(store.getState().undo?.goalId).toBe(a);
+    expect(store.getState().startBreak(a, addDays(DAY0, 30))).toMatchObject({ ok: false });
+    expect(store.getState().undo?.goalId).toBe(a);
+    expect(store.getState().startBreak(a, addDays(DAY0, 3))).toEqual({ ok: true });
+    expect(store.getState().undo).toBeNull();
+  });
+
   it('answers each goal on its own: its round, its notice, its route', async () => {
     const { store, setTime } = harness({ limits: PLUS_LIMITS });
     await ready(store);

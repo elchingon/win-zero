@@ -21,6 +21,8 @@ export interface Limits {
   headStartMax: number;
   /** A comeback (engine/comeback.ts) is welcomed back, with a win-back round and the Phoenix theme. */
   comebacks: boolean;
+  /** A goal can take a break: days off with no check-in and no effect (engine/breaks.ts). */
+  breaks: boolean;
 }
 
 export const FREE_LIMITS: Limits = {
@@ -32,6 +34,7 @@ export const FREE_LIMITS: Limits = {
   secretCredits: false,
   headStartMax: 0,
   comebacks: false,
+  breaks: false,
 };
 export const PLUS_LIMITS: Limits = {
   maxGoals: 3,
@@ -42,4 +45,5 @@ export const PLUS_LIMITS: Limits = {
   secretCredits: true,
   headStartMax: HEAD_START_MAX,
   comebacks: true,
+  breaks: true,
 };

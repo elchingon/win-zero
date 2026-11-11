@@ -65,6 +65,29 @@ describe('reading a saved goal', () => {
     expect(firstGoal(slot({ ...goal, alias: '  ' }))).toEqual(goal);
   });
 
+  it('keeps real breaks, in order, and drops the rest', () => {
+    const a = { from: '2026-10-20', to: '2026-10-25' };
+    const b = { from: '2026-11-02', to: '2026-11-15' };
+    expect(firstGoal(slot({ ...goal, breaks: [a, b] }))?.breaks).toEqual([a, b]);
+    const kept = firstGoal(
+      slot({
+        ...goal,
+        breaks: [
+          a,
+          { from: '2026-10-24', to: '2026-10-28' }, // overlaps the one before
+          { from: '2026-10-30', to: '2026-10-29' }, // ends before it starts
+          { from: '2026-10-30', to: '2026-11-13' }, // 15 days
+          { from: 'soon', to: '2026-11-01' },
+          'a break',
+          b,
+        ],
+      }),
+    );
+    expect(kept?.breaks).toEqual([a, b]);
+    expect(firstGoal(slot({ ...goal, breaks: [] }))).toEqual(goal);
+    expect(firstGoal(slot({ ...goal, breaks: 'none' }))).toEqual(goal);
+  });
+
   it('flags nothing when there was no goal', () => {
     expect(hasUnreadableGoal({ goal: null })).toBe(false);
     expect(hasUnreadableGoal({ goals: [] })).toBe(false);

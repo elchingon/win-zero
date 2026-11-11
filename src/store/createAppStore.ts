@@ -16,6 +16,7 @@ import {
   comebackAt,
   createGoalWithHeadStart,
   EMPTY_WALLET,
+  endBreak as endGoalBreak,
   giftCredits,
   isBonusSize,
   isUnlocked,
@@ -26,6 +27,7 @@ import {
   pendingWindow,
   resolve,
   SECRET_GAME_CREDITS,
+  setBreakEnd as setGoalBreakEnd,
   setCheckInDays as setGoalCheckInDays,
   setGoalAlias as setGoalLockScreenName,
   setCheckInTime as setGoalCheckInTime,
@@ -33,10 +35,13 @@ import {
   setMorningTime as setGoalMorningTime,
   spendBomb as spendGoalBomb,
   spendCredit,
+  startBreak as startGoalBreak,
   weaponCreditOffer,
   winBackSize,
   type Answer,
   type AnswerResult,
+  type BreakRejection,
+  type BreakResult,
   type ClockTime,
   type DayKey,
   type GoalState,
@@ -94,6 +99,7 @@ export type AddGoalResult =
   | { ok: true; goalId: string }
   | { ok: false; reason: 'not-ready' | 'empty-goal' | 'full' | 'days-not-allowed' | 'head-start-not-allowed' };
 export type EditResult = { ok: true } | { ok: false; reason: 'no-goal' | 'empty-goal' | 'days-not-allowed' | 'no-days' };
+export type BreakEditResult = { ok: true } | { ok: false; reason: 'no-goal' | 'breaks-not-allowed' | BreakRejection };
 export type ImportResult = ImportOutcome | { ok: false; reason: 'not-ready' };
 
 export interface AppState extends PersistedState {
@@ -196,6 +202,15 @@ export interface AppState extends PersistedState {
   setMorningTime: (goalId: string, time: ClockTime) => EditResult;
   /** The weekdays a goal checks in on, where the app offers that (Limits). */
   setCheckInDays: (goalId: string, days: readonly number[]) => EditResult;
+  /**
+   * Take a break through `until` (engine/breaks.ts), where the app offers that (Limits): from `from`,
+   * by default the next check-in that hasn't opened.
+   */
+  startBreak: (goalId: string, until: DayKey, from?: DayKey) => BreakEditResult;
+  /** Move the running break's end: later, or earlier to yesterday at the earliest. */
+  setBreakEnd: (goalId: string, until: DayKey) => BreakEditResult;
+  /** Resume now: the running break ends with yesterday, or one not started is cancelled. */
+  endBreak: (goalId: string) => BreakEditResult;
   setPref: <K extends keyof Prefs>(key: K, value: Prefs[K]) => void;
   /** "Not now" on Home's reminders-off card: hide it for REMINDER_CARD_HIDE_MS. */
   hideReminderCard: () => void;
@@ -368,6 +383,21 @@ export function createAppStore(deps: StoreDeps) {
           const slot = slotOf(goalId);
           if (!slot) return { ok: false, reason: 'no-goal' };
           setSlot(goalId, change(slot.goal));
+          return { ok: true };
+        };
+
+        /**
+         * Run a break change through the engine, or say why not. Undo Not today puts the goal back as
+         * it was before the answer, so a break changes it no longer can.
+         */
+        const breakEdit = (goalId: string, change: (goal: GoalState, t: Date, tz: TimeZone) => BreakResult): BreakEditResult => {
+          const slot = slotOf(goalId);
+          if (!slot) return { ok: false, reason: 'no-goal' };
+          if (!limits.breaks) return { ok: false, reason: 'breaks-not-allowed' };
+          const r = change(slot.goal, now(), timeZone());
+          if (!r.ok) return { ok: false, reason: r.reason };
+          const { undo } = get();
+          setSlot(goalId, r.state, {}, { undo: undo?.goalId === goalId ? null : undo });
           return { ok: true };
         };
 
@@ -675,6 +705,10 @@ export function createAppStore(deps: StoreDeps) {
             if (days.length === 0) return { ok: false, reason: 'no-days' };
             return edit(goalId, (goal) => setGoalCheckInDays(goal, days, now(), timeZone()).state);
           },
+
+          startBreak: (goalId, until, from) => breakEdit(goalId, (goal, t, tz) => startGoalBreak(goal, until, t, tz, from)),
+          setBreakEnd: (goalId, until) => breakEdit(goalId, (goal, t, tz) => setGoalBreakEnd(goal, until, t, tz)),
+          endBreak: (goalId) => breakEdit(goalId, (goal, t, tz) => endGoalBreak(goal, t, tz)),
 
           setPref: (key, value) => set({ prefs: { ...get().prefs, [key]: value } }),
 

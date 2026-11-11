@@ -46,7 +46,7 @@ describe('variant', () => {
 });
 
 describe('what each app offers (SPEC 9)', () => {
-  it('sends the move from Win Zero, takes it in to Plus, and offers goals, schedules, game modes, themes, icons, the secret credits, head starts and comebacks in Plus', () => {
+  it('sends the move from Win Zero, takes it in to Plus, and offers goals, schedules, game modes, themes, icons, the secret credits, head starts, comebacks and breaks in Plus', () => {
     expect(load(undefined).FEATURES).toEqual({
       moveOut: true,
       importIn: false,
@@ -58,6 +58,7 @@ describe('what each app offers (SPEC 9)', () => {
       secretCredits: false,
       headStart: false,
       comebacks: false,
+      breaks: false,
     });
     expect(load('plus').FEATURES).toEqual({
       moveOut: false,
@@ -70,6 +71,7 @@ describe('what each app offers (SPEC 9)', () => {
       secretCredits: true,
       headStart: true,
       comebacks: true,
+      breaks: true,
     });
   });
 
@@ -77,6 +79,13 @@ describe('what each app offers (SPEC 9)', () => {
     for (const v of [undefined, 'free', 'plus']) {
       const app = load(v);
       expect(app.FEATURES.multiGoal).toBe(app.LIMITS.maxGoals > 1);
+    }
+  });
+
+  it('offers breaks exactly where the store allows them', () => {
+    for (const v of [undefined, 'free', 'plus']) {
+      const app = load(v);
+      expect(app.FEATURES.breaks).toBe(app.LIMITS.breaks);
     }
   });
 

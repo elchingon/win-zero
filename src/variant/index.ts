@@ -48,6 +48,8 @@ export const FEATURES = {
   headStart: LIMITS.headStartMax > 0,
   /** Comebacks are welcomed back, with a win-back round and the Phoenix theme (LIMITS). */
   comebacks: LIMITS.comebacks,
+  /** A goal can take a break for travel or illness (LIMITS). */
+  breaks: LIMITS.breaks,
 } as const;
 
 /** On iPhone, the folder only the two apps share (an App Group, in app.json): a move waits there. */

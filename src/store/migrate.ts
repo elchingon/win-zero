@@ -11,10 +11,12 @@ import {
   isModeId,
   isThemeId,
   isValidDayKey,
+  latestBreakEnd,
   WEAPONS,
   type CreditGrant,
   type CreditKind,
   type CreditWallet,
+  type GoalBreak,
   type GoalState,
   type ThemeId,
   type WeaponId,
@@ -155,7 +157,28 @@ function normalizeGoal(raw: unknown): GoalState | null {
   const goal = { ...(v as unknown as GoalState), slide: count(v.slide, 0), paused: bool(v.paused, false) };
   // A lock-screen name (SPEC 9) that isn't a name is dropped.
   if (goal.alias !== undefined && (typeof goal.alias !== 'string' || !goal.alias.trim())) delete goal.alias;
+  // Breaks (SPEC 9): only real ones are kept.
+  const breaks = normalizeBreaks(goal.breaks);
+  if (breaks) goal.breaks = breaks;
+  else delete goal.breaks;
   return goal;
+}
+
+/**
+ * A goal's saved breaks, in order: each one real dates, at most BREAK_MAX_DAYS long, and after the
+ * one before it. Anything else is dropped. Undefined when none are left.
+ */
+function normalizeBreaks(raw: unknown): GoalBreak[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const out: GoalBreak[] = [];
+  for (const b of raw) {
+    if (!isRecord(b) || typeof b.from !== 'string' || typeof b.to !== 'string') continue;
+    const { from, to } = b;
+    if (!isValidDayKey(from) || !isValidDayKey(to) || to < from || to > latestBreakEnd(from)) continue;
+    const prev = out[out.length - 1];
+    if (!prev || from > prev.to) out.push({ from, to });
+  }
+  return out.length ? out : undefined;
 }
 
 /** The goals stored data holds, active and archived, as saved: before version 3, the one goal. */
