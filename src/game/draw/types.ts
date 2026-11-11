@@ -25,12 +25,17 @@ export interface SpriteSheet {
   armored: Sprite[];
   /** Bullet streaks, head at the sprite's center, pointing right: the usual, the chain and the big shot. */
   bullets: Sprite[];
-  /** A ×V badge per distinct armored value, in armorBadges order. Drawn at natural size (ry = px per point). */
+  /**
+   * A ×V badge per distinct armored value, in armorBadges order (a boss round's: its plan's badges).
+   * Drawn at natural size (ry = px per point).
+   */
   badges: Sprite[];
   /** The white Bungee "0" for the celebration fill, tinted per glyph. `ry` is its font size in px. */
   glyph: Sprite;
   /** White effect shapes, tinted per particle. `ry` is the dot's side, the confetti's length, the ring's ry. */
   fx: { dot: Sprite; confetti: Sprite; ring: Sprite };
+  /** A boss round's boss: its ring (armored, in the flare slot's color) and its fg ring for hit flashes. Absent otherwise. */
+  boss?: { ring: Sprite; flash: Sprite };
 }
 
 /** A color as [r, g, b, a], each 0..1: what Skia's native calls accept without allocating. */

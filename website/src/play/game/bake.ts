@@ -1,8 +1,8 @@
 // Built once per round: the website's version of the app's sprite bake (src/game/bake/kit.ts),
 // on 2D canvases, from the same numbers (src/game/look.ts). It makes the sprite sheet (zero rings
-// with their glow baked in, ×V badges, bullet streaks), tinted copies of the sprites the scene
-// tints, the backdrop, and the paints the shared drawing code reuses every frame.
-import type { FillPlan, ZeroGroup } from '@/engine';
+// with their glow baked in, ×V badges, bullet streaks, and a boss round's boss), tinted copies of
+// the sprites the scene tints, the backdrop, and the paints the shared drawing code reuses every frame.
+import type { BossPlan, FillPlan, ZeroGroup } from '@/engine';
 import { TURRET_BASE_RADIUS } from '@/game/draw/scene';
 import type { Kit, Rgba, Sprite, SpriteSheet } from '@/game/draw/types';
 import {
@@ -12,6 +12,8 @@ import {
   BADGE_FONT,
   BADGE_HEIGHT,
   BADGE_PAD_X,
+  bossRingDensity,
+  bossSpriteRadius,
   BULLET_LOOKS,
   BULLET_TAIL_ALPHA,
   DOT_ALPHA,
@@ -43,7 +45,7 @@ import {
   type BulletLook,
 } from '@/game/look';
 import { armorBadges } from '@/game/sim/badges';
-import { ARMOR_SIZE_SCALE, FG } from '@/game/sim/constants';
+import { ARMOR_SIZE_SCALE, FG, FLARE } from '@/game/sim/constants';
 import { fillGrid } from '@/game/sim/fill';
 import { ZERO_ASPECT } from '@/game/sim/sizing';
 import { formatCount } from '@/lib/format';
@@ -333,12 +335,15 @@ export function bakeRound(opts: {
   width: number;
   height: number;
   pixelRatio: number;
+  /** A boss round's boss (engine bossPlan): a row of its own, and its plan's badges. */
+  boss?: BossPlan;
 }): BakedRound {
-  const { ctx, n, groups, fill, width, height, pixelRatio } = opts;
+  const { ctx, n, groups, fill, width, height, pixelRatio, boss } = opts;
   const measure = context(makeCanvas(1, 1));
   const objectCount = groups.reduce((sum, g) => sum + g.count, 0);
-  const badgeValues = armorBadges(groups);
-  const armoredRound = badgeValues.length > 0;
+  const armorValues = armorBadges(groups);
+  const armoredRound = armorValues.length > 0;
+  const badgeValues = boss ? boss.badges : armorValues;
   const ryPt = spriteRadius(objectCount, width, height);
   const density = ringDensity(pixelRatio, ryPt * (armoredRound ? ARMOR_SIZE_SCALE : 1));
   const fxScale = fxDensity(pixelRatio);
@@ -346,13 +351,18 @@ export function bakeRound(opts: {
 
   const ringCells = zeroPalette.map((c) => ringCell(ryPt * density, c, false));
   const armoredCells = armoredRound ? zeroPalette.map((c) => ringCell(ryPt * ARMOR_SIZE_SCALE * density, c, true)) : [];
+  // The boss: its armored ring in the flare slot's color, and its fg ring for hit flashes.
+  const bossPt = bossSpriteRadius(width, height);
+  const bossRy = bossPt * bossRingDensity(pixelRatio, bossPt);
+  const bossCells = boss ? [ringCell(bossRy, zeroPalette[FLARE] ?? colors.flare, true), ringCell(bossRy, zeroPalette[FG] ?? colors.fg, true)] : [];
   const { canvas: atlas, sprites } = pack([
     ringCells,
     armoredCells,
     badgeValues.map((v) => badgeCell(v, fxScale, measure)),
     BULLET_LOOKS.map((look) => bulletCell(look, fxScale)),
+    bossCells,
   ]);
-  const [zero = [], armored = [], badges = [], bullets = []] = sprites;
+  const [zero = [], armored = [], badges = [], bullets = [], bossRow = []] = sprites;
 
   // Hit flashes tint the fg ring with fg; particles and fill glyphs take any palette color.
   const tints: TintTable = new Map();
@@ -362,6 +372,9 @@ export function bakeRound(opts: {
   const fgArmored = armored[FG];
   const fgArmoredCell = armoredCells[FG];
   if (fgArmored && fgArmoredCell) tints.set(fgArmored, tintCopies(fgArmoredCell, [colors.fg]));
+  const [bossRing, bossFlash] = bossRow;
+  const bossFlashCell = bossCells[1];
+  if (bossFlash && bossFlashCell) tints.set(bossFlash, tintCopies(bossFlashCell, [colors.fg]));
   const [dotCell, confettiCell, ringFxCell] = fxCells(fxScale);
   const fx = {
     dot: tintOnly(dotCell, zeroPalette, tints),
@@ -370,7 +383,17 @@ export function bakeRound(opts: {
   };
   const glyph = tintOnly(glyphCell(Math.min(glyphPt * fxScale, GLYPH_MAX_PX), fill.glyphs <= GLYPH_GLOW_MAX, measure), zeroPalette, tints);
 
-  const sheet: SpriteSheet = { width: atlas.width, height: atlas.height, zero, armored, badges, bullets, glyph, fx };
+  const sheet: SpriteSheet = {
+    width: atlas.width,
+    height: atlas.height,
+    zero,
+    armored,
+    badges,
+    bullets,
+    glyph,
+    fx,
+    ...(bossRing && bossFlash ? { boss: { ring: bossRing, flash: bossFlash } } : {}),
+  };
   const big = fill.overlayNumber ? overlay(n, width, height, measure) : null;
   const turretBase = new Path2D();
   turretBase.arc(0, 0, TURRET_BASE_RADIUS, Math.PI, Math.PI * 2);

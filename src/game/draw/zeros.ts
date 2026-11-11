@@ -1,6 +1,7 @@
 'worklet';
 // The zeros: rings (with armored ×V badges) from the atlas in one call, an additive flash on
-// the ones just hit, and energy bars over the tough ones.
+// the ones just hit, and energy bars over the tough ones. A boss round's boss has a sprite of its
+// own, pips for its stages over its bar, and a dimmed bar while it's shielded.
 import type { SkCanvas, SkColor, SkImage, SkRSXform, SkRect } from '@shopify/react-native-skia';
 
 import { FG, POP_IN } from '../sim/constants';
@@ -22,6 +23,12 @@ const BAR_MIN_WIDTH = 18;
 /** Bar width as a fraction of the ring's width. */
 const BAR_WIDTH = 0.9;
 const BAR_TRACK_ALPHA = 0.85;
+/** A shielded boss's bar is this dim. */
+const GUARDED_BAR_ALPHA = 0.35;
+/** A boss's stage pips: their side, the gap between them, and how far above its bar. */
+const PIP_SIZE = 5;
+const PIP_GAP = 4;
+const PIP_RISE = 4;
 
 /** A zero's pop-in scale: easeBack from 0 once its spawn delay is over. */
 export function popScale(z: Zero): number {
@@ -42,7 +49,7 @@ export function drawZeros(canvas: SkCanvas, s: GameState, kit: Kit, atlas: SkIma
     if (!z || !z.alive) continue;
     const scale = zeroScale(z);
     if (scale <= 0.001) continue;
-    const ring = z.kind === 'armored' ? sheet.armored[z.color] : sheet.zero[z.color];
+    const ring = z.kind === 'boss' ? sheet.boss?.ring : z.kind === 'armored' ? sheet.armored[z.color] : sheet.zero[z.color];
     if (!ring) continue;
     pushSprite(batch, ring, z.x, z.y, (z.ry * scale) / ring.ry, 0);
     const badge = z.badge >= 0 ? sheet.badges[z.badge] : undefined;
@@ -61,7 +68,7 @@ export function drawHitFlashes(canvas: SkCanvas, s: GameState, kit: Kit, atlas: 
   for (let i = 0; i < s.zeros.length; i++) {
     const z = s.zeros[i];
     if (!z || !z.alive || z.hitFlash <= 0) continue;
-    const ring = z.kind === 'armored' ? sheet.armored[FG] : sheet.zero[FG];
+    const ring = z.kind === 'boss' ? sheet.boss?.flash : z.kind === 'armored' ? sheet.armored[FG] : sheet.zero[FG];
     if (!ring) continue;
     if (!pushSprite(batch, ring, z.x, z.y, (z.ry * zeroScale(z)) / ring.ry, 0)) break;
     tintLast(batch, kit.colors.fg, z.hitFlash);
@@ -78,6 +85,20 @@ export function drawHitFlashes(canvas: SkCanvas, s: GameState, kit: Kit, atlas: 
   );
 }
 
+/** A boss's stages, as pips over its bar: lit for the ones still to fight, this one among them. */
+function drawStagePips(canvas: SkCanvas, s: GameState, kit: Kit, sc: Scratch, z: Zero, barY: number, alpha: number): void {
+  const bs = s.boss;
+  if (bs === null) return;
+  const paint = kit.paints.fill;
+  const span = bs.stages * PIP_SIZE + (bs.stages - 1) * PIP_GAP;
+  const y = barY - PIP_RISE - PIP_SIZE;
+  for (let k = 0; k < bs.stages; k++) {
+    const lit = k >= bs.stage;
+    paintColor(paint, sc, lit ? (kit.palette[z.color] ?? kit.colors.fg) : kit.colors.panel2, alpha * (lit ? 1 : BAR_TRACK_ALPHA));
+    canvas.drawRect(rect(sc, z.x - span / 2 + k * (PIP_SIZE + PIP_GAP), y, PIP_SIZE, PIP_SIZE), paint);
+  }
+}
+
 /** HP bars over energy and armored zeros, in the zero's own color, draining per hit. */
 export function drawEnergyBars(canvas: SkCanvas, s: GameState, kit: Kit, sc: Scratch): void {
   const paint = kit.paints.fill;
@@ -89,10 +110,11 @@ export function drawEnergyBars(canvas: SkCanvas, s: GameState, kit: Kit, sc: Scr
     const width = Math.max(BAR_MIN_WIDTH, z.rx * 2 * BAR_WIDTH) * pop;
     const x = z.x - width / 2;
     const y = z.y - z.ry * pop - BAR_GAP - BAR_HEIGHT;
-    const alpha = clamp01(pop);
+    const alpha = clamp01(pop) * (z.guarded ? GUARDED_BAR_ALPHA : 1);
     paintColor(paint, sc, kit.colors.panel2, BAR_TRACK_ALPHA * alpha);
     canvas.drawRect(rect(sc, x, y, width, BAR_HEIGHT), paint);
     paintColor(paint, sc, kit.palette[z.color] ?? kit.colors.fg, alpha);
     canvas.drawRect(rect(sc, x, y, width * clamp01(z.hp / z.maxHp), BAR_HEIGHT), paint);
+    if (z.kind === 'boss') drawStagePips(canvas, s, kit, sc, z, y, alpha);
   }
 }

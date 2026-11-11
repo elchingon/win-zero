@@ -3,7 +3,7 @@
 // and arithmetic only, so the app's Skia bake and the website's canvas bake draw the same thing.
 import { colors } from '@/theme/tokens';
 
-import { SIZE_JITTER } from './sim/constants';
+import { BOSS_SIDE_SHARE, SIZE_JITTER } from './sim/constants';
 import { zeroRadius } from './sim/sizing';
 
 // The backdrop behind every screen (ZeroField): a dot grid over a radial glow.
@@ -42,6 +42,8 @@ export const HIGHLIGHT_WIDTH = 0.18;
 export const SPRITE_MAX_DENSITY = 3;
 /** And never with a radius above this many pixels, to keep the sheet small. */
 export const SPRITE_MAX_RY_PX = 200;
+/** A boss round's boss is baked once, sharper: up to this many pixels of radius. */
+export const BOSS_SPRITE_MAX_RY_PX = 400;
 /** A blur reaches about this many sigmas. */
 export const GLOW_REACH = 3;
 export const SPRITE_PAD = 2;
@@ -108,6 +110,19 @@ export function spriteRadius(objectCount: number, width: number, height: number)
 /** Pixels per point for the zero rings: the screen's density, within the sheet's limits. */
 export function ringDensity(pixelRatio: number, biggestRy: number): number {
   return Math.max(1, Math.min(pixelRatio, SPRITE_MAX_DENSITY, SPRITE_MAX_RY_PX / biggestRy));
+}
+
+/**
+ * The radius (points) a boss round's boss is baked at: the biggest a boss gets on this screen in
+ * any mode, since every mode keeps it within sim/boss.ts's bossRy.
+ */
+export function bossSpriteRadius(width: number, height: number): number {
+  return Math.min(width, height) * BOSS_SIDE_SHARE;
+}
+
+/** Pixels per point for a boss's ring: the screen's density, within its own limit. */
+export function bossRingDensity(pixelRatio: number, ry: number): number {
+  return Math.max(1, Math.min(pixelRatio, SPRITE_MAX_DENSITY, BOSS_SPRITE_MAX_RY_PX / ry));
 }
 
 /** Pixels per point for shots, effects, badges and fill glyphs. */

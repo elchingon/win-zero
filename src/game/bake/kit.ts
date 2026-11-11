@@ -19,7 +19,7 @@ import {
 } from '@shopify/react-native-skia';
 import { PixelRatio } from 'react-native';
 
-import type { FillPlan, ModeId, ZeroGroup } from '@/engine';
+import type { BossPlan, FillPlan, ModeId, ZeroGroup } from '@/engine';
 import { formatCount } from '@/lib/format';
 import type { ThemeLook } from '@/theme/themes';
 import { colors } from '@/theme/tokens';
@@ -39,6 +39,8 @@ import {
   BADGE_FONT,
   BADGE_HEIGHT,
   BADGE_PAD_X,
+  bossRingDensity,
+  bossSpriteRadius,
   BULLET_TAIL_ALPHA,
   DOT_ALPHA,
   DOT_ORIGIN,
@@ -70,7 +72,7 @@ import {
   type BulletLook,
 } from '../look';
 import { armorBadges, pieceBadges } from '../sim/badges';
-import { ARMOR_SIZE_SCALE } from '../sim/constants';
+import { ARMOR_SIZE_SCALE, FG, FLARE } from '../sim/constants';
 import { fillGrid } from '../sim/fill';
 import { ZERO_ASPECT, ZERO_STROKE } from '../sim/sizing';
 import { highlightPath } from '../ZeroRing';
@@ -335,7 +337,8 @@ export interface BakedSprites {
  * the round has them, and the shots and effects, in the round's theme. The layout is the same in
  * every theme. `font` is Bungee, at any size. Orbit's split pieces wear badges of their own,
  * baked in a row after the rest and listed after the round's badges, so the Shooter's sheet
- * never moves.
+ * never moves. A boss round's boss gets a row of its own at the end, baked once at the boss's
+ * size, and its badges are its plan's.
  */
 export function bakeSprites(opts: {
   groups: readonly ZeroGroup[];
@@ -346,10 +349,13 @@ export function bakeSprites(opts: {
   look: ThemeLook;
   /** The round's mode. A mode with sprites of its own gets rows after these, so the Shooter's never move. */
   mode?: ModeId;
+  /** A boss round's boss (engine bossPlan). */
+  boss?: BossPlan;
 }): BakedSprites {
   const objectCount = opts.groups.reduce((sum, g) => sum + g.count, 0);
-  const badgeValues = armorBadges(opts.groups);
-  const armoredRound = badgeValues.length > 0;
+  const armorValues = armorBadges(opts.groups);
+  const armoredRound = armorValues.length > 0;
+  const badgeValues = opts.boss ? opts.boss.badges : armorValues;
   const ryPt = spriteRadius(objectCount, opts.width, opts.height);
   const biggest = ryPt * (armoredRound ? ARMOR_SIZE_SCALE : 1);
   const density = ringDensity(PixelRatio.get(), biggest);
@@ -364,14 +370,24 @@ export function bakeSprites(opts: {
     fx: fxCells(fxScale),
     glyph: [glyphCell(Math.min(glyphPt * fxScale, GLYPH_MAX_PX), opts.font, opts.fill.glyphs <= GLYPH_GLOW_MAX)],
     pieceBadges: (opts.mode === 'orbit' ? pieceBadges(opts.groups) : []).map((v) => badgeCell(v, opts.font, fxScale)),
+    boss: opts.boss ? bossCells(opts.width, opts.height, c.palette) : [],
   };
   const { picture, sprites, width, height } = pack(Object.values(rows));
-  const [zero = [], armored = [], roundBadges = [], bullets = [], fx = [], glyphs = [], pieces = []] = sprites;
+  const [zero = [], armored = [], roundBadges = [], bullets = [], fx = [], glyphs = [], pieces = [], bossRow = []] = sprites;
   const badges = [...roundBadges, ...pieces];
   const [dot, confetti, ring] = fx;
   const [glyph] = glyphs;
   if (!dot || !confetti || !ring || !glyph) throw new Error('The effect sprites failed to pack');
-  return { picture, sheet: { width, height, zero, armored, badges, bullets, glyph, fx: { dot, confetti, ring } } };
+  const [bossRing, bossFlash] = bossRow;
+  const boss = bossRing && bossFlash ? { boss: { ring: bossRing, flash: bossFlash } } : {};
+  return { picture, sheet: { width, height, zero, armored, badges, bullets, glyph, fx: { dot, confetti, ring }, ...boss } };
+}
+
+/** The boss's ring, armored, in the flare slot's color, and its fg ring for hit flashes, at the boss's size. */
+function bossCells(width: number, height: number, palette: readonly string[]): Cell[] {
+  const ryPt = bossSpriteRadius(width, height);
+  const ry = ryPt * bossRingDensity(PixelRatio.get(), ryPt);
+  return [ringCell(ry, palette[FLARE] ?? colors.flare, true), ringCell(ry, palette[FG] ?? colors.fg, true)];
 }
 
 function background(width: number, height: number): SkPicture {

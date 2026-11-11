@@ -1,9 +1,10 @@
 // The shared round, drawn through the canvas stand-in, from the first frame to the result
 // sheet: every weapon, a bomb, then Finish round and the celebration fill (with the big number
-// on top). This is where the website adds risk to the app's sim and drawing code.
+// on top), and a boss round's boss (SPEC 4) through its phases. This is where the website adds risk
+// to the app's sim and drawing code.
 import { describe, expect, it } from 'vitest';
 
-import { composeRound, fillPlan, unlockedWeapons, type FillPlan } from '@/engine';
+import { BOSS_DAYS, bossGroups, bossPlan, composeRound, fillPlan, unlockedWeapons, type BossDay, type FillPlan } from '@/engine';
 import { drawScene, makeScratch } from '@/game/draw/scene';
 import type { Kit, Sprite } from '@/game/draw/types';
 import { dropBomb } from '@/game/sim/bomb';
@@ -22,7 +23,7 @@ const W = 390;
 const H = 844;
 const cell = (ry = 10): Sprite => ({ x: 0, y: 0, width: 20, height: 28, ry });
 
-function stubKit(n: number, fill: FillPlan, tints: TintTable): Kit {
+function stubKit(n: number, fill: FillPlan, tints: TintTable, boss = false): Kit {
   const tintAll = (s: Sprite, palette: readonly string[]) => {
     tints.set(s, new Map(palette.map((hex) => {
       const [r = 0, g = 0, b = 0] = rgba(hex);
@@ -34,6 +35,8 @@ function stubKit(n: number, fill: FillPlan, tints: TintTable): Kit {
   const armored = zeroPalette.map(() => cell());
   tintAll(zero[3]!, [colors.fg]);
   tintAll(armored[3]!, [colors.fg]);
+  // A boss's hit flash tints its fg ring, as the bake leaves a copy for.
+  const bossSprites = boss ? { boss: { ring: cell(60), flash: tintAll(cell(60), [colors.fg]) } } : {};
   return {
     width: W,
     height: H,
@@ -47,6 +50,7 @@ function stubKit(n: number, fill: FillPlan, tints: TintTable): Kit {
       badges: Array.from({ length: 8 }, () => cell(1)),
       glyph: tintAll(cell(40), zeroPalette),
       fx: { dot: tintAll(cell(8), zeroPalette), confetti: tintAll(cell(16), zeroPalette), ring: tintAll(cell(12), zeroPalette) },
+      ...bossSprites,
     },
     background: { image: {} as CanvasImageSource, width: W, height: H },
     turretBase: {} as Path2D,
@@ -68,14 +72,16 @@ function stubKit(n: number, fill: FillPlan, tints: TintTable): Kit {
   };
 }
 
-function playThrough(n: number) {
+function playThrough(n: number, bossDay?: BossDay) {
   const fill = fillPlan(n);
   const tints: TintTable = new Map();
-  const kit = stubKit(n, fill, tints);
+  const boss = bossDay ? bossPlan(bossDay, 'shooter') : undefined;
+  const kit = stubKit(n, fill, tints, boss !== undefined);
   const weapons = unlockedWeapons(100);
   const s = createGame({
+    ...(boss ? { boss } : {}),
     n,
-    groups: composeRound(n).groups,
+    groups: boss ? bossGroups(boss) : composeRound(n).groups,
     fill,
     width: W,
     height: H,
@@ -111,10 +117,11 @@ function playThrough(n: number) {
   releaseFire(s);
   dropBomb(s);
   for (let i = 0; i < 20; i++) frame();
+  const stage = s.boss?.stage ?? 0;
   finishAll(s);
   for (let i = 0; i < 60 * 30 && !showResult; i++) frame();
   for (let i = 0; i < 30; i++) frame();
-  return { ctx, canvas, phases, showResult, kit };
+  return { ctx, canvas, phases, showResult, kit, stage };
 }
 
 describe('the round, drawn on the web', () => {
@@ -129,5 +136,17 @@ describe('the round, drawn on the web', () => {
     if (kit.overlay) expect(ops).toContain('strokeText');
     // Additive effects use lighter; nothing leaves an unknown blend.
     expect(new Set(ctx.drawn.map((d) => d.composite))).toEqual(new Set(['source-over', 'lighter']));
+  });
+});
+
+describe('a boss round, drawn on the web (SPEC 4)', () => {
+  it.each(BOSS_DAYS)('plays the Day %i boss through its phases to the result sheet', (n) => {
+    const { ctx, canvas, phases, showResult, stage } = playThrough(n, n);
+    expect(showResult).toBe(true);
+    expect([...phases]).toEqual(expect.arrayContaining(['play', 'celebrate', 'fill', 'done']));
+    // Every weapon in turn breaks a phase or more before Finish round.
+    expect(stage).toBeGreaterThan(0);
+    expect(canvas.tintMisses).toBe(0);
+    expect(ctx.depth).toBe(0);
   });
 });

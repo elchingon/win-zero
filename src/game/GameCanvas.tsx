@@ -98,14 +98,14 @@ export const GameCanvas = memo(function GameCanvas(props: {
   ref?: Ref<GameHandle>;
 }) {
   const { round, look, weapon, reduceMotion, onReport, onFrameStats, ref } = props;
-  const { width, height, groups, n, fill, mode } = round;
+  const { width, height, groups, n, fill, mode, boss } = round;
   const font = useFont(fontAssets.Bungee_400Regular, FONT_LOAD_SIZE);
 
   // The sprite sheet waits for the font (badges and fill glyphs are Bungee); until then the
   // frame loop holds off.
   const baked = useMemo(
-    () => (font ? bakeSprites({ groups, fill, width, height, font, look, mode }) : null),
-    [groups, fill, width, height, font, look, mode],
+    () => (font ? bakeSprites({ groups, fill, width, height, font, look, mode, boss }) : null),
+    [groups, fill, width, height, font, look, mode, boss],
   );
   const sheetSize = useMemo(() => (baked ? { width: baked.sheet.width, height: baked.sheet.height } : NO_SIZE), [baked]);
   const atlas = usePictureAsTexture(baked?.picture ?? null, sheetSize);

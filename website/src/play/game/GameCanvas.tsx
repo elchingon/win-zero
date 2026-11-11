@@ -13,7 +13,7 @@ import {
   type Ref,
 } from 'react';
 
-import type { FillPlan, WeaponDef, ZeroGroup } from '@/engine';
+import type { BossPlan, FillPlan, WeaponDef, ZeroGroup } from '@/engine';
 import { drawScene, makeScratch } from '@/game/draw/scene';
 import { dropBomb } from '@/game/sim/bomb';
 import { finishAll } from '@/game/sim/finish';
@@ -54,6 +54,8 @@ export interface RoundSetup {
   groups: readonly ZeroGroup[];
   fill: FillPlan;
   seed: number;
+  /** A boss round's boss (SPEC 4), whose groups are bossGroups(boss). */
+  boss?: BossPlan;
 }
 
 export interface GameHandle {
@@ -120,7 +122,7 @@ export function GameCanvas(props: {
 
   // The sprite sheet, once Bungee is ready. Replays reuse it: it depends on the round's zeros
   // and the size, not on the seed.
-  const { n, groups, fill, seed } = round;
+  const { n, groups, fill, seed, boss } = round;
   useEffect(() => {
     const ctx = canvas.current?.getContext('2d');
     if (!size || !ctx) return;
@@ -128,12 +130,12 @@ export function GameCanvas(props: {
     void fontReady().then(() => {
       if (cancelled) return;
       const pixelRatio = Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO);
-      setBaked(bakeRound({ ctx, n, groups, fill, width: size.width, height: size.height, pixelRatio }));
+      setBaked(bakeRound({ ctx, n, groups, fill, width: size.width, height: size.height, pixelRatio, boss }));
     });
     return () => {
       cancelled = true;
     };
-  }, [size, n, groups, fill]);
+  }, [size, n, groups, fill, boss]);
 
   // A new round: start the sim and the frame loop.
   useEffect(() => {
@@ -148,6 +150,7 @@ export function GameCanvas(props: {
     resize();
     const insets = safeArea();
     const s = createGame({
+      ...(boss ? { boss } : {}),
       n,
       groups,
       fill,
@@ -210,7 +213,7 @@ export function GameCanvas(props: {
       cancelAnimationFrame(frame);
       if (state.current === s) state.current = null;
     };
-  }, [size, baked, n, groups, fill, seed]);
+  }, [size, baked, n, groups, fill, seed, boss]);
 
   useEffect(() => {
     if (state.current) setWeapon(state.current, weapon);
