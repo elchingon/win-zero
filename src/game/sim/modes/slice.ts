@@ -2,8 +2,9 @@
 // Slice (SPEC 9): zeros are tossed up from the bottom edge of the board, a few at a time, and a
 // swipe cuts them. A cut is a hit from the power-up's weapon (its damage, splash and chain); a
 // zero that survives one (energy and armored zeros) is juggled higher with each cut until it
-// pops. A zero that falls back unsliced waits on the bottom edge for another toss. Late in the
-// round, tosses float and the blade reaches further, so the last zero is easy to cut.
+// pops. A zero that falls back unsliced waits on the bottom edge for another toss. A boss floats
+// as armored zeros do, and its rings are thrown up off it. Late in the round, tosses float and the
+// blade reaches further, so the last zero is easy to cut.
 //
 // A zero waiting for its toss sits on the bottom edge, hidden and out of reach through its
 // pop-in delay; it launches the moment it appears. So a bomb, or Finish round, that brings it in
@@ -11,8 +12,9 @@
 import type { WeaponId } from '@/engine';
 
 import { armorBadges } from '../badges';
-import { catchable, keepOnBoard, liveZeros } from '../board';
-import { ASSIST_LAST, HIT_FLASH } from '../constants';
+import { catchable, fewLeft, keepOnBoard } from '../board';
+import { bossBadge, bossRy } from '../boss';
+import { HIT_FLASH } from '../constants';
 import { segmentHitsZero } from '../hit';
 import { between, random } from '../rng';
 import { ZERO_ASPECT, zeroRadius } from '../sizing';
@@ -51,6 +53,9 @@ export const SLICE_JUGGLE_GROW = 0.15;
 export const SLICE_COOLDOWN = 0.25;
 /** A ceiling hit keeps this much of the speed, heading down. */
 export const SLICE_CEILING_KEEP = 0.3;
+
+/** A boss is at most this share of the board's height, so its tosses still have room to rise. */
+export const SLICE_BOSS_SHARE = 0.25;
 
 /** Twin Blade: the two blades run this far apart. */
 export const SLICE_TWIN_GAP = 26;
@@ -137,11 +142,12 @@ export function placeSlice(s: GameState, cfg: GameConfig): void {
     const group = cfg.groups[g];
     if (!group) continue;
     const armored = group.kind === 'armored';
+    const boss = group.kind === 'boss';
     for (let k = 0; k < group.count; k++) {
       const z = s.zeros[i];
       if (!z) return;
-      readyZero(z, group, armored ? badges.indexOf(group.value) : -1, i);
-      z.ry = zeroSize(s, base, armored);
+      readyZero(z, group, boss ? bossBadge(s, group.value) : armored ? badges.indexOf(group.value) : -1, i);
+      z.ry = boss ? Math.min(bossRy(s), (s.bottom - s.top) * SLICE_BOSS_SHARE) : zeroSize(s, base, armored);
       z.rx = z.ry * ZERO_ASPECT;
       park(s, z);
       i++;
@@ -149,10 +155,10 @@ export function placeSlice(s: GameState, cfg: GameConfig): void {
   }
 }
 
-/** The pull on a zero in the air: armored zeros float, and late tosses hang. */
+/** The pull on a zero in the air: armored zeros and bosses float, and late tosses hang. */
 function gravity(s: GameState, ss: SliceState, z: Zero): number {
   const g = (2 * (s.bottom - s.top)) / (SLICE_RISE_S * SLICE_RISE_S);
-  return g * (z.kind === 'armored' ? SLICE_ARMOR_FLOAT : 1) * (ss.assist ? SLICE_ASSIST_FLOAT : 1);
+  return g * (z.kind === 'armored' || z.kind === 'boss' ? SLICE_ARMOR_FLOAT : 1) * (ss.assist ? SLICE_ASSIST_FLOAT : 1);
 }
 
 /** The speed that carries a zero up `height` points against the pull. */
@@ -170,6 +176,18 @@ function launch(s: GameState, ss: SliceState, z: Zero, i: number): void {
   const rise = -z.vy / gravity(s, ss, z);
   const aimX = s.width * (0.5 + (random(s.rng) - 0.5) * SLICE_AIM);
   z.vx = rise > 0 ? (aimX - z.x) / rise : 0;
+}
+
+/** Ring zero `k` of `count`, in slot `j`, is thrown up off the boss, fanned out from its middle. */
+export function shedSlice(s: GameState, ss: SliceState, boss: Zero, r: Zero, j: number, k: number, count: number): void {
+  ss.launched[j] = true;
+  ss.cuts[j] = 0;
+  const along = count > 1 ? (k / (count - 1)) * 2 - 1 : 0;
+  r.x = Math.max(r.rx, Math.min(s.width - r.rx, boss.x + along * boss.rx * 0.6));
+  r.y = Math.max(s.top + r.ry, Math.min(s.bottom - r.ry, boss.y));
+  const room = Math.max(0, r.y - (s.top + r.ry));
+  r.vy = upSpeed(s, ss, r, room * between(s.rng, SLICE_TOSS_MIN, SLICE_TOSS_MAX));
+  r.vx = along * SLICE_AIM * s.width * 0.5;
 }
 
 /** Bring the next waiting zeros in, staggered, until enough are in the air. */
@@ -249,7 +267,7 @@ function applyPower(s: GameState, ss: SliceState): void {
   ss.blades = p.blades;
   ss.reach = p.reach;
   ss.linger = p.linger;
-  ss.assist = s.phase === 'play' && (s.sinceDamage >= SLICE_ASSIST_IDLE || liveZeros(s) <= ASSIST_LAST);
+  ss.assist = s.phase === 'play' && (s.sinceDamage >= SLICE_ASSIST_IDLE || fewLeft(s));
 }
 
 /** The finger lands: a new stroke starts there. */

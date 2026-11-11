@@ -60,6 +60,30 @@ export const HIT_FLASH = 0.18;
  */
 export const ASSIST_LAST = 3;
 
+// --- Boss rounds (SPEC 4, engine boss.ts) --------------------------------------------------
+
+/** The boss's size: this share of the board's shorter side, and at most this share of its height. */
+export const BOSS_SIDE_SHARE = 0.34;
+export const BOSS_BOARD_SHARE = 0.3;
+/** The Shooter's boss drifts this fast at first, in points a second. */
+export const BOSS_SPEED = 70;
+/** A broken stage leaves the boss this much its size, and this much faster. */
+export const BOSS_SHRINK = 0.82;
+export const BOSS_SPEEDUP = 1.3;
+/** Ring zeros are sized as if this many shared the board, and fly off at this speed. */
+export const BOSS_RING_SIZE_AS_IF = 10;
+export const BOSS_RING_SPEED = 170;
+/** A ring appears after this long, so the splash or chain that broke the stage can't take it unseen. */
+export const BOSS_SHED_GRACE = 0.3;
+/** A stage break throws this many times a kill's sparks and fragments, with a shake and a flash. */
+export const BOSS_BURST_SCALE = 3;
+export const SHAKE_BOSS_BREAK = 14;
+export const FLASH_BOSS_BREAK = 0.4;
+/** While its ring is out, the shielded boss sends off a teal ring this often. */
+export const BOSS_GUARD_PULSE = 0.6;
+/** Breaker's boss, once it drifts, moves this many board widths a second. */
+export const BOSS_DRIFT = 0.12;
+
 // --- Shots ---------------------------------------------------------------------------------
 
 export const BULLET_SPEED = 1500;

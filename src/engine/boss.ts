@@ -28,8 +28,8 @@ export const BOSS_MODE_HP_SCALE: Readonly<Record<ModeId, number>> = {
   shooter: 1,
   orbit: 1,
   slice: 0.6,
-  breaker: 0.4,
-  catch: 0.3,
+  breaker: 0.25,
+  catch: 0.2,
 };
 
 /** A broken stage sheds this share of the value the boss had, as a ring of zeros. */

@@ -34,6 +34,7 @@ export function readyZero(z: Zero, group: ZeroGroup, badge: number, i: number): 
   z.hitFlash = 0;
   z.mark = 0;
   z.cooldown = 0;
+  z.guarded = false;
 }
 
 /** A zero's vertical radius: the round's base size, give or take SIZE_JITTER, bigger when armored. */

@@ -4,12 +4,13 @@
 // and armored zeros) bounces back up high, off toward the side of the cup it struck. A zero that
 // lands beside the cups bounces up high too, along its own path. Nothing draws a zero in but the
 // power-ups that pull (Magnet, Vacuum Beam, Black Hole), and those only on its way down: with the
-// plain cups, the player has to get under every zero. The cups follow the finger's x, and start
-// in the middle.
+// plain cups, the player has to get under every zero. A boss is heavy and hops short; its rings
+// fly up off it. The cups follow the finger's x, and start in the middle.
 import type { WeaponId } from '@/engine';
 
 import { armorBadges } from '../badges';
 import { catchable, keepOnBoard } from '../board';
+import { bossBadge, bossRy, ringRy } from '../boss';
 import { HIT_FLASH } from '../constants';
 import { between, random, spread } from '../rng';
 import { ZERO_ASPECT, zeroRadius } from '../sizing';
@@ -30,6 +31,9 @@ export const CATCH_SWAY = 0.05;
 /** A bounce, off the floor or a cup, carries a zero up to between these shares of the board from the top. */
 export const CATCH_BOUNCE_TO_MIN = 0.08;
 export const CATCH_BOUNCE_TO_MAX = 0.25;
+/** A boss's bounces carry it only up to between these shares of the board from the top: heavy, short hops. */
+export const CATCH_BOSS_HOP_MIN = 0.4;
+export const CATCH_BOSS_HOP_MAX = 0.55;
 /** A zero caught at a cup's edge leaves sideways at this many board widths a second; from its middle, straight up. */
 export const CATCH_DEFLECT = 0.25;
 /** No second catch of the same zero within this long. */
@@ -159,11 +163,12 @@ export function placeCatch(s: GameState, cfg: GameConfig): void {
     const group = cfg.groups[g];
     if (!group) continue;
     const armored = group.kind === 'armored';
+    const boss = group.kind === 'boss';
     for (let k = 0; k < group.count; k++) {
       const z = s.zeros[i];
       if (!z) return;
-      readyZero(z, group, armored ? badges.indexOf(group.value) : -1, i);
-      z.ry = zeroSize(s, base, armored);
+      readyZero(z, group, boss ? bossBadge(s, group.value) : armored ? badges.indexOf(group.value) : -1, i);
+      z.ry = boss ? bossRy(s) : zeroSize(s, base, armored);
       z.rx = z.ry * ZERO_ASPECT;
       z.x = between(rng, z.rx, Math.max(z.rx, s.width - z.rx));
       const yMin = s.top + z.ry;
@@ -173,10 +178,12 @@ export function placeCatch(s: GameState, cfg: GameConfig): void {
       z.vx = spread(rng, CATCH_SWAY * s.width);
       z.vy = 0;
       z.delay = random(rng) * span;
-      widest = Math.max(widest, z.rx);
+      // A boss is caught by its own width; the cups are sized for its rings.
+      if (!boss) widest = Math.max(widest, z.rx);
       i++;
     }
   }
+  if (s.boss !== null) widest = Math.max(widest, ringRy(s) * ZERO_ASPECT);
   cs.baseHalf = Math.max(CUP_MIN_HALF, widest * CUP_RX_SHARE);
   applyPower(s, cs);
 }
@@ -195,7 +202,9 @@ function sideWalls(s: GameState, z: Zero): void {
 /** Zero `i` leaves the rims' level, headed for a high point near the top of the board. */
 function bounce(s: GameState, cs: CatchState, z: Zero, i: number): void {
   const top = s.top + z.ry;
-  const apex = top + (s.bottom - z.ry - top) * between(s.rng, CATCH_BOUNCE_TO_MIN, CATCH_BOUNCE_TO_MAX);
+  const share =
+    z.kind === 'boss' ? between(s.rng, CATCH_BOSS_HOP_MIN, CATCH_BOSS_HOP_MAX) : between(s.rng, CATCH_BOUNCE_TO_MIN, CATCH_BOUNCE_TO_MAX);
+  const apex = top + (s.bottom - z.ry - top) * share;
   z.vy = -Math.sqrt(2 * gravity(s, cs, i) * Math.max(0, z.y - apex));
 }
 
@@ -262,6 +271,16 @@ export function stepCatch(s: GameState, dt: number): void {
     fly(s, cs, z, i, dt);
     if (z.alive) keepOnBoard(z, s);
   }
+}
+
+/** Ring zero `k` of `count`, in slot `j`, flies up off the boss, fanned out from its middle. */
+export function shedCatch(s: GameState, cs: CatchState, boss: Zero, r: Zero, j: number, k: number, count: number): void {
+  cs.pace[j] = 1;
+  const along = count > 1 ? (k / (count - 1)) * 2 - 1 : 0;
+  r.x = Math.max(r.rx, Math.min(s.width - r.rx, boss.x + along * boss.rx * 0.6));
+  r.y = Math.max(s.top + r.ry, Math.min(s.bottom - r.ry, boss.y));
+  r.vx = along * CATCH_DEFLECT * s.width;
+  bounce(s, cs, r, j);
 }
 
 /** The finger is at x: the cups head there. */

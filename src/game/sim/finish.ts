@@ -1,7 +1,7 @@
 'worklet';
 // Finish round, for players using a screen reader: the round is visual only, so the HUD offers
-// a way to clear it. Every zero left goes at once, quietly, and the one nearest the middle goes
-// last, setting off the usual finale from there.
+// a way to clear it. Every zero left goes at once, quietly, and the one nearest the middle (a boss
+// round's boss) goes last, setting off the usual finale from there.
 import { killZero } from './damage';
 import type { GameState, Zero } from './types';
 
@@ -11,14 +11,19 @@ export function finishAll(s: GameState): boolean {
   const cx = s.width / 2;
   const cy = (s.top + s.bottom) / 2;
   let last: Zero | null = null;
-  let nearest = Infinity;
-  for (let i = 0; i < s.zeros.length; i++) {
-    const z = s.zeros[i];
-    if (!z || !z.alive) continue;
-    const d = Math.hypot(z.x - cx, z.y - cy);
-    if (d < nearest) {
-      nearest = d;
-      last = z;
+  const boss = s.boss === null ? undefined : s.zeros[s.boss.slot];
+  if (boss && boss.alive) {
+    last = boss;
+  } else {
+    let nearest = Infinity;
+    for (let i = 0; i < s.zeros.length; i++) {
+      const z = s.zeros[i];
+      if (!z || !z.alive) continue;
+      const d = Math.hypot(z.x - cx, z.y - cy);
+      if (d < nearest) {
+        nearest = d;
+        last = z;
+      }
     }
   }
   if (!last) return false;

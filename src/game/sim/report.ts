@@ -15,12 +15,14 @@ export function makeReport(valueLeft: number, seed: number): Report {
     bombs: 0,
     bounces: 0,
     swishes: 0,
+    bossStage: 0,
+    bossBreaks: 0,
     final: false,
     showResult: false,
   };
 }
 
-/** Start the next frame's report. The seed and valueLeft carry over; the counts start again. */
+/** Start the next frame's report. The seed, valueLeft and bossStage carry over; the counts start again. */
 export function resetReport(report: Report): void {
   report.dirty = false;
   report.shots = 0;
@@ -31,6 +33,7 @@ export function resetReport(report: Report): void {
   report.bombs = 0;
   report.bounces = 0;
   report.swishes = 0;
+  report.bossBreaks = 0;
   report.final = false;
   report.showResult = false;
 }

@@ -8,7 +8,7 @@
 // play down to the last few zeros and then let go. Every frame it checks what must hold in any mode
 // (the counter, ×V, the board's edges, the effect caps and the order of phases) and keeps what
 // broke, rather than failing on the spot.
-import { composeRound, fillPlan, type ModeId, type WeaponDef } from '@/engine';
+import { bossGroups, bossPlan, composeRound, fillPlan, isBossDay, type ModeId, type WeaponDef } from '@/engine';
 
 import { armorBadges } from '../badges';
 import { liveZeros } from '../board';
@@ -82,11 +82,17 @@ export function target(s: GameState): Zero | null {
   return best;
 }
 
-export function roundConfig(n: number, opts: { mode: ModeId; weapon: WeaponDef; screen: Screen; seed: number }): GameConfig {
+/** A round of `n` zeros, or with `boss`, that day's boss round. */
+export function roundConfig(
+  n: number,
+  opts: { mode: ModeId; weapon: WeaponDef; screen: Screen; seed: number; boss?: boolean },
+): GameConfig {
   const { width, height, insetTop, insetBottom } = opts.screen;
+  const boss = opts.boss && isBossDay(n) ? bossPlan(n, opts.mode) : undefined;
   return {
+    ...(boss ? { boss } : {}),
     n,
-    groups: composeRound(n).groups,
+    groups: boss ? bossGroups(boss) : composeRound(n).groups,
     fill: fillPlan(n),
     width,
     height,
@@ -251,9 +257,9 @@ function touchFor(s: GameState): Touch | null {
   }
 }
 
-/** The round as built matches composeRound: each group's zeros, worth its value, wearing its badge. */
+/** The round as built matches its groups: each group's zeros, worth its value, wearing its badge. */
 function checkStart(s: GameState, cfg: GameConfig, broke: (what: string) => void): void {
-  const badges = armorBadges(cfg.groups);
+  const badges = cfg.boss ? cfg.boss.badges : armorBadges(cfg.groups);
   let i = 0;
   let total = 0;
   for (const g of cfg.groups) {
@@ -263,8 +269,9 @@ function checkStart(s: GameState, cfg: GameConfig, broke: (what: string) => void
       if (z.kind !== g.kind || z.value !== g.value || z.hp !== g.hp || z.maxHp !== g.hp || z.energyBar !== g.energyBar) {
         broke(`zero ${i} isn't its group's: ${z.kind} ×${z.value} ${z.hp} HP`);
       }
-      const badge = z.kind === 'armored' ? badges[z.badge] : undefined;
-      if (z.kind === 'armored' ? badge !== z.value : z.badge !== -1) broke(`zero ${i} wears the wrong badge`);
+      const wears = z.kind === 'armored' || (z.kind === 'boss' && z.value > 1);
+      const badge = wears ? badges[z.badge] : undefined;
+      if (wears ? badge !== z.value : z.badge !== -1) broke(`zero ${i} wears the wrong badge`);
       total += z.value;
     }
   }

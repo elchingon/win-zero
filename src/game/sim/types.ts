@@ -3,7 +3,7 @@
 // everything is plain data: fixed pools of reusable objects, palette slots instead of color
 // strings, and the random number generator's state inside it. Every game mode shares these
 // fields; what only one mode needs lives in `modeState`.
-import type { FillPlan, ModeId, WeaponDef, ZeroGroup, ZeroKind } from '@/engine';
+import type { BossPlan, FillPlan, ModeId, WeaponDef, ZeroGroup, ZeroKind } from '@/engine';
 
 /** play → celebrate (the last zero went) → fill (the screen fills with zeros) → done (result sheet). */
 export type Phase = 'play' | 'celebrate' | 'fill' | 'done';
@@ -37,6 +37,8 @@ export interface Zero {
   mark: number;
   /** Seconds before it can be caught or cut again (Catch, Slice). Always 0 in the Shooter. */
   cooldown: number;
+  /** A boss round's boss while the ring it shed is out: nothing can hit it (boss.ts). */
+  guarded: boolean;
 }
 
 export interface Bullet {
@@ -253,6 +255,31 @@ export interface BreakerState {
   assist: boolean;
 }
 
+/**
+ * A boss round's boss (SPEC 4, boss.ts), from the engine's plan. Per-stage arrays are indexed by
+ * stage; `fresh` is indexed like `zeros`.
+ */
+export interface BossState {
+  /** The stage being fought, from 0, of `stages`. */
+  stage: number;
+  stages: number;
+  /** Each stage's HP, and the zeros the boss is worth through it. */
+  hp: number[];
+  value: number[];
+  /** Every ring's zero values, stage by stage: stage k sheds shed[shedFrom[k]] up to shed[shedFrom[k + 1]]. */
+  shed: number[];
+  shedFrom: number[];
+  /** The values that wear a ×V badge, in the atlas's order: a badge's index is its value's here. */
+  badges: number[];
+  /** The boss's slot, and the first of the spare slots its rings go in. */
+  slot: number;
+  ringFrom: number;
+  /** Ring zeros shed but not yet set off by the mode: which slots. */
+  fresh: boolean[];
+  /** Seconds to the shielded boss's next pulse. */
+  pulse: number;
+}
+
 /** What the round's mode keeps beyond the shared fields. Each mode adds its own. */
 export type ModeState = ShooterState | CatchState | OrbitState | SliceState | BreakerState;
 
@@ -275,6 +302,8 @@ export interface GameConfig {
   mode?: ModeId;
   /** Auto-fire (Settings › Accessibility): after the first touch, firing keeps going. Off when unset. */
   autoFire?: boolean;
+  /** A boss round's boss (engine bossPlan), whose groups are bossGroups(boss). Unset otherwise. */
+  boss?: BossPlan;
 }
 
 /** What happened since the last report, sent to the JS thread at most once a frame. */
@@ -293,6 +322,9 @@ export interface Report {
   bounces: number;
   /** Swings of Slice's blade. */
   swishes: number;
+  /** A boss round: the stage being fought (0 otherwise), and stages broken this frame. */
+  bossStage: number;
+  bossBreaks: number;
   /** The last zero went this frame. */
   final: boolean;
   /** The fill has landed: show the result sheet. */
@@ -303,6 +335,8 @@ export interface GameState {
   /** The game mode this round plays: always one whose round is built (engine PLAYABLE_MODES). */
   mode: ModeId;
   modeState: ModeState;
+  /** A boss round's boss, or null. */
+  boss: BossState | null;
   n: number;
   seed: number;
   width: number;

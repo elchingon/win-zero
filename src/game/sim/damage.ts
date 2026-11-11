@@ -1,6 +1,7 @@
 'worklet';
 // Damage and kills. Every weapon, splash, chain and bomb comes through damageZero, so the
 // counter, the report and the end of the round are handled in one place.
+import { bossBreak } from './boss';
 import { explode, wound } from './effects';
 import { hittable } from './hit';
 import { splitZero } from './modes/split';
@@ -38,6 +39,12 @@ export function damageZero(s: GameState, z: Zero, damage: number): boolean {
   s.sinceDamage = 0;
   z.hp -= damage;
   if (z.hp <= 0) {
+    // A boss breaks a stage instead, shedding a ring, until its last (boss.ts).
+    if (z.kind === 'boss' && bossBreak(s, z)) {
+      s.report.hits++;
+      s.report.dirty = true;
+      return false;
+    }
     // Orbit: an armored zero splits into smaller zeros that keep its value (SPEC 9). Only a hit
     // splits one; Finish round's kills never do, so the round always ends.
     if (s.modeState.mode === 'orbit' && z.kind === 'armored') splitZero(s, s.modeState, z);

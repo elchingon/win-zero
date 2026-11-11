@@ -7,7 +7,7 @@
 // Catch has no assist (SPEC 9): its zeros bounce until the player gets a cup under them.
 import { describe, expect, it } from '@jest/globals';
 
-import { modeTier, WEAPONS, type ModeId, type WeaponDef } from '@/engine';
+import { BOSS_DAYS, modeTier, WEAPONS, type ModeId, type WeaponDef } from '@/engine';
 
 import { clearRound, LIMIT_FRAMES, roundConfig, SCREENS, type Cleared, type Hands } from './bot';
 
@@ -48,6 +48,28 @@ const handsOff: Case[] = HANDS_OFF.flatMap(({ mode, hands }) =>
   ),
 );
 
+/** Boss rounds (SPEC 4), on each boss day, in every mode, on both screens, weakest and strongest. */
+const bosses: Case[] = MODES.flatMap((mode) =>
+  SCREENS.flatMap((screen) =>
+    TIERS.flatMap((weapon) =>
+      BOSS_DAYS.map((n) => ({ mode, screen, weapon, n, tier: modeTier(mode, weapon.id), hands: 'on' as const, how: 'on' })),
+    ),
+  ),
+);
+
+/** Breaker's boss rounds with nobody touching them, from the last few zeros. */
+const bossesHandsOff: Case[] = SCREENS.flatMap((screen) =>
+  BOSS_DAYS.map((n) => ({
+    mode: 'breaker' as const,
+    screen,
+    weapon: WEAPONS[0]!,
+    n,
+    tier: modeTier('breaker', WEAPONS[0]!.id),
+    hands: 'tail' as const,
+    how: 'off for the last few',
+  })),
+);
+
 function outcome({ state, frames, finals, results, rate, violations }: Cleared) {
   return {
     violations,
@@ -70,5 +92,15 @@ describe('every round clears', () => {
 describe('every round clears with nobody touching it', () => {
   it.each(handsOff)('$mode on a $screen.name with the $tier, hands $how: Day $n', ({ mode, screen, weapon, n, hands }) => {
     expect(outcome(clearRound(roundConfig(n, { mode, weapon, screen, seed: 9000 + n }), hands))).toEqual(CLEARED);
+  });
+});
+
+describe('every boss round clears', () => {
+  it.each(bosses)('$mode on a $screen.name with the $tier: the Day $n boss', ({ mode, screen, weapon, n }) => {
+    expect(outcome(clearRound(roundConfig(n, { mode, weapon, screen, seed: 5000 + n, boss: true })))).toEqual(CLEARED);
+  });
+
+  it.each(bossesHandsOff)('$mode on a $screen.name with the $tier, hands $how: the Day $n boss', ({ mode, screen, weapon, n, hands }) => {
+    expect(outcome(clearRound(roundConfig(n, { mode, weapon, screen, seed: 6000 + n, boss: true }), hands))).toEqual(CLEARED);
   });
 });

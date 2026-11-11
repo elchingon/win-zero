@@ -1,6 +1,7 @@
 'worklet';
 // The board every game mode plays on: keeping a zero inside it, which zeros a catch or a cut can
 // take, and how many are left. A leaf file, so any mode can use it.
+import { ASSIST_LAST } from './constants';
 import { hittable } from './hit';
 import type { GameState, Zero } from './types';
 
@@ -22,4 +23,14 @@ export function liveZeros(s: GameState): number {
   let count = 0;
   for (let i = 0; i < s.zeros.length; i++) if (s.zeros[i]?.alive) count++;
   return count;
+}
+
+/**
+ * Late in the round, when a mode helps with the last few (SPEC 9): ASSIST_LAST or fewer zeros
+ * left. A boss round's boss alone isn't few until its last stage; its ring's last few are.
+ */
+export function fewLeft(s: GameState): boolean {
+  const live = liveZeros(s);
+  if (s.boss === null) return live <= ASSIST_LAST;
+  return s.boss.stage >= s.boss.stages - 1 || (live > 1 && live <= ASSIST_LAST);
 }

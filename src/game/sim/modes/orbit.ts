@@ -2,12 +2,15 @@
 // Orbit (SPEC 9): the turret sits in the middle of the board and aims all round, firing every
 // weapon as in the Shooter, while the zeros circle it on oval tracks of their own: big and small,
 // fast and slow, either way round. An armored zero splits into smaller zeros that keep its value
-// (split.ts). Late in the round, bullets home in on the last few zeros.
+// (split.ts). A boss circles as big as the room round the turret allows, and its rings take tracks
+// of their own. Late in the round, bullets home in on the last few zeros.
 import { armorBadges, pieceBadges } from '../badges';
-import { keepOnBoard, liveZeros } from '../board';
+import { keepOnBoard, fewLeft } from '../board';
+import { bossBadge, bossRy } from '../boss';
 import {
   ARMOR_SPEED_SCALE,
-  ASSIST_LAST,
+  BOSS_RING_SPEED,
+  BOSS_SPEED,
   HIT_FLASH,
   MAX_ZEROS,
   ORBIT_PIECES,
@@ -23,16 +26,26 @@ import {
 import { hittable } from '../hit';
 import { between, random } from '../rng';
 import { ZERO_ASPECT, ZERO_MIN_RADIUS, zeroRadius } from '../sizing';
-import type { GameConfig, GameState, OrbitState } from '../types';
+import type { GameConfig, GameState, OrbitState, Zero } from '../types';
 import { popInSpan, readyZero, zeroSize } from './place';
-import { minTrack, onTrack } from './split';
+import { minTrack, onTrack, ORBIT_TURRET_CLEAR } from './split';
 
 /** Once nothing's been hit for this long, as when only ASSIST_LAST are left, bullets home in. */
 export const ORBIT_ASSIST_IDLE = 3;
 /** Homing bullets turn toward the nearest zero by up to this many radians a second. */
 export const ORBIT_HOMING_TURN = 5;
 
+/** A boss is at most this share of the biggest that clears the turret on a full track. */
+export const ORBIT_BOSS_ROOM = 0.95;
+
 const TAU = Math.PI * 2;
+
+/** The biggest a boss can be and still circle clear of the turret: its track's reach must hold it. */
+export function orbitBossRy(s: GameState): number {
+  const across = (s.width / 2 - ORBIT_TURRET_CLEAR) / (1 + ZERO_ASPECT);
+  const down = ((s.bottom - s.top) / 2 - ORBIT_TURRET_CLEAR) / 2;
+  return Math.max(1, Math.min(bossRy(s), Math.min(across, down) * ORBIT_BOSS_ROOM));
+}
 
 /** Spare zero slots an Orbit round keeps for split pieces: enough for every armored zero, within MAX_ZEROS. */
 export function orbitSpares(groups: GameConfig['groups'], objectCount: number): number {
@@ -88,11 +101,12 @@ export function placeOrbit(s: GameState, cfg: GameConfig): void {
     const group = cfg.groups[g];
     if (!group) continue;
     const armored = group.kind === 'armored';
+    const boss = group.kind === 'boss';
     for (let k = 0; k < group.count; k++) {
       const z = s.zeros[i];
       if (!z) return;
-      readyZero(z, group, armored ? badges.indexOf(group.value) : -1, i);
-      z.ry = zeroSize(s, base, armored);
+      readyZero(z, group, boss ? bossBadge(s, group.value) : armored ? badges.indexOf(group.value) : -1, i);
+      z.ry = boss ? orbitBossRy(s) : zeroSize(s, base, armored);
       z.rx = z.ry * ZERO_ASPECT;
       const reachX = Math.max(0, s.width / 2 - z.rx);
       const reachY = Math.max(0, (s.bottom - s.top) / 2 - z.ry);
@@ -102,7 +116,7 @@ export function placeOrbit(s: GameState, cfg: GameConfig): void {
       os.angle[i] = random(rng) * TAU;
       const jitter = SPEED_JITTER_MIN + random(rng) * SPEED_JITTER_RANGE;
       const smallBoost = 1 + (SMALL_ZERO_REF / Math.max(z.ry, ZERO_MIN_RADIUS)) * SMALL_ZERO_BOOST;
-      const speed = Math.min(SPEED_MAX, crowdSpeed * jitter * smallBoost) * (armored ? ARMOR_SPEED_SCALE : 1);
+      const speed = boss ? BOSS_SPEED * jitter : Math.min(SPEED_MAX, crowdSpeed * jitter * smallBoost) * (armored ? ARMOR_SPEED_SCALE : 1);
       const radius = ((os.track[i] ?? 1) * (reachX + reachY)) / 2;
       os.spin[i] = ((random(rng) < 0.5 ? -1 : 1) * speed) / Math.max(1, radius);
       z.delay = random(rng) * span;
@@ -110,6 +124,22 @@ export function placeOrbit(s: GameState, cfg: GameConfig): void {
       i++;
     }
   }
+}
+
+/**
+ * Ring zero `k` of `count`, in slot `j`, leaves the boss in slot `i`: each on a track of its own,
+ * spread round from where the boss is, either way round.
+ */
+export function shedOrbit(s: GameState, os: OrbitState, i: number, r: Zero, j: number, k: number, count: number): void {
+  const reachX = Math.max(0, s.width / 2 - r.rx);
+  const reachY = Math.max(0, (s.bottom - s.top) / 2 - r.ry);
+  os.reachX[j] = reachX;
+  os.reachY[j] = reachY;
+  os.track[j] = between(s.rng, minTrack(r.rx, r.ry, reachX, reachY), 1);
+  os.angle[j] = (os.angle[i] ?? 0) + (k / Math.max(1, count)) * TAU;
+  const radius = ((os.track[j] ?? 1) * (reachX + reachY)) / 2;
+  os.spin[j] = ((k % 2 === 0 ? 1 : -1) * BOSS_RING_SPEED) / Math.max(1, radius);
+  onTrack(s, os, r, j);
 }
 
 /** Bullets turn toward the nearest zero, keeping their speed. */
@@ -157,5 +187,5 @@ export function stepOrbit(s: GameState, dt: number): void {
     onTrack(s, os, z, i);
     keepOnBoard(z, s);
   }
-  if (s.phase === 'play' && (s.sinceDamage >= ORBIT_ASSIST_IDLE || liveZeros(s) <= ASSIST_LAST)) homeBullets(s, dt);
+  if (s.phase === 'play' && (s.sinceDamage >= ORBIT_ASSIST_IDLE || fewLeft(s))) homeBullets(s, dt);
 }

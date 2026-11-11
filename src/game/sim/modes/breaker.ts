@@ -8,12 +8,14 @@
 // The layout keeps one ball quick enough for a long round, since a brick's hits and a ball's
 // damage are the round's and the weapon's: a gap under the ceiling, where a ball that gets up
 // there rattles against the steel; gutters by the walls that carry it up there; and room
-// between bricks to ricochet through.
+// between bricks to ricochet through. A boss is one big brick in the middle of the field, its
+// rings small bricks round it; once its first stage breaks, it drifts from wall to wall.
 import type { WeaponId } from '@/engine';
 
 import { armorBadges } from '../badges';
-import { liveZeros } from '../board';
-import { ARMOR_SIZE_SCALE, ASSIST_LAST, HIT_FLASH } from '../constants';
+import { fewLeft } from '../board';
+import { bossBadge, bossRy } from '../boss';
+import { ARMOR_SIZE_SCALE, HIT_FLASH } from '../constants';
 import { hittable } from '../hit';
 import { ZERO_ASPECT, zeroRadius } from '../sizing';
 import { updateFiring } from '../trigger';
@@ -49,6 +51,11 @@ export const BREAKER_FIELD = 0.55;
 export const BREAKER_CEILING_GAP = 3;
 export const BREAKER_GUTTER = 2.5;
 export const BREAKER_GAP = 0.8;
+
+/** A boss is this share of the biggest brick the field holds, leaving room for its rings round it. */
+export const BREAKER_BOSS_SHARE = 0.7;
+/** A ring's bricks stand this many of their own heights out from the boss's edge. */
+export const BREAKER_RING_GAP = 1.6;
 
 /** The paddle's half-width: this share of the board's width, at least PADDLE_MIN_HALF points. Its top speed, in board widths a second. */
 export const PADDLE_HALF_SHARE = 0.1;
@@ -172,12 +179,15 @@ export function placeBreaker(s: GameState, cfg: GameConfig): void {
     const group = cfg.groups[g];
     if (!group) continue;
     const armored = group.kind === 'armored';
+    const boss = group.kind === 'boss';
     for (let k = 0; k < group.count; k++) {
       const z = s.zeros[i];
       if (!z) return;
-      readyZero(z, group, armored ? badges.indexOf(group.value) : -1, i);
+      readyZero(z, group, boss ? bossBadge(s, group.value) : armored ? badges.indexOf(group.value) : -1, i);
       // Never bigger than the sprite it's drawn from.
-      z.ry = Math.max(1, Math.min(biggest, base * (armored ? ARMOR_SIZE_SCALE : 1)));
+      z.ry = boss
+        ? Math.max(1, Math.min(bossRy(s), biggest * BREAKER_BOSS_SHARE))
+        : Math.max(1, Math.min(biggest, base * (armored ? ARMOR_SIZE_SCALE : 1)));
       z.rx = z.ry * ZERO_ASPECT;
       z.delay = (i / Math.max(1, count)) * span;
       i++;
@@ -205,6 +215,33 @@ export function placeBreaker(s: GameState, cfg: GameConfig): void {
     b.held = true;
     b.serve = BALL_SERVE_DELAY + span;
     b.speed = bs.speed;
+  }
+}
+
+/**
+ * Ring brick `k` of `count` stands round the boss, spread all the way round it, inside the board
+ * and above the paddle's reach: the top of the board down to the field's foot.
+ */
+export function shedBreaker(s: GameState, boss: Zero, r: Zero, k: number, count: number): void {
+  const angle = (k / Math.max(1, count)) * Math.PI * 2 - Math.PI / 2;
+  const out = r.ry * BREAKER_RING_GAP;
+  const foot = s.top + BREAKER_CEILING_GAP * 2 * BALL_R + (s.bottom - s.top) * BREAKER_FIELD;
+  r.x = Math.max(r.rx, Math.min(s.width - r.rx, boss.x + Math.cos(angle) * (boss.rx + out)));
+  r.y = Math.max(s.top + r.ry, Math.min(foot, boss.y + Math.sin(angle) * (boss.ry + out)));
+  r.vx = 0;
+  r.vy = 0;
+}
+
+/** Once its first stage breaks, Breaker's boss drifts from wall to wall. */
+function driftBoss(s: GameState, z: Zero, dt: number): void {
+  if (z.vx === 0) return;
+  z.x += z.vx * dt;
+  if (z.x < z.rx) {
+    z.x = z.rx;
+    z.vx = Math.abs(z.vx);
+  } else if (z.x > s.width - z.rx) {
+    z.x = s.width - z.rx;
+    z.vx = -Math.abs(z.vx);
   }
 }
 
@@ -351,7 +388,7 @@ export function stepBreaker(s: GameState, dt: number): void {
   const bs = s.modeState;
   if (bs.mode !== 'breaker') return;
   applyPower(s, bs);
-  bs.assist = s.phase === 'play' && (s.sinceDamage >= BREAKER_ASSIST_IDLE || liveZeros(s) <= ASSIST_LAST);
+  bs.assist = s.phase === 'play' && (s.sinceDamage >= BREAKER_ASSIST_IDLE || fewLeft(s));
   const target = Math.max(bs.half, Math.min(s.width - bs.half, bs.targetX));
   const most = PADDLE_SPEED * s.width * dt;
   bs.paddleX += Math.max(-most, Math.min(most, target - bs.paddleX));
@@ -367,6 +404,7 @@ export function stepBreaker(s: GameState, dt: number): void {
     if (!z || !z.alive) continue;
     z.age += dt;
     if (z.hitFlash > 0) z.hitFlash = Math.max(0, z.hitFlash - dt / HIT_FLASH);
+    if (z.kind === 'boss' && s.phase === 'play') driftBoss(s, z, dt);
   }
   // The fill freezes whatever's left behind it.
   if (s.phase !== 'play' && s.phase !== 'celebrate') return;

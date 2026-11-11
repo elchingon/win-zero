@@ -1,13 +1,14 @@
 'worklet';
-// Building a round: zeros from composeRound's groups, placed and set moving the way the round's
-// mode wants (the Shooter as in the prototype's spawn()), plus every pool the frame loop will
-// need, allocated once up front.
+// Building a round: zeros from composeRound's groups (or a boss round's one boss), placed and set
+// moving the way the round's mode wants (the Shooter as in the prototype's spawn()), plus every
+// pool the frame loop will need, allocated once up front.
 import { DEFAULT_MODE, PLAYABLE_MODES, type ModeId } from '@/engine';
 
 import {
   ARMOR_SIZE_SCALE,
   ARMOR_SPEED_SCALE,
   BOLT_POINTS,
+  BOSS_SPEED,
   BUSY_OBJECTS,
   HUD_BOTTOM,
   HUD_TOP,
@@ -32,6 +33,7 @@ import {
   TURRET_Y_FROM_BOTTOM,
 } from './constants';
 import { armorBadges } from './badges';
+import { bossBadge, bossRy, makeBossState } from './boss';
 import { layoutFill } from './fill';
 import { makePool } from './pool';
 import { makeBreakerState, placeBreaker } from './modes/breaker';
@@ -64,6 +66,7 @@ function makeZero(): Zero {
     hitFlash: 0,
     mark: 0,
     cooldown: 0,
+    guarded: false,
   };
 }
 
@@ -121,14 +124,15 @@ function spawnZeros(state: GameState, cfg: GameConfig): void {
     const group = cfg.groups[g];
     if (!group) continue;
     const armored = group.kind === 'armored';
+    const boss = group.kind === 'boss';
     for (let k = 0; k < group.count; k++) {
       const z = state.zeros[i];
       if (!z) return;
-      const ry = base * (1 - SIZE_JITTER / 2 + random(rng) * SIZE_JITTER) * (armored ? ARMOR_SIZE_SCALE : 1);
+      const ry = boss ? bossRy(state) : base * (1 - SIZE_JITTER / 2 + random(rng) * SIZE_JITTER) * (armored ? ARMOR_SIZE_SCALE : 1);
       const rx = ry * ZERO_ASPECT;
       const jitter = SPEED_JITTER_MIN + random(rng) * SPEED_JITTER_RANGE;
       const smallBoost = 1 + (SMALL_ZERO_REF / Math.max(ry, ZERO_MIN_RADIUS)) * SMALL_ZERO_BOOST;
-      const speed = Math.min(SPEED_MAX, crowdSpeed * jitter * smallBoost) * (armored ? ARMOR_SPEED_SCALE : 1);
+      const speed = boss ? BOSS_SPEED * jitter : Math.min(SPEED_MAX, crowdSpeed * jitter * smallBoost) * (armored ? ARMOR_SPEED_SCALE : 1);
       const angle = random(rng) * Math.PI * 2;
       const yMin = state.top + ry;
       const yMax = Math.max(yMin, state.bottom - ry);
@@ -144,13 +148,14 @@ function spawnZeros(state: GameState, cfg: GameConfig): void {
       z.hp = group.hp;
       z.maxHp = group.hp;
       z.value = group.value;
-      z.badge = armored ? badges.indexOf(group.value) : -1;
+      z.badge = boss ? bossBadge(state, group.value) : armored ? badges.indexOf(group.value) : -1;
       z.energyBar = group.energyBar;
       z.delay = random(rng) * delaySpan;
       z.age = 0;
       z.hitFlash = 0;
       z.mark = 0;
       z.cooldown = 0;
+      z.guarded = false;
       i++;
     }
   }
@@ -206,8 +211,10 @@ export function buildGame(cfg: GameConfig, mode: ModeId): GameState {
   let objectCount = 0;
   for (let g = 0; g < cfg.groups.length; g++) objectCount += cfg.groups[g]?.count ?? 0;
 
-  // A mode may keep spare slots past the round's own zeros (Orbit's split pieces).
-  const slots = objectCount + (mode === 'orbit' ? orbitSpares(cfg.groups, objectCount) : 0);
+  // A mode may keep spare slots past the round's own zeros (Orbit's split pieces), and a boss round
+  // keeps them for the boss's rings.
+  const ringFrom = objectCount + (mode === 'orbit' ? orbitSpares(cfg.groups, objectCount) : 0);
+  const slots = ringFrom + (cfg.boss ? cfg.boss.spares : 0);
   const zeros: Zero[] = [];
   for (let i = 0; i < slots; i++) zeros.push(makeZero());
   const glyphs: Glyph[] = [];
@@ -218,6 +225,7 @@ export function buildGame(cfg: GameConfig, mode: ModeId): GameState {
   const state: GameState = {
     mode,
     modeState: makeModeState(mode, zeros.length, objectCount, cfg),
+    boss: cfg.boss ? makeBossState(cfg.boss, ringFrom, slots) : null,
     n: cfg.n,
     seed: cfg.seed,
     width: cfg.width,

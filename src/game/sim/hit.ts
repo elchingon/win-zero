@@ -3,9 +3,9 @@
 import { HIT_MIN_RX, HIT_MIN_RY, HIT_PAD } from './constants';
 import type { Zero } from './types';
 
-/** On the board and popped in. Nothing touches a zero before it appears. */
+/** On the board, popped in, and not a shielded boss. Nothing touches a zero before it appears. */
 export function hittable(z: Zero): boolean {
-  return z.alive && z.age >= z.delay;
+  return z.alive && z.age >= z.delay && !z.guarded;
 }
 
 /** Is (x, y) on the zero? Its ellipse, with small zeros padded out to a fair target. */
