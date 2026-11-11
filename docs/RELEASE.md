@@ -340,6 +340,16 @@ variant disagree. `npm run check:variants` (also in CI) checks both apps' config
 
   Every build made before this needs rebuilding, dev clients included. A release build without the
   group can't move (it says so), and a dev build without it puts the move in the link instead.
+- [ ] **Widgets' extension (Plus, SPEC 9):** Plus's iPhone build has a second target,
+  `WinZeroWidgets`, bundle id `com.e7systems.winzeroplus.widgets`, in the same App Group (added by
+  `modules/widgets`' config plugin; `npm run check:variants` says "widgets" for Plus only).
+  - Apple Developer → Identifiers → **+** → App IDs: `com.e7systems.winzeroplus.widgets`, with
+    **App Groups** on and `group.com.e7systems.winzero` assigned. Or let EAS register it: the
+    extension is in `extra.eas.build.experimental.ios.appExtensions`, so `eas build` signs it.
+  - In Xcode (`npm run open:ios:plus`): the **WinZeroWidgets** target → Signing & Capabilities →
+    team UPCQA84MG4, Automatically manage signing. Before archiving, set the same **Build** in the
+    General tab of both targets: `npm run check:release:ios:plus` stops when they differ.
+  - It needs a native rebuild of Plus (dev clients too). Win Zero's build has none.
 - [ ] **Plus's store pages:** `EXPO_PUBLIC_PLUS_STORE_URL_IOS` and `_ANDROID`. While they're unset, the
   free app hides Home's Plus button and Settings → **Win Zero Plus**. If Plus isn't installed, the
   move opens the page. Plus opens its own page for "Update Win Zero Plus".
@@ -522,6 +532,12 @@ and its debug tools. The others use a TestFlight, internal or `preview` build.
 | 75 | **Phoenix icon on a rebuilt client (Plus)** | After a native rebuild of Plus (it adds an 8th alternate icon): earn Phoenix (row 74), then Settings › App icon → Phoenix; then Erase all data. Also `winzeroplus://play?practice=200&theme=phoenix` in a dev build. | The home-screen icon becomes the crimson zero with a violet plus (Android asks first). Before Phoenix is earned its tile says "After a comeback". Erase puts the Plus icon back. The practice round wears crimson, gold and violet, readable on the dark backdrop. |
 | 76 | **Take a break (Plus)** | On a goal with a missed check-in or two, before its check-in time: its screen → **Take a break**, type 15, then tap **1 week** → **Take a break**. On a second goal, after its check-in has opened, take a 3-day break. Then on the first, type 10 → **Save end date**, then **Resume now**; on the second, **Cancel break**. With VoiceOver / TalkBack, and with the phone in grayscale. | 15 says "A whole number from 1 to 14." and holds the button. Before check-in time, the break starts today and no check-in comes tonight; after it, "It starts tomorrow…", "The check-in open now stays open…", and that check-in can still be answered. Each says when check-ins come back. Home says "“…” is on a break through …" with **Resume now** in place of the goal's next check-in, and the calendar shows two bars on its days, the ones to come too, read out as "On a break". Debug › **Pending** has no reminder on a break day. **Resume now** after check-in time opens today's check-in at once. Win Zero has no **Take a break**. |
 | 77 | **Back from a break (Plus)** _dev_ | On a test install: miss 5 check-ins, take a 7-day break, then move the debug clock past it and miss 3 more. Then a Yes. | Misses 6 and 7 cost nothing; the 8th slips ("One zero came off…"). The break's days show no Missed mark and no news. The Yes after it isn't a comeback (no Welcome back) and keeps Yeses in a row going. |
+| 83 | **Add the widgets (Plus)** | On a rebuilt Plus client, iPhone: add the small and medium widgets to the Home Screen, and the circle, rectangle and inline ones to the Lock Screen. Android: the small and wide widgets. With one goal, then three. | Each shows the goals' zeros and words as the app does: "Next check-in · Today 8:00 PM", or "Check in · Yes makes N" with **YES** while one is open. The medium and wide ones list up to three, open check-ins first. Win Zero shows no widgets in the picker. |
+| 84 | **Yes from a widget (Plus)** | With a check-in open: tap **YES** on the small widget with the app closed (cold), then on another goal's row with the app on Settings, then on the lock screen's rectangle (Face ID). | Each time the app opens on Home with that goal's round ready, as after a notification's Yes; the streak goes up once. The widget then says "Day N round ready", and its tap plays the round. A second tap on a stale widget only opens Home, with no banner. |
+| 85 | **Widgets change on their own (Plus)** | Leave the app closed across a check-in time, then midnight, then (on a test install) a run of missed days past the free ones. | The widget turns to "Check in" at check-in time, and back to the next check-in once it closes, without opening the app; the zeros drop when a miss slips one. On Android it can be a few minutes late. |
+| 86 | **Widgets keep the goal private (Plus)** | With **Goal in reminders and widgets** off, then on; with a lock-screen name; with the phone locked. | Off: "Your goal" / "Your second goal" or the lock-screen name. On: the goal's wording. Locked, the rectangle hides the name. Settings' row says the switch covers widgets. |
+| 87 | **Widgets on a break, after Erase and a restart (Plus)** | Start a break; then Erase all data; then (Android) restart the phone. Then iOS in dark, tinted and StandBy. | "On a break · Until …", then "Set up a goal" after Erase, with no goal's words left; after a restart the widgets still show the right frame within half an hour. Every look is readable. |
+| 88 | **Widgets in a release build (Plus)** | An Android upload build (R8 on) and an iPhone archive; `npm run check:release:ios:plus` first. | The widgets work as in rows 83–85. The check passes with both targets on the same build number. |
 
 ### Known and accepted
 - **A move can't prove it came from Win Zero on Android.** Any app can open Plus's import link

@@ -63,6 +63,7 @@ How it relates to Win Zero: Win Zero (Apple ID 6823793298) is our free daily che
 - four more games besides the Shooter (Catch, Orbit, Slice and Breaker), picked before each round
 - eight color themes, with matching alternate app icons
 - a head start of days already done, a free win-back round after a comeback, and Past goals that keep what each goal accomplished
+- home-screen and lock-screen widgets (WidgetKit, an app extension in the same App Group) showing each goal's zeros and next check-in, with Yes for an open one
 Win Zero offers an optional one-way move of a user's data into Plus (Win Zero: Settings > About). It happens on the device through an App Group the two apps share (group.com.e7systems.winzero); nothing goes to a server. Plus can be reviewed without Win Zero installed.
 
 To see Plus quickly:
@@ -71,6 +72,7 @@ To see Plus quickly:
 3. Home > "Add goal" adds a second goal, with its own check-in days.
 4. Settings has Goals, Games, Themes and App icon. Choosing an app icon shows iOS's standard "You have changed the icon" alert.
 5. Notifications (optional): allow them in Setup or Settings. Each goal's check-in arrives at its time as a notification with Yes / Not today buttons.
+6. Widgets: touch and hold the Home Screen, tap + and choose Win Zero Plus. With a check-in open (step 1), its YES opens the app and answers it, as the notification's Yes does.
 
 One playful extra, disclosed here: on Home, under the Game tab, tapping the Game credits count three times quickly gives a free Game credit, which plays a bonus round. It is free and unlimited, never sold, and hinted at the end of Settings > Games.
 

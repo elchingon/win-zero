@@ -91,6 +91,7 @@ describe('the comparison', () => {
     expect(html).toContain('<td>Eight: four included, four to earn</td>');
     expect(html).toMatch(/<th scope="row">Start with days already done<\/th><td>.*No.*<\/td><td>Up to 30 days<\/td>/);
     expect(html).toMatch(/<th scope="row">A break for travel or illness, with nothing lost<\/th><td>.*No.*<\/td><td>Up to 14 days<\/td>/);
+    expect(html).toMatch(/<th scope="row">Home-screen and lock-screen widgets<\/th><td>.*No.*<\/td><td>.*Yes.*<\/td>/);
   });
 });
 

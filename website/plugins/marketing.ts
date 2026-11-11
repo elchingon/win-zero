@@ -228,6 +228,7 @@ export function compareHtml(facts: Facts): string {
     ['Color themes', looks(free), looks(plus)],
     ['App icons', icons(free), icons(plus)],
     ['Reminders you answer from the notification', YES, YES],
+    ['Home-screen and lock-screen widgets', NO, YES],
     ['Gentle streak rules, bombs, shields and credits', YES, YES],
     ['Bring your progress over from Win Zero', NO, YES],
     ['No account, ads or tracking', YES, YES],
@@ -560,6 +561,7 @@ export function llmsTxt(facts: Facts): string {
       `${words(engine.COMEBACK_MIN_GAP)} or more check-ins without one with a free win-back round, lets a goal take a ` +
       `break of up to ${engine.BREAK_MAX_DAYS} days with nothing lost, and keeps archived goals under Past goals with what ` +
       'each accomplished.',
+    '- Plus has home-screen and lock-screen widgets showing each goal\'s zeros and next check-in, with Yes for an open one.',
     '- Win Zero users can move their goal, history, streak, rewards and credits to Plus on the same phone, without a server.',
     '- A browser version at https://winzero.app/play has the check-in, rules, rewards and round, without reminders.',
     '- Support with drinking, drugs or mental health (US): the SAMHSA National Helpline, 1-800-662-4357, free, confidential and open 24/7.',

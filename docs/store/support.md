@@ -129,6 +129,18 @@ account. Win Zero stays free and complete.
   off, a reminder calls a goal by its **Lock-screen name** if you set one, or by its place ("your
   second goal").
 
+### Widgets
+
+- **Add one** like any other: on iPhone, touch and hold the Home Screen or Lock Screen and tap
+  **+** (or Customize), then Win Zero Plus; on Android, touch and hold the home screen and pick
+  **Widgets**.
+- They show your zeros and what's due, open check-ins first. Tap **YES** to answer an open
+  check-in: the app opens with your round ready, as from a notification.
+- **Private by default:** with **Goal in reminders and widgets** off (Settings), widgets say "Your
+  goal" or a goal's lock-screen name, never its wording.
+- **A widget looks out of date?** Open the app once: it updates every widget. On Android, a
+  widget can change a few minutes after a check-in opens.
+
 ### Taking a break
 
 - **Traveling or unwell?** Open the goal (from **Settings**, or **Edit** on Home) and tap **Take a

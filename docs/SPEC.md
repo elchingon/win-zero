@@ -1,6 +1,6 @@
 # Win Zero: Product & Game Spec
 
-Version 0.9 · November 11, 2026 · Owner: e7sal
+Version 0.11 · November 11, 2026 · Owner: e7sal
 
 Win Zero is a daily habit app for iOS and Android. The user sets one daily goal (for example "Stop drinking" or "Exercise more"); Win Zero Plus allows up to three (section 9). Every day, at a check-in time the user picks, the app asks whether they did it. Each "yes" adds a zero to a shooting round. The streak is the number of zeros on screen.
 
@@ -236,6 +236,13 @@ Before each round not yet played (a day's or a bonus round), Plus asks **Pick yo
 | **Breaker** | Zeros are bricks, with a paddle and ball. A dropped ball just respawns. | Brick hits / steel bricks worth ×V | 1 ball → 2 balls → Multi-ball → Fireball → Lightning Ball → Laser Paddle → Mega Ball |
 
 Every mode uses `composeRound(n)`, can't be lost (no lives or timers; missed zeros come back), ends with the same celebration, fill and result sheet, and supports **Finish round** and bombs. Late in a round, gentle assists (homing, magnet) make sure the last zero can always be cleared. Catch has none: its zeros keep bouncing until they're caught. A Weapon credit lends a locked power-up in any mode. **Share this milestone** names a new power-up as the game played does: "I unlocked a new catcher, Twin Cups".
+
+### Widgets
+- **Home screen:** a small widget with the most urgent goal (its zeros big, then "Check in · Yes makes 31", "Day 31 round ready · Tap to play", "Next check-in · Tue 8:00 PM" or "On a break · Until Mon, Nov 24"), and on iPhone a medium one, on Android a wide one, with up to three goals, a row each. **Lock screen** (iPhone): a circle with the zeros, a rectangle with the goal and one line, and an inline line.
+- The most urgent goal comes first: open check-ins (the one that opened first, first), then rounds ready, then the rest, then goals on a break. With no goal: "Set up a goal".
+- **YES** shows on a goal whose check-in is open. Tapping it opens the app and answers Yes as the notification's Yes does (section 1): Home, with the round ready to play. On the lock screen, the rectangle's tap is that Yes (iPhone asks for Face ID first); the circle and the line open Home. A round ready opens it; anything else opens Home. A widget a moment behind (a day already answered) only opens Home.
+- A goal is named as its reminders name it (section 9, Reminders): its wording only with **Goal in reminders and widgets** on, otherwise its lock-screen name or its place ("Your second goal"), and on a locked iPhone the rectangle's name is hidden.
+- The app works out ahead, for 14 days (`TIMELINE_HORIZON_DAYS`), every moment a widget would change with nobody answering (each check-in opening and closing, each midnight), from the rules (`engine/timeline.ts`), and words every frame (`src/plus/widget/snapshot.ts`). It writes them when storage is read, after any change and each time it comes back to the foreground, to a file the widgets read: on iPhone in the App Group's folder, on Android in the app's files. The widgets change at those moments without the app running; on Android, an inexact alarm may make that a few minutes late.
 
 ### Themes and app icons
 - Themes recolor the round (zeros, shots and the fill) and Home's drifting zeros. The rest of the app keeps the section 7 palette.

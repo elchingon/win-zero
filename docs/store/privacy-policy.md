@@ -1,6 +1,6 @@
 # Win Zero Privacy Policy
 
-_Effective October 24, 2026_
+_Effective November 11, 2026_
 
 Win Zero and Win Zero Plus are daily check-in apps made by E7 Systems. This policy explains what
 both apps, and the website at winzero.app, do with your information. Your goals and check-ins are
@@ -55,6 +55,15 @@ Check-in reminders are scheduled by your phone itself; no server sends them. By 
 reminder says "your goal", so your goal stays off the lock screen. If you turn on **Goal in
 reminders** in Settings, reminders include your goal's wording. You can turn reminders off at
 any time in your phone's settings.
+
+## Widgets
+
+Win Zero Plus's widgets show what the app shows: each goal's zeros and when it checks in. The app
+writes that to a file on your phone for them, in the folder it shares with its widgets (and, on
+iPhone, with Win Zero), and nothing leaves your phone. They show your goal's wording only if you turn
+on **Goal in reminders and widgets**; otherwise "Your goal" or the lock-screen name you gave it.
+Anyone who sees your home or lock screen sees what the widgets show, so choose that setting with
+that in mind.
 
 ## Moving to Win Zero Plus
 

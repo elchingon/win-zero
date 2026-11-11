@@ -34,7 +34,9 @@ src/theme/          tokens.ts (palette + fonts from SPEC section 7)
 src/ui/copy/        notice, rules and support copy, shared with the website
 src/dev/            demo tools: seedRun.ts and demo.ts are shared with the website
 src/variant/        which app this build is (Win Zero or Win Zero Plus) and its name; app code only
-modules/            local Expo modules: app-icons (Plus's icon switch), haptics (Android's haptics as media)
+modules/            local Expo modules: app-icons (Plus's icon switch), haptics (Android's haptics as media),
+                    widgets (Plus's home-screen and lock-screen widgets: the snapshot writer, the
+                    WidgetKit extension's sources in extension/, Android's providers, and its plugin)
 plugins/            local config plugins: xcode-variant (Plus's Xcode project bundles Plus), scene-lifecycle
                     (both apps adopt the UIScene life cycle iOS 27 requires)
 app.config.ts       app.json for Win Zero; EXPO_PUBLIC_APP_VARIANT=plus gives Plus its own ids, scheme and art (assets/brand-plus/)

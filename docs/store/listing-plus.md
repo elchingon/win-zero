@@ -31,7 +31,7 @@ Habit tracker, goals & games
 Track up to three habits on the days you choose. Play five arcade games and earn themes as you progress. Pay once, with no ads, subscription or account.
 ```
 
-### Description (4000 max): 3479
+### Description (4000 max): 3580
 ```
 Track up to three habits on your own schedule, and turn each Yes into an arcade round. Win Zero Plus is a habit tracker with daily reminders, five games, and themes to earn as your best streak grows.
 
@@ -42,6 +42,7 @@ UP TO THREE GOALS
 • Home shows what's open now and what's up next, with each goal's stats and calendar a tap away.
 • Already doing it? Start a goal with up to 30 days you've done, so your streak starts where you really are.
 • Done with a goal? Archive it, and Past goals keeps what it accomplished: its best run, milestones and comebacks.
+• Home-screen and lock-screen widgets show your zeros and what's due, with Yes for an open check-in.
 
 CHECK-IN DAYS
 • Pick the days each goal checks in: every day, weekdays, or any mix.
@@ -132,7 +133,7 @@ Win Zero Plus: Habit Tracker
 Track 3 habits on your schedule. Turn check-ins into 5 arcade games. Pay once.
 ```
 
-### Full description (4000 max): 3668
+### Full description (4000 max): 3769
 ```
 Track up to three habits on your own schedule, and turn each Yes into an arcade round. Win Zero Plus is a habit tracker with daily reminders, five games, and themes to earn as your best streak grows.
 
@@ -143,6 +144,7 @@ UP TO THREE GOALS
 • Home shows what's open now and what's up next, with each goal's stats and calendar a tap away.
 • Already doing it? Start a goal with up to 30 days you've done, so your streak starts where you really are.
 • Done with a goal? Archive it, and Past goals keeps what it accomplished: its best run, milestones and comebacks.
+• Home-screen and lock-screen widgets show your zeros and what's due, with Yes for an open check-in.
 
 CHECK-IN DAYS
 • Pick the days each goal checks in: every day, weekdays, or any mix.
