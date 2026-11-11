@@ -92,4 +92,12 @@ function setMarketingVersion(pbxproj, version) {
   return pbxproj.replace(setting, (_, head) => `${head}${value};`);
 }
 
-module.exports = { IOS, PARK, NAMES, parkedPath, planIosSwitch, pointVersionsAtSettings, setMarketingVersion };
+/**
+ * Every build number (CURRENT_PROJECT_VERSION) the project's configs set, once each. Xcode's General
+ * tab sets one per target: Win Zero Plus's widgets must carry the app's, or App Store Connect warns.
+ */
+function buildNumbers(pbxproj) {
+  return [...new Set([...pbxproj.matchAll(/\bCURRENT_PROJECT_VERSION = "?([^";]*)"?;/g)].map((m) => m[1]))];
+}
+
+module.exports = { IOS, PARK, NAMES, buildNumbers, parkedPath, planIosSwitch, pointVersionsAtSettings, setMarketingVersion };

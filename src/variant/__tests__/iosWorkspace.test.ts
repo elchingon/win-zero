@@ -2,7 +2,7 @@
 // both build in ios/, and the one not being built waits, untouched, in .ios-parked/.
 import { describe, expect, it } from '@jest/globals';
 
-import { planIosSwitch, setMarketingVersion, pointVersionsAtSettings } from '../../../scripts/ios-workspace.cjs';
+import { buildNumbers, planIosSwitch, setMarketingVersion, pointVersionsAtSettings } from '../../../scripts/ios-workspace.cjs';
 
 const none = { free: false, plus: false };
 
@@ -130,5 +130,13 @@ describe('setMarketingVersion', () => {
 
   it('fails loudly without a MARKETING_VERSION', () => {
     expect(() => setMarketingVersion('buildSettings = {};', '1.1.3')).toThrow('MARKETING_VERSION');
+  });
+});
+
+describe('buildNumbers', () => {
+  it("lists each build number once, so the widgets' can be held to the app's", () => {
+    expect(buildNumbers(PBXPROJ)).toEqual(['7']);
+    expect(buildNumbers(`${PBXPROJ}\n\t\t\t\tCURRENT_PROJECT_VERSION = "8";`)).toEqual(['7', '8']);
+    expect(buildNumbers('')).toEqual([]);
   });
 });

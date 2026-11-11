@@ -3,8 +3,9 @@
 // URL scheme, and every icon and splash file either names must exist. Both must be in the App
 // Group a move between them goes through on iPhone (SPEC 9), and only Plus has alternate icons.
 // Only Plus pins its variant in its Xcode project (plugins/xcode-variant.js), so an Xcode build of
-// Plus bundles Plus's JavaScript. Both adopt the scene life cycle (plugins/scene-lifecycle.js), without
-// which iOS 27 stops either app at launch.
+// Plus bundles Plus's JavaScript, and only Plus has widgets (modules/widgets), whose extension EAS
+// signs beside it. Both adopt the scene life cycle (plugins/scene-lifecycle.js), without which iOS
+// 27 stops either app at launch.
 // Run: npm run check:variants
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -17,9 +18,10 @@ const APP_GROUP = 'group.com.e7systems.winzero';
 const ICON_PLUGIN = './modules/app-icons/app.plugin.js';
 const VARIANT_PLUGIN = './plugins/xcode-variant.js';
 const SCENE_PLUGIN = './plugins/scene-lifecycle.js';
+const WIDGETS_PLUGIN = './modules/widgets/app.plugin.js';
 const EXPECTED = {
-  free: { name: 'Win Zero', id: 'com.e7systems.winzero', scheme: 'winzero', brand: './assets/brand/', icons: 0, pinned: false },
-  plus: { name: 'Win Zero Plus', id: 'com.e7systems.winzeroplus', scheme: 'winzeroplus', brand: './assets/brand-plus/', icons: 8, pinned: true },
+  free: { name: 'Win Zero', id: 'com.e7systems.winzero', scheme: 'winzero', brand: './assets/brand/', icons: 0, pinned: false, widgets: false },
+  plus: { name: 'Win Zero Plus', id: 'com.e7systems.winzeroplus', scheme: 'winzeroplus', brand: './assets/brand-plus/', icons: 8, pinned: true, widgets: true },
 };
 
 /** The alternate icons a config gives the app-icons plugin: none without it. */
@@ -62,13 +64,18 @@ for (const [variant, want] of Object.entries(EXPECTED)) {
   const hasPlugin = (name) => (c.plugins ?? []).some((p) => (Array.isArray(p) ? p[0] : p) === name);
   check(`${VARIANT_PLUGIN} in plugins`, hasPlugin(VARIANT_PLUGIN), want.pinned);
   check(`${SCENE_PLUGIN} in plugins`, hasPlugin(SCENE_PLUGIN), true);
+  check(`${WIDGETS_PLUGIN} in plugins`, hasPlugin(WIDGETS_PLUGIN), want.widgets);
+  const extensions = c.extra?.eas?.build?.experimental?.ios?.appExtensions ?? [];
+  check('signed widget extension', extensions.some((e) => e.bundleIdentifier === `${want.id}.widgets`), want.widgets);
   const assets = assetPaths(c);
   if (assets.length === 0) problems.push(`${variant}: no art found in the config`);
   for (const p of assets) {
     if (!p.startsWith(want.brand)) problems.push(`${variant}: ${p} is outside ${want.brand}`);
     if (!fs.existsSync(path.join(root, p))) problems.push(`${variant}: ${p} is missing`);
   }
-  console.log(`${variant}: ${c.name} · ${c.ios?.bundleIdentifier} · ${c.scheme}:// · ${assets.length} art files · ${icons.length} alternate icons`);
+  console.log(
+    `${variant}: ${c.name} · ${c.ios?.bundleIdentifier} · ${c.scheme}:// · ${assets.length} art files · ${icons.length} alternate icons · ${hasPlugin(WIDGETS_PLUGIN) ? 'widgets' : 'no widgets'}`,
+  );
 }
 
 if (problems.length > 0) {

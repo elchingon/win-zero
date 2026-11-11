@@ -19,6 +19,9 @@ export const PLUS = {
   id: 'com.e7systems.winzeroplus',
 } as const;
 
+/** The widgets' iOS extension (modules/widgets), which EAS signs beside the app. */
+export const PLUS_WIDGETS = { targetName: 'WinZeroWidgets', bundleIdentifier: `${PLUS.id}.widgets` } as const;
+
 const FREE_BRAND = './assets/brand/';
 const PLUS_BRAND = './assets/brand-plus/';
 
@@ -48,6 +51,8 @@ function plusIcon(name: string) {
  */
 const PLUS_ONLY_PLUGINS: NonNullable<ExpoConfig['plugins']> = [
   ['./modules/app-icons/app.plugin.js', { icons: PLUS_ICONS.map(plusIcon) }],
+  // The home-screen and lock-screen widgets: an iOS extension target and Android's providers.
+  './modules/widgets/app.plugin.js',
   // Plus's Xcode project pins the variant, so a build made in Xcode (which never has this
   // environment) bundles Plus's JavaScript, not Win Zero's.
   './plugins/xcode-variant.js',
@@ -93,6 +98,24 @@ export function withPlus(config: ExpoConfig, root: string): ExpoConfig {
     scheme: PLUS.scheme,
     ios: { ...plus.ios, bundleIdentifier: PLUS.id },
     android: { ...plus.android, package: PLUS.id },
+    extra: {
+      ...plus.extra,
+      eas: {
+        ...plus.extra?.eas,
+        build: {
+          experimental: {
+            ios: {
+              appExtensions: [
+                {
+                  ...PLUS_WIDGETS,
+                  entitlements: { 'com.apple.security.application-groups': plus.ios?.entitlements?.['com.apple.security.application-groups'] },
+                },
+              ],
+            },
+          },
+        },
+      },
+    },
     plugins: [
       ...(plus.plugins ?? []),
       ...PLUS_ONLY_PLUGINS,

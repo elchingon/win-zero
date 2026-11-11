@@ -8,10 +8,13 @@
 //   app, and unless any Plus store page is Win Zero Plus's real one (scripts/release-env.cjs). It
 //   also says whether Win Zero will offer the move. On EAS they come from the profile's `env` in
 //   eas.json (the gitignored .env isn't uploaded); --local reads them as the release bundle will.
+// Locally, for iPhone, Win Zero Plus's widget extension must carry the app's build number.
 // Other profiles pass.
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { buildNumbers } from './ios-workspace.cjs';
 import { buildVariant } from './prebuild.mjs';
 import { checkReleaseEnv, localReleaseEnv, report } from './release-env.cjs';
 
@@ -26,6 +29,16 @@ if (process.argv[2] === '--local') {
   }
   const variant = buildVariant();
   const result = checkReleaseEnv(localReleaseEnv(root), { variant, platform });
+  // Xcode's General tab sets each target's build number: the widgets' must be the app's.
+  const project = path.join(root, 'ios', 'WinZeroPlus.xcodeproj', 'project.pbxproj');
+  if (platform === 'ios' && variant === 'plus' && fs.existsSync(project)) {
+    const builds = buildNumbers(fs.readFileSync(project, 'utf8'));
+    if (builds.length > 1) {
+      result.errors.push(
+        `WinZeroPlus and WinZeroWidgets have different build numbers (${builds.join(', ')}). Set the same Build in Xcode's General tab for both targets.`,
+      );
+    }
+  }
   const ok = report(result, { title: `${NAMES[variant]} release build (${platform}), from .env:`, strict: true });
   process.exit(ok ? 0 : 1);
 }

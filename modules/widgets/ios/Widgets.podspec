@@ -1,0 +1,24 @@
+Pod::Spec.new do |s|
+  s.name           = 'Widgets'
+  s.version        = '1.0.0'
+  s.summary        = "Hands Win Zero Plus's widgets what to show"
+  s.description    = "Saves the snapshot Win Zero Plus's home-screen and lock-screen widgets draw from, and reloads them"
+  s.license        = 'UNLICENSED'
+  s.author         = 'E7 Systems'
+  s.homepage       = 'https://winzero.app'
+  s.platforms      = {
+    :ios => '16.4'
+  }
+  s.swift_version  = '5.9'
+  s.source         = { git: '' }
+  s.static_framework = true
+
+  s.dependency 'ExpoModulesCore'
+  s.frameworks = 'WidgetKit'
+
+  s.source_files = "**/*.{h,m,swift}"
+  s.pod_target_xcconfig = {
+    'DEFINES_MODULE' => 'YES',
+    'SWIFT_COMPILATION_MODE' => 'wholemodule'
+  }
+end

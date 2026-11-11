@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The wide widget: up to three goals, a row each, with YES on the ones whose check-in is open. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  android:id="@+id/winzero_root"
+  android:layout_width="match_parent"
+  android:layout_height="match_parent"
+  android:background="@drawable/winzero_widget_bg"
+  android:orientation="vertical"
+  android:paddingStart="14dp"
+  android:paddingTop="8dp"
+  android:paddingEnd="14dp"
+  android:paddingBottom="8dp">
+
+  <TextView
+    android:id="@+id/winzero_empty"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center_vertical"
+    android:textColor="#F5F0E6"
+    android:textSize="15sp"
+    android:textStyle="bold"
+    android:visibility="gone" />
+
+  <LinearLayout
+    android:id="@+id/winzero_row1"
+    android:layout_width="match_parent"
+    android:layout_height="0dp"
+    android:layout_weight="1"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:visibility="gone">
+
+    <TextView
+      android:id="@+id/winzero_row1_zeros"
+      android:layout_width="56dp"
+      android:layout_height="wrap_content"
+      android:maxLines="1"
+      android:textColor="#FFB52E"
+      android:textSize="22sp"
+      android:textStyle="bold" />
+
+    <LinearLayout
+      android:layout_width="0dp"
+      android:layout_height="wrap_content"
+      android:layout_weight="1"
+      android:orientation="vertical">
+
+      <TextView
+        android:id="@+id/winzero_row1_label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textColor="#AAB0D8"
+        android:textSize="11sp"
+        android:textStyle="bold" />
+
+      <TextView
+        android:id="@+id/winzero_row1_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textColor="#F5F0E6"
+        android:textSize="13sp" />
+    </LinearLayout>
+
+    <TextView
+      android:id="@+id/winzero_row1_yes"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:background="@drawable/winzero_widget_yes"
+      android:minHeight="32dp"
+      android:gravity="center"
+      android:paddingStart="14dp"
+      android:paddingEnd="14dp"
+      android:text="@string/winzero_widget_yes"
+      android:textColor="#0D1130"
+      android:textSize="13sp"
+      android:textStyle="bold"
+      android:visibility="gone" />
+  </LinearLayout>
+
+  <LinearLayout
+    android:id="@+id/winzero_row2"
+    android:layout_width="match_parent"
+    android:layout_height="0dp"
+    android:layout_weight="1"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:visibility="gone">
+
+    <TextView
+      android:id="@+id/winzero_row2_zeros"
+      android:layout_width="56dp"
+      android:layout_height="wrap_content"
+      android:maxLines="1"
+      android:textColor="#FFB52E"
+      android:textSize="22sp"
+      android:textStyle="bold" />
+
+    <LinearLayout
+      android:layout_width="0dp"
+      android:layout_height="wrap_content"
+      android:layout_weight="1"
+      android:orientation="vertical">
+
+      <TextView
+        android:id="@+id/winzero_row2_label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textColor="#AAB0D8"
+        android:textSize="11sp"
+        android:textStyle="bold" />
+
+      <TextView
+        android:id="@+id/winzero_row2_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textColor="#F5F0E6"
+        android:textSize="13sp" />
+    </LinearLayout>
+
+    <TextView
+      android:id="@+id/winzero_row2_yes"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:background="@drawable/winzero_widget_yes"
+      android:minHeight="32dp"
+      android:gravity="center"
+      android:paddingStart="14dp"
+      android:paddingEnd="14dp"
+      android:text="@string/winzero_widget_yes"
+      android:textColor="#0D1130"
+      android:textSize="13sp"
+      android:textStyle="bold"
+      android:visibility="gone" />
+  </LinearLayout>
+
+  <LinearLayout
+    android:id="@+id/winzero_row3"
+    android:layout_width="match_parent"
+    android:layout_height="0dp"
+    android:layout_weight="1"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:visibility="gone">
+
+    <TextView
+      android:id="@+id/winzero_row3_zeros"
+      android:layout_width="56dp"
+      android:layout_height="wrap_content"
+      android:maxLines="1"
+      android:textColor="#FFB52E"
+      android:textSize="22sp"
+      android:textStyle="bold" />
+
+    <LinearLayout
+      android:layout_width="0dp"
+      android:layout_height="wrap_content"
+      android:layout_weight="1"
+      android:orientation="vertical">
+
+      <TextView
+        android:id="@+id/winzero_row3_label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textColor="#AAB0D8"
+        android:textSize="11sp"
+        android:textStyle="bold" />
+
+      <TextView
+        android:id="@+id/winzero_row3_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textColor="#F5F0E6"
+        android:textSize="13sp" />
+    </LinearLayout>
+
+    <TextView
+      android:id="@+id/winzero_row3_yes"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:background="@drawable/winzero_widget_yes"
+      android:minHeight="32dp"
+      android:gravity="center"
+      android:paddingStart="14dp"
+      android:paddingEnd="14dp"
+      android:text="@string/winzero_widget_yes"
+      android:textColor="#0D1130"
+      android:textSize="13sp"
+      android:textStyle="bold"
+      android:visibility="gone" />
+  </LinearLayout>
+</LinearLayout>

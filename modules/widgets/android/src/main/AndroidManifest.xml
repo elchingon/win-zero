@@ -1,0 +1,2 @@
+<!-- The widgets' receivers go in the app's manifest from Win Zero Plus's config plugin, so Win Zero has none. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" />

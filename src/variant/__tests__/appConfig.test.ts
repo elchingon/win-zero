@@ -8,7 +8,7 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
 
 import { THEME_IDS } from '@/engine';
 
-import makeConfig, { assetPaths, PLUS, PLUS_ICONS, readVariant, withPlus } from '../../../app.config';
+import makeConfig, { assetPaths, PLUS, PLUS_ICONS, PLUS_WIDGETS, readVariant, withPlus } from '../../../app.config';
 import appJson from '../../../app.json';
 
 const root = path.resolve(__dirname, '../../..');
@@ -81,6 +81,19 @@ describe('Win Zero Plus', () => {
     }
   });
 
+  it('has home-screen and lock-screen widgets, which EAS signs in the App Group, and Win Zero has none', () => {
+    expect(plus.plugins).toContain('./modules/widgets/app.plugin.js');
+    expect(JSON.stringify(base)).not.toContain('modules/widgets');
+    expect(plus.extra?.eas?.build?.experimental?.ios?.appExtensions).toEqual([
+      {
+        targetName: 'WinZeroWidgets',
+        bundleIdentifier: 'com.e7systems.winzeroplus.widgets',
+        entitlements: { 'com.apple.security.application-groups': ['group.com.e7systems.winzero'] },
+      },
+    ]);
+    expect(PLUS_WIDGETS.bundleIdentifier.startsWith(`${PLUS.id}.`)).toBe(true);
+  });
+
   it("leaves out the dev client's exp+ scheme, which the free app's slug already claims", () => {
     expect(plus.plugins).toContainEqual(['expo-dev-client', { addGeneratedScheme: false }]);
   });
@@ -98,7 +111,7 @@ describe('Win Zero Plus', () => {
     // One developer team signs both, so Xcode never asks for it again after a prebuild.
     expect(plus.ios?.appleTeamId).toBe(base.ios?.appleTeamId);
     expect(base.ios?.appleTeamId).toMatch(/^[A-Z0-9]{10}$/);
-    expect(plus.extra).toEqual(base.extra);
+    expect({ ...plus.extra, eas: { projectId: plus.extra?.eas?.projectId } }).toEqual(base.extra);
     expect(plus.ios?.privacyManifests).toEqual(base.ios?.privacyManifests);
     expect(plus.android?.permissions).toEqual(base.android?.permissions);
     expect(plus.android?.blockedPermissions).toEqual(base.android?.blockedPermissions);

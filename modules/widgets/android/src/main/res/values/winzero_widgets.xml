@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Win Zero Plus's widgets, in the widget picker. The words they show come from the app. -->
+<resources>
+  <string name="winzero_widget_name">Win Zero Plus</string>
+  <string name="winzero_widget_small_label">Win Zero Plus</string>
+  <string name="winzero_widget_wide_label">Win Zero Plus goals</string>
+  <string name="winzero_widget_small_description">Your zeros and your next check-in, with Yes when it\'s open.</string>
+  <string name="winzero_widget_wide_description">Every goal\'s zeros and check-ins, with Yes for the open ones.</string>
+  <string name="winzero_widget_yes">YES</string>
+</resources>

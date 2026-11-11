@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Every half hour as well as at each frame's alarm, which also covers a restart. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+  android:description="@string/winzero_widget_small_description"
+  android:initialLayout="@layout/winzero_widget_small"
+  android:minHeight="110dp"
+  android:minWidth="110dp"
+  android:previewLayout="@layout/winzero_widget_small"
+  android:resizeMode="horizontal|vertical"
+  android:targetCellHeight="2"
+  android:targetCellWidth="2"
+  android:updatePeriodMillis="1800000"
+  android:widgetCategory="home_screen" />
