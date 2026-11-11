@@ -291,7 +291,8 @@ describe('several goals in Settings', () => {
     expect(screen.getByText('Every day · 20:00')).toBeOnTheScreen();
     expect(screen.getByText('Mon, Wed, Fri · 07:00')).toBeOnTheScreen();
     expect(screen.getByText('1 more fits.')).toBeOnTheScreen();
-    expect(screen.getByText(/Reminders use a goal’s lock-screen name/)).toBeOnTheScreen();
+    expect(screen.getByText(/in widgets\. They use a goal’s lock-screen name/)).toBeOnTheScreen();
+    expect(screen.getByText('Goal in reminders and widgets')).toBeOnTheScreen();
 
     await fireEvent.press(screen.getByRole('button', { name: /^Run/ }));
     expect(app.pathname()).toBe('/goal');

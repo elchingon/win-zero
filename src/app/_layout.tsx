@@ -6,7 +6,7 @@ import { AppState, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { startNotifications } from '@/notifications';
-import { reportPath } from '@/notifications/route';
+import { reportPath, toHome } from '@/notifications/route';
 import { appStore, startLifecycle, useApp } from '@/store';
 import { colors } from '@/theme/tokens';
 import { importDelivery, startMoveAcks, subscribe } from '@/transfer/inbox';
@@ -26,6 +26,13 @@ const startIconGuard: ((store: typeof appStore) => () => void) | null =
   process.env.EXPO_PUBLIC_APP_VARIANT === 'plus'
     ? // eslint-disable-next-line @typescript-eslint/no-require-imports
       require('@/plus/iconGuard').startIconGuard
+    : null;
+
+// Win Zero Plus only: its widgets (SPEC 9), kept current, and their Yes answered.
+const PlusWidgets: typeof import('@/plus/widget') | null =
+  process.env.EXPO_PUBLIC_APP_VARIANT === 'plus'
+    ? // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require('@/plus/widget')
     : null;
 
 SplashScreen.preventAutoHideAsync();
@@ -76,6 +83,9 @@ export default function RootLayout() {
   useEffect(() => (FEATURES.moveOut ? startMoveAcks(appStore, transport) : undefined), []);
   // Win Zero Plus: an earned theme's icon goes back to the app's own if Erase un-earns it (SPEC 9).
   useEffect(() => startIconGuard?.(appStore), []);
+  // Win Zero Plus: the widgets show what's due, and their Yes answers as a notification's does.
+  useEffect(() => (PlusWidgets ? PlusWidgets.startWidgetSync(appStore, PlusWidgets.widgetsNative) : undefined), []);
+  useEffect(() => (PlusWidgets ? PlusWidgets.startWidgetLinks(appStore, { toHome }) : undefined), []);
   // Win Zero Plus: a move that arrived while the splash was up opens once the screens can. Each
   // delivery once: backing out of /import doesn't bring it back.
   const delivery = useSyncExternalStore(subscribe, importDelivery);

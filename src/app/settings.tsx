@@ -111,10 +111,12 @@ export default function Settings() {
           onChange={(v) => store.setPref('reengage', v)}
         />
         <ToggleRow
-          label="Goal in reminders"
+          label={PlusSettings ? PlusSettings.SETTINGS_COPY.goalInRemindersLabel : 'Goal in reminders'}
           detail={
-            PlusSettings && several
-              ? PlusSettings.SETTINGS_COPY.goalInReminders
+            PlusSettings
+              ? several
+                ? PlusSettings.SETTINGS_COPY.goalInReminders
+                : PlusSettings.SETTINGS_COPY.goalInRemindersOne
               : 'Off keeps your goal private on the lock screen. Reminders just say “your goal”.'
           }
           value={prefs.goalInReminders}

@@ -76,6 +76,8 @@ const PLUS_PEER: Peer = {
 
 /** The other app: Win Zero Plus for Win Zero, and Win Zero for Plus. */
 export const PEER: Peer = IS_PLUS ? FREE_PEER : PLUS_PEER;
+/** This app's own URL scheme, as app.config.ts gives it. */
+export const SCHEME = IS_PLUS ? PLUS_PEER.scheme : FREE_PEER.scheme;
 
 /**
  * Win Zero Plus's store page on this platform, once Plus is on the store: until then Win Zero

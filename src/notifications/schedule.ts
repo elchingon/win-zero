@@ -22,6 +22,7 @@ import {
   type TimeZone,
 } from '@/engine';
 
+import { goalLabel } from './labels';
 import { lapseLine } from './lapseCopy';
 import { CHECKIN_CATEGORY_ID, CHECKIN_CHANNEL_ID, type ReminderData } from './shared';
 
@@ -45,7 +46,6 @@ export function bothOpenBody(label: string): string {
   return `Yesterday's check-in for ${label} is still open, and today's is ready. Tap to answer.`;
 }
 
-const ORDINALS = ['first', 'second', 'third', 'fourth', 'fifth'];
 
 /** The weekly nudge, one per week in turn. Never names the goal; never counts what was missed. */
 export const NUDGES: readonly { title: string; body: string }[] = [
@@ -80,18 +80,8 @@ export interface ReminderInput {
   showGoal: boolean;
 }
 
-/**
- * How a reminder names a goal: its wording when the user turned that on, and otherwise "your goal",
- * which keeps it off the lock screen. With more than one goal (SPEC 9), its lock-screen name, or
- * its place among them: "your second goal".
- */
-export function goalLabel(goal: GoalState, place: number, count: number, showGoal: boolean): string {
-  if (showGoal) return `“${goal.goal}”`;
-  if (count <= 1) return 'your goal';
-  if (goal.alias) return `“${goal.alias}”`;
-  const ordinal = ORDINALS[place];
-  return ordinal ? `your ${ordinal} goal` : 'your goal';
-}
+
+export { goalLabel } from './labels';
 
 /** A check-in's title: "Daily check-in", unless the goal checks in on chosen days only. */
 export function checkInTitle(goal: GoalState): string {

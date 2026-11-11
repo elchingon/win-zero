@@ -134,6 +134,35 @@ export const BREAK_COPY = {
   },
 } as const;
 
+/** The home-screen and lock-screen widgets (SPEC 9). Each goal is named as its reminders name it. */
+export const WIDGET_COPY = {
+  zeros: (n: number) => `${n.toLocaleString('en-US')} ${n === 1 ? 'zero' : 'zeros'}`,
+  open: {
+    headline: 'Check in',
+    detail: (next: number) => `Yes makes ${next.toLocaleString('en-US')}`,
+    inline: (zeros: string) => `Check in · ${zeros}`,
+    a11y: (label: string, zeros: string) => `${label}: check-in open, ${zeros}. Tap Yes if you did it.`,
+  },
+  ready: {
+    headline: (n: number) => `Day ${n.toLocaleString('en-US')} round ready`,
+    detail: 'Tap to play',
+    a11y: (label: string, n: number) => `${label}: your Day ${n.toLocaleString('en-US')} round is ready. Tap to play.`,
+  },
+  waiting: {
+    headline: 'Next check-in',
+    inline: (when: string) => `Next check-in ${when}`,
+    a11y: (label: string, zeros: string, when: string) => `${label}: ${zeros}. Next check-in ${when}.`,
+  },
+  break: {
+    headline: 'On a break',
+    detail: (until: string) => `Until ${until}`,
+    inline: (until: string) => `On a break until ${until}`,
+    a11y: (label: string, until: string, when: string) => `${label} is on a break until ${until}. Check-ins come back ${when}.`,
+  },
+  empty: { headline: 'Set up a goal', detail: 'Open Win Zero Plus to start.' },
+  yes: 'Yes',
+} as const;
+
 export const HEAD_START_COPY = {
   label: 'Days already done',
   hint: (max: number) =>
@@ -243,8 +272,12 @@ export const ADD_GOAL_COPY = {
 /** Settings' own words, as they read with several goals, or past ones. */
 export const SETTINGS_COPY = {
   erase: "This deletes your goals, past goals, streaks, history and rewards from this phone. It can't be undone.",
+  /** Goal in reminders' label in Plus, whose widgets name goals the same way. */
+  goalInRemindersLabel: 'Goal in reminders and widgets',
   goalInReminders:
-    'Off keeps your goals private on the lock screen. Reminders use a goal’s lock-screen name, or “your second goal”.',
+    'Off keeps your goals private on the lock screen and in widgets. They use a goal’s lock-screen name, or “your second goal”.',
+  /** With one goal. */
+  goalInRemindersOne: 'Off keeps your goal private on the lock screen and in widgets. They just say “your goal”.',
 } as const;
 
 export const GOAL_COPY = {
