@@ -227,6 +227,7 @@ export function compareHtml(facts: Facts): string {
     ['App icons', icons(free), icons(plus)],
     ['Reminders you answer from the notification', YES, YES],
     ['Gentle streak rules, bombs, shields and credits', YES, YES],
+    [`Boss rounds on Days ${list(engine.BOSS_DAYS.map(String))}`, YES, 'In every game'],
     ['Bring your progress over from Win Zero', NO, YES],
     ['No account, ads or tracking', YES, YES],
     ['In-app purchases or subscription', NO, NO],
@@ -319,6 +320,13 @@ export function homeFaqs(facts: Facts): Faq[] {
         'Win Zero is a free daily habit tracker for iPhone and Android that turns check-ins into an arcade game. Pick one ' +
         'goal and a check-in time. Each day Win Zero asks whether you stuck to it, and every Yes adds a zero to your ' +
         'streak. Then you clear those zeros in a quick shooting round: a streak of 30 gives you thirty to blast.',
+    },
+    {
+      q: 'What is a boss round?',
+      a:
+        `The first time a run reaches Day ${list(engine.BOSS_DAYS.map(String))}, that day's round is a boss: one huge ` +
+        'zero worth the whole day, fought in phases. Each phase it loses throws off a ring of small zeros, and once ' +
+        'they are cleared the boss can be hit again. Beat it and the screen fills with zeros as always.',
     },
     {
       q: 'Is Win Zero free?',
@@ -543,6 +551,7 @@ export function llmsTxt(facts: Facts): string {
     '- Goals and check-ins stay on the phone. Neither app has analytics, advertising or tracking.',
     `- A Not today usually costs one zero, not the whole streak. The first ${engine.MISSED_GRACE_DAYS} missed check-ins in a ` +
       `row cost nothing. On every ${ordinal(engine.SLIDE_FINAL)} slip without a Yes, a shield protects the streak or it starts over.`,
+    `- Boss rounds: the first time a run reaches Day ${list(engine.BOSS_DAYS.map(String))}, that round is one huge zero fought in phases, each shedding a ring of small zeros.`,
     `- Rewards: ${words(engine.WEAPONS.length)} weapons unlock as the best run grows (${list(engine.WEAPONS.map((w) => `${w.name} at day ${w.unlockAt}`))}), ` +
       `a bomb every ${engine.BOMB_EVERY} days, and a shield every ${engine.SHIELD_EVERY} (up to ${engine.SHIELD_CAP} held).`,
     `- Plus games: ${list(engine.MODES.map((m) => m.name))}. Plus themes: ${list(t.fromStart)} from the start; ` +

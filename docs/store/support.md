@@ -40,6 +40,9 @@ is free, confidential and open 24/7 in the US: **1-800-662-4357**. The number is
   in a round to clear a crowd of zeros.
 - **Shields:** earn one at each new streak milestone of 7, 14, 21 and beyond within a run, up to 3.
 - Slipping and climbing back to the same milestone does not earn that reward twice in the same run.
+- **Boss rounds:** the first time a run reaches Day 7, 30, 100 or 365, that day's round is one huge
+  zero, fought in phases. Each phase it loses throws off a ring of small zeros; clear them, and the
+  boss can be hit again. Its replays are boss rounds too.
 
 ## Game and Weapon credits
 

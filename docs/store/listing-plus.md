@@ -31,7 +31,7 @@ Habit tracker, goals & games
 Track up to three habits on the days you choose. Play five arcade games and earn themes as you progress. Pay once, with no ads, subscription or account.
 ```
 
-### Description (4000 max): 3382
+### Description (4000 max): 3513
 ```
 Track up to three habits on your own schedule, and turn each Yes into an arcade round. Win Zero Plus is a habit tracker with daily reminders, five games, and themes to earn as your best streak grows.
 
@@ -51,6 +51,7 @@ FIVE ARCADE GAMES
 • Play each round as Shooter, Catch, Orbit, Slice or Breaker, and pick your game before every new round.
 • Each game has seven power-up tiers, starting with one available immediately. The rest unlock as your best run grows, and stay unlocked.
 • No game can be lost: no lives, no timers. Clear the last zero for the big finish.
+• Reach Day 7, 30, 100 or 365 and face a boss in any game: one huge zero that breaks in phases, throwing off rings of small zeros.
 
 THEMES AND APP ICONS
 • Eight color themes for your rounds and the zeros on Home. Classic, Neon Arcade, Mono CRT and Pastel are yours from the start; Ember, Aurora and Gold Year are earned at a best run of 30, 180 and 365 days, and Phoenix by coming back after starting over.
@@ -131,7 +132,7 @@ Win Zero Plus: Habit Tracker
 Track 3 habits on your schedule. Turn check-ins into 5 arcade games. Pay once.
 ```
 
-### Full description (4000 max): 3571
+### Full description (4000 max): 3702
 ```
 Track up to three habits on your own schedule, and turn each Yes into an arcade round. Win Zero Plus is a habit tracker with daily reminders, five games, and themes to earn as your best streak grows.
 
@@ -151,6 +152,7 @@ FIVE ARCADE GAMES
 • Play each round as Shooter, Catch, Orbit, Slice or Breaker, and pick your game before every new round.
 • Each game has seven power-up tiers, starting with one available immediately. The rest unlock as your best run grows, and stay unlocked.
 • No game can be lost: no lives, no timers. Clear the last zero for the big finish.
+• Reach Day 7, 30, 100 or 365 and face a boss in any game: one huge zero that breaks in phases, throwing off rings of small zeros.
 
 THEMES AND APP ICONS
 • Eight color themes for your rounds and the zeros on Home. Classic, Neon Arcade, Mono CRT and Pastel are yours from the start; Ember, Aurora and Gold Year are earned at a best run of 30, 180 and 365 days, and Phoenix by coming back after starting over.

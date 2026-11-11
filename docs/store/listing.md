@@ -29,7 +29,7 @@ Daily habits. Arcade rewards.
 One goal, a daily check-in, and an arcade round built from your streak. Earn weapons and rewards as you go. No ads, subscriptions or account.
 ```
 
-### Description (4000 max): 2381
+### Description (4000 max): 2500
 ```
 Win Zero is a daily habit tracker that turns your check-ins into arcade rounds. Track one goal, build your streak, and give yourself something to play for.
 
@@ -48,6 +48,7 @@ EARN YOUR ARSENAL
 • Start with the Pea Shooter and unlock six more weapons as your best run grows, up to the Zero Nuke. They're yours for good.
 • Earn bombs at new streak milestones of 5, 10, 15 and beyond within a run. Use them to clear a crowd of zeros.
 • Earn shields at new streak milestones of 7, 14, 21 and beyond within a run, up to 3 at a time. They protect against the seventh slip.
+• Reach Day 7, 30, 100 or 365 and face a boss: one huge zero that breaks in phases, throwing off rings of small zeros.
 
 PLAY A LITTLE MORE
 • Earn Game credits for bonus rounds and Weapon credits to try a locked weapon for one round. Credits are earned by checking in, never bought.
@@ -104,7 +105,7 @@ Win Zero Goal Tracker Game
 Track one habit with daily reminders, gentle streak rules and arcade rewards.
 ```
 
-### Full description (4000 max): 2575
+### Full description (4000 max): 2694
 ```
 Win Zero is a daily habit tracker that turns your check-ins into arcade rounds. Track one goal, build your streak, and give yourself something to play for.
 
@@ -123,6 +124,7 @@ EARN YOUR ARSENAL
 • Start with the Pea Shooter and unlock six more weapons as your best run grows, up to the Zero Nuke. They're yours for good.
 • Earn bombs at new streak milestones of 5, 10, 15 and beyond within a run. Use them to clear a crowd of zeros.
 • Earn shields at new streak milestones of 7, 14, 21 and beyond within a run, up to 3 at a time. They protect against the seventh slip.
+• Reach Day 7, 30, 100 or 365 and face a boss: one huge zero that breaks in phases, throwing off rings of small zeros.
 
 PLAY A LITTLE MORE
 • Earn Game credits for bonus rounds and Weapon credits to try a locked weapon for one round. Credits are earned by checking in, never bought.

@@ -90,6 +90,7 @@ describe('the comparison', () => {
     expect(html).toContain(`<td>US$${APPS.plus.priceUsd}, once</td>`);
     expect(html).toContain('<td>Eight: four included, four to earn</td>');
     expect(html).toMatch(/<th scope="row">Start with days already done<\/th><td>.*No.*<\/td><td>Up to 30 days<\/td>/);
+    expect(html).toMatch(/<th scope="row">Boss rounds on Days 7, 30, 100 and 365<\/th><td>.*Yes.*<\/td><td>In every game<\/td>/);
   });
 });
 
