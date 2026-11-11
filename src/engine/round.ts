@@ -19,7 +19,8 @@ export const ARMOR_HP_CAP = 12;
 /** Most glyphs drawn in the celebration fill. Above this, the full number is overlaid. */
 export const FILL_GLYPH_CAP = 500;
 
-export type ZeroKind = 'energy' | 'standard' | 'armored';
+/** `boss` is a boss round's one zero (boss.ts); composeRound never makes one. */
+export type ZeroKind = 'energy' | 'standard' | 'armored' | 'boss';
 
 export interface ZeroGroup {
   kind: ZeroKind;
