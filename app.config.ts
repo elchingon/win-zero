@@ -19,6 +19,12 @@ export const PLUS = {
   id: 'com.e7systems.winzeroplus',
 } as const;
 
+/**
+ * Plus shares a milestone as a picture (SPEC 9), and the iPhone share sheet's Save Image saves it
+ * to Photos: iOS stops an app that does that without saying why.
+ */
+export const PLUS_PHOTOS_ADD = 'Save Image saves your milestone card to your photos. Win Zero Plus never reads your photos.';
+
 const FREE_BRAND = './assets/brand/';
 const PLUS_BRAND = './assets/brand-plus/';
 
@@ -91,7 +97,11 @@ export function withPlus(config: ExpoConfig, root: string): ExpoConfig {
     name: PLUS.name,
     version: PLUS.version,
     scheme: PLUS.scheme,
-    ios: { ...plus.ios, bundleIdentifier: PLUS.id },
+    ios: {
+      ...plus.ios,
+      bundleIdentifier: PLUS.id,
+      infoPlist: { ...plus.ios?.infoPlist, NSPhotoLibraryAddUsageDescription: PLUS_PHOTOS_ADD },
+    },
     android: { ...plus.android, package: PLUS.id },
     plugins: [
       ...(plus.plugins ?? []),

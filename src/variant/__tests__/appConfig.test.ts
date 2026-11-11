@@ -8,7 +8,7 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
 
 import { THEME_IDS } from '@/engine';
 
-import makeConfig, { assetPaths, PLUS, PLUS_ICONS, readVariant, withPlus } from '../../../app.config';
+import makeConfig, { assetPaths, PLUS, PLUS_ICONS, PLUS_PHOTOS_ADD, readVariant, withPlus } from '../../../app.config';
 import appJson from '../../../app.json';
 
 const root = path.resolve(__dirname, '../../..');
@@ -79,6 +79,12 @@ describe('Win Zero Plus', () => {
       expect(p.startsWith('./assets/brand-plus/')).toBe(true);
       expect(fs.existsSync(path.join(root, p))).toBe(true);
     }
+  });
+
+  it('says why it saves to Photos, which Save Image on its milestone card does, and Win Zero never asks', () => {
+    expect(plus.ios?.infoPlist?.NSPhotoLibraryAddUsageDescription).toBe(PLUS_PHOTOS_ADD);
+    expect(base.ios?.infoPlist?.NSPhotoLibraryAddUsageDescription).toBeUndefined();
+    expect(JSON.stringify(base)).not.toContain('NSPhotoLibrary');
   });
 
   it("leaves out the dev client's exp+ scheme, which the free app's slug already claims", () => {

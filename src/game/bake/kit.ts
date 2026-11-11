@@ -351,15 +351,18 @@ export function bakeSprites(opts: {
   mode?: ModeId;
   /** A boss round's boss (engine bossPlan). */
   boss?: BossPlan;
+  /** Pixels per point to bake at: the screen's, unless given (Win Zero Plus's share card bakes at its own). */
+  pixelRatio?: number;
 }): BakedSprites {
+  const pixelRatio = opts.pixelRatio ?? PixelRatio.get();
   const objectCount = opts.groups.reduce((sum, g) => sum + g.count, 0);
   const armorValues = armorBadges(opts.groups);
   const armoredRound = armorValues.length > 0;
   const badgeValues = opts.boss ? opts.boss.badges : armorValues;
   const ryPt = spriteRadius(objectCount, opts.width, opts.height);
   const biggest = ryPt * (armoredRound ? ARMOR_SIZE_SCALE : 1);
-  const density = ringDensity(PixelRatio.get(), biggest);
-  const fxScale = fxDensity(PixelRatio.get());
+  const density = ringDensity(pixelRatio, biggest);
+  const fxScale = fxDensity(pixelRatio);
   const glyphPt = fillGrid(opts.fill.glyphs, opts.width, opts.height).size;
   const c = bakeColors(opts.look);
   const rows = {
@@ -370,7 +373,7 @@ export function bakeSprites(opts: {
     fx: fxCells(fxScale),
     glyph: [glyphCell(Math.min(glyphPt * fxScale, GLYPH_MAX_PX), opts.font, opts.fill.glyphs <= GLYPH_GLOW_MAX)],
     pieceBadges: (opts.mode === 'orbit' ? pieceBadges(opts.groups) : []).map((v) => badgeCell(v, opts.font, fxScale)),
-    boss: opts.boss ? bossCells(opts.width, opts.height, c.palette) : [],
+    boss: opts.boss ? bossCells(opts.width, opts.height, c.palette, pixelRatio) : [],
   };
   const { picture, sprites, width, height } = pack(Object.values(rows));
   const [zero = [], armored = [], roundBadges = [], bullets = [], fx = [], glyphs = [], pieces = [], bossRow = []] = sprites;
@@ -384,9 +387,9 @@ export function bakeSprites(opts: {
 }
 
 /** The boss's ring, armored, in the flare slot's color, and its fg ring for hit flashes, at the boss's size. */
-function bossCells(width: number, height: number, palette: readonly string[]): Cell[] {
+function bossCells(width: number, height: number, palette: readonly string[], pixelRatio: number): Cell[] {
   const ryPt = bossSpriteRadius(width, height);
-  const ry = ryPt * bossRingDensity(PixelRatio.get(), ryPt);
+  const ry = ryPt * bossRingDensity(pixelRatio, ryPt);
   return [ringCell(ry, palette[FLARE] ?? colors.flare, true), ringCell(ry, palette[FG] ?? colors.fg, true)];
 }
 
