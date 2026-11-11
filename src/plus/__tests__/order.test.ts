@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 
-import type { GoalState } from '@/engine';
+import { startBreak, type GoalState } from '@/engine';
 import { answerDay, at, DAY0, DENVER, NEW_YORK, newGoal, TOKYO, yesDays } from '@/engine/__tests__/fixtures';
 import type { GoalSlot, RoundRecord } from '@/store';
 
@@ -67,5 +67,18 @@ describe("Home's order with several goals (SPEC 9)", () => {
       ['b', at('2026-10-15', '19:00')],
     ]);
     expect(cards.boundary).toBe(at('2026-10-15', '19:00').getTime());
+  });
+
+  it('says a goal is on a break, and wakes at midnight while it is, for its words change with the day', () => {
+    const r = startBreak({ ...yesDays(newGoal(), DAY0, 2), goalId: 'a' }, '2026-10-20', at('2026-10-15', '12:00'), DENVER);
+    if (!r.ok) throw new Error(r.reason);
+    const on = homeCards([slot(r.state)], at('2026-10-17', '12:00'));
+    expect(on.later[0]?.onBreak?.when).toBe('on');
+    expect(on.later[0]?.next.day).toBe('2026-10-21');
+    expect(on.boundary).toBe(at('2026-10-18', '00:00').getTime());
+    // Its days are over, so the goal waits for its next check-in, as any other.
+    const over = homeCards([slot(r.state)], at('2026-10-21', '12:00'));
+    expect(over.later[0]?.onBreak).toBeNull();
+    expect(over.boundary).toBe(at('2026-10-21', '20:00').getTime());
   });
 });
