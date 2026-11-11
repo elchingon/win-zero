@@ -213,6 +213,7 @@ export function compareHtml(facts: Facts): string {
   const icons = (l: LimitsModule.Limits) => (l.iconsEnabled ? 'One for each theme' : 'One');
   const headStart = (l: LimitsModule.Limits) => (l.headStartMax > 0 ? `Up to ${l.headStartMax} days` : NO);
   const comebacks = (l: LimitsModule.Limits) => (l.comebacks ? YES : NO);
+  const breaks = (l: LimitsModule.Limits) => (l.breaks ? `Up to ${engine.BREAK_MAX_DAYS} days` : NO);
   const pastGoals = (l: LimitsModule.Limits) => (l.maxGoals > 1 ? YES : NO);
   const rows: [string, string, string][] = [
     ['Price', 'Free', `${price(APPS.plus)}, once`],
@@ -220,6 +221,7 @@ export function compareHtml(facts: Facts): string {
     ['Check-in days', days(free), days(plus)],
     ['Start with days already done', headStart(free), headStart(plus)],
     ['A win-back round when you come back', comebacks(free), comebacks(plus)],
+    ['A break for travel or illness, with nothing lost', breaks(free), breaks(plus)],
     ['Past goals, with what each accomplished', pastGoals(free), pastGoals(plus)],
     ['Arcade games', games(free), games(plus)],
     ['Power-ups', `${capital(words(engine.WEAPONS.length))} weapons`, `${capital(words(shooter.tiers.length))} in each game`],
@@ -417,6 +419,13 @@ export function plusFaqs(facts: Facts): Faq[] {
         'theme. The streak follows the same gentle rules as always.',
     },
     {
+      q: 'Can I pause a goal while I travel or when I am unwell?',
+      a:
+        `Yes. A goal can take a break of up to ${engine.BREAK_MAX_DAYS} days. There are no check-ins or reminders on ` +
+        'those days, and nothing is gained or lost. Back early? Resume whenever you like. Missed check-ins from just ' +
+        'before a break still count when it ends, so the rules stay the same for everyone.',
+    },
+    {
       q: 'What happens to a goal when I am done with it?',
       a:
         `Once a goal has reached ${engine.ARCHIVE_MIN_BEST} zeros, you can archive it. It stops its reminders and frees ` +
@@ -548,8 +557,9 @@ export function llmsTxt(facts: Facts): string {
     `- Plus games: ${list(engine.MODES.map((m) => m.name))}. Plus themes: ${list(t.fromStart)} from the start; ` +
       `${list([...t.earned.map((th) => `${th.name} at a best run of ${th.unlockAt} days`), ...t.comeback.map((name) => `${name} for coming back after starting over`)])}.`,
     `- Plus can start a goal with up to ${limits.PLUS_LIMITS.headStartMax} days already done, welcomes a Yes after ` +
-      `${words(engine.COMEBACK_MIN_GAP)} or more check-ins without one with a free win-back round, and keeps archived goals ` +
-      'under Past goals with what each accomplished.',
+      `${words(engine.COMEBACK_MIN_GAP)} or more check-ins without one with a free win-back round, lets a goal take a ` +
+      `break of up to ${engine.BREAK_MAX_DAYS} days with nothing lost, and keeps archived goals under Past goals with what ` +
+      'each accomplished.',
     '- Win Zero users can move their goal, history, streak, rewards and credits to Plus on the same phone, without a server.',
     '- A browser version at https://winzero.app/play has the check-in, rules, rewards and round, without reminders.',
     '- Support with drinking, drugs or mental health (US): the SAMHSA National Helpline, 1-800-662-4357, free, confidential and open 24/7.',

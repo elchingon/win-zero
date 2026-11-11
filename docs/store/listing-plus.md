@@ -31,7 +31,7 @@ Habit tracker, goals & games
 Track up to three habits on the days you choose. Play five arcade games and earn themes as you progress. Pay once, with no ads, subscription or account.
 ```
 
-### Description (4000 max): 3382
+### Description (4000 max): 3479
 ```
 Track up to three habits on your own schedule, and turn each Yes into an arcade round. Win Zero Plus is a habit tracker with daily reminders, five games, and themes to earn as your best streak grows.
 
@@ -46,6 +46,7 @@ UP TO THREE GOALS
 CHECK-IN DAYS
 • Pick the days each goal checks in: every day, weekdays, or any mix.
 • Rest days are just rest. Nothing is gained or lost on them.
+• Traveling or unwell? Give a goal a break of up to 14 days, with no check-ins and nothing lost.
 
 FIVE ARCADE GAMES
 • Play each round as Shooter, Catch, Orbit, Slice or Breaker, and pick your game before every new round.
@@ -131,7 +132,7 @@ Win Zero Plus: Habit Tracker
 Track 3 habits on your schedule. Turn check-ins into 5 arcade games. Pay once.
 ```
 
-### Full description (4000 max): 3571
+### Full description (4000 max): 3668
 ```
 Track up to three habits on your own schedule, and turn each Yes into an arcade round. Win Zero Plus is a habit tracker with daily reminders, five games, and themes to earn as your best streak grows.
 
@@ -146,6 +147,7 @@ UP TO THREE GOALS
 CHECK-IN DAYS
 • Pick the days each goal checks in: every day, weekdays, or any mix.
 • Rest days are just rest. Nothing is gained or lost on them.
+• Traveling or unwell? Give a goal a break of up to 14 days, with no check-ins and nothing lost.
 
 FIVE ARCADE GAMES
 • Play each round as Shooter, Catch, Orbit, Slice or Breaker, and pick your game before every new round.

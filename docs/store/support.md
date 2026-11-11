@@ -56,7 +56,7 @@ is free, confidential and open 24/7 in the US: **1-800-662-4357**. The number is
 - **Check Focus or Do Not Disturb.** These can hide reminders.
 - **On Android**, reminders can arrive a few minutes late. Android groups alarms to save battery.
   If they're much later than that, turn off battery optimization for Win Zero.
-- **After a long break**, daily reminders pause. Win Zero sends one gentle reminder a week instead
+- **After a long stretch without a check-in**, daily reminders pause. Win Zero sends one gentle reminder a week instead
   (you can turn that off in Settings). Answering any check-in turns daily reminders back on.
 
 ## Changing your goal or times
@@ -128,6 +128,17 @@ account. Win Zero stays free and complete.
 - **Reminders** come for each goal, with their own Yes and Not today. With **Goal in reminders**
   off, a reminder calls a goal by its **Lock-screen name** if you set one, or by its place ("your
   second goal").
+
+### Taking a break
+
+- **Traveling or unwell?** Open the goal (from **Settings**, or **Edit** on Home) and tap **Take a
+  break**: 3 days, a week, two weeks, or any number of days up to 14. There are no check-ins or
+  reminders on those days, and nothing is gained or lost.
+- It starts from the next check-in that hasn't opened yet. One that's open already stays open, so
+  answer it as usual.
+- Missed check-ins from just before a break still count when it ends, toward the first 7 free ones.
+- Back early? **Resume now** brings today's check-in back. Need longer? Add days, up to 14 in all,
+  until the check-in after it opens. After that check-in, you can take another break.
 
 ### A head start
 

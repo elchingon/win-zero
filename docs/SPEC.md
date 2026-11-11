@@ -1,6 +1,6 @@
 # Win Zero: Product & Game Spec
 
-Version 0.8 · November 9, 2026 · Owner: e7sal
+Version 0.9 · November 11, 2026 · Owner: e7sal
 
 Win Zero is a daily habit app for iOS and Android. The user sets one daily goal (for example "Stop drinking" or "Exercise more"); Win Zero Plus allows up to three (section 9). Every day, at a check-in time the user picks, the app asks whether they did it. Each "yes" adds a zero to a shooting round. The streak is the number of zeros on screen.
 
@@ -25,6 +25,8 @@ Each goal day `D` has one answer window. It is generous on purpose: this is a su
 - **Closes:** midnight at the end of day `D+1`, on the clock in the time zone the window opened in. It never closes before day `D+1`'s window opens.
 
 With the defaults, Monday can be answered from 8:00 PM Monday until midnight Tuesday night. If a window closes unanswered, day `D` is **missed** (see section 3).
+
+A day on a goal's break (Win Zero Plus, section 9) has no window, as a rest day has none; the window before it still closes at midnight at the end of the next day.
 
 Day `D+1`'s window opens at its own check-in time, so the two overlap until midnight. Days still settle strictly in order: Home asks about the earliest open day first, then the next. While yesterday is still open, today's check-in notification has no Yes / Not today buttons (a Yes couldn't say which day it means). Tapping it opens Home. Once yesterday is answered, today's is rescheduled with its buttons.
 
@@ -63,6 +65,7 @@ Notes:
 - A shield is only spent when there's a streak to protect, and never on an ordinary slip.
 - Bombs and shields are only granted above the run's previous peak, so slipping and climbing back can't earn the same milestone twice.
 - `bestStreak` never decreases. It drives weapon unlocks.
+- A break's days (section 9) aren't check-in days: nothing settles on them, and `consecutiveMissed` and `slide` carry over a break unchanged.
 - Missed days are resolved lazily. On app open, on notification response, or in a background task, run `resolve(state, now)` to walk every closed window since the last resolution. It must be idempotent and handle the app being closed for weeks.
 - All date math uses the user's local timezone and must survive DST changes and travel. Store the timezone with each history entry.
 
@@ -174,7 +177,7 @@ Accounts and cloud sync, leaderboards, IAP. Multiple goals, weekday schedules, g
 Win Zero Plus is a second app built from this codebase as a build variant: its own name, bundle id (`com.e7systems.winzeroplus`), URL scheme (`winzeroplus`) and icon. It is **paid upfront**. Neither app has in-app purchases, ads or accounts, and both collect no data. Free Win Zero stays complete and free forever: one goal, every rule, the full arsenal and the Shooter.
 
 Guardrails for both apps:
-- Plus changes no rule. Each Plus goal follows sections 2–5 exactly; themes and modes never touch `rules.ts`, `resolve.ts` or `rewards.ts`. A head start records its days through the same Yes rule, and comebacks are read from history (`headStart.ts`, `comeback.ts`).
+- Plus changes no rule but one. Each Plus goal follows sections 2–5 exactly; themes and modes never touch `rules.ts`, `resolve.ts` or `rewards.ts`. A head start records its days through the same Yes rule, and comebacks are read from history (`headStart.ts`, `comeback.ts`). A break (below) is the one rule Plus adds: its days are left out of a goal's check-in days (`goalDays.ts`, `breaks.ts`), as rest days are, so the rule files still don't change.
 - Nothing is for sale inside either app. Once Plus is on the store, the free app offers it in only two places: a small "+" beside Home's goal heading, which opens a card saying what Plus adds, and Settings › Win Zero Plus. Never on the Slipping, Reset, Shielded, Notice or support screens, and never with badges or nags: the card opens only from the "+", and starts closed each time.
 - Plus is never on an older store version (`STORE_VERSION`) than the free app, so a move from the free app can always be read.
 
@@ -185,6 +188,15 @@ Guardrails for both apps:
 - The 7 free missed days, and the slips after them, count check-in days. For a goal that isn't every day, the copy says "7 check-ins" rather than "a week".
 - Changing the days takes effect from the next check-in day that hasn't opened yet. It never rewrites a settled day or closes an open window early.
 - The history calendar shows rest days with a muted mark.
+
+### Breaks
+- A goal can take a **break** for travel or illness, from its screen (or Settings, with one goal): **Take a break** for 3 days, a week, two weeks, or a typed number of days up to 14 (`BREAK_MAX_DAYS`, calendar days from its first).
+- It starts on the next check-in day that hasn't opened yet. A check-in already open stays open and is answered as usual; the field says so, says when the break starts, and when check-ins come back.
+- A break's days work like rest days: no window, no reminders, no history entry, nothing gained or lost. A run of missed days already counting carries over it: misses before and after a break count together toward the 7 free ones, and a slip's place in the slide stays as it was.
+- Its end can move until the first check-in after it opens: later, up to 14 days from its first, or earlier, to yesterday at the earliest, since days already over never change. **Resume now** ends it with yesterday, so today checks in again, straight away if its check-in time has passed. One that hasn't started yet can be cancelled. A new break can start only once a check-in has opened since the last one, so breaks never run back to back.
+- Home says “Run” is on a break through Sun, Nov 22, and when check-ins come back, with **Resume now**, in place of that goal's next check-in. The history calendar marks a break's days with two bars ("On a break"), those still to come too. How it works explains breaks.
+- "In a row" (section 5) and comebacks read history only, so a break doesn't end a run of Yeses in a row, and isn't a comeback's gap. Weekly nudges skip a break's days, and one lands on the first check-in after a long one. Past goals counts the days a goal spent on a break.
+- The reset's notes say "after a long stretch without a check-in", never "a long break", so the two aren't confused.
 
 ### Multiple goals
 - Up to 3 goals. Each has its own wording, check-in and reminder times, days, streak, best run, bombs, shields, history, round and notices.
