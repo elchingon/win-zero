@@ -63,6 +63,7 @@ How it relates to Win Zero: Win Zero (Apple ID 6823793298) is our free daily che
 - four more games besides the Shooter (Catch, Orbit, Slice and Breaker), picked before each round
 - eight color themes, with matching alternate app icons
 - a head start of days already done, a free win-back round after a comeback, and Past goals that keep what each goal accomplished
+- milestones shared as a picture of the round (made on the device; Save Image adds it to Photos, the app's only Photos access, add-only)
 Win Zero offers an optional one-way move of a user's data into Plus (Win Zero: Settings > About). It happens on the device through an App Group the two apps share (group.com.e7systems.winzero); nothing goes to a server. Plus can be reviewed without Win Zero installed.
 
 To see Plus quickly:
@@ -135,6 +136,10 @@ Expected to match Win Zero; inspect the final merged manifest and Play permissio
 - receive boot completed (to keep scheduled reminders after a restart)
 - internet
 - modify audio settings (sound effects)
+
+Sharing a milestone card needs no permission: the image is handed to the chooser by a content URI
+from the app's own cache (expo-file-system's FileProvider), with read access granted to the app the
+user picks. On iPhone, `NSPhotoLibraryAddUsageDescription` covers Save Image (add-only).
 
 The storage and overlay permissions from the Expo template are removed (`blockedPermissions` in
 `app.json`, shared by both apps). The alternate app icons add launcher entries (activity aliases),
