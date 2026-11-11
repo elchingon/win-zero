@@ -71,6 +71,11 @@ describe('round labels', () => {
       'BONUS',
       'PRACTICE',
     ]);
+    expect([hudLabel('real', 30, { boss: true }), hudLabel('replay', 7, { boss: true }), hudLabel('practice', 7, { boss: true })]).toEqual([
+      'BOSS · DAY 30',
+      'BOSS · DAY 7',
+      'PRACTICE',
+    ]);
     expect(sheetEyebrow('real', 30, goal)).toBe('Day 30 · Stop drinking');
     expect(sheetEyebrow('replay', 30, null)).toBe('Day 30');
     expect(sheetEyebrow('bonus', 250, goal)).toBe('Bonus round');
@@ -124,6 +129,22 @@ describe('resultLines', () => {
     // The credit was spent on this very round before it began.
     expect(texts(3, 'real', record([grant('weapon', 'yes-run-3')]), goal, wallet(0, 0))).toContain(
       'Weapon credit earned for 3 Yeses in a row. You have 0.',
+    );
+  });
+
+  it("leads a boss round's sheet with the boss beaten (SPEC 4)", () => {
+    const seven = yesDays(newGoal(), DAY0, 7);
+    const boss: RoundRecord = {
+      day: '2026-10-19',
+      n: 7,
+      rewards: { bomb: false, shield: true, shieldCapped: false, weapons: ['scatter'], credits: [] },
+      borrowed: [],
+      played: false,
+    };
+    expect(resultLines(7, 'real', boss, seven, wallet(0, 0))[0]).toEqual({ text: 'You beat the Day 7 boss.', news: true });
+    expect(texts(7, 'replay', boss, seven, wallet(0, 0))).not.toContain('You beat the Day 7 boss.');
+    expect(texts(30, 'real', { ...boss, n: 30, rewards: { ...boss.rewards, shield: false } }, seven, wallet(0, 0))).not.toContain(
+      'You beat the Day 30 boss.',
     );
   });
 

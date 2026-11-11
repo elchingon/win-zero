@@ -1443,6 +1443,15 @@ a {
   margin-top: 4px;
 }
 
+.hud-phase {
+  margin: 4px 0 0;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.09em;
+  color: var(--flare);
+}
+
 .meter {
   margin: 4px 0 0;
   font-family: var(--font-mono);

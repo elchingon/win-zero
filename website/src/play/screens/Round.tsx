@@ -10,12 +10,22 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { Navigate, useSearchParams } from 'react-router';
 
 import { parseCount, PRACTICE_BEST, PRACTICE_BOMBS, PRACTICE_MAX_N } from '@/dev/demo';
-import { composeRound, equippedWeapon, fillPlan, roundWeapons, weaponCreditOffer, type WeaponId } from '@/engine';
+import {
+  bossGroups,
+  bossRoundFor,
+  composeRound,
+  equippedWeapon,
+  fillPlan,
+  roundWeapons,
+  weaponCreditOffer,
+  type WeaponId,
+} from '@/engine';
 import { makeCues } from '@/game/cues';
 import { hudLabel, replayMode, revealedCredits, roundOverlay, type ResultMode } from '@/game/result';
 import type { Report } from '@/game/sim/types';
 import { arsenalBestOf, primarySlot, slotById, totalBombs } from '@/store/select';
 import type { CreditRound, RoundRecord } from '@/store/types';
+import { BOSS_COPY } from '@/ui/copy/boss';
 import { creditReveal } from '@/ui/copy/credits';
 
 import { CheerPopup } from '../game/CheerPopup';
@@ -145,13 +155,18 @@ function Play(props: {
   const weapon = useMemo(() => equippedWeapon(pick, best, borrowed), [pick, best, borrowed]);
   const weapons = useMemo(() => roundWeapons(best, borrowed), [best, borrowed]);
 
-  const groups = useMemo(() => composeRound(n).groups, [n]);
+  // A boss round (SPEC 4): the day's round, and its replays, when its Yes set a new high on a boss day.
+  const boss = useMemo(() => (record ? bossRoundFor(record, 'shooter') : null), [record]);
+  const groups = useMemo(() => (boss ? bossGroups(boss) : composeRound(n).groups), [n, boss]);
   const fill = useMemo(() => fillPlan(n), [n]);
   const [seed, setSeed] = useState(newSeed);
-  const round = useMemo<RoundSetup>(() => ({ n, groups, fill, seed }), [n, groups, fill, seed]);
+  const round = useMemo<RoundSetup>(() => ({ n, groups, fill, seed, ...(boss ? { boss } : {}) }), [n, groups, fill, seed, boss]);
+  const phases = boss?.stages.length ?? 0;
 
   const game = useRef<GameHandle>(null);
   const [left, setLeft] = useState(n);
+  // The boss's phase, from 0, as the round reports it.
+  const [phase, setPhase] = useState(0);
   const [over, setOver] = useState(false);
   const [landed, setLanded] = useState(false);
   const [cheered, setCheered] = useState(false);
@@ -188,6 +203,7 @@ function Play(props: {
     (r: Report) => {
       if (r.seed !== seedRef.current) return;
       setLeft(r.valueLeft);
+      setPhase(r.bossStage);
       if (r.final) setOver(true);
       if (r.showResult) setLanded(true);
       const c = cues(r, performance.now());
@@ -216,6 +232,14 @@ function Play(props: {
     if (over) announce('Round cleared.');
   }, [over]);
 
+  // A boss is seen, so a screen reader hears what it does as it opens, and each phase as it breaks.
+  useEffect(() => {
+    if (phases > 0) announce(BOSS_COPY.intro(n, phases));
+  }, [phases, n, seed]);
+  useEffect(() => {
+    if (phase > 0) announce(BOSS_COPY.broke(phase + 1, phases));
+  }, [phase, phases]);
+
   /** Finish round: the game is visual, so a keyboard or screen reader can clear it in one go. */
   const finish = () => {
     if (!over) game.current?.finishAll();
@@ -231,6 +255,7 @@ function Play(props: {
     setSeed(next);
     setMode(replayMode(mode));
     setLeft(n);
+    setPhase(0);
     setOver(false);
     setLanded(false);
     setCheered(false);
@@ -255,7 +280,7 @@ function Play(props: {
     else appStore.getState().selectWeapon(next.id);
   };
 
-  const name = mode === 'practice' ? 'Practice round' : mode === 'bonus' ? 'Bonus round' : `Day ${n} round`;
+  const name = mode === 'practice' ? 'Practice round' : mode === 'bonus' ? 'Bonus round' : boss ? `Day ${n} boss round` : `Day ${n} round`;
 
   return (
     <main className="round" aria-label={name}>
@@ -277,7 +302,7 @@ function Play(props: {
         <Hud
           left={left}
           total={n}
-          label={hudLabel(mode, n)}
+          label={hudLabel(mode, n, { boss: boss !== null })}
           weaponName={weapon.name}
           canSwitch={weapons.length > 1}
           onSwitchWeapon={switchWeapon}
@@ -291,9 +316,12 @@ function Play(props: {
           hintKey={seed}
           onFinish={finish}
           extra={
-            mode === 'practice' ? (
-              <p className="meter">{stats ? `${stats.fps.toFixed(0)} FPS · WORST ${stats.worstMs.toFixed(1)} MS · ${stats.pixelRatio}×` : 'MEASURING…'}</p>
-            ) : null
+            <>
+              {boss ? <p className="hud-phase">{BOSS_COPY.phase(phase + 1, phases)}</p> : null}
+              {mode === 'practice' ? (
+                <p className="meter">{stats ? `${stats.fps.toFixed(0)} FPS · WORST ${stats.worstMs.toFixed(1)} MS · ${stats.pixelRatio}×` : 'MEASURING…'}</p>
+              ) : null}
+            </>
           }
         />
       )}

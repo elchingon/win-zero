@@ -19,6 +19,11 @@ describe('makeGate', () => {
 });
 
 describe('cues', () => {
+  it("booms and buzzes like a bomb when a boss's phase breaks (SPEC 4), without a pop on top", () => {
+    const c = makeCues()(report({ bossBreaks: 1, hits: 1 }), 0);
+    expect(c).toMatchObject({ boom: true, pop: false, bombHaptic: true, boomHaptic: false });
+  });
+
   it('fires a shot sound per frame with shots', () => {
     const cues = makeCues();
     expect(cues(report({ shots: 2 }), 0).shoot).toBe(true);

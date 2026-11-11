@@ -6,6 +6,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { act, renderRouter, fireEvent, screen } from 'expo-router/testing-library';
+import { AccessibilityInfo } from 'react-native';
 
 import PlayScreen from '@/app/play';
 import { weaponById, type CreditGrant, type CreditWallet, type WeaponId } from '@/engine';
@@ -18,7 +19,7 @@ import { WEAPON_PROMPT } from '@/ui/copy/credits';
 jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock'));
 jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
-const mockRounds: { n: number; mode?: string; autoFire?: boolean; look: ThemeLook; reduceMotion: boolean }[] = [];
+const mockRounds: { n: number; mode?: string; autoFire?: boolean; look: ThemeLook; reduceMotion: boolean; boss?: object; groups?: object }[] = [];
 /** Clears the round on the canvas: its last zero goes, and the fill lands. */
 const mockCanvas: { clear: () => void } = { clear: () => {} };
 jest.mock('@/game/GameCanvas', () => {
@@ -27,7 +28,7 @@ jest.mock('@/game/GameCanvas', () => {
   return {
     GameCanvas: (props: {
       weapon: { name: string };
-      round: { n: number; mode?: string; autoFire?: boolean; seed: number };
+      round: { n: number; mode?: string; autoFire?: boolean; seed: number; boss?: object; groups?: object };
       look: ThemeLook;
       reduceMotion: boolean;
       onReport: (r: object) => void;
@@ -35,7 +36,7 @@ jest.mock('@/game/GameCanvas', () => {
       const { weapon, round, look, reduceMotion, onReport } = props;
       mockRounds.push({ ...round, look, reduceMotion });
       mockCanvas.clear = () => {
-        const counts = { shots: 0, hits: 0, kills: 0, armoredKills: 0, blasts: 0, bombs: 0, bounces: 0, swishes: 0 };
+        const counts = { shots: 0, hits: 0, kills: 0, armoredKills: 0, blasts: 0, bombs: 0, bounces: 0, swishes: 0, bossStage: 0, bossBreaks: 0 };
         onReport({ seed: round.seed, dirty: true, valueLeft: 0, ...counts, final: true, showResult: false });
         onReport({ seed: round.seed, dirty: true, valueLeft: 0, ...counts, final: false, showResult: true });
       };
@@ -197,6 +198,63 @@ describe('a bonus round', () => {
   it('goes back to base when there is none', async () => {
     const app = await open('/play?round=bonus');
     expect(app.pathname()).toBe('/');
+  });
+});
+
+describe('boss rounds (SPEC 4)', () => {
+  // Day 7, a new high: its shield shows it.
+  const seven = yesDays(newGoal(), DAY0, 7);
+  const bossRound = (played = false): RoundRecord => ({
+    day: '2026-10-19',
+    n: 7,
+    rewards: { bomb: false, shield: true, shieldCapped: false, weapons: ['scatter'], credits: [] },
+    borrowed: [],
+    played,
+  });
+
+  it("plays a new high's Day 7 as its boss round, saying so on the HUD", async () => {
+    appStore.setState({ goals: [{ goal: seven, round: bossRound(), seenThrough: null }], credits: wallet(0) });
+    await open('/play');
+    expect(mockRounds.at(-1)).toMatchObject({ n: 7, boss: { n: 7 }, groups: [{ kind: 'boss', count: 1, value: 7 }] });
+    expect(screen.getByText('BOSS · DAY 7')).toBeOnTheScreen();
+    expect(screen.getByText('PHASE 1 OF 3')).toBeOnTheScreen();
+  });
+
+  it('plays its replay as a boss round too', async () => {
+    appStore.setState({ goals: [{ goal: seven, round: bossRound(true), seenThrough: null }], credits: wallet(0) });
+    await open('/play');
+    expect(mockRounds.at(-1)).toMatchObject({ boss: { n: 7 } });
+  });
+
+  it('plays an ordinary round without one', async () => {
+    appStore.setState({ goals: [{ goal, round: dayRound(), seenThrough: null }], credits: wallet(0) });
+    await open('/play');
+    expect(mockRounds.at(-1)).not.toHaveProperty('boss');
+    expect(screen.queryByText(/^BOSS/)).not.toBeOnTheScreen();
+    expect(screen.queryByText(/^PHASE/)).not.toBeOnTheScreen();
+  });
+
+  it('plays a practice boss round from its link, on a boss day only', async () => {
+    await open('/play?practice=30&boss=1');
+    expect(mockRounds.at(-1)).toMatchObject({ n: 30, boss: { n: 30 } });
+    mockRounds.length = 0;
+    await open('/play?practice=31&boss=1');
+    expect(mockRounds.at(-1)).not.toHaveProperty('boss');
+  });
+
+  it('tells a screen reader what the boss does as the round opens', async () => {
+    const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
+    announce.mockClear();
+    // Already a mock in jest, so restoreAllMocks leaves it: put it back by hand.
+    const reader = jest.spyOn(AccessibilityInfo, 'isScreenReaderEnabled').mockResolvedValue(true);
+    try {
+      appStore.setState({ goals: [{ goal: seven, round: bossRound(), seenThrough: null }], credits: wallet(0) });
+      await open('/play');
+      await act(async () => {});
+      expect(announce).toHaveBeenCalledWith('Day 7 boss. 3 phases. Each one it loses throws off a ring of small zeros.');
+    } finally {
+      reader.mockResolvedValue(false);
+    }
   });
 });
 

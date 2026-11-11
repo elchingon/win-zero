@@ -3,9 +3,11 @@
 // credit the Yes earned. A replay, a bonus round or
 // a practice round changes nothing, and says so. Also the round's labels, so the app and the
 // website name each kind of round the same. Shared by both. In Win Zero Plus (SPEC 9), power-ups
-// go by the game mode's names, and an earned theme is announced like a weapon.
+// go by the game mode's names, and an earned theme is announced like a weapon. A boss round (SPEC 4)
+// says so on the HUD and leads its sheet with the boss beaten.
 import {
   addDays,
+  bossRoundFor,
   DEFAULT_MODE,
   nextGoalDay,
   nextUnlock,
@@ -19,6 +21,7 @@ import {
 } from '@/engine';
 import { plural } from '@/lib/format';
 import type { RoundRecord } from '@/store/types';
+import { BOSS_COPY } from '@/ui/copy/boss';
 import { creditEarned } from '@/ui/copy/credits';
 import { powerUp } from '@/ui/copy/modes';
 
@@ -43,11 +46,11 @@ export interface RoundWords {
   lede: string;
 }
 
-/** The HUD's label: 'DAY 30', 'BONUS' or 'PRACTICE'. */
-export function hudLabel(mode: ResultMode, n: number): string {
+/** The HUD's label: 'DAY 30', 'BOSS · DAY 30', 'BONUS' or 'PRACTICE'. */
+export function hudLabel(mode: ResultMode, n: number, { boss = false }: { boss?: boolean } = {}): string {
   if (mode === 'practice') return 'PRACTICE';
   if (mode === 'bonus') return 'BONUS';
-  return `DAY ${n}`;
+  return boss ? BOSS_COPY.hud(n) : `DAY ${n}`;
 }
 
 /** Above "N zeros down": 'Day 30 · Stop drinking', 'Bonus round' or 'Practice'. */
@@ -119,6 +122,7 @@ export function resultLines(
   } else if (mode === 'replay') {
     lines.push({ text: "Replay: your streak and rewards don't change." });
   } else if (record && goal) {
+    if (bossRoundFor(record, gameMode)) lines.push({ text: BOSS_COPY.beat(n), news: true });
     for (const id of record.rewards.weapons) {
       const p = powerUp(gameMode, weaponById(id));
       lines.push({ text: `New ${p.kind} unlocked: ${p.name}.${p.description ? ` ${p.description}` : ''}`, news: true });

@@ -46,6 +46,21 @@ describe('milestoneShareText', () => {
     );
   });
 
+  it("says a boss round's boss was beaten (SPEC 4), on a new high only", () => {
+    expect(milestoneShareText(30, { ...none, weapons: ['chain'], bomb: true })).toBe(
+      'Day 30 on Win Zero: 30 zeros down. I beat the boss, unlocked the Chain Zapper and earned a bomb.',
+    );
+    expect(milestoneShareText(7, { ...none, shieldCapped: true })).toBe('Day 7 on Win Zero: 7 zeros down. I beat the boss.');
+    expect(milestoneShareText(7, { ...none, shield: true }, 'Win Zero Plus', 'catch')).toBe(
+      'Day 7 on Win Zero Plus: 7 zeros down. I beat the boss and earned a shield.',
+    );
+    expect(milestoneShareText(365, { ...none, bomb: true }, 'Win Zero Plus', 'breaker')).toBe(
+      'Day 365 on Win Zero Plus: 365 zeros down. I beat the boss and earned a bomb.',
+    );
+    // Climbing back to Day 30 within a run earns nothing, and has no boss.
+    expect(milestoneShareText(30, none)).toBeNull();
+  });
+
   it('has nothing to share for a round that earned nothing', () => {
     expect(milestoneShareText(4, none)).toBeNull();
     expect(milestoneShareText(21, { ...none, shieldCapped: true })).toBeNull(); // shields already full

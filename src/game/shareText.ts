@@ -1,10 +1,12 @@
 // The words for sharing a milestone round. A milestone is a Yes that earned something: a new
-// weapon, a bomb or a shield (credits aren't shared). The goal's wording is never in the text: it may be private
-// (someone working on sobriety shares a streak, not a reason). Shared by the app and the website.
-import { DEFAULT_MODE, weaponById, type ModeId, type WeaponId } from '@/engine';
+// weapon, a bomb or a shield (credits aren't shared), and a boss round's boss beaten (SPEC 4). The
+// goal's wording is never in the text: it may be private (someone working on sobriety shares a
+// streak, not a reason). Shared by the app and the website.
+import { bossRoundFor, DEFAULT_MODE, weaponById, type ModeId, type WeaponId } from '@/engine';
 import { formatCount, joinAnd } from '@/lib/format';
 import type { RoundRewards } from '@/store/types';
 import { FREE_APP_NAME } from '@/ui/copy/app';
+import { BOSS_COPY } from '@/ui/copy/boss';
 import { powerUp } from '@/ui/copy/modes';
 
 /**
@@ -33,9 +35,10 @@ export function milestoneShareText(
   const items = [...(rewards.bomb ? ['a bomb'] : []), ...(rewards.shield ? ['a shield'] : [])];
   const ups = rewards.weapons.length > 0 ? unlocked(mode, rewards.weapons) : null;
   const did = [
+    ...(bossRoundFor({ n, rewards }, mode) ? [BOSS_COPY.share] : []),
     ...(ups ? [`unlocked ${ups.words}${ups.aside && items.length > 0 ? ',' : ''}`] : []),
     ...(items.length > 0 ? [`earned ${joinAnd(items)}`] : []),
   ];
   if (did.length === 0) return null;
-  return `Day ${formatCount(n)} on ${appName}: ${formatCount(n)} ${n === 1 ? 'zero' : 'zeros'} down. I ${did.join(' and ')}.`;
+  return `Day ${formatCount(n)} on ${appName}: ${formatCount(n)} ${n === 1 ? 'zero' : 'zeros'} down. I ${joinAnd(did)}.`;
 }

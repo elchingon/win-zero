@@ -10,7 +10,7 @@ import { router } from 'expo-router';
 import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 
 import PlayScreen from '@/app/play';
-import { PLAYABLE_MODES, THEME_UNLOCK_EMBER } from '@/engine';
+import { bossPlan, PLAYABLE_MODES, THEME_UNLOCK_EMBER } from '@/engine';
 import { DAY0, newGoal, yesDays } from '@/engine/__tests__/fixtures';
 import { COMEBACK_CHEERS } from '@/plus/copy';
 import { appStore, primaryRound, type RoundRecord } from '@/store';
@@ -23,7 +23,7 @@ import { MODE_COPY } from '@/ui/copy/modes';
 jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock'));
 jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
-const mockRounds: { n: number; mode?: string; look: ThemeLook }[] = [];
+const mockRounds: { n: number; mode?: string; look: ThemeLook; boss?: { stages: { hp: number }[] } }[] = [];
 /** Clears the round on the canvas: its last zero goes, and the fill lands. */
 const mockCanvas: { clear: () => void } = { clear: () => {} };
 jest.mock('@/game/GameCanvas', () => {
@@ -34,7 +34,7 @@ jest.mock('@/game/GameCanvas', () => {
       const { round, onReport } = props;
       mockRounds.push({ ...round, look: props.look });
       mockCanvas.clear = () => {
-        const counts = { shots: 0, hits: 0, kills: 0, armoredKills: 0, blasts: 0, bombs: 0, bounces: 0, swishes: 0 };
+        const counts = { shots: 0, hits: 0, kills: 0, armoredKills: 0, blasts: 0, bombs: 0, bounces: 0, swishes: 0, bossStage: 0, bossBreaks: 0 };
         onReport({ seed: round.seed, dirty: true, valueLeft: 0, ...counts, final: true, showResult: false });
         onReport({ seed: round.seed, dirty: true, valueLeft: 0, ...counts, final: false, showResult: true });
       };
@@ -192,6 +192,26 @@ describe('the game mode in Win Zero Plus (SPEC 9)', () => {
     expect(mockRounds.at(-1)?.n).toBe(60);
     expect(mockRounds.every((r) => r.mode === 'shooter')).toBe(true);
     expect(appStore.getState().gameMode).toBeNull();
+  });
+});
+
+describe('a boss round in Win Zero Plus (SPEC 4)', () => {
+  it("fights the boss in the game picked, with that game's HP", async () => {
+    const seven: RoundRecord = { ...dayRound, n: 7, rewards: { ...dayRound.rewards, shield: true, weapons: ['scatter'] } };
+    appStore.setState({ goals: [{ goal: yesDays(newGoal(), DAY0, 7), round: seven, seenThrough: null }], gameMode: 'catch' });
+    await open('/play');
+    await pickLast();
+    expect(mockRounds.at(-1)?.mode).toBe('catch');
+    expect(mockRounds.at(-1)?.boss?.stages.map((st) => st.hp)).toEqual(bossPlan(7, 'catch').stages.map((st) => st.hp));
+    expect(screen.getByText('BOSS · DAY 7')).toBeOnTheScreen();
+  });
+
+  it('never makes the win-back round a boss round, whatever its size', async () => {
+    appStore.setState({ winBack: { goalId: 'g1', day: '2026-10-15', n: 30, borrowed: [], played: false } });
+    await open('/play?round=winback');
+    await pickLast();
+    expect(mockRounds.at(-1)).not.toHaveProperty('boss');
+    expect(screen.getByText('COMEBACK')).toBeOnTheScreen();
   });
 });
 

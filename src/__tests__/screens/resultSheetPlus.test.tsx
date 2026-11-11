@@ -58,7 +58,7 @@ describe('the result sheet in Win Zero Plus', () => {
     );
     await fireEvent.press(screen.getByRole('button', { name: /Share/ }));
     expect(share).toHaveBeenCalledWith({
-      message: 'Day 30 on Win Zero Plus: 30 zeros down. I unlocked a new catcher, Chain Catch, and earned a bomb.',
+      message: 'Day 30 on Win Zero Plus: 30 zeros down. I beat the boss, unlocked a new catcher, Chain Catch, and earned a bomb.',
     });
   });
 });

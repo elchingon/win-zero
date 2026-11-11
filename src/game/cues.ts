@@ -38,19 +38,23 @@ export function makeGate(minMs: number): (nowMs: number) => boolean {
 
 type CueSheet = (report: Report, nowMs: number) => Cues;
 
-/** The Shooter's sounds: a shot per frame that fires, pops for kills, a boom for bombs and the end. */
+/**
+ * The Shooter's sounds: a shot per frame that fires, pops for kills, a boom for bombs, a boss's
+ * broken phase and the end.
+ */
 function shooterCues(): CueSheet {
   const popGate = makeGate(POP_MIN_MS);
   const killGate = makeGate(KILL_HAPTIC_MIN_MS);
   return (r, nowMs) => {
-    // The last zero and bombs get the boom; their kills don't pop on top of it.
-    const big = r.final || r.bombs > 0;
+    // The last zero, bombs and a boss's phase get the boom; their kills don't pop on top of it.
+    const blast = r.bombs > 0 || r.bossBreaks > 0;
+    const big = r.final || blast;
     return {
       shoot: r.shots > 0,
       boom: big,
       pop: !big && (r.kills > 0 || r.blasts > 0) && popGate(nowMs),
       killHaptic: !big && r.kills > 0 && killGate(nowMs),
-      bombHaptic: r.bombs > 0 && !r.final,
+      bombHaptic: blast && !r.final,
       boomHaptic: r.final,
     };
   };

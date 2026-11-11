@@ -3,6 +3,7 @@
 // website; the website has no notifications, so How it works leaves those lines out there.
 import {
   BOMB_EVERY,
+  BOSS_DAYS,
   clockMinutes,
   MISSED_GRACE_DAYS,
   SHIELD_CAP,
@@ -12,6 +13,8 @@ import {
   type ClockTime,
 } from '@/engine';
 import { UNDO_MS } from '@/store/createAppStore';
+
+import { joinAnd } from '@/lib/format';
 
 import { FREE_APP_NAME } from './app';
 import { CREDIT_USES, creditsEarnedBy } from './credits';
@@ -110,6 +113,7 @@ export function howItWorks({
       body: [
         'Each Yes adds a zero to your streak and opens a round with that many zeros to shoot. The last one goes out with a big explosion.',
         "Rewards are banked the moment you say Yes: they're yours whether you play the round now, later, or not at all. An unplayed round waits on Home until the next day's check-in is answered or closes.",
+        `Reaching Day ${joinAnd(BOSS_DAYS.map(String))} for the first time in a run brings a boss round: one huge zero that breaks in phases, each one throwing off a ring of small zeros to clear before you can hit it again.`,
       ],
     },
     {

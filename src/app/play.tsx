@@ -10,9 +10,10 @@
 // or for the game, before the round), which in Win Zero are always the Shooter and Classic.
 // Development builds, and release builds made with EXPO_PUBLIC_PERF_BUILD=1 (eas build
 // --profile perf), can open /play?practice=N to play any N with every weapon and a frame
-// meter, and nothing about the streak changes. In Win Zero Plus, /play?practice=N&theme=<id>
-// plays it in any theme, earned or not, and &mode=<id> in any game mode whose round is built,
-// without changing the saved pick.
+// meter, and nothing about the streak changes; &boss=1 makes a boss day's practice a boss round
+// (SPEC 4). In Win Zero Plus, /play?practice=N&theme=<id> plays it in any theme, earned or not, and
+// &mode=<id> in any game mode whose round is built, without changing the saved pick. A day's round
+// whose Yes set a new high on a boss day is a boss round, and so are its replays.
 import { Redirect, router, Stack, useLocalSearchParams, type ErrorBoundaryProps } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AccessibilityInfo, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -20,9 +21,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PRACTICE_BEST, PRACTICE_BOMBS, PRACTICE_MAX_N } from '@/dev/demo';
 import {
+  bossGroups,
+  bossPlan,
+  bossRoundFor,
   composeRound,
   equippedWeapon,
   fillPlan,
+  isBossDay,
   isModeId,
   isThemeId,
   modeTier,
@@ -42,6 +47,7 @@ import { ResultSheet, type ResultMode } from '@/game/ResultSheet';
 import { useSfx } from '@/game/sfx';
 import type { Report } from '@/game/sim/types';
 import { WeaponCreditPrompt } from '@/game/WeaponCreditPrompt';
+import { BOSS_COPY } from '@/ui/copy/boss';
 import {
   appStore,
   arsenalBestOf,
@@ -79,12 +85,13 @@ const newSeed = () => Math.floor(Math.random() * 2 ** 31);
 const NONE_BORROWED: WeaponId[] = [];
 
 export default function Play() {
-  const { practice, round, goal, theme, mode } = useLocalSearchParams<{
+  const { practice, round, goal, theme, mode, boss } = useLocalSearchParams<{
     practice?: string;
     round?: string;
     goal?: string;
     theme?: string;
     mode?: string;
+    boss?: string;
   }>();
   const practiceN = PRACTICE_ENABLED && practice ? Number(practice) : NaN;
   const isPractice = Number.isInteger(practiceN) && practiceN >= 1 && practiceN <= PRACTICE_MAX_N;
@@ -100,7 +107,7 @@ export default function Play() {
         <Round
           // A link to the screen already showing only changes its params, and a round reads its
           // mode and theme once: a practice link that names others starts a new round.
-          key={`${practiceN}:${practiceMode}:${practiceTheme}`}
+          key={`${practiceN}:${practiceMode}:${practiceTheme}:${boss}`}
           initialMode="practice"
           goalId={null}
           n={practiceN}
@@ -109,6 +116,7 @@ export default function Play() {
           borrowed={NONE_BORROWED}
           theme={practiceTheme}
           gameMode={practiceMode}
+          practiceBoss={boss === '1'}
         />
       ) : round === 'bonus' ? (
         <BonusStoreRound />
@@ -277,8 +285,10 @@ function Round(props: {
   words?: RoundWords;
   /** A bonus round's last zero went: the bonus round's own, unless given. */
   onFinish?: () => void;
+  /** A practice round on a boss day, played as its boss round (SPEC 4). */
+  practiceBoss?: boolean;
 }) {
-  const { initialMode, goalId, n, best, record, borrowed, theme, gameMode: linkMode, words, onFinish } = props;
+  const { initialMode, goalId, n, best, record, borrowed, theme, gameMode: linkMode, words, onFinish, practiceBoss } = props;
   // Replay turns a real round into a replay.
   const [mode, setMode] = useState(initialMode);
   const { width, height } = useWindowDimensions();
@@ -304,16 +314,35 @@ function Round(props: {
   // Settings › Accessibility, which can't change mid-round.
   const [autoFire] = useState(() => appStore.getState().prefs.autoFire);
 
-  const groups = useMemo(() => composeRound(n).groups, [n]);
+  // A boss round (SPEC 4): the day's round, and its replays, when its Yes set a new high on a boss day.
+  const boss = useMemo(() => {
+    if (initialMode === 'practice') return practiceBoss && isBossDay(n) ? bossPlan(n, gameMode) : null;
+    return record ? bossRoundFor(record, gameMode) : null;
+  }, [initialMode, practiceBoss, n, gameMode, record]);
+  const groups = useMemo(() => (boss ? bossGroups(boss) : composeRound(n).groups), [n, boss]);
   const fill = useMemo(() => fillPlan(n), [n]);
   const [seed, setSeed] = useState(newSeed);
   const round = useMemo<RoundSetup>(
-    () => ({ n, groups, fill, width, height, insetTop: insets.top, insetBottom: insets.bottom, seed, mode: gameMode, autoFire }),
-    [n, groups, fill, width, height, insets.top, insets.bottom, seed, gameMode, autoFire],
+    () => ({
+      n,
+      groups,
+      fill,
+      width,
+      height,
+      insetTop: insets.top,
+      insetBottom: insets.bottom,
+      seed,
+      mode: gameMode,
+      autoFire,
+      ...(boss ? { boss } : {}),
+    }),
+    [n, groups, fill, width, height, insets.top, insets.bottom, seed, gameMode, autoFire, boss],
   );
 
   const game = useRef<GameHandle>(null);
   const [left, setLeft] = useState(n);
+  // The boss's phase, from 0, as the round reports it.
+  const [phase, setPhase] = useState(0);
   const [over, setOver] = useState(false);
   const [landed, setLanded] = useState(false);
   const [cheered, setCheered] = useState(false);
@@ -336,6 +365,7 @@ function Round(props: {
     (r: Report) => {
       if (r.seed !== seedRef.current) return;
       setLeft(r.valueLeft);
+      setPhase(r.bossStage);
       if (r.final) setOver(true);
       if (r.showResult) setLanded(true);
       const c = cues(r, Date.now());
@@ -374,6 +404,15 @@ function Round(props: {
     if (over && screenReader) AccessibilityInfo.announceForAccessibility('Round cleared.');
   }, [over, screenReader]);
 
+  // A boss is seen, so a screen reader hears what it does as it opens, and each phase as it breaks.
+  const phases = boss?.stages.length ?? 0;
+  useEffect(() => {
+    if (screenReader && phases > 0) AccessibilityInfo.announceForAccessibility(BOSS_COPY.intro(n, phases));
+  }, [screenReader, phases, n, seed]);
+  useEffect(() => {
+    if (screenReader && phase > 0) AccessibilityInfo.announceForAccessibility(BOSS_COPY.broke(phase + 1, phases));
+  }, [screenReader, phase, phases]);
+
   /** Finish round: the game is visual, so a screen reader can clear it in one go. */
   const finish = () => {
     if (!over) game.current?.finishAll();
@@ -389,6 +428,7 @@ function Round(props: {
     setSeed(next);
     setMode(replayMode(mode));
     setLeft(n);
+    setPhase(0);
     setOver(false);
     setLanded(false);
     setCheered(false);
@@ -447,7 +487,7 @@ function Round(props: {
         <Hud
           left={left}
           total={n}
-          label={words?.hud ?? hudLabel(mode, n)}
+          label={words?.hud ?? hudLabel(mode, n, { boss: boss !== null })}
           mode={gameMode}
           autoFire={autoFire}
           tierName={modeTier(gameMode, weapon.id)}
@@ -463,11 +503,14 @@ function Round(props: {
           hintKey={seed}
           onFinish={finishButton ? finish : undefined}
           extra={
-            mode === 'practice' ? (
-              <Text style={styles.meter}>
-                {stats ? `${stats.fps.toFixed(0)} FPS · WORST ${stats.worstMs.toFixed(1)} MS` : 'MEASURING…'}
-              </Text>
-            ) : null
+            <>
+              {boss ? <Text style={styles.phase}>{BOSS_COPY.phase(phase + 1, phases)}</Text> : null}
+              {mode === 'practice' ? (
+                <Text style={styles.meter}>
+                  {stats ? `${stats.fps.toFixed(0)} FPS · WORST ${stats.worstMs.toFixed(1)} MS` : 'MEASURING…'}
+                </Text>
+              ) : null}
+            </>
           }
         />
       )}
@@ -478,4 +521,5 @@ function Round(props: {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.ink },
   meter: { marginTop: 4, fontFamily: fonts.monoSemiBold, fontSize: 11, letterSpacing: 1, color: colors.teal },
+  phase: { marginTop: 4, fontFamily: fonts.monoSemiBold, fontSize: 11, letterSpacing: 1, color: colors.flare },
 });
