@@ -9,6 +9,7 @@ import {
   goalRemoval,
   MILESTONES,
 } from '../accomplishments';
+import { startBreak } from '../breaks';
 import { addDays } from '../dates';
 import { createGoalWithHeadStart } from '../headStart';
 import { resolve } from '../resolve';
@@ -57,8 +58,17 @@ describe('goalAccomplishments', () => {
       answered: 14,
       comebacks: 1,
       shieldsUsed: 1,
+      breakDays: 0,
       milestones: [7, 14],
     });
+  });
+
+  it('counts the days it spent on a break', () => {
+    const r = startBreak(yesDays(newGoal(), DAY0, 3), addDays(DAY0, 9), at(addDays(DAY0, 3), '12:00'), DENVER);
+    if (!r.ok) throw new Error(r.reason);
+    const s = answerDay(r.state, addDays(DAY0, 10), 'yes').state;
+    expect(goalAccomplishments(s, addDays(DAY0, 5))).toMatchObject({ breakDays: 3 });
+    expect(goalAccomplishments(s, addDays(DAY0, 20))).toMatchObject({ breakDays: 7, yesDays: 4, days: 21 });
   });
 
   it('keeps the milestones a slide or a reset came after', () => {

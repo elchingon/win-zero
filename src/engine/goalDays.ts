@@ -1,7 +1,7 @@
 // Which calendar days are goal days: the days a goal checks in on (SPEC 9). Every day by default;
-// a weekday schedule leaves the other days as rest days, with no window and no effect. Everything
-// that steps from one goal day to the next (windows, catching up, reminders) goes through here,
-// never addDays(day, 1).
+// a weekday schedule leaves the other days as rest days, with no window and no effect, and so does a
+// break (breaks.ts). Everything that steps from one goal day to the next (windows, catching up,
+// reminders) goes through here, never addDays(day, 1).
 import { addDays, diffDays, weekdayOf } from './dates';
 import type { DayKey, GoalState, ScheduleEntry, Weekday } from './types';
 
@@ -42,9 +42,18 @@ export function latestScheduleEntry(state: GoalState): ScheduleEntry {
   return entry;
 }
 
-/** True when `day` has a check-in: it's on or after the goal's first day, and one of its days. */
+/** True when `day` falls in one of the goal's breaks (breaks.ts). */
+export function onBreak(state: GoalState, day: DayKey): boolean {
+  for (const b of state.breaks ?? []) if (b.from <= day && day <= b.to) return true;
+  return false;
+}
+
+/**
+ * True when `day` has a check-in: it's on or after the goal's first day, one of its days, and not
+ * on a break.
+ */
 export function isGoalDay(state: GoalState, day: DayKey): boolean {
-  if (day < state.firstDay) return false;
+  if (day < state.firstDay || onBreak(state, day)) return false;
   const days = scheduleEntryFor(state, day).days;
   return !days || days.includes(weekdayOf(day) as Weekday);
 }
@@ -61,8 +70,10 @@ export function isEveryDay(state: GoalState): boolean {
 
 /** The first goal day after `day`. */
 export function nextGoalDay(state: GoalState, day: DayKey): DayKey {
-  // Past the latest entry, a week always holds a goal day.
-  const limit = Math.max(0, diffDays(latestScheduleEntry(state).fromDay, day)) + 7;
+  // Past the latest entry and the last break, a week always holds a goal day.
+  const lastBreak = state.breaks?.[state.breaks.length - 1];
+  const limit =
+    Math.max(0, diffDays(latestScheduleEntry(state).fromDay, day), lastBreak ? diffDays(lastBreak.to, day) : 0) + 7;
   let d = addDays(day, 1);
   for (let i = 0; i < limit; i++, d = addDays(d, 1)) {
     if (isGoalDay(state, d)) return d;

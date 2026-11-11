@@ -1,6 +1,7 @@
 // What a goal accomplished (SPEC 9), for Win Zero Plus's Past goals, and which goals can be archived
 // there: one that reached ARCHIVE_MIN_BEST zeros. A goal that hasn't can be deleted instead. Read
 // from the goal and its history only.
+import { breakDays } from './breaks';
 import { comebackCount } from './comeback';
 import { diffDays } from './dates';
 import { isHeadStart } from './headStart';
@@ -41,6 +42,8 @@ export interface Accomplishments {
   comebacks: number;
   /** Finals a shield took. */
   shieldsUsed: number;
+  /** Calendar days it spent on a break, through the last day. */
+  breakDays: number;
   /** The MILESTONES the best run reached. */
   milestones: number[];
 }
@@ -64,6 +67,7 @@ export function goalAccomplishments(goal: GoalState, lastDay: DayKey): Accomplis
     answered,
     comebacks: comebackCount(goal),
     shieldsUsed,
+    breakDays: breakDays(goal, lastDay),
     milestones: MILESTONES.filter((m) => goal.bestStreak >= m),
   };
 }

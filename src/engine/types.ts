@@ -29,6 +29,15 @@ export interface ScheduleEntry {
   notBefore?: IsoInstant;
 }
 
+/**
+ * Days off a goal takes for travel or illness (SPEC 9, breaks.ts), from `from` through `to`. They
+ * work like rest days: no window, no history entry and no effect.
+ */
+export interface GoalBreak {
+  from: DayKey;
+  to: DayKey;
+}
+
 export type DayResult = 'yes' | 'no' | 'shielded' | 'missed';
 
 /** One settled goal day. History is append-only; entries are never edited. */
@@ -71,6 +80,8 @@ export interface GoalState {
   firstDay: DayKey;
   /** Sorted by fromDay; the first entry starts on firstDay. */
   checkInSchedule: ScheduleEntry[];
+  /** Breaks, sorted and never overlapping (breaks.ts). Absent when there have been none. */
+  breaks?: GoalBreak[];
   morningTime: ClockTime;
   streak: number;
   /** Never decreases. Drives weapon unlocks. */

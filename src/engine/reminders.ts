@@ -143,12 +143,16 @@ export function planDaily(state: GoalState, now: Date): DailyPlan {
  * whether it already happened or is projected. If shields push it past REMINDER_MAX_WINDOWS,
  * a week after the last daily window. The reset lands when its window closes, at midnight at the
  * end of the following day; nudges come at check-in time, a week at a time from that following
- * day, on a goal day.
+ * day, on a goal day. A break longer than a week moves two weeks' nudges to the day after it: one
+ * comes then.
  */
 export function planNudges(state: GoalState, now: Date, lastDay: DayKey): PlannedReminder[] {
   const out: PlannedReminder[] = [];
+  let prev: DayKey | null = null;
   for (let k = 1; out.length < REENGAGE_NUDGE_COUNT; k++) {
     const day = goalDayOnOrAfter(state, addDays(lastDay, 1 + REENGAGE_EVERY_DAYS * k));
+    if (prev !== null && day <= prev) continue;
+    prev = day;
     const at = opensAt(state, day);
     if (at.getTime() > now.getTime()) out.push({ at, kind: 'reengage', day });
   }

@@ -2,7 +2,8 @@
 // history entry and no effect; the grace days and the slide count check-in days.
 import { describe, expect, it } from '@jest/globals';
 
-import { addDays, weekdayOf } from '../dates';
+import { activeBreak, BREAK_MAX_DAYS, endBreak, setBreakEnd, startBreak } from '../breaks';
+import { addDays, diffDays, weekdayOf } from '../dates';
 import {
   checkInDays,
   EVERY_DAY,
@@ -12,6 +13,7 @@ import {
   latestScheduleEntry,
   nextGoalDay,
   normalizeDays,
+  onBreak,
   prevGoalDay,
 } from '../goalDays';
 import { planReminders } from '../reminders';
@@ -352,8 +354,8 @@ describe('reminders on a weekday goal', () => {
   });
 });
 
-describe('random weekday schedules, flights, edits and answers', () => {
-  it('never closes an open window early, never skips or repeats a check-in day, never settles a rest day', () => {
+describe('random weekday schedules, flights, edits, breaks and answers', () => {
+  it('never closes an open window early, never skips or repeats a check-in day, never settles a rest or break day', () => {
     const zones = [DENVER, LA, NEW_YORK, TOKYO, PAGO_PAGO, KIRITIMATI, LONDON];
     const times = ['00:15', '06:00', '12:30', '18:00', '20:00', '23:59'];
     const daySets = [MON_FRI, MON_WED_FRI, WEEKEND, [0], [2, 4], [...EVERY_DAY], [1, 2, 3, 4, 5, 6]];
@@ -385,9 +387,22 @@ describe('random weekday schedules, flights, edits and answers', () => {
         else if (roll < 0.3) next = setCheckInTime(before, pick(times, rand()), now, tz).state;
         else if (roll < 0.45) next = setCheckInDays(before, pick(daySets, rand()), now, tz).state;
         else if (roll < 0.75) next = answer(before, { answer: rand() < 0.8 ? 'yes' : 'not-today' }, now, tz).state;
+        else if (roll < 0.8) next = startBreak(before, addDays(firstUnsettledDay(before), Math.floor(rand() * 16)), now, tz).state;
+        else if (roll < 0.84) {
+          const b = activeBreak(before, now);
+          next = b ? setBreakEnd(before, addDays(b.from, Math.floor(rand() * 18) - 3), now, tz).state : before;
+        } else if (roll < 0.86) next = endBreak(before, now, tz).state;
         else next = before;
         expectChain(before, before, next);
         s = next;
+
+        const breaks = s.breaks ?? [];
+        expect(s.history.filter((e) => onBreak(s, e.day))).toEqual([]);
+        breaks.forEach((b, i) => {
+          expect(diffDays(b.to, b.from)).toBeGreaterThanOrEqual(0);
+          expect(diffDays(b.to, b.from)).toBeLessThan(BREAK_MAX_DAYS);
+          if (i > 0) expect(b.from > (breaks[i - 1]?.to ?? '')).toBe(true);
+        });
 
         if (open && (s.lastSettledDay ?? '') < open.day) {
           expect(closesAt(s, open.day).getTime()).toBeGreaterThanOrEqual(open.closesAt.getTime());
@@ -401,6 +416,7 @@ describe('random weekday schedules, flights, edits and answers', () => {
         }
       }
       expect(s.history.length).toBeGreaterThan(40);
+      expect(s.breaks?.length).toBeGreaterThan(0);
     }
   });
 });
