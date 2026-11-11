@@ -1,14 +1,15 @@
 // The result sheet, over the filled screen: the day, "N zeros down", what the Yes earned, and
 // the next unlock. Rewards were applied when Yes was answered; this only reveals them. A
 // replay, a bonus round or a practice round changes nothing, and says so. Win Zero Plus names
-// power-ups by the round's game mode, and announces a theme a Yes unlocked (SPEC 9).
+// power-ups by the round's game mode, announces a theme a Yes unlocked, and shares a milestone as
+// a picture of the round's zeros (SPEC 9).
 import { Canvas, LinearGradient, Rect, vec } from '@shopify/react-native-skia';
 import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import type { ModeId } from '@/engine';
+import { DEFAULT_MODE, type ModeId } from '@/engine';
 import { formatCount } from '@/lib/format';
 import { arsenalBestOf, slotById, useApp, type RoundRecord } from '@/store';
 import { colors, fonts, fontScale, space, type, withAlpha } from '@/theme/tokens';
@@ -21,6 +22,14 @@ import { resultLines, sheetEyebrow, type ResultMode, type RoundWords } from './r
 import { milestoneShareText, shareMilestone } from './share';
 
 export type { ResultMode } from './result';
+
+// Win Zero Plus only: the share card (SPEC 9). The literal comparison folds per file, so Win Zero's
+// bundle leaves it out.
+const PlusShare: typeof import('@/plus/share') | null =
+  process.env.EXPO_PUBLIC_APP_VARIANT === 'plus'
+    ? // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require('@/plus/share')
+    : null;
 
 /** The prototype's #result: clear at the top, deepening to ink at 92% by 38% of the way down. */
 const SCRIM = [withAlpha(colors.ink, 0), withAlpha(colors.ink, 0.92)];
@@ -96,7 +105,9 @@ export function ResultSheet(props: {
         <Button label="Back to base" onPress={onBack} style={!stack && styles.primary} />
         <Button label="Replay" variant="ghost" onPress={onReplay} style={!stack && styles.secondary} />
       </View>
-      {shareText ? (
+      {PlusShare && shareText && record ? (
+        <PlusShare.ShareMilestoneLink n={record.n} rewards={record.rewards} mode={gameMode ?? DEFAULT_MODE} text={shareText} />
+      ) : shareText ? (
         <LinkButton
           label="Share this milestone"
           accessibilityHint="Opens the share sheet. Your goal's wording isn't included."

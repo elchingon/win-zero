@@ -23,6 +23,26 @@ function unlocked(mode: ModeId, ids: readonly WeaponId[]): { words: string; asid
 }
 
 /**
+ * What a Day `n` round did worth sharing, in order: 'beat the boss', 'unlocked the Chain Zapper,'
+ * 'earned a bomb'. Empty when it earned nothing to share. `mode`: the game it was played in, which
+ * names the power-ups. The share text and Win Zero Plus's card both say these.
+ */
+export function milestoneShareParts(n: number, rewards: RoundRewards, mode: ModeId = DEFAULT_MODE): string[] {
+  const items = [...(rewards.bomb ? ['a bomb'] : []), ...(rewards.shield ? ['a shield'] : [])];
+  const ups = rewards.weapons.length > 0 ? unlocked(mode, rewards.weapons) : null;
+  return [
+    ...(bossRoundFor({ n, rewards }, mode) ? [BOSS_COPY.share] : []),
+    ...(ups ? [`unlocked ${ups.words}${ups.aside && items.length > 0 ? ',' : ''}`] : []),
+    ...(items.length > 0 ? [`earned ${joinAnd(items)}`] : []),
+  ];
+}
+
+/** "N zeros down": '30 zeros down', '1 zero down'. */
+export function zerosDown(n: number): string {
+  return `${formatCount(n)} ${n === 1 ? 'zero' : 'zeros'} down`;
+}
+
+/**
  * What to share for a Day `n` round, or null when it earned nothing to share. `appName`: the app
  * the player shared from (SPEC 9). `mode`: the game it was played in, which names the power-ups.
  */
@@ -32,13 +52,7 @@ export function milestoneShareText(
   appName: string = FREE_APP_NAME,
   mode: ModeId = DEFAULT_MODE,
 ): string | null {
-  const items = [...(rewards.bomb ? ['a bomb'] : []), ...(rewards.shield ? ['a shield'] : [])];
-  const ups = rewards.weapons.length > 0 ? unlocked(mode, rewards.weapons) : null;
-  const did = [
-    ...(bossRoundFor({ n, rewards }, mode) ? [BOSS_COPY.share] : []),
-    ...(ups ? [`unlocked ${ups.words}${ups.aside && items.length > 0 ? ',' : ''}`] : []),
-    ...(items.length > 0 ? [`earned ${joinAnd(items)}`] : []),
-  ];
+  const did = milestoneShareParts(n, rewards, mode);
   if (did.length === 0) return null;
-  return `Day ${formatCount(n)} on ${appName}: ${formatCount(n)} ${n === 1 ? 'zero' : 'zeros'} down. I ${joinAnd(did)}.`;
+  return `Day ${formatCount(n)} on ${appName}: ${zerosDown(n)}. I ${joinAnd(did)}.`;
 }

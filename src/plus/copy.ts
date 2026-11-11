@@ -82,6 +82,16 @@ export const DAYS_COPY = {
   lastDay: 'At least one day stays on',
 } as const;
 
+/** The share card (SPEC 9): a picture of the round's zeros, made on the phone. */
+export const SHARE_CARD_COPY = {
+  label: 'Share this milestone',
+  hint: "Shares a picture of your zeros and what you earned. Your goal's wording isn't on it.",
+  /** The Android share sheet's title. */
+  title: 'Share your milestone',
+  /** The card's last line, after the app's name. */
+  site: 'winzero.app',
+} as const;
+
 export const HEAD_START_COPY = {
   label: 'Days already done',
   hint: (max: number) =>
